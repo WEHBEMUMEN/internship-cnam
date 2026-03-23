@@ -44,8 +44,8 @@
 
         {% assign weeks = site.data.weeks | sort: "week_number" | reverse %}
 
-        {% for week_file in weeks %}
-          {% assign week = week_file[1] %}
+        {% for week_hash in weeks %}
+          {% assign week = week_hash[1] %}
           {% assign done_count = week.tasks | where: "done", true | size %}
           {% assign total_count = week.tasks | size %}
 

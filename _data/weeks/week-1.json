@@ -1,0 +1,16 @@
+{
+  "week_number": 1,
+  "start_date": "2026-03-23",
+  "end_date": "2026-03-29",
+  "primary_goal": "Repository setup, initial literature review, and understanding the digital twin architecture.",
+  "tasks": [
+    {"task": "Set up GitHub repository and file structure.", "done": true},
+    {"task": "Create project Gantt chart and deploy GitHub Pages site.", "done": true},
+    {"task": "Set up Sveltia CMS and task tracking system.", "done": true},
+    {"task": "Read the primary paper on Isogeometric Analysis (Cottrell et al., 2009).", "done": false},
+    {"task": "Review the Shared resources Mumen link.", "done": false}
+  ],
+  "meeting_date": "",
+  "questions": "1. What specific parameters should be adjustable in real-time?\n2. Should the initial 2D test case be a specific mechanical component?",
+  "notes": "*(Add notes here after meeting)*"
+}

@@ -10,22 +10,16 @@
       .login-button[data-provider="github"] { display: none !important; }
     </style>
     <script>
-      // Failsafe polling to instantly hide the custom token box once the user logs in
+      // Hide the generate token link as soon as the user navigates anywhere inside the CMS
       setInterval(() => {
-        const hash = window.location.hash || '';
         const customTokenBox = document.getElementById('custom-token-box');
-        
         if (customTokenBox) {
-          // If the Sveltia CMS routes to the dashboard, hide the generating link
-          if (hash.includes('/collections') || hash.includes('/search') || hash.includes('/edit') || hash.includes('/entries') || hash.includes('/media')) {
-            customTokenBox.style.display = 'none';
-          } else {
-            customTokenBox.style.display = 'block';
-          }
+          // If ANY hash exists the user is past the login screen — hide the button
+          customTokenBox.style.display = (window.location.hash && window.location.hash.length > 1) ? 'none' : 'block';
         }
-      }, 500);
+      }, 300);
 
-      // Actively watch the Sveltia CMS UI rendering to hide the primary "Login with GitHub" button
+      // Hide the broken "Login with GitHub" / Netlify button
       const observer = new MutationObserver(() => {
         document.querySelectorAll('button').forEach(btn => {
           const text = btn.textContent.toLowerCase();
