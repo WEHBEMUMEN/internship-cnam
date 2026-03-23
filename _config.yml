@@ -1,5 +1,5 @@
 include:
-  - admin
+  - cms
   - _data
   - _layouts
 
