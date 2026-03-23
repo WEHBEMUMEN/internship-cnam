@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title | default: "Documentation" }} | Digital Twin & ROM</title>
+  
+  <!-- Root path linking ensures CSS works deeply across any subdirectory -->
+  <link rel="stylesheet" href="/internship-cnam/index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="/internship-cnam/index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/internship-cnam/index.html" class="home-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="/internship-cnam/overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="/internship-cnam/repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="/internship-cnam/timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="/internship-cnam/tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        
+        <div class="section-head">
+          <span class="badge">Documentation</span>
+          <h2 class="section-title">{{ page.title | default: "Document" }}</h2>
+        </div>
+
+        <div class="markdown-body">
+          {{ content }}
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

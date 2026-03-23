@@ -1,3 +1,7 @@
+---
+layout: page
+title: "Weekly Log & Planner"
+---
 # 📝 Internship Weekly Log & Planner
 
 Use this document to track weekly goals, daily tasks, and notes from meetings with the supervisor (Christophe Hoareau).

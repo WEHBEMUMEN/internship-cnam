@@ -1,3 +1,7 @@
+---
+layout: page
+title: "Reference Catalog"
+---
 # 📚 Literature & Resource Catalog
 
 This document tracks all reading materials, research papers, and shared links related to the internship on Isogeometric Analysis (IGA) and Reduced Order Modelling (ROM).
