@@ -1,0 +1,9 @@
+{
+  "title": "Digital Twin",
+  "category": "Methodology",
+  "body": "A Digital Twin is a virtual representation of a physical object or system. In this project, it involves creating a real-time virtual counterpart to a physical 3D-printed structural model, allowing for monitoring and predictive simulation using ROM techniques.",
+  "related": [
+    { "slug": "Reduced Order Modelling" },
+    { "slug": "Isogeometric Analysis" }
+  ]
+}

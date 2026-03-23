@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Dictionary | Digital Twin & ROM</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="scripts.js" defer></script>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="home-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+        <a href="dictionary.html" style="color: var(--accent);"><i class="fa-solid fa-book-bookmark"></i> <span>Dictionary</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal reveal-up">
+          <span class="badge">TERMS & DEFINITIONS</span>
+          <h2 class="section-title">Project Dictionary</h2>
+          <p class="section-sub">A comprehensive guide to the terminology and concepts used in this research.</p>
+        </div>
+
+        <div id="dictionary-grid" class="grid reveal reveal-up delay-1">
+          <!-- Terms will be loaded here -->
+          <div class="loading-msg">Loading terms...</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam.</p>
+    </div>
+  </footer>
+
+  <script>
+    const TERMS = [
+      { id: 'digital-twin', title: 'Digital Twin' },
+      { id: 'reduced-order-modelling', title: 'Reduced Order Modelling' },
+      { id: 'isogeometric-analysis', title: 'Isogeometric Analysis' },
+      { id: 'hyper-reduction', title: 'Hyper-reduction' }
+    ];
+
+    async function loadTerms() {
+      const grid = document.getElementById('dictionary-grid');
+      grid.innerHTML = '';
+
+      for (const term of TERMS) {
+        try {
+          const res = await fetch(`_data/dictionary/${term.id}.json`);
+          const data = await res.json();
+          grid.innerHTML += `
+            <div class="card reveal reveal-up">
+              <span class="badge" style="font-size: 0.7rem; margin-bottom: 10px;">${data.category}</span>
+              <h3>${data.title}</h3>
+              <p>${data.body.substring(0, 120)}...</p>
+              <a href="term.html?id=${term.id}" class="card-link">Read more <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          `;
+        } catch (e) {
+          console.error(`Failed to load term: ${term.id}`, e);
+        }
+      }
+
+      if (window.initRevealAnimations) {
+        window.initRevealAnimations();
+      }
+    }
+
+    loadTerms();
+  </script>
+
+</body>
+</html>

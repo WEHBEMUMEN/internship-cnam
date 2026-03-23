@@ -1,0 +1,8 @@
+{
+  "title": "Hyper-reduction",
+  "category": "Methodology",
+  "body": "Hyper-reduction is an advanced technique used within Reduced Order Modelling to further accelerate simulations of nonlinear problems. It identifies and computes only a small subset of the nonlinear terms (the 'Reduced Integration Domain'), drastically reducing the CPU time required for each time step.",
+  "related": [
+    { "slug": "Reduced Order Modelling" }
+  ]
+}

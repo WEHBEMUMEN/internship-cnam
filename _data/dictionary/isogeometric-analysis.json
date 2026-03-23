@@ -1,0 +1,9 @@
+{
+  "title": "Isogeometric Analysis",
+  "category": "Technology",
+  "body": "Isogeometric Analysis (IGA) is a computational method that integrates CAD geometry directly into numerical analysis. By using the same basis functions (like NURBS) for both design and simulation, IGA improves accuracy and eliminates the need for complex mesh generation.",
+  "related": [
+    { "slug": "Reduced Order Modelling" },
+    { "slug": "Digital Twin" }
+  ]
+}

@@ -71,6 +71,18 @@ collections:
       - {label: "Supervisor Meeting Date", name: "meeting_date", widget: "datetime", type: "date", format: "YYYY-MM-DD", required: false}
       - {label: "Questions to Ask", name: "questions", widget: "markdown", required: false}
       - {label: "Notes / Action Items", name: "notes", widget: "markdown", required: false}
+  - name: "dictionary"
+    label: "Project Dictionary"
+    folder: "_data/dictionary"
+    create: true
+    extension: "json"
+    format: "json"
+    slug: "{{title}}"
+    fields:
+      - {label: "Term Title", name: "title", widget: "string"}
+      - {label: "Category", name: "category", widget: "select", options: ["Methodology", "Technology", "Lab", "Software"]}
+      - {label: "Description", name: "body", widget: "markdown"}
+      - {label: "Related Terms", name: "related", widget: "list", required: false, fields: [{label: "Term Slug", name: "slug", widget: "string"}]}
 
 
 

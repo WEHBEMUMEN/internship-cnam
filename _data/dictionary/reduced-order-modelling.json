@@ -1,0 +1,9 @@
+{
+  "title": "Reduced Order Modelling",
+  "category": "Methodology",
+  "body": "Reduced Order Modelling (ROM) is a technique for reducing the computational complexity of mathematical models in numerical simulations. In this project, ROM is used to achieve real-time simulation speeds for nonlinear dynamic problems, specifically through methods like hyper-reduction.",
+  "related": [
+    { "slug": "Digital Twin" },
+    { "slug": "Hyper-reduction" }
+  ]
+}

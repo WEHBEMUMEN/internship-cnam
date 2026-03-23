@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Term Definition | Digital Twin & ROM</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="scripts.js" defer></script>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="home-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+        <a href="dictionary.html"><i class="fa-solid fa-book-bookmark"></i> <span>Dictionary</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div id="term-content" class="reveal reveal-up">
+           <div class="loading-msg">Loading term details...</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam.</p>
+    </div>
+  </footer>
+
+  <script>
+    async function loadTerm() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const termId = urlParams.get('id');
+      const content = document.getElementById('term-content');
+
+      if (!termId) {
+        content.innerHTML = '<h2>Select a term from the <a href="dictionary.html">dictionary</a>.</h2>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`_data/dictionary/${termId}.json`);
+        if (!res.ok) throw new Error('Term not found');
+        const data = await res.json();
+        
+        document.title = `${data.title} | Project Dictionary`;
+
+        content.innerHTML = `
+          <div class="section-head" style="text-align: left; margin-bottom: 40px;">
+            <a href="dictionary.html" class="card-link" style="margin-bottom: 20px; display: inline-flex;"><i class="fa-solid fa-arrow-left"></i> Back to Dictionary</a>
+            <span class="badge" style="display: block; width: fit-content;">${data.category}</span>
+            <h1 class="section-title" style="font-size: 3.5rem; margin-top: 10px;">${data.title}</h1>
+          </div>
+          
+          <div class="markdown-body" style="background: white; border: none; padding: 0;">
+            ${marked.parse(data.body)}
+          </div>
+
+          ${data.related && data.related.length > 0 ? `
+            <div style="margin-top: 60px; padding-top: 40px; border-top: 1px solid var(--border);">
+              <h3 style="margin-bottom: 20px;">Related Terms</h3>
+              <div class="nav-links" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start;">
+                ${data.related.map(r => `
+                  <a href="term.html?id=${r.slug.toLowerCase().replace(/ /g, '-')}" class="btn btn-outline" style="padding: 8px 16px; font-size: 0.85rem;">${r.slug}</a>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        `;
+      } catch (e) {
+        content.innerHTML = `<h2>Error: ${e.message}</h2><p>Go back to the <a href="dictionary.html">dictionary</a>.</p>`;
+      }
+
+      if (window.initRevealAnimations) {
+        window.initRevealAnimations();
+      }
+    }
+
+    loadTerm();
+  </script>
+
+</body>
+</html>
