@@ -1,0 +1,116 @@
+---
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Tracker | Digital Twin & ROM</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="home-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="tasks.html" style="color: var(--accent);"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="badge">PROJECT TRACKER</span>
+          <h2 class="section-title">Kanban Task Board</h2>
+          <p class="section-sub">Live checklist of research milestones and deliverables managed directly from the CMS.</p>
+        </div>
+
+        <div class="task-board">
+          
+          <!-- TO DO COLUMN -->
+          <div class="task-column">
+            {% assign todo_tasks = site.data.tasks.task_list.tasks | where: "status", "To Do" %}
+            <h3 class="column-title" style="border-bottom: 3px solid #cbd5e1; padding-bottom: 12px;">To Do <span class="count">{{ todo_tasks | size }}</span></h3>
+            <div class="task-list">
+              {% for task in site.data.tasks.task_list.tasks %}
+                {% if task.status == "To Do" %}
+                  <div class="task-card">
+                    <div class="task-header">
+                      <span class="task-priority priority-{{ task.priority | downcase | default: 'low' }}">{{ task.priority | default: 'Low' }}</span>
+                      {% if task.deadline %}<span class="task-deadline"><i class="fa-regular fa-clock"></i> {{ task.deadline | date: "%b %d, %Y" }}</span>{% endif %}
+                    </div>
+                    <h4 class="task-title">{{ task.title }}</h4>
+                    {% if task.description %}<div class="task-desc">{{ task.description | markdownify }}</div>{% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- IN PROGRESS COLUMN -->
+          <div class="task-column">
+            {% assign in_progress_tasks = site.data.tasks.task_list.tasks | where: "status", "In Progress" %}
+            <h3 class="column-title" style="border-bottom: 3px solid #3b82f6; padding-bottom: 12px;">In Progress <span class="count">{{ in_progress_tasks | size }}</span></h3>
+            <div class="task-list">
+              {% for task in site.data.tasks.task_list.tasks %}
+                {% if task.status == "In Progress" %}
+                  <div class="task-card">
+                    <div class="task-header">
+                      <span class="task-priority priority-{{ task.priority | downcase | default: 'low' }}">{{ task.priority | default: 'Low' }}</span>
+                      {% if task.deadline %}<span class="task-deadline"><i class="fa-regular fa-clock"></i> {{ task.deadline | date: "%b %d, %Y" }}</span>{% endif %}
+                    </div>
+                    <h4 class="task-title">{{ task.title }}</h4>
+                    {% if task.description %}<div class="task-desc">{{ task.description | markdownify }}</div>{% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- DONE COLUMN -->
+          <div class="task-column">
+            {% assign done_tasks = site.data.tasks.task_list.tasks | where: "status", "Done" %}
+            <h3 class="column-title" style="border-bottom: 3px solid #10b981; padding-bottom: 12px;">Done <span class="count">{{ done_tasks | size }}</span></h3>
+            <div class="task-list">
+              {% for task in site.data.tasks.task_list.tasks %}
+                {% if task.status == "Done" %}
+                  <div class="task-card" style="opacity: 0.75;">
+                    <div class="task-header">
+                      <span class="task-priority priority-{{ task.priority | downcase | default: 'low' }}">{{ task.priority | default: 'Low' }}</span>
+                      {% if task.deadline %}<span class="task-deadline"><i class="fa-regular fa-circle-check"></i> {{ task.deadline | date: "%b %d, %Y" }}</span>{% endif %}
+                    </div>
+                    <h4 class="task-title" style="text-decoration: line-through;">{{ task.title }}</h4>
+                    {% if task.description %}<div class="task-desc">{{ task.description | markdownify }}</div>{% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam. Managed via Sveltia CMS.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

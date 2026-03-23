@@ -23,3 +23,21 @@ collections:
           - label: "Final Report (PDF Link)"
             name: "final_report"
             widget: "string"
+
+  - name: "tasks"
+    label: "Task Tracker"
+    files:
+      - file: "_data/tasks.yml"
+        label: "Manage Project Tasks"
+        name: "task_list"
+        fields:
+          - label: "Tasks"
+            name: "tasks"
+            widget: "list"
+            fields:
+              - {label: "Title", name: "title", widget: "string"}
+              - {label: "Status", name: "status", widget: "select", options: ["To Do", "In Progress", "Done"]}
+              - {label: "Priority", name: "priority", widget: "select", options: ["Low", "Medium", "High"]}
+              - {label: "Deadline", name: "deadline", widget: "date", format: "YYYY-MM-DD", required: false}
+              - {label: "Description", name: "description", widget: "markdown", required: false}
+
