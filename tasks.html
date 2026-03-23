@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
-
+  <script src="scripts.js" defer></script>
 </head>
 <body>
 
@@ -36,13 +36,13 @@
   <main>
     <section class="section">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head reveal reveal-up">
           <span class="badge">PROJECT TRACKER</span>
           <h2 class="section-title">Kanban Task Board</h2>
           <p class="section-sub">Live checklist of research milestones and deliverables.</p>
         </div>
 
-        <div id="task-board" class="task-board">
+        <div id="task-board" class="task-board reveal reveal-up delay-1">
           <div class="loading-msg"><i class="fa-solid fa-spinner fa-spin"></i> Loading tasks...</div>
         </div>
       </div>
@@ -83,7 +83,7 @@
       const dateIcon = isDone ? 'fa-circle-check' : 'fa-clock';
       const dateStr = formatDate(task.deadline);
       return `
-        <div class="task-card${isDone ? ' done' : ''}">
+        <div class="task-card${isDone ? ' done' : ''} reveal reveal-up">
           <div class="task-header">
             <span class="task-priority priority-${priorityClass}">${task.priority || 'Low'}</span>
             ${dateStr ? `<span class="task-deadline"><i class="fa-regular ${dateIcon}"></i> ${dateStr}</span>` : ''}
@@ -118,6 +118,11 @@
           ${columnHeader('Done', '#10b981', done.length)}
           <div class="task-list">${done.map(taskCard).join('') || '<p class="task-desc">No tasks here.</p>'}</div>
         </div>`;
+
+      // Re-run the reveal observer for dynamic content
+      if (window.initRevealAnimations) {
+        window.initRevealAnimations();
+      }
     }
 
     loadTasks();

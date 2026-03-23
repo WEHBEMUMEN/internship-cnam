@@ -81,6 +81,7 @@ header {
 .logo i {
   color: var(--accent);
   font-size: 1.8rem;
+  animation: logoPulse 3s infinite ease-in-out;
 }
 
 .nav-links {
@@ -106,6 +107,7 @@ header {
 .hero {
   padding: 140px 0 100px;
   background: radial-gradient(circle at 50% -20%, var(--accent-soft), transparent 60%);
+  animation: heroBgPulse 10s infinite alternate ease-in-out;
 }
 
 .hero-content {
@@ -168,7 +170,7 @@ h1 span {
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.02);
   filter: brightness(1.1);
   box-shadow: 0 20px 25px -5px var(--accent-glow);
 }
@@ -182,6 +184,7 @@ h1 span {
 .btn-outline:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
+  transform: translateY(-2px);
 }
 
 .hero-visual {
@@ -201,6 +204,7 @@ h1 span {
 .hero-visual img {
   width: 100%;
   display: block;
+  animation: floating 6s infinite ease-in-out;
 }
 
 .section {
@@ -797,3 +801,55 @@ h1 span {
     padding-bottom: 80px; /* Space for bottom nav */
   }
 }
+
+/* =========================================
+   ANIMATIONS & INTERACTIVITY
+   ========================================= */
+
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes logoPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-glow)); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 10px var(--accent)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-glow)); }
+}
+
+@keyframes heroBgPulse {
+  0% { background-position: 50% -20%; }
+  100% { background-position: 55% -15%; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reveal.active {
+  opacity: 1;
+}
+
+.reveal-up.active {
+  animation: fadeInUp 0.8s forwards;
+}
+
+.reveal-right.active {
+  animation: fadeInRight 0.8s forwards;
+}
+
+.delay-1 { animation-delay: 0.2s; }
+.delay-2 { animation-delay: 0.4s; }
+.delay-3 { animation-delay: 0.6s; }

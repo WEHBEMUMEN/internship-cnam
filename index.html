@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="scripts.js" defer></script>
 </head>
 <body>
 
@@ -36,16 +37,45 @@
     <section class="hero">
       <div class="container">
         <div class="hero-content">
-          <span class="badge">RESEARCH INTERNSHIP 2026</span>
-          <h1>Digital Twin & <span>Reduced Order Modelling</span></h1>
-          <p class="hero-sub">Exploring nonlinear dynamics with Isogeometric Analysis (IGA) and hyper-reduction at LMSSC, Cnam.</p>
-          <div class="hero-buttons">
+          <span class="badge reveal reveal-up">RESEARCH INTERNSHIP 2026</span>
+          <h1 class="reveal reveal-up delay-1">Digital Twin & <span>Reduced Order Modelling</span></h1>
+          <p class="hero-sub reveal reveal-up delay-2">Exploring nonlinear dynamics with Isogeometric Analysis (IGA) and hyper-reduction at LMSSC, Cnam.</p>
+          <div class="hero-buttons reveal reveal-up delay-3">
             <a href="repository.html" class="btn btn-primary">Explore Project</a>
             <a href="overview.html" class="btn btn-outline">Read Abstract</a>
           </div>
         </div>
-        <div class="hero-visual">
+        <div class="hero-visual reveal reveal-right">
           <img src="digital_twin_light_hero.png" alt="Digital Twin visualization">
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal reveal-up">
+          <h2 class="section-title">Project Highlights</h2>
+          <p class="section-sub">Key components of the research internship and technological focus.</p>
+        </div>
+        <div class="grid">
+          <div class="card reveal reveal-up">
+            <i class="fa-solid fa-microchip"></i>
+            <h3>Digital Twin Design</h3>
+            <p>Developing high-fidelity virtual counterparts for structural systems to monitor and predict real-time performance.</p>
+            <a href="overview.html" class="card-link">Learn more <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+          <div class="card reveal reveal-up delay-1">
+            <i class="fa-solid fa-gauge-high"></i>
+            <h3>Hyper-reduction</h3>
+            <p>Implementing ECW and other hyper-reduction techniques to significantly accelerate nonlinear simulations.</p>
+            <a href="overview.html" class="card-link">Learn more <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+          <div class="card reveal reveal-up delay-2">
+            <i class="fa-solid fa-bezier-curve"></i>
+            <h3>Isogeometric Analysis</h3>
+            <p>Leveraging IGA for precise geometry representation and improved convergence in structural mechanics.</p>
+            <a href="repository.html" class="card-link">View Files <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
         </div>
       </div>
     </section>
