@@ -43,10 +43,10 @@
           
           <!-- TO DO COLUMN -->
           <div class="task-column">
-            {% assign todo_tasks = site.data.tasks.task_list.tasks | where: "status", "To Do" %}
+            {% assign todo_tasks = site.data.tasks.tasks | where: "status", "To Do" %}
             <h3 class="column-title" style="border-bottom: 3px solid #cbd5e1; padding-bottom: 12px;">To Do <span class="count">{{ todo_tasks | size }}</span></h3>
             <div class="task-list">
-              {% for task in site.data.tasks.task_list.tasks %}
+              {% for task in site.data.tasks.tasks %}
                 {% if task.status == "To Do" %}
                   <div class="task-card">
                     <div class="task-header">
@@ -63,10 +63,10 @@
 
           <!-- IN PROGRESS COLUMN -->
           <div class="task-column">
-            {% assign in_progress_tasks = site.data.tasks.task_list.tasks | where: "status", "In Progress" %}
+            {% assign in_progress_tasks = site.data.tasks.tasks | where: "status", "In Progress" %}
             <h3 class="column-title" style="border-bottom: 3px solid #3b82f6; padding-bottom: 12px;">In Progress <span class="count">{{ in_progress_tasks | size }}</span></h3>
             <div class="task-list">
-              {% for task in site.data.tasks.task_list.tasks %}
+              {% for task in site.data.tasks.tasks %}
                 {% if task.status == "In Progress" %}
                   <div class="task-card">
                     <div class="task-header">
@@ -83,10 +83,10 @@
 
           <!-- DONE COLUMN -->
           <div class="task-column">
-            {% assign done_tasks = site.data.tasks.task_list.tasks | where: "status", "Done" %}
+            {% assign done_tasks = site.data.tasks.tasks | where: "status", "Done" %}
             <h3 class="column-title" style="border-bottom: 3px solid #10b981; padding-bottom: 12px;">Done <span class="count">{{ done_tasks | size }}</span></h3>
             <div class="task-list">
-              {% for task in site.data.tasks.task_list.tasks %}
+              {% for task in site.data.tasks.tasks %}
                 {% if task.status == "Done" %}
                   <div class="task-card" style="opacity: 0.75;">
                     <div class="task-header">
