@@ -1,5 +1,3 @@
----
----
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +9,27 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <style>
+    .task-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 40px; }
+    .task-column { background: var(--card-bg, #1e293b); border-radius: 16px; padding: 24px; }
+    .column-title { font-size: 1rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .count { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 2px 10px; font-size: 0.85rem; font-weight: 600; }
+    .task-list { display: flex; flex-direction: column; gap: 14px; }
+    .task-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+    .task-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .task-card.done { opacity: 0.6; }
+    .task-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
+    .task-priority { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
+    .priority-high { background: rgba(239,68,68,0.15); color: #f87171; }
+    .priority-medium { background: rgba(234,179,8,0.15); color: #fbbf24; }
+    .priority-low { background: rgba(16,185,129,0.15); color: #34d399; }
+    .task-deadline { font-size: 0.78rem; color: var(--text-secondary, #94a3b8); display: flex; align-items: center; gap: 5px; }
+    .task-title { font-size: 0.95rem; font-weight: 600; color: var(--text-primary, #f1f5f9); margin: 0 0 6px 0; line-height: 1.4; }
+    .task-title.done-title { text-decoration: line-through; }
+    .task-desc { font-size: 0.82rem; color: var(--text-secondary, #94a3b8); line-height: 1.5; margin-top: 6px; }
+    .loading-msg { text-align: center; color: var(--text-secondary, #94a3b8); padding: 40px; font-style: italic; }
+  </style>
 </head>
 <body>
 
@@ -26,6 +45,9 @@
         <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
         <a href="timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
         <a href="tasks.html" style="color: var(--accent);"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
       </nav>
     </div>
   </header>
@@ -36,71 +58,11 @@
         <div class="section-head">
           <span class="badge">PROJECT TRACKER</span>
           <h2 class="section-title">Kanban Task Board</h2>
-          <p class="section-sub">Live checklist of research milestones and deliverables managed directly from the CMS.</p>
+          <p class="section-sub">Live checklist of research milestones and deliverables.</p>
         </div>
 
-        <div class="task-board">
-          
-          <!-- TO DO COLUMN -->
-          <div class="task-column">
-            {% assign todo_tasks = site.data.tasks.tasks | where: "status", "To Do" %}
-            <h3 class="column-title" style="border-bottom: 3px solid #cbd5e1; padding-bottom: 12px;">To Do <span class="count">{{ todo_tasks | size }}</span></h3>
-            <div class="task-list">
-              {% for task in site.data.tasks.tasks %}
-                {% if task.status == "To Do" %}
-                  <div class="task-card">
-                    <div class="task-header">
-                      <span class="task-priority priority-{{ task.priority | downcase | default: 'low' }}">{{ task.priority | default: 'Low' }}</span>
-                      {% if task.deadline %}<span class="task-deadline"><i class="fa-regular fa-clock"></i> {{ task.deadline | date: "%b %d, %Y" }}</span>{% endif %}
-                    </div>
-                    <h4 class="task-title">{{ task.title }}</h4>
-                    {% if task.description %}<div class="task-desc">{{ task.description | markdownify }}</div>{% endif %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-          </div>
-
-          <!-- IN PROGRESS COLUMN -->
-          <div class="task-column">
-            {% assign in_progress_tasks = site.data.tasks.tasks | where: "status", "In Progress" %}
-            <h3 class="column-title" style="border-bottom: 3px solid #3b82f6; padding-bottom: 12px;">In Progress <span class="count">{{ in_progress_tasks | size }}</span></h3>
-            <div class="task-list">
-              {% for task in site.data.tasks.tasks %}
-                {% if task.status == "In Progress" %}
-                  <div class="task-card">
-                    <div class="task-header">
-                      <span class="task-priority priority-{{ task.priority | downcase | default: 'low' }}">{{ task.priority | default: 'Low' }}</span>
-                      {% if task.deadline %}<span class="task-deadline"><i class="fa-regular fa-clock"></i> {{ task.deadline | date: "%b %d, %Y" }}</span>{% endif %}
-                    </div>
-                    <h4 class="task-title">{{ task.title }}</h4>
-                    {% if task.description %}<div class="task-desc">{{ task.description | markdownify }}</div>{% endif %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-          </div>
-
-          <!-- DONE COLUMN -->
-          <div class="task-column">
-            {% assign done_tasks = site.data.tasks.tasks | where: "status", "Done" %}
-            <h3 class="column-title" style="border-bottom: 3px solid #10b981; padding-bottom: 12px;">Done <span class="count">{{ done_tasks | size }}</span></h3>
-            <div class="task-list">
-              {% for task in site.data.tasks.tasks %}
-                {% if task.status == "Done" %}
-                  <div class="task-card" style="opacity: 0.75;">
-                    <div class="task-header">
-                      <span class="task-priority priority-{{ task.priority | downcase | default: 'low' }}">{{ task.priority | default: 'Low' }}</span>
-                      {% if task.deadline %}<span class="task-deadline"><i class="fa-regular fa-circle-check"></i> {{ task.deadline | date: "%b %d, %Y" }}</span>{% endif %}
-                    </div>
-                    <h4 class="task-title" style="text-decoration: line-through;">{{ task.title }}</h4>
-                    {% if task.description %}<div class="task-desc">{{ task.description | markdownify }}</div>{% endif %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-          </div>
-
+        <div id="task-board" class="task-board">
+          <div class="loading-msg"><i class="fa-solid fa-spinner fa-spin"></i> Loading tasks...</div>
         </div>
       </div>
     </section>
@@ -108,9 +70,77 @@
 
   <footer class="footer">
     <div class="container">
-      <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam. Managed via Sveltia CMS.</p>
+      <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam.</p>
     </div>
   </footer>
+
+  <script>
+    const TASKS_URL = '_data/tasks.yml';
+
+    async function loadTasks() {
+      try {
+        const res = await fetch(TASKS_URL);
+        if (!res.ok) throw new Error('Could not load tasks.yml');
+        const text = await res.text();
+        const data = jsyaml.load(text);
+        renderBoard(data.tasks || []);
+      } catch (e) {
+        document.getElementById('task-board').innerHTML =
+          `<div class="loading-msg"><i class="fa-solid fa-triangle-exclamation"></i> Could not load tasks. ${e.message}</div>`;
+      }
+    }
+
+    function formatDate(str) {
+      if (!str) return null;
+      const d = new Date(str);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function taskCard(task) {
+      const isDone = task.status === 'Done';
+      const priorityClass = (task.priority || 'Low').toLowerCase();
+      const dateIcon = isDone ? 'fa-circle-check' : 'fa-clock';
+      const dateStr = formatDate(task.deadline);
+      return `
+        <div class="task-card${isDone ? ' done' : ''}">
+          <div class="task-header">
+            <span class="task-priority priority-${priorityClass}">${task.priority || 'Low'}</span>
+            ${dateStr ? `<span class="task-deadline"><i class="fa-regular ${dateIcon}"></i> ${dateStr}</span>` : ''}
+          </div>
+          <h4 class="task-title${isDone ? ' done-title' : ''}">${task.title}</h4>
+          ${task.description ? `<div class="task-desc">${task.description}</div>` : ''}
+        </div>`;
+    }
+
+    function columnHeader(label, color, count) {
+      return `<h3 class="column-title" style="border-bottom: 3px solid ${color}; padding-bottom: 12px;">
+        ${label} <span class="count">${count}</span>
+      </h3>`;
+    }
+
+    function renderBoard(tasks) {
+      const todo       = tasks.filter(t => t.status === 'To Do');
+      const inProgress = tasks.filter(t => t.status === 'In Progress');
+      const done       = tasks.filter(t => t.status === 'Done');
+
+      const board = document.getElementById('task-board');
+      board.innerHTML = `
+        <div class="task-column">
+          ${columnHeader('To Do', '#cbd5e1', todo.length)}
+          <div class="task-list">${todo.map(taskCard).join('') || '<p class="task-desc">No tasks here.</p>'}</div>
+        </div>
+        <div class="task-column">
+          ${columnHeader('In Progress', '#3b82f6', inProgress.length)}
+          <div class="task-list">${inProgress.map(taskCard).join('') || '<p class="task-desc">No tasks here.</p>'}</div>
+        </div>
+        <div class="task-column">
+          ${columnHeader('Done', '#10b981', done.length)}
+          <div class="task-list">${done.map(taskCard).join('') || '<p class="task-desc">No tasks here.</p>'}</div>
+        </div>`;
+    }
+
+    loadTasks();
+  </script>
 
 </body>
 </html>

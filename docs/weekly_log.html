@@ -1,31 +1,58 @@
----
----
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Weekly Log | Digital Twin & ROM</title>
-  <link rel="stylesheet" href="/internship-cnam/index.css">
+  <link rel="stylesheet" href="../index.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    .markdown-container {
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 40px;
+      background: var(--card-bg, #1e293b);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .markdown-body h1 { font-size: 2.2rem; margin-bottom: 24px; border-bottom: 2px solid var(--accent, #3b82f6); padding-bottom: 12px; }
+    .markdown-body h2 { font-size: 1.6rem; margin-top: 40px; margin-bottom: 16px; color: var(--accent, #3b82f6); }
+    .markdown-body h3 { font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; }
+    .markdown-body p { line-height: 1.7; color: var(--text-secondary, #94a3b8); margin-bottom: 16px; }
+    .markdown-body ul { margin-bottom: 20px; padding-left: 20px; }
+    .markdown-body li { margin-bottom: 10px; color: var(--text-secondary, #94a3b8); }
+    .markdown-body table { width: 100%; border-collapse: collapse; margin: 24px 0; background: rgba(0,0,0,0.2); border-radius: 12px; overflow: hidden; }
+    .markdown-body th, .markdown-body td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .markdown-body th { background: rgba(255,255,255,0.05); color: var(--text-primary, #f1f5f9); font-weight: 700; }
+    .markdown-body strong { color: var(--text-primary, #f1f5f9); }
+    .markdown-body blockquote { border-left: 4px solid var(--accent, #3b82f6); padding-left: 20px; margin: 20px 0; font-style: italic; color: var(--text-primary, #f1f5f9); }
+    .markdown-body pre { background: rgba(0,0,0,0.4); padding: 16px; border-radius: 8px; overflow-x: auto; margin: 20px 0; }
+    .markdown-body code { font-family: 'Inter', monospace; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+    .markdown-body .task-list-item { list-style-type: none; padding-left: 0; }
+    .markdown-body input[type="show"] { display: none; }
+    .loading-spinner { text-align: center; font-size: 1.2rem; color: var(--text-secondary, #94a3b8); margin-top: 100px; }
+  </style>
 </head>
 <body>
 
   <header>
     <div class="container header-container">
-      <a href="/internship-cnam/index.html" class="logo">
+      <a href="../index.html" class="logo">
         <i class="fa-solid fa-cube"></i>
         <span>Digital Twin [ROM]</span>
       </a>
       <nav class="nav-links">
-        <a href="/internship-cnam/index.html"><i class="fa-solid fa-house"></i> <span>Home</span></a>
-        <a href="/internship-cnam/overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
-        <a href="/internship-cnam/repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
-        <a href="/internship-cnam/timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
-        <a href="/internship-cnam/tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
-        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
+        <a href="../index.html"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="../overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="../repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="../timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="../tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
           <i class="fa-brands fa-github"></i> <span>GitHub</span>
         </a>
       </nav>
@@ -33,79 +60,14 @@
   </header>
 
   <main>
-    <section class="section">
+    <div id="loading" class="loading-spinner">
+      <i class="fa-solid fa-spinner fa-spin"></i> Loading Weekly Log content...
+    </div>
+    <section id="content" style="display: none;">
       <div class="container">
-
-        <div class="section-head">
-          <span class="badge">PROGRESS TRACKING</span>
-          <h2 class="section-title">Weekly Log & Planner</h2>
-          <p class="section-sub">A structured weekly breakdown of goals, tasks, and supervisor meeting notes — managed via the CMS dashboard.</p>
+        <div class="markdown-container">
+          <div id="markdown-body" class="markdown-body"></div>
         </div>
-
-        {% assign weeks = site.data.weeks | sort: "week_number" | reverse %}
-
-        {% for week_hash in weeks %}
-          {% assign week = week_hash[1] %}
-          {% assign done_count = week.tasks | where: "done", true | size %}
-          {% assign total_count = week.tasks | size %}
-
-          <div class="week-card">
-            <div class="week-header">
-              <div class="week-title-group">
-                <span class="week-badge">Week {{ week.week_number }}</span>
-                <h3 class="week-title">{{ week.primary_goal }}</h3>
-                <p class="week-dates">
-                  <i class="fa-regular fa-calendar"></i>
-                  {{ week.start_date | date: "%b %d" }} – {{ week.end_date | date: "%b %d, %Y" }}
-                </p>
-              </div>
-              <div class="week-progress-ring" title="{{ done_count }}/{{ total_count }} tasks done">
-                <svg viewBox="0 0 36 36" class="circular-chart">
-                  <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                  {% if total_count > 0 %}
-                    {% assign pct = done_count | times: 100 | divided_by: total_count %}
-                    <path class="circle" stroke-dasharray="{{ pct }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                  {% endif %}
-                </svg>
-                <span class="ring-label">{{ done_count }}/{{ total_count }}</span>
-              </div>
-            </div>
-
-            <div class="week-body">
-
-              {% if week.tasks and week.tasks.size > 0 %}
-              <div class="week-section">
-                <h4><i class="fa-solid fa-clipboard-list"></i> Tasks</h4>
-                <ul class="week-tasks">
-                  {% for t in week.tasks %}
-                    <li class="{% if t.done %}done-task{% endif %}">
-                      <i class="fa-solid {% if t.done %}fa-circle-check{% else %}fa-circle{% endif %}"></i>
-                      {{ t.task }}
-                    </li>
-                  {% endfor %}
-                </ul>
-              </div>
-              {% endif %}
-
-              {% if week.questions and week.questions != "" %}
-              <div class="week-section">
-                <h4><i class="fa-solid fa-comments"></i> Supervisor Meeting {% if week.meeting_date != "" %}— {{ week.meeting_date | date: "%B %d, %Y" }}{% endif %}</h4>
-                <div class="markdown-body" style="padding: 20px; margin-top: 0;">
-                  <strong>Questions to ask:</strong>
-                  {{ week.questions | markdownify }}
-                  {% if week.notes and week.notes != "" %}
-                  <strong>Notes & Action Items:</strong>
-                  {{ week.notes | markdownify }}
-                  {% endif %}
-                </div>
-              </div>
-              {% endif %}
-
-            </div>
-          </div>
-
-        {% endfor %}
-
       </div>
     </section>
   </main>
@@ -115,6 +77,27 @@
       <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam.</p>
     </div>
   </footer>
+
+  <script>
+    async function fetchAndRender() {
+      try {
+        const response = await fetch('weekly_log.md');
+        if (!response.ok) throw new Error('Could not fetch weekly_log.md');
+        let text = await response.text();
+        
+        // Remove frontmatter if present
+        text = text.replace(/^---[\s\S]*?---/, '');
+        
+        document.getElementById('markdown-body').innerHTML = marked.parse(text);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+      } catch (error) {
+        document.getElementById('loading').innerHTML = '<p>Error: ' + error.message + '</p>';
+      }
+    }
+    
+    fetchAndRender();
+  </script>
 
 </body>
 </html>

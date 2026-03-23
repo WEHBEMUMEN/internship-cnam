@@ -1,21 +1,126 @@
 tasks:
+  # ── DONE ──────────────────────────────────────────────────────────────────
   - title: Setup GitHub Repository Structure
     status: Done
     priority: High
     deadline: 2026-03-24
     description: Initialize docs, src, app, cad, and resources directories cleanly.
+
   - title: Configure Sveltia CMS Integration
     status: Done
     priority: High
     deadline: 2026-03-23
-    description: Install Sveltia and define downloads and task collections within index.yml.
-  - title: Review IGA Literature (Cottrell et al.)
+    description: Install Sveltia and define downloads and task collections within config.yml.
+
+  - title: Build Project Website (GitHub Pages)
+    status: Done
+    priority: High
+    deadline: 2026-03-23
+    description: Deploy index.html, overview.html, timeline.html, tasks.html, repository.html with full CSS and navigation.
+
+  - title: Restructure Reference Catalog
+    status: Done
+    priority: High
+    deadline: 2026-03-23
+    description: Reorganize reference_catalog.md into 5 annotated categories — IGA, ROM, FSI, Nonlinear Dynamics, Digital Twin.
+
+  # ── IN PROGRESS ───────────────────────────────────────────────────────────
+  - title: Read Hoareau et al. 2025 (Supervisor's Paper)
+    status: In Progress
+    priority: High
+    deadline: 2026-03-30
+    description: "Primary reference — IGA + ROM + hyper-reduction applied to sloshing. Read first before any other paper."
+
+  - title: Read Cottrell et al. 2009 (IGA Foundations)
     status: In Progress
     priority: High
     deadline: 2026-04-05
-    description: Read the foundation text on Isogeometric Analysis to prepare for the hyper-reduction phase.
-  - title: Design Initial Digital Twin Frontend
+    description: Foundation text on Isogeometric Analysis. Focus on chapters covering NURBS basis and structural mechanics.
+
+  # ── TO DO (Planning) ──────────────────────────────────────────────────────
+  - title: Prepare & Hold First Supervisor Meeting
+    status: To Do
+    priority: High
+    deadline: 2026-03-30
+    description: "Answer Q1–Q5 with Christophe Hoareau: parameter space, test case geometry, accuracy tolerance, deliverable format, existing lab code."
+
+  - title: Lock Software Stack & Write architecture.md
+    status: To Do
+    priority: High
+    deadline: 2026-04-07
+    description: "Decide: IGA solver (Nutils vs. lab code), ROM library (pyMOR), DT communication (static JSON → Flask API). Document in docs/architecture.md."
+
+  - title: Write Parameter Space Definition (parameter_space.md)
+    status: To Do
+    priority: High
+    deadline: 2026-04-07
+    description: Define parameter vector (geometry, material, load), ranges, and sampling strategy based on supervisor Q1–Q2 answers.
+
+  # ── TO DO (Phase 2A — FOM Geometry) ──────────────────────────────────────
+  - title: "Phase 2A: Define & Implement Parameterized IGA Geometry"
+    status: To Do
+    priority: High
+    deadline: 2026-04-14
+    description: Implement NURBS parametrization of the 2D test case (cantilever beam or equivalent). Verify patch with geometry plots.
+
+  # ── TO DO (Phase 2B — Full Order Model) ───────────────────────────────────
+  - title: "Phase 2B: Assemble IGA Full Order Model (FOM)"
+    status: To Do
+    priority: High
+    deadline: 2026-04-28
+    description: Assemble stiffness K(u) and mass M matrices. Implement Newton-Raphson + Newmark-beta integrator. Validate against analytical solution (error < 0.1%).
+
+  # ── TO DO (Phase 2C — Snapshots) ─────────────────────────────────────────
+  - title: "Phase 2C: Generate Snapshot Database"
+    status: To Do
+    priority: High
+    deadline: 2026-05-12
+    description: Run FOM across 25-point Latin Hypercube Sample of parameter space. Store as .npy files. Plot singular value decay to confirm low-dimensional manifold.
+
+  # ── TO DO (Phase 2D — POD ROM) ────────────────────────────────────────────
+  - title: "Phase 2D: Build Reduced Order Model (POD)"
+    status: To Do
+    priority: High
+    deadline: 2026-05-26
+    description: Apply SVD to snapshot matrix. Select r modes (99.9% energy). Project FOM equations. Validate on out-of-sample parameters (target error < 1%).
+
+  # ── TO DO (Phase 2E — Hyper-reduction) ────────────────────────────────────
+  - title: "Phase 2E: Implement & Compare Hyper-reduction (DEIM / ECS / ECSW)"
+    status: To Do
+    priority: High
+    deadline: 2026-06-09
+    description: Implement all three methods (DEIM, ECS, ECSW). Compare accuracy, wall-clock speedup (target 100x vs FOM), and stability. Document in docs/benchmarks.md.
+
+  # ── TO DO (Phase 2F — Online Phase) ───────────────────────────────────────
+  - title: "Phase 2F: Online ROM Query & JSON Export"
+    status: To Do
+    priority: High
+    deadline: 2026-06-16
+    description: Build online query script that returns displacement field for new parameter in < 1 second. Export as JSON for Digital Twin frontend.
+
+  # ── TO DO (Phase 3 — Digital Twin Frontend) ───────────────────────────────
+  - title: "Phase 4: Design Digital Twin Frontend"
     status: To Do
     priority: Medium
-    deadline: 2026-04-15
-    description: Create the wireframes and basic interactive viewer for the ROM output variables.
+    deadline: 2026-07-14
+    description: Build interactive viewer for ROM outputs. Parameter sliders, real-time displacement plot, error indicator. Connect to JSON export or Flask API.
+
+  # ── TO DO (Phase 4 — Physical Extension Note) ─────────────────────────────
+  - title: Write Physical Extension Design Note
+    status: To Do
+    priority: Low
+    deadline: 2026-07-21
+    description: Document what hardware, sensors, and protocols would be needed to connect the Digital Twin to a real physical model. Save in docs/physical_extension.md.
+
+  # ── TO DO (Phase 5 — Finalization) ────────────────────────────────────────
+  - title: Draft Final Internship Report
+    status: To Do
+    priority: High
+    deadline: 2026-08-17
+    description: Write the full technical report covering methodology, results, benchmarks, and pedagogical application. Follow LMSSC report template.
+
+  - title: Develop Pedagogical Tutorials
+    status: To Do
+    priority: Medium
+    deadline: 2026-08-24
+    description: Create Jupyter notebook tutorials guiding students through IGA → POD → ROM → Digital Twin pipeline.
