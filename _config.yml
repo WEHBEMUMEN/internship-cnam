@@ -1,6 +1,11 @@
+baseurl: "/internship-cnam"
+url: "https://wehbemumen.github.io"
+
 include:
   - cms
   - _data
   - _layouts
 
+# Ensure Jekyll handles JSON and YAML data correctly
 data_dir: _data
+exclude: [Gemfile, Gemfile.lock, .github, README.md]
