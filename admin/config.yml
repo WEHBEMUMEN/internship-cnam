@@ -1,6 +1,5 @@
 backend:
-  name: github
-  repo: WEHBEMUMEN/internship-cnam
+  name: git-gateway
   branch: main
 
 media_folder: "resources/uploads"
