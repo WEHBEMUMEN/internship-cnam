@@ -88,6 +88,10 @@ header {
   align-items: center;
 }
 
+.nav-links .home-link {
+  display: none; /* Hidden on Desktop */
+}
+
 .nav-links a {
   font-weight: 600;
   color: var(--text-secondary);
@@ -396,7 +400,15 @@ h1 span {
     align-items: center;
     z-index: 1000;
   }
-  
+
+  .nav-links .home-link {
+    display: flex; /* Show Home on Mobile */
+  }
+
+  .nav-links .github-link {
+    display: none; /* Hide GitHub on Mobile */
+  }
+
   .nav-links a {
     display: flex;
     flex-direction: column;
