@@ -4,9 +4,27 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Content Manager</title>
+    <!-- Hide the broken Netlify button and keep the Token button -->
+    <style>
+      /* Fallback CSS if custom classes match */
+      .login-button[data-provider="github"] { display: none !important; }
+    </style>
+    <script>
+      // Actively watch the Sveltia CMS UI rendering and hide the primary "Login with GitHub" button
+      const observer = new MutationObserver(() => {
+        document.querySelectorAll('button').forEach(btn => {
+          const text = btn.textContent.toLowerCase();
+          // Hide any button that says "sign in with netlify" or "login with github" but NOT "token"
+          if ((text.includes('github') || text.includes('netlify')) && !text.includes('token')) {
+            btn.style.display = 'none';
+          }
+        });
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    </script>
   </head>
   <body>
-    <!-- Sveltia CMS Drop-in -->
+    <!-- Decap / Sveltia CMS Drop-in -->
     <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
   </body>
 </html>
