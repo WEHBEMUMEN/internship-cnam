@@ -1,0 +1,25 @@
+backend:
+  name: github
+  repo: WEHBEMUMEN/internship-cnam
+  branch: main
+
+media_folder: "resources/uploads"
+public_folder: "resources/uploads"
+
+collections:
+  - name: "links"
+    label: "Download Links & Assets"
+    files:
+      - file: "_data/downloads.yml"
+        label: "Manage File Links"
+        name: "downloads"
+        fields:
+          - label: "Windows App Download Link (.zip or .exe)"
+            name: "app_download"
+            widget: "string"
+          - label: "Core Presentation (PDF Link)"
+            name: "core_pdf"
+            widget: "string"
+          - label: "Final Report (PDF Link)"
+            name: "final_report"
+            widget: "string"

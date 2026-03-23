@@ -1,3 +1,5 @@
+---
+---
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,9 +50,15 @@
           </div>
           <div class="card">
             <i class="fa-solid fa-file-pdf"></i>
-            <h3>Technical Reports</h3>
+            <h3>Core Presentation</h3>
+            <p>The main digital twin and ROM presentation slides.</p>
+            <a href="{{ site.data.downloads.core_pdf | default: '#' }}" target="_blank" class="card-link">Download PDF <i class="fa-solid fa-download"></i></a>
+          </div>
+          <div class="card">
+            <i class="fa-solid fa-file-pdf"></i>
+            <h3>Final Report</h3>
             <p>Collection of research drafts and final technical submissions.</p>
-            <a href="https://github.com/WEHBEMUMEN/internship-cnam/tree/main/docs" target="_blank" class="card-link">Browse Folder <i class="fa-solid fa-arrow-right"></i></a>
+            <a href="{{ site.data.downloads.final_report | default: '#' }}" target="_blank" class="card-link">Download PDF <i class="fa-solid fa-download"></i></a>
           </div>
         </div>
       </div>
