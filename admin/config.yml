@@ -44,15 +44,34 @@ collections:
   - name: "docs"
     label: "Manuals & Logs"
     files:
-      - file: "docs/weekly_log.md"
-        label: "Weekly Log Editor"
-        name: "weekly_log"
-        fields:
-          - {label: "Document Content", name: "body", widget: "markdown"}
       - file: "resources/reference_catalog.md"
         label: "Reference Catalog"
         name: "reference_catalog"
         fields:
           - {label: "Document Content", name: "body", widget: "markdown"}
+
+  - name: "weekly_log"
+    label: "Weekly Log"
+    label_singular: "Week"
+    folder: "_data/weeks"
+    create: true
+    slug: "week-{{fields.week_number}}"
+    extension: "yml"
+    format: "yaml"
+    fields:
+      - {label: "Week Number", name: "week_number", widget: "number", hint: "e.g. 1, 2, 3..."}
+      - {label: "Start Date", name: "start_date", widget: "datetime", type: "date", format: "YYYY-MM-DD"}
+      - {label: "End Date", name: "end_date", widget: "datetime", type: "date", format: "YYYY-MM-DD"}
+      - {label: "Primary Goal", name: "primary_goal", widget: "string"}
+      - label: "Tasks"
+        name: "tasks"
+        widget: "list"
+        fields:
+          - {label: "Task", name: "task", widget: "string"}
+          - {label: "Done?", name: "done", widget: "boolean", default: false}
+      - {label: "Supervisor Meeting Date", name: "meeting_date", widget: "datetime", type: "date", format: "YYYY-MM-DD", required: false}
+      - {label: "Questions to Ask", name: "questions", widget: "markdown", required: false}
+      - {label: "Notes / Action Items", name: "notes", widget: "markdown", required: false}
+
 
 

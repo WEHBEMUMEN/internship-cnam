@@ -1,0 +1,120 @@
+---
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Log | Digital Twin & ROM</title>
+  <link rel="stylesheet" href="/internship-cnam/index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="/internship-cnam/index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/internship-cnam/index.html"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="/internship-cnam/overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="/internship-cnam/repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="/internship-cnam/timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="/internship-cnam/tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+
+        <div class="section-head">
+          <span class="badge">PROGRESS TRACKING</span>
+          <h2 class="section-title">Weekly Log & Planner</h2>
+          <p class="section-sub">A structured weekly breakdown of goals, tasks, and supervisor meeting notes — managed via the CMS dashboard.</p>
+        </div>
+
+        {% assign weeks = site.data.weeks | sort: "week_number" | reverse %}
+
+        {% for week_file in weeks %}
+          {% assign week = week_file[1] %}
+          {% assign done_count = week.tasks | where: "done", true | size %}
+          {% assign total_count = week.tasks | size %}
+
+          <div class="week-card">
+            <div class="week-header">
+              <div class="week-title-group">
+                <span class="week-badge">Week {{ week.week_number }}</span>
+                <h3 class="week-title">{{ week.primary_goal }}</h3>
+                <p class="week-dates">
+                  <i class="fa-regular fa-calendar"></i>
+                  {{ week.start_date | date: "%b %d" }} – {{ week.end_date | date: "%b %d, %Y" }}
+                </p>
+              </div>
+              <div class="week-progress-ring" title="{{ done_count }}/{{ total_count }} tasks done">
+                <svg viewBox="0 0 36 36" class="circular-chart">
+                  <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  {% if total_count > 0 %}
+                    {% assign pct = done_count | times: 100 | divided_by: total_count %}
+                    <path class="circle" stroke-dasharray="{{ pct }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  {% endif %}
+                </svg>
+                <span class="ring-label">{{ done_count }}/{{ total_count }}</span>
+              </div>
+            </div>
+
+            <div class="week-body">
+
+              {% if week.tasks and week.tasks.size > 0 %}
+              <div class="week-section">
+                <h4><i class="fa-solid fa-clipboard-list"></i> Tasks</h4>
+                <ul class="week-tasks">
+                  {% for t in week.tasks %}
+                    <li class="{% if t.done %}done-task{% endif %}">
+                      <i class="fa-solid {% if t.done %}fa-circle-check{% else %}fa-circle{% endif %}"></i>
+                      {{ t.task }}
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+
+              {% if week.questions and week.questions != "" %}
+              <div class="week-section">
+                <h4><i class="fa-solid fa-comments"></i> Supervisor Meeting {% if week.meeting_date != "" %}— {{ week.meeting_date | date: "%B %d, %Y" }}{% endif %}</h4>
+                <div class="markdown-body" style="padding: 20px; margin-top: 0;">
+                  <strong>Questions to ask:</strong>
+                  {{ week.questions | markdownify }}
+                  {% if week.notes and week.notes != "" %}
+                  <strong>Notes & Action Items:</strong>
+                  {{ week.notes | markdownify }}
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
+            </div>
+          </div>
+
+        {% endfor %}
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam.</p>
+    </div>
+  </footer>
+
+</body>
+</html>
