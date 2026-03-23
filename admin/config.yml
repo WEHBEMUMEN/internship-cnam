@@ -38,7 +38,7 @@ collections:
               - {label: "Title", name: "title", widget: "string"}
               - {label: "Status", name: "status", widget: "select", options: ["To Do", "In Progress", "Done"]}
               - {label: "Priority", name: "priority", widget: "select", options: ["Low", "Medium", "High"]}
-              - {label: "Deadline", name: "deadline", widget: "date", format: "YYYY-MM-DD", required: false}
+              - {label: "Deadline", name: "deadline", widget: "datetime", type: "date", format: "YYYY-MM-DD", required: false}
               - {label: "Description", name: "description", widget: "markdown", required: false}
 
   - name: "docs"
