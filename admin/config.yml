@@ -41,3 +41,18 @@ collections:
               - {label: "Deadline", name: "deadline", widget: "date", format: "YYYY-MM-DD", required: false}
               - {label: "Description", name: "description", widget: "markdown", required: false}
 
+  - name: "docs"
+    label: "Manuals & Logs"
+    files:
+      - file: "docs/weekly_log.md"
+        label: "Weekly Log Editor"
+        name: "weekly_log"
+        fields:
+          - {label: "Document Content", name: "body", widget: "markdown"}
+      - file: "resources/reference_catalog.md"
+        label: "Reference Catalog"
+        name: "reference_catalog"
+        fields:
+          - {label: "Document Content", name: "body", widget: "markdown"}
+
+
