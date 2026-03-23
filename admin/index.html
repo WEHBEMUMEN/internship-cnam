@@ -10,27 +10,29 @@
       .login-button[data-provider="github"] { display: none !important; }
     </style>
     <script>
-      // Actively watch the Sveltia CMS UI rendering
-      const observer = new MutationObserver(() => {
-        let isLoginScreen = false;
+      // Failsafe polling to instantly hide the custom token box once the user logs in
+      setInterval(() => {
+        const hash = window.location.hash || '';
+        const customTokenBox = document.getElementById('custom-token-box');
         
+        if (customTokenBox) {
+          // If the Sveltia CMS routes to the dashboard, hide the generating link
+          if (hash.includes('/collections') || hash.includes('/search') || hash.includes('/edit') || hash.includes('/entries') || hash.includes('/media')) {
+            customTokenBox.style.display = 'none';
+          } else {
+            customTokenBox.style.display = 'block';
+          }
+        }
+      }, 500);
+
+      // Actively watch the Sveltia CMS UI rendering to hide the primary "Login with GitHub" button
+      const observer = new MutationObserver(() => {
         document.querySelectorAll('button').forEach(btn => {
           const text = btn.textContent.toLowerCase();
-          // Hide any button that says "sign in with netlify" or "login with github" but NOT "token"
           if ((text.includes('github') || text.includes('netlify')) && !text.includes('token')) {
             btn.style.display = 'none';
           }
-          // Detect if we are currently looking at the login buttons
-          if (text.includes('sign in') || text.includes('token')) {
-            isLoginScreen = true;
-          }
         });
-
-        // Hide our custom token generator link if the user has successfully logged in
-        const customTokenBox = document.getElementById('custom-token-box');
-        if (customTokenBox) {
-          customTokenBox.style.display = isLoginScreen ? 'block' : 'none';
-        }
       });
       observer.observe(document.documentElement, { childList: true, subtree: true });
     </script>
