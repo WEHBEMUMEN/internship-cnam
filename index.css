@@ -379,26 +379,38 @@ h1 span {
   h1 { font-size: 2.75rem; }
   
   header {
-    padding: 20px 0;
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 0;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    z-index: 1000;
   }
   
+  .logo {
+    display: none; /* Hide top logo to make it a pure bottom navigation bar */
+  }
+
   .header-container {
+    padding: 0;
     gap: 0;
   }
   
   .nav-links {
-    position: fixed;
-    bottom: 0;
-    left: 0;
+    position: static;
     width: 100%;
-    background: var(--glass);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
+    background: transparent;
+    backdrop-filter: none;
+    border-top: none;
     padding: 12px 0;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    z-index: 1000;
   }
 
   .nav-links .home-link {
