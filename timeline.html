@@ -37,46 +37,103 @@
           <h2 class="section-title">Implementation Timeline</h2>
           <p class="section-sub">A detailed 6-month roadmap from research to core development.</p>
         </div>
-        <div class="timeline">
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-              <div class="timeline-date">Phase 1: March 2026</div>
-              <h3>Research & Planning</h3>
-              <p>State-of-the-Art assessment (IGA, ROM, Digital Twin). Software requirements definition and initial literature review.</p>
+        <div class="gantt-container">
+          <div class="gantt-chart">
+            <!-- Header -->
+            <div class="gantt-header">PHASE</div>
+            <div class="gantt-header">MAR</div>
+            <div class="gantt-header">APR</div>
+            <div class="gantt-header">MAY</div>
+            <div class="gantt-header">JUN</div>
+            <div class="gantt-header">JUL</div>
+            <div class="gantt-header">AUG</div>
+
+            <!-- Phase 1 -->
+            <div class="gantt-row">
+              <div class="gantt-label">1. Research</div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">Planning</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="gantt-row">
+              <div class="gantt-label">2. Core Logic</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">Computational</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="gantt-row">
+              <div class="gantt-label">3. Physical</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">CAD Design</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="gantt-row">
+              <div class="gantt-label">4. Digital Twin</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell" style="grid-column: span 2;">
+                <div class="gantt-bar" style="width: 100%;">Integration</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="gantt-row">
+              <div class="gantt-label">5. Finalization</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">Finalization</div>
+              </div>
             </div>
           </div>
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-              <div class="timeline-date">Phase 2: April 2026</div>
-              <h3>Computational Core</h3>
-              <p>Definition of 2D/3D parameterized test cases. Generating the ROM basis and validating the reduced model strategy.</p>
-            </div>
+        </div>
+
+        <div style="margin-top: 60px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+          <div class="gantt-bar-info">
+            <h4>1. Research & Planning</h4>
+            <p>State-of-the-Art assessment (IGA, ROM, Digital Twin). Software requirements definition and initial literature review.</p>
           </div>
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-              <div class="timeline-date">Phase 3: May 2026</div>
-              <h3>Physical Prototypes</h3>
-              <p>CAD design (FreeCAD/SolidWorks) and 3D printing of structural models for the digital twin set-up.</p>
-            </div>
+          <div class="gantt-bar-info">
+            <h4>2. Computational Core</h4>
+            <p>Definition of 2D/3D parameterized test cases. Generating the ROM basis and validating the reduced model strategy.</p>
           </div>
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-              <div class="timeline-date">Phase 4: June - July 2026</div>
-              <h3>Digital Twin Integration</h3>
-              <p>App UI development and real-time virtual environment scaling. Connecting physical and virtual set-ups with hybrid logic.</p>
-            </div>
+          <div class="gantt-bar-info">
+            <h4>3. Physical Prototypes</h4>
+            <p>CAD design (FreeCAD/SolidWorks) and 3D printing of structural models for the digital twin set-up.</p>
           </div>
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-content">
-              <div class="timeline-date">Phase 5: August 2026</div>
-              <h3>Finalization & Papers</h3>
-              <p>Developing pedagogical tutorials and environments. Drafting final research papers and internship conclusions.</p>
-            </div>
+          <div class="gantt-bar-info">
+            <h4>4. Digital Twin Integration</h4>
+            <p>App UI development and real-time virtual environment scaling. Connecting physical and virtual set-ups with hybrid logic.</p>
+          </div>
+          <div class="gantt-bar-info">
+            <h4>5. Finalization & Papers</h4>
+            <p>Developing pedagogical tutorials and environments. Drafting final research papers and internship conclusions.</p>
           </div>
         </div>
       </div>
