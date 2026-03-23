@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Content Manager</title>
+    <!-- Hide the broken Netlify button and keep the Token button -->
+    <style>
+      /* Fallback CSS if custom classes match */
+      .login-button[data-provider="github"] { display: none !important; }
+    </style>
+    <script>
+      // Hide the generate token link as soon as the user navigates anywhere inside the CMS
+      setInterval(() => {
+        const customTokenBox = document.getElementById('custom-token-box');
+        if (customTokenBox) {
+          // If ANY hash exists the user is past the login screen — hide the button
+          customTokenBox.style.display = (window.location.hash && window.location.hash.length > 1) ? 'none' : 'block';
+        }
+      }, 300);
+
+      // Hide the broken "Login with GitHub" / Netlify button
+      const observer = new MutationObserver(() => {
+        document.querySelectorAll('button').forEach(btn => {
+          const text = btn.textContent.toLowerCase();
+          if ((text.includes('github') || text.includes('netlify')) && !text.includes('token')) {
+            btn.style.display = 'none';
+          }
+        });
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    </script>
+  </head>
+  <body>
+    <!-- Persistent Quick Link to Generate Token -->
+    <div id="custom-token-box" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif;">
+      <p style="color: #64748b; font-size: 14px; margin-bottom: 12px; font-weight: 500;">Need a new login token?</p>
+      <a href="https://github.com/settings/tokens/new?scopes=repo,user&description=Digital+Twin+CMS+Login" target="_blank" style="background: var(--accent, #2563eb); color: white; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px;">
+        Generate GitHub Token 🔑
+      </a>
+    </div>
+
+    <!-- Decap / Sveltia CMS Drop-in -->
+    <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
+  </body>
+</html>
