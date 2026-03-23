@@ -1,0 +1,9 @@
+{
+  "title": "Large Displacements",
+  "category": "Methodology",
+  "body": "Large displacements refer to structural deformations where the displacement magnitude significantly alters the geometry of the system. This introduces geometric nonlinearity into the governing equations, requiring advanced numerical methods like IGA and ROM to solve accurately in a reasonable timeframe.",
+  "related": [
+    { "slug": "Nonlinear Dynamics" },
+    { "slug": "Isogeometric Analysis" }
+  ]
+}

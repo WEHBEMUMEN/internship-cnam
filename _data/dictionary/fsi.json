@@ -1,0 +1,9 @@
+{
+  "title": "Fluid-Structure Interaction",
+  "category": "Methodology",
+  "body": "Fluid-Structure Interaction (FSI) is the study of the interaction between a movable or deformable structure and an internal or surrounding fluid flow. This project aims to create a Digital Twin set-up designed for pedagogical applications in FSI and nonlinear dynamics courses.",
+  "related": [
+    { "slug": "Digital Twin" },
+    { "slug": "Nonlinear Dynamics" }
+  ]
+}

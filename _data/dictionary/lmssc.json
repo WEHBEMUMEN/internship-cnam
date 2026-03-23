@@ -1,0 +1,9 @@
+{
+  "title": "LMSSC",
+  "category": "Lab",
+  "body": "The Laboratory of Structural Mechanics and Coupled Systems (LMSSC) is a research unit at Cnam (Paris) dedicated to studying the dynamic behavior of complex systems. Its research focuses on multi-physics coupling, vibration control, and advanced numerical modelling, including the Digital Twin methodology explored in this project.",
+  "related": [
+    { "slug": "Cnam" },
+    { "slug": "Digital Twin" }
+  ]
+}

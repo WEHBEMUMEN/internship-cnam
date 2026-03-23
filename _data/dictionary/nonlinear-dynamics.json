@@ -1,0 +1,9 @@
+{
+  "title": "Nonlinear Dynamics",
+  "category": "Methodology",
+  "body": "Nonlinear dynamics is the study of systems governed by equations that do not satisfy the principle of superposition. In structural mechanics, this often involves large displacements or material nonlinearities. This project focuses on solving these complex dynamic problems efficiently using ROM and IGA.",
+  "related": [
+    { "slug": "Reduced Order Modelling" },
+    { "slug": "Large Displacements" }
+  ]
+}
