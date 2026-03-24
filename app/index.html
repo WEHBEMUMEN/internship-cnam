@@ -117,8 +117,36 @@
             </div>
           </div>
 
+          <!-- 1D Degree Elevation -->
+          <div class="card reveal reveal-up delay-1">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-chart-line" style="font-size: 2rem; color: var(--accent);"></i>
+                <span class="badge" style="font-size: 0.7rem;">Phase 1.2</span>
+            </div>
+            <h3>Degree Elevation & Fitting</h3>
+            <p>Automated B-spline curve shape preservation matching polynomial degree increments (p-refinement).</p>
+            <div class="app-actions">
+              <a href="iga-sim-1.2/index.html" class="btn btn-primary btn-center" style="width: 100%;">Launch 1.2 Engine <i class="fa-solid fa-arrow-up-right-dots" style="margin-left: 8px;"></i></a>
+              <button onclick="openModal('modal-1_2')" class="btn btn-outline btn-center" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></button>
+            </div>
+          </div>
+
+          <!-- Knot Insertion -->
+          <div class="card reveal reveal-up delay-2">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-scissors" style="font-size: 2rem; color: var(--accent);"></i>
+                <span class="badge" style="font-size: 0.7rem;">Phase 1.3</span>
+            </div>
+            <h3>Knot Insertion (h-refinement)</h3>
+            <p>Dynamically inserting knots into the parameter space without altering the curve (Boehm's algorithm approach).</p>
+            <div class="app-actions">
+              <a href="iga-sim-1.3/index.html" class="btn btn-primary btn-center" style="width: 100%;">Launch 1.3 Engine <i class="fa-solid fa-plus" style="margin-left: 8px;"></i></a>
+              <button onclick="openModal('modal-1_3')" class="btn btn-outline btn-center" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></button>
+            </div>
+          </div>
+
           <!-- Placeholder for 2D Expansion -->
-          <div class="card reveal reveal-up delay-1" style="opacity: 0.7;">
+          <div class="card reveal reveal-up delay-2" style="opacity: 0.7;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-bezier-curve" style="font-size: 2rem; color: var(--text-secondary);"></i>
                 <span class="badge" style="font-size: 0.7rem; background: #334155;">Phase 2</span>
@@ -166,6 +194,43 @@
         <li><strong>Dynamic Interaction</strong>: Dragging control points $\mathbf{P}_i$ in the UI performs a real-time re-evaluation of the curve mapping.</li>
         <li><strong>Rational Pull</strong>: Increasing $w_i$ "pulls" the curve closer to control point $\mathbf{P}_i$, a key feature of NURBS over standard B-splines.</li>
       </ul>
+    </div>
+  </div>
+
+  <div id="modal-1_2" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('modal-1_2')">&times;</span>
+      <h2 style="margin-bottom: 20px; color: var(--accent); font-weight: 800;">Degree Elevation & Least Squares Fitting</h2>
+      <h3>1. Theoretical Goal</h3>
+      <p>The goal of <strong>p-refinement</strong> (Degree Elevation) is to increase the polynomial degree $p$ of the curve to $p+1$ while keeping the exact same physical geometry $\mathbf{x}(\xi)$.</p>
+      
+      <h3>2. Least Squares Projection</h3>
+      <p>This engine uses a Least Squares optimization algorithm to interpolate the new control points $\mathbf{P}_i'$ given a dense array of sampled points $S_k$ from the geometric curve:</p>
+      <div class="math-block">
+        $$\min \sum_{k=0}^{M} \left( \sum_{i=0}^{n'} R_{i, p+1}(\xi_k) \mathbf{P}_i' - S_k \right)^2$$
+      </div>
+
+      <h3>3. Why it matters</h3>
+      <p>In Isogeometric Analysis, higher order polynomials give better differential accuracy for measuring stress matrices, but manually creating smooth splines from scratch is difficult. Elevating degree dynamically handles this automatically.</p>
+    </div>
+  </div>
+
+  <div id="modal-1_3" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('modal-1_3')">&times;</span>
+      <h2 style="margin-bottom: 20px; color: var(--accent); font-weight: 800;">Knot Insertion (h-refinement)</h2>
+      <h3>1. Concept</h3>
+      <p>Injecting a new parametric span $\bar{\xi}$ immediately within the Knot Vector array $\Xi$ inherently fragments the parametric basis, spawning a brand new control point computationally without mutating the core physical curve structural shape in anyway. This handles physical localized density configurations.</p>
+      
+      <h3>2. Mathematical Approach</h3>
+      <p>A new span $\bar{\xi} \in [u_k, u_{k+1})$ interpolates exactly according to:</p>
+      <div class="math-block">
+        $$\mathbf{P}'_i = (1 - \alpha_i)\mathbf{P}_{i-1} + \alpha_i \mathbf{P}_i$$
+      </div>
+      <p>where $\alpha_i$ are explicitly defined interpolation fractional parameters scaling via evaluating exact local knots elements boundaries.</p>
+      
+      <h3>3. Practical Significance</h3>
+      <p>It allows mathematical engineers and digital twin structural analysts to selectively subdivide and pack denser nodes tightly around an area of high physical pressure/stress without having to blindly compute and expand polynomial computational cost complexity around standard stable uniform domains globally.</p>
     </div>
   </div>
 

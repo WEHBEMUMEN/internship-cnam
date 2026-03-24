@@ -48,6 +48,16 @@ class App {
             this.rebuildKnotVector();
         });
 
+        const insertKnotSlider = document.getElementById('insert-knot');
+        const insertBtn = document.getElementById('insert-btn');
+        insertKnotSlider.addEventListener('input', (e) => {
+            document.getElementById('knot-val').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        insertBtn.addEventListener('click', () => {
+            const uBar = parseFloat(insertKnotSlider.value);
+            this.insertKnot(uBar);
+        });
+
         cpInput.addEventListener('input', (e) => {
             this.n = parseInt(e.target.value);
             document.getElementById('cp-val').textContent = this.n;
@@ -143,73 +153,53 @@ class App {
             
             const originalN = this.n;
             const originalP = this.p;
+
+            // Boehm's Injection limits
+            const injections = [10, 50, 100, 250, 500];
+            const k_results = [];
             
-            // --- Test 1: Vary Control Points (Fix Degree at Current) ---
-            const n_refinements = [10, 50, 100, 200, 500];
-            const n_results = [];
-            
-            for (let n of n_refinements) {
-                this.n = n;
-                this.p = originalP;
+            for (let K of injections) {
+                this.n = 6; this.p = 2; // Baseline
                 this.points = this.initPoints();
                 this.weights = new Array(this.n).fill(1.0);
                 this.knotVector.update(this.n, this.p);
                 
-                let frames = 0;
-                let angle = 0;
+                await new Promise(r => setTimeout(r, 50));
                 
-                const startTime = performance.now();
-                await new Promise(resolve => {
-                    const loop = () => {
-                        if (frames >= 60) { resolve(); return; }
-                        this.weights = this.weights.map((w, i) => 1.0 + 0.8 * Math.sin(angle + i));
-                        this.points.forEach((pt, i) => { pt.y = 0.5 + 0.3 * Math.sin(angle * 2 + i); });
-                        this.render(); 
-                        angle += 0.2;
-                        frames++;
-                        requestAnimationFrame(loop);
-                    };
-                    requestAnimationFrame(loop);
-                });
-                
-                const endTime = performance.now();
-                n_results.push(Math.floor(60 / ((endTime - startTime) / 1000)));
-            }
-            
-            // --- Test 2: Vary Degree (Fix Control Points at safe constant N=50) ---
-            const p_refinements = [2, 3, 4, 5, 6]; 
-            const fixedN = Math.max(originalN, 15);
-            const p_results = [];
-
-            for (let p of p_refinements) {
-                this.p = p;
-                this.n = fixedN; 
-                this.points = this.initPoints();
-                this.weights = new Array(this.n).fill(1.0);
-                this.knotVector.update(this.n, this.p);
-                
-                let frames = 0;
-                let angle = 0;
-                
-                const startTime = performance.now();
-                await new Promise(resolve => {
-                    const loop = () => {
-                        if (frames >= 60) { resolve(); return; }
-                        this.weights = this.weights.map((w, i) => 1.0 + 0.8 * Math.sin(angle + i));
-                        this.points.forEach((pt, i) => { pt.y = 0.5 + 0.3 * Math.sin(angle * 2 + i); });
-                        this.render(); 
-                        angle += 0.2;
-                        frames++;
-                        requestAnimationFrame(loop);
-                    };
-                    requestAnimationFrame(loop);
-                });
-                
-                const endTime = performance.now();
-                p_results.push(Math.floor(60 / ((endTime - startTime) / 1000)));
+                const t0 = performance.now();
+                // Direct math insertion bypassing DOM for real solver metrics
+                for(let i = 0; i < K; i++) {
+                    const uBar = 0.1 + (Math.random() * 0.8);
+                    const p = this.p;
+                    const n = this.n;
+                    const U = this.knotVector.values;
+                    const Pw = this.points.map((pt, idx) => { const w = this.weights[idx]; return { x: pt.x * w, y: pt.y * w, w: w }; });
+                    
+                    let k = -1;
+                    for (let j = 0; j < U.length - 1; j++) { if (uBar >= U[j] && uBar < U[j+1]) { k = j; break; } }
+                    if (k === -1) continue;
+                    
+                    const newN = n + 1;
+                    const newU = [...U]; newU.splice(k + 1, 0, uBar);
+                    const newPw = [];
+                    for (let j = 0; j < newN; j++) {
+                        if (j <= k - p) newPw.push(Pw[j]);
+                        else if (j >= k + 1) newPw.push(Pw[j - 1]);
+                        else {
+                            const alpha = (uBar - U[j]) / (U[j+p] - U[j]);
+                            const pt0 = Pw[j-1], pt1 = Pw[j];
+                            newPw.push({ x: (1 - alpha) * pt0.x + alpha * pt1.x, y: (1 - alpha) * pt0.y + alpha * pt1.y, w: (1 - alpha) * pt0.w + alpha * pt1.w });
+                        }
+                    }
+                    this.n = newN; this.knotVector.values = newU;
+                    this.points = newPw.map(pt => ({ x: pt.x / pt.w, y: pt.y / pt.w }));
+                    this.weights = newPw.map(pt => pt.w);
+                }
+                const t1 = performance.now();
+                k_results.push((t1 - t0).toFixed(1));
             }
 
-            // Restore Safe State
+            // Restore
             this.n = originalN;
             this.p = originalP;
             this.points = this.initPoints();
@@ -219,34 +209,22 @@ class App {
             this.render();
             
             isBenchmarking = false;
-            benchmarkBtn.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Benchmark Test';
+            benchmarkBtn.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Test Knot Injection';
             
-            // Generate Unified Multi-Variable Report
             const reportDiv = document.createElement('div');
-            reportDiv.style.cssText = "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--sidebar-bg); padding:30px; border-radius:16px; border:1px solid var(--accent); z-index:9999; box-shadow:0 20px 40px rgba(0,0,0,0.8); min-width: 360px;";
+            reportDiv.style.cssText = "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--sidebar-bg); padding:30px; border-radius:16px; border:1px solid var(--accent); z-index:9999; box-shadow:0 20px 40px rgba(0,0,0,0.8); min-width: 400px;";
             reportDiv.innerHTML = `
-                <h3 style="margin-top:0; margin-bottom: 24px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 12px; font-size:1.4rem;">Isolated Architecture Benchmark</h3>
+                <h3 style="margin-top:0; margin-bottom: 24px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 12px; font-size:1.4rem;">Boehm's Knot Insertion Matrix</h3>
                 
-                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 1: Scaling Nodes (Fixed p=${originalP})</h4>
+                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test: Flooding Injection Array</h4>
                 <ul style="list-style:none; padding:0; margin-bottom: 24px;">
-                    ${n_refinements.map((n, i) => `
+                    ${injections.map((K, i) => `
                         <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace;">
-                            <span style="color:var(--text-secondary);">Nodes (n=${n})</span>
-                            <span style="color:var(--success); font-weight:bold;">${n_results[i]} FPS</span>
+                            <span style="color:var(--text-secondary);">Injected knots (${K})</span>
+                            <span style="color:var(--success); font-weight:bold;">${k_results[i]} ms</span>
                         </li>
                     `).join('')}
                 </ul>
-
-                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 2: Scaling Degree (Fixed n=${fixedN})</h4>
-                <ul style="list-style:none; padding:0; margin-bottom: 30px;">
-                    ${p_refinements.map((p, i) => `
-                        <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace;">
-                            <span style="color:var(--text-secondary);">Degree (p=${p})</span>
-                            <span style="color:var(--success); font-weight:bold;">${p_results[i]} FPS</span>
-                        </li>
-                    `).join('')}
-                </ul>
-
                 <button class="btn btn-primary" style="width:100%; font-weight:bold;" onclick="this.parentElement.remove()">Close Constraints Report</button>
             `;
             document.body.appendChild(reportDiv);
@@ -262,6 +240,58 @@ class App {
             requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
+    }
+
+    insertKnot(uBar) {
+        const p = this.p;
+        const n = this.n;
+        const U = this.knotVector.values;
+        const Pw = this.points.map((pt, i) => {
+            const w = this.weights[i];
+            return { x: pt.x * w, y: pt.y * w, w: w };
+        });
+
+        let k = -1;
+        for (let i = 0; i < U.length - 1; i++) {
+            if (uBar >= U[i] && uBar < U[i+1]) {
+                k = i; break;
+            }
+        }
+        if (k === -1) return; 
+
+        const newN = n + 1;
+        const newU = [...U];
+        newU.splice(k + 1, 0, uBar);
+
+        const newPw = [];
+        for (let i = 0; i < newN; i++) {
+            if (i <= k - p) {
+                newPw.push(Pw[i]);
+            } else if (i >= k + 1) {
+                newPw.push(Pw[i - 1]);
+            } else {
+                const alpha = (uBar - U[i]) / (U[i+p] - U[i]);
+                const pt0 = Pw[i-1];
+                const pt1 = Pw[i];
+                newPw.push({
+                    x: (1 - alpha) * pt0.x + alpha * pt1.x,
+                    y: (1 - alpha) * pt0.y + alpha * pt1.y,
+                    w: (1 - alpha) * pt0.w + alpha * pt1.w
+                });
+            }
+        }
+
+        this.n = newN;
+        this.knotVector.values = newU;
+        this.points = newPw.map(pt => ({ x: pt.x / pt.w, y: pt.y / pt.w }));
+        this.weights = newPw.map(pt => pt.w);
+
+        document.getElementById('cp-count').max = Math.max(15, this.n + 5);
+        document.getElementById('cp-count').value = this.n;
+        document.getElementById('cp-val').textContent = this.n;
+        this.updateKnotUI();
+        this.updateWeightsUI();
+        this.render();
     }
 
     rebuildKnotVector() {

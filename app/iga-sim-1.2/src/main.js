@@ -43,9 +43,11 @@ class App {
         const viewCurveBtn = document.getElementById('view-curve');
 
         degreeInput.addEventListener('input', (e) => {
-            this.p = parseInt(e.target.value);
-            document.getElementById('degree-val').textContent = this.p;
-            this.rebuildKnotVector();
+            const newP = parseInt(e.target.value);
+            if (newP !== this.p) {
+                this.elevateDegree(newP);
+                document.getElementById('degree-val').textContent = this.p;
+            }
         });
 
         cpInput.addEventListener('input', (e) => {
@@ -127,7 +129,7 @@ class App {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(definition, null, 2));
             const dlAnchor = document.createElement('a');
             dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", "nurbs_definition.json");
+            dlAnchor.setAttribute("download", "nurbs_interpolated_definition.json");
             document.body.appendChild(dlAnchor);
             dlAnchor.click();
             dlAnchor.remove();
@@ -143,73 +145,46 @@ class App {
             
             const originalN = this.n;
             const originalP = this.p;
+
+            // Test 1: Vary M (Fix p)
+            const m_refinements = [50, 100, 250, 500, 1000];
+            const fixedPForM = Math.min(this.p + 2, 6);
+            const m_results = [];
             
-            // --- Test 1: Vary Control Points (Fix Degree at Current) ---
-            const n_refinements = [10, 50, 100, 200, 500];
-            const n_results = [];
-            
-            for (let n of n_refinements) {
-                this.n = n;
-                this.p = originalP;
+            for (let m of m_refinements) {
+                this.n = originalN; this.p = originalP;
                 this.points = this.initPoints();
                 this.weights = new Array(this.n).fill(1.0);
                 this.knotVector.update(this.n, this.p);
                 
-                let frames = 0;
-                let angle = 0;
+                await new Promise(r => setTimeout(r, 50)); 
                 
-                const startTime = performance.now();
-                await new Promise(resolve => {
-                    const loop = () => {
-                        if (frames >= 60) { resolve(); return; }
-                        this.weights = this.weights.map((w, i) => 1.0 + 0.8 * Math.sin(angle + i));
-                        this.points.forEach((pt, i) => { pt.y = 0.5 + 0.3 * Math.sin(angle * 2 + i); });
-                        this.render(); 
-                        angle += 0.2;
-                        frames++;
-                        requestAnimationFrame(loop);
-                    };
-                    requestAnimationFrame(loop);
-                });
-                
-                const endTime = performance.now();
-                n_results.push(Math.floor(60 / ((endTime - startTime) / 1000)));
+                const t0 = performance.now();
+                this.elevateDegree(fixedPForM, m);
+                const t1 = performance.now();
+                m_results.push((t1 - t0).toFixed(1));
             }
-            
-            // --- Test 2: Vary Degree (Fix Control Points at safe constant N=50) ---
-            const p_refinements = [2, 3, 4, 5, 6]; 
-            const fixedN = Math.max(originalN, 15);
+
+            // Test 2: Vary P (Fix M)
+            const p_refinements = [2, 3, 4, 5, 6];
+            const fixedM = 200;
             const p_results = [];
 
             for (let p of p_refinements) {
-                this.p = p;
-                this.n = fixedN; 
+                this.n = 6; this.p = 2; 
                 this.points = this.initPoints();
                 this.weights = new Array(this.n).fill(1.0);
                 this.knotVector.update(this.n, this.p);
                 
-                let frames = 0;
-                let angle = 0;
+                await new Promise(r => setTimeout(r, 50));
                 
-                const startTime = performance.now();
-                await new Promise(resolve => {
-                    const loop = () => {
-                        if (frames >= 60) { resolve(); return; }
-                        this.weights = this.weights.map((w, i) => 1.0 + 0.8 * Math.sin(angle + i));
-                        this.points.forEach((pt, i) => { pt.y = 0.5 + 0.3 * Math.sin(angle * 2 + i); });
-                        this.render(); 
-                        angle += 0.2;
-                        frames++;
-                        requestAnimationFrame(loop);
-                    };
-                    requestAnimationFrame(loop);
-                });
-                
-                const endTime = performance.now();
-                p_results.push(Math.floor(60 / ((endTime - startTime) / 1000)));
+                const t0 = performance.now();
+                this.elevateDegree(p, fixedM);
+                const t1 = performance.now();
+                p_results.push((t1 - t0).toFixed(1));
             }
 
-            // Restore Safe State
+            // Restore
             this.n = originalN;
             this.p = originalP;
             this.points = this.initPoints();
@@ -219,34 +194,32 @@ class App {
             this.render();
             
             isBenchmarking = false;
-            benchmarkBtn.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Benchmark Test';
+            benchmarkBtn.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Test Matrix Solver';
             
-            // Generate Unified Multi-Variable Report
             const reportDiv = document.createElement('div');
-            reportDiv.style.cssText = "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--sidebar-bg); padding:30px; border-radius:16px; border:1px solid var(--accent); z-index:9999; box-shadow:0 20px 40px rgba(0,0,0,0.8); min-width: 360px;";
+            reportDiv.style.cssText = "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--sidebar-bg); padding:30px; border-radius:16px; border:1px solid var(--accent); z-index:9999; box-shadow:0 20px 40px rgba(0,0,0,0.8); min-width: 400px;";
             reportDiv.innerHTML = `
-                <h3 style="margin-top:0; margin-bottom: 24px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 12px; font-size:1.4rem;">Isolated Architecture Benchmark</h3>
+                <h3 style="margin-top:0; margin-bottom: 24px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 12px; font-size:1.4rem;">Linear Algebra Benchmark</h3>
                 
-                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 1: Scaling Nodes (Fixed p=${originalP})</h4>
+                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 1: Scaling Samples (Fixed p=${fixedPForM})</h4>
                 <ul style="list-style:none; padding:0; margin-bottom: 24px;">
-                    ${n_refinements.map((n, i) => `
+                    ${m_refinements.map((m, i) => `
                         <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace;">
-                            <span style="color:var(--text-secondary);">Nodes (n=${n})</span>
-                            <span style="color:var(--success); font-weight:bold;">${n_results[i]} FPS</span>
+                            <span style="color:var(--text-secondary);">Samples (M=${m})</span>
+                            <span style="color:var(--success); font-weight:bold;">${m_results[i]} ms</span>
                         </li>
                     `).join('')}
                 </ul>
 
-                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 2: Scaling Degree (Fixed n=${fixedN})</h4>
+                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 2: Scaling Degree (Fixed M=${fixedM})</h4>
                 <ul style="list-style:none; padding:0; margin-bottom: 30px;">
                     ${p_refinements.map((p, i) => `
                         <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace;">
                             <span style="color:var(--text-secondary);">Degree (p=${p})</span>
-                            <span style="color:var(--success); font-weight:bold;">${p_results[i]} FPS</span>
+                            <span style="color:var(--success); font-weight:bold;">${p_results[i]} ms</span>
                         </li>
                     `).join('')}
                 </ul>
-
                 <button class="btn btn-primary" style="width:100%; font-weight:bold;" onclick="this.parentElement.remove()">Close Constraints Report</button>
             `;
             document.body.appendChild(reportDiv);
@@ -262,6 +235,105 @@ class App {
             requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
+    }
+
+    elevateDegree(newP, M = 150) {
+        // Collect samples from current curve
+        const samples = [];
+        for(let i=0; i<=M; i++) {
+            const xi = i/M;
+            samples.push(Curve.evaluate(xi, this.p, this.knotVector.values, this.points, this.weights));
+        }
+
+        // Increase control points to maintain shape accuracy
+        const newN = this.n + Math.abs(newP - this.p) * 2; 
+        const newKnotVector = new KnotVector(newN, newP);
+        const newU = newKnotVector.values;
+        const newWeights = new Array(newN).fill(1.0);
+
+        // Build A matrix (M+1 x newN)
+        const A = [];
+        for(let i=0; i<=M; i++) {
+            const xi = i/M;
+            A.push(NURBS.evaluateAll(newN, newP, xi, newU, newWeights));
+        }
+
+        // Build ATA (newN x newN) and ATB (newN x 2)
+        const ATA = Array(newN).fill(0).map(()=>Array(newN).fill(0));
+        const ATBx = Array(newN).fill(0);
+        const ATBy = Array(newN).fill(0);
+
+        for(let i=0; i<newN; i++) {
+            for(let j=0; j<newN; j++) {
+                let sum = 0;
+                for(let k=0; k<=M; k++) { sum += A[k][i] * A[k][j]; }
+                ATA[i][j] = sum;
+            }
+            let sumX = 0, sumY = 0;
+            for(let k=0; k<=M; k++) {
+                sumX += A[k][i] * samples[k].x;
+                sumY += A[k][i] * samples[k].y;
+            }
+            ATBx[i] = sumX;
+            ATBy[i] = sumY;
+        }
+
+        // Solve ATA * X = ATBx
+        const solve = (matA, matB) => {
+            let n = matA.length;
+            let A = matA.map(r => [...r]);
+            let B = [...matB];
+            for (let i = 0; i < n; i++) {
+                let maxEl = Math.abs(A[i][i]), maxRow = i;
+                for (let k = i + 1; k < n; k++) {
+                    if (Math.abs(A[k][i]) > maxEl) { maxEl = Math.abs(A[k][i]); maxRow = k; }
+                }
+                for (let k = i; k < n; k++) {
+                    let tmp = A[maxRow][k]; A[maxRow][k] = A[i][k]; A[i][k] = tmp;
+                }
+                let tmpB = B[maxRow]; B[maxRow] = B[i]; B[i] = tmpB;
+                
+                for (let k = i + 1; k < n; k++) {
+                    if (A[i][i] === 0) continue;
+                    let c = -A[k][i] / A[i][i];
+                    for (let j = i; j < n; j++) {
+                        if (i === j) A[k][j] = 0; else A[k][j] += c * A[i][j];
+                    }
+                    B[k] += c * B[i];
+                }
+            }
+            let x = new Array(n).fill(0);
+            for (let i = n - 1; i > -1; i--) {
+                if (A[i][i] === 0) { x[i] = 0; continue; }
+                let sum = 0;
+                for (let k = i + 1; k < n; k++) { sum += A[i][k] * x[k]; }
+                x[i] = (B[i] - sum) / A[i][i];
+            }
+            return x;
+        };
+
+        const newX = solve(ATA, ATBx);
+        const newY = solve(ATA, ATBy);
+
+        const newPoints = [];
+        for(let i=0; i<newN; i++) { newPoints.push({x: newX[i], y: newY[i]}); }
+        if (newN > 0 && samples.length > 0) {
+           newPoints[0] = {x: samples[0].x, y: samples[0].y};
+           newPoints[newN - 1] = {x: samples[M].x, y: samples[M].y};
+        }
+
+        this.points = newPoints;
+        this.n = newN;
+        this.weights = newWeights;
+        this.p = newP;
+        this.knotVector = newKnotVector;
+        
+        document.getElementById('cp-count').max = Math.max(15, this.n + 5); 
+        document.getElementById('cp-count').value = this.n;
+        document.getElementById('cp-val').textContent = this.n;
+        this.updateKnotUI();
+        this.updateWeightsUI();
+        this.render();
     }
 
     rebuildKnotVector() {
