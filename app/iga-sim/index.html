@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IGA Sim | 1D Core Engine</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <i class="fa-solid fa-cube logo-icon"></i>
+                <h1>IGA Simulator</h1>
+                <span class="badge">v0.1.0-alpha</span>
+            </header>
+
+            <section class="controls">
+                <div class="control-group">
+                    <label for="degree">Degree ($p$)</label>
+                    <input type="range" id="degree" min="0" max="5" value="2" step="1">
+                    <span class="value-display" id="degree-val">2</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="knot-count">Control Points ($n$)</label>
+                    <input type="range" id="cp-count" min="3" max="15" value="6" step="1">
+                    <span class="value-display" id="cp-val">6</span>
+                </div>
+
+                <div class="control-group">
+                    <label>Knot Vector ($\Xi$)</label>
+                    <div id="knot-editor" class="knot-editor">
+                        <!-- Knots will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="reset-btn" class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                    <button id="download-json" class="btn btn-primary"><i class="fa-solid fa-download"></i> Export JSON</button>
+                </div>
+            </section>
+
+            <footer class="sidebar-footer">
+                <p>&copy; 2026 LMSSC | Digital Twin Project</p>
+            </footer>
+        </aside>
+
+        <main class="viewport">
+            <div class="canvas-header">
+                <div class="title-group">
+                    <h2>B-Spline Basis Functions</h2>
+                    <p>Interactive visualization of $N_{i,p}(\xi)$</p>
+                </div>
+                <div class="status-group">
+                    <span class="status-item"><i class="fa-solid fa-bolt"></i> <span id="fps">60</span> FPS</span>
+                </div>
+            </div>
+            
+            <div class="canvas-wrapper">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+
+            <div class="info-panel">
+                <div class="math-card">
+                    <h4>Cox-de Boor recursion</h4>
+                    <code>N_{i,p}(\xi) = \frac{\xi-\xi_i}{\xi_{i+p}-\xi_i}N_{i,p-1}(\xi) + \dots</code>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
