@@ -98,7 +98,38 @@ tasks:
     deadline: 2026-06-16
     description: Build online query script that returns displacement field for new parameter in < 1 second. Export as JSON for Digital Twin frontend.
 
-  # ── TO DO (Phase 3 — Digital Twin Frontend) ───────────────────────────────
+  # ── TO DO (Phase 3 — Real-Time Application Roadmap) ──────────────────────────
+  - title: "Phase 3.1: 1D Core Engine"
+    status: To Do
+    priority: High
+    deadline: 2026-06-30
+    description: "Setup parametric space, generate basis functions, and evaluate derivatives for the 1D case."
+
+  - title: "Phase 3.2: Real-Time Benchmarking"
+    status: To Do
+    priority: High
+    deadline: 2026-07-07
+    description: "Profile the evaluation loop against existing libraries (IGAFem, GeoPDEs) to ensure 24 fps capability."
+
+  - title: "Phase 3.3: 1D UI Prototype"
+    status: To Do
+    priority: Medium
+    deadline: 2026-07-14
+    description: "Build interactive interface with time/parameter sliders and a live plot for the 1D simulation."
+
+  - title: "Phase 3.4: 2D NURBS Expansion"
+    status: To Do
+    priority: High
+    deadline: 2026-07-28
+    description: "Introduce control points, weights, and NURBS mapping to physical space for 2D geometry."
+
+  - title: "Phase 3.5: Final Real-Time App"
+    status: To Do
+    priority: High
+    deadline: 2026-08-10
+    description: "Implement full 2D dynamic simulation with interactive control points running at 24 fps."
+
+  # ── TO DO (Phase 4 — Digital Twin Frontend Development) ───────────────────────
   - title: "Phase 4: Design Digital Twin Frontend"
     status: To Do
     priority: Medium

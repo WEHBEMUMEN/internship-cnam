@@ -1,7 +1,7 @@
 {
   "title": "Knots",
   "category": "Technology",
-  "body": "In the context of B-splines and NURBS, knots are a sequence of parameter values that determine where and how the control points affect the curve. They are essentially the 'joints' of the curve. The spacing of the knots can be uniform or non-uniform, which gives NURBS its 'Non-Uniform' property and allows for more flexible and precise curves.",
+  "body": "In the context of B-splines and NURBS, knots are a sequence of parameter values that determine where and how the control points affect the curve. They are defined in the 1D parametric space as $\\Xi = \\{\\xi_1, \\xi_2, ..., \\xi_{n+p+1}\\}$. They are essentially the 'joints' of the curve. The spacing of the knots can be uniform or non-uniform, which gives NURBS its 'Non-Uniform' property and allows for more flexible and precise curves.",
   "related": [
     { "slug": "b-splines" },
     { "slug": "nurbs" }
