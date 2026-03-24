@@ -1,0 +1,9 @@
+{
+  "title": "Finite Element Method (FEM)",
+  "category": "Numerical Method",
+  "body": "The Finite Element Method (FEM) is a numerical technique for solving problems which are described by partial differential equations or can be formulated as functional minimization. It involves dividing a complex problem domain into smaller, simpler parts called finite elements. The simple equations that model these finite elements are then assembled into a larger system of equations that models the entire problem.",
+  "related": [
+    { "slug": "Isogeometric Analysis" },
+    { "slug": "Continuum Mechanics" }
+  ]
+}

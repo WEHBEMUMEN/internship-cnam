@@ -1,0 +1,16 @@
+{
+  "title": "NURBS (Non-Uniform Rational B-Splines)",
+  "category": "Technology",
+  "body": "NURBS are a mathematical model commonly used in computer graphics for generating and representing curves and surfaces. They offer a great deal of flexibility and precision, which has made them a standard in Computer-Aided Design (CAD).
+
+Let's break down the acronym:
+
+*   **B-Splines (Basis Splines):** These are piecewise polynomial curves that are smooth and can be easily controlled. The shape of the curve is defined by a set of control points.
+*   **Rational:** This means that the B-splines are defined as a ratio of two polynomials. This allows for the precise representation of conic sections like circles and ellipses.
+*   **Non-Uniform:** This means that the spacing between the 'knots' (parameters that define the start and end points of the spline segments) can be uneven. This allows for more control over the shape of the curve, including the ability to create sharp corners.
+
+In the context of this project, NURBS are the core of Isogeometric Analysis (IGA). By using the same NURBS basis to represent both the geometry (from CAD) and the solution field (for analysis), IGA can achieve higher accuracy and a more streamlined workflow compared to traditional Finite Element Methods that require a separate meshing step.",
+  "related": [
+    { "slug": "Isogeometric Analysis" }
+  ]
+}

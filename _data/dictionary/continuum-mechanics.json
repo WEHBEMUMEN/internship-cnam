@@ -1,0 +1,18 @@
+{
+  "title": "Continuum Mechanics",
+  "category": "Foundational Theory",
+  "body": "Continuum mechanics is a branch of mechanics that deals with the analysis of the kinematics and the mechanical behavior of materials modeled as a continuous mass rather than as discrete particles. The fundamental assumption is that the substance of the object completely fills the space it occupies.
+
+This abstraction allows us to describe the bulk properties of a material without having to consider the behavior of every single atom or molecule. Instead, we can use differential equations to describe the material's behavior.
+
+Key concepts in continuum mechanics include:
+
+*   **Stress:** A measure of the internal forces acting within a deformable body. It is a tensor quantity, meaning it has both magnitude and direction.
+*   **Strain:** A measure of the deformation of a body. It describes the relative displacement between particles in the body.
+
+By applying the fundamental laws of physics, such as conservation of mass, momentum, and energy, to a continuous medium, we can derive the governing equations of motion for that material. These equations form the basis for more specialized fields like fluid dynamics and solid mechanics, and are the foundation for numerical methods like the Finite Element Method.",
+  "related": [
+    { "slug": "Finite Element Method" },
+    { "slug": "Nonlinear Dynamics" }
+  ]
+}
