@@ -117,7 +117,10 @@ header {
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   padding: 6px 14px;
   background: var(--accent-soft);
   color: var(--accent);
@@ -155,6 +158,11 @@ h1 span {
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1;
   padding: 14px 32px;
   border-radius: 12px;
   font-weight: 700;
@@ -342,6 +350,7 @@ h1 span {
   box-shadow: 0 4px 12px var(--accent-glow);
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 0 12px;
   color: white;
   font-size: 0.75rem;
@@ -408,6 +417,10 @@ h1 span {
 }
 
 .column-title .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   background: var(--bg-color);
   color: var(--text-secondary);
   font-size: 0.8rem;
@@ -452,6 +465,10 @@ h1 span {
 }
 
 .task-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   padding: 4px 10px;
   border-radius: 6px;
   text-transform: uppercase;
