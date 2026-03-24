@@ -141,21 +141,21 @@
       <h2 style="margin-bottom: 20px; color: var(--accent); font-weight: 800;">Mathematical Foundation</h2>
       
       <h3>1. B-spline Basis Functions</h3>
-      <p>The foundation of IGA is the **Cox-de Boor formula**, which defines parametric basis functions of degree $p$ recursively:</p>
+      <p>The foundation of IGA is the <strong>Cox-de Boor formula</strong>, which defines parametric basis functions of degree $p$ recursively:</p>
       
       <div class="math-block">
         $$N_{i,p}(\xi) = \frac{\xi - \xi_i}{\xi_{i+p} - \xi_i} N_{i,p-1}(\xi) + \frac{\xi_{i+p+1} - \xi}{\xi_{i+p+1} - \xi_{i+1}} N_{i+1,p-1}(\xi)$$
       </div>
 
       <h3>2. From B-Splines to NURBS</h3>
-      <p>To exactly represent conic sections (circles, ellipses) and add local control through weights $w_i$, we use **Non-Uniform Rational B-Splines (NURBS)**:</p>
+      <p>To exactly represent conic sections (circles, ellipses) and add local control through weights $w_i$, we use <strong>Non-Uniform Rational B-Splines (NURBS)</strong>:</p>
       
       <div class="math-block">
         $$R_{i,p}(\xi) = \frac{N_{i,p}(\xi) w_i}{\sum_{j=0}^{n} N_{j,p}(\xi) w_j}$$
       </div>
 
       <h3>3. Geometry Construction</h3>
-      <p>The final physical curve $\mathbf{C}(\xi)$ is the linear combination of these rational basis functions and a set of **Control Points** $\mathbf{P}_i$:</p>
+      <p>The final physical curve $\mathbf{C}(\xi)$ is the linear combination of these rational basis functions and a set of <strong>Control Points</strong> $\mathbf{P}_i$:</p>
 
       <div class="math-block">
         $$\mathbf{C}(\xi) = \sum_{i=0}^{n} R_{i,p}(\xi) \mathbf{P}_i$$
@@ -163,8 +163,8 @@
 
       <h3>Software Logic</h3>
       <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.8;">
-        <li>**Dynamic Interaction**: Dragging control points $\mathbf{P}_i$ in the UI performs a real-time re-evaluation of the curve mapping.</li>
-        <li>**Rational Pull**: Increasing $w_i$ "pulls" the curve closer to control point $\mathbf{P}_i$, a key feature of NURBS over standard B-splines.</li>
+        <li><strong>Dynamic Interaction</strong>: Dragging control points $\mathbf{P}_i$ in the UI performs a real-time re-evaluation of the curve mapping.</li>
+        <li><strong>Rational Pull</strong>: Increasing $w_i$ "pulls" the curve closer to control point $\mathbf{P}_i$, a key feature of NURBS over standard B-splines.</li>
       </ul>
     </div>
   </div>

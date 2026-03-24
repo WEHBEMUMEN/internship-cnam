@@ -86,14 +86,14 @@
         try {
           const res = await fetch(`_data/dictionary/${term.id}.json`);
           const data = await res.json();
-          grid.innerHTML += `
-            <div class="card reveal reveal-up">
-              <span class="badge" style="font-size: 0.7rem; margin-bottom: 10px;">${data.category}</span>
-              <h3>${data.title}</h3>
-              <p>${data.body.substring(0, 120)}...</p>
-              <a href="term.html?id=${term.id}" class="card-link">Read more <i class="fa-solid fa-arrow-right"></i></a>
-            </div>
-          `;
+            grid.innerHTML += `
+              <div class="card reveal reveal-up">
+                <span class="badge" style="font-size: 0.7rem; margin-bottom: 10px;">${data.category}</span>
+                <h3>${data.title}</h3>
+                <p>${data.body.replace(/\*\*/g, '').substring(0, 140)}...</p>
+                <a href="term.html?id=${term.id}" class="card-link">Read more <i class="fa-solid fa-arrow-right"></i></a>
+              </div>
+            `;
         } catch (e) {
           console.error(`Failed to load term: ${term.id}`, e);
         }
