@@ -71,6 +71,18 @@
         
         document.title = `${data.title} | Project Dictionary`;
 
+        let bodyText = data.body.replace(/\\n/g, '\n');
+        const mathBlocks = [];
+        bodyText = bodyText.replace(/\$\$[\s\S]*?\$\$|\$.*?\$/g, (match) => {
+          mathBlocks.push(match);
+          return `@@@MATHBLOCK${mathBlocks.length - 1}@@@`;
+        });
+        
+        let parsedHtml = marked.parse(bodyText);
+        mathBlocks.forEach((block, i) => {
+          parsedHtml = parsedHtml.replace(`@@@MATHBLOCK${i}@@@`, block);
+        });
+
         content.innerHTML = `
           <div class="section-head" style="text-align: left; margin-bottom: 40px;">
             <a href="dictionary.html" class="card-link" style="margin-bottom: 20px; display: inline-flex;"><i class="fa-solid fa-arrow-left"></i> Back to Dictionary</a>
@@ -79,7 +91,7 @@
           </div>
           
           <div class="markdown-body" style="background: white; border: none; padding: 0;">
-            ${marked.parse(data.body.replace(/\\n/g, '\n'))}
+            ${parsedHtml}
           </div>
 
           ${data.related && data.related.length > 0 ? `
