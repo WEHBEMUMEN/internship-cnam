@@ -542,6 +542,11 @@ h1 span {
   text-decoration: underline;
 }
 
+.markdown-body strong, .markdown-body b {
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
 .markdown-body ul, .markdown-body ol {
   margin-bottom: 1.25em;
   padding-left: 2em;

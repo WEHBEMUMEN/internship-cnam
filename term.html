@@ -79,7 +79,7 @@
           </div>
           
           <div class="markdown-body" style="background: white; border: none; padding: 0;">
-            ${marked.parse(data.body)}
+            ${marked.parse(data.body.replace(/\\n/g, '\n'))}
           </div>
 
           ${data.related && data.related.length > 0 ? `
@@ -96,6 +96,20 @@
       } catch (e) {
         content.innerHTML = `<h2>Error: ${e.message}</h2><p>Go back to the <a href="dictionary.html">dictionary</a>.</p>`;
       }
+
+      setTimeout(() => {
+        if (window.renderMathInElement) {
+          window.renderMathInElement(document.body, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false},
+              {left: '\\(', right: '\\)', display: false},
+              {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false
+          });
+        }
+      }, 100);
 
       if (window.initRevealAnimations) {
         window.initRevealAnimations();
