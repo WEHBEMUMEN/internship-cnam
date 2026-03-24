@@ -5,12 +5,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App UI | Digital Twin & ROM</title>
+  <title>Simulation Hub | Digital Twin & ROM</title>
   <link rel="stylesheet" href="../index.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(8px);
+      overflow-y: auto;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      margin: 5% auto;
+      padding: 40px;
+      border: 1px solid var(--border);
+      width: 90%;
+      max-width: 800px;
+      border-radius: 16px;
+      position: relative;
+    }
+    .close-modal {
+      position: absolute;
+      top: 20px; right: 20px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .math-block {
+      background: #0f172a;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+  </style>
 </head>
 <body>
 
@@ -23,7 +61,7 @@
       <nav class="nav-links">
         <a href="../index.html" class="home-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
         <a href="../overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
-        <a href="../repository.html" style="color: var(--accent);"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="../repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
         <a href="../timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
         <a href="../tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
         <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
@@ -36,19 +74,37 @@
   <main>
     <section class="section">
       <div class="container">
-        <div class="section-head">
-          <span class="badge">VIRTUAL ENVIRONMENT</span>
-          <h2 class="section-title">Digital Twin Application</h2>
-          <p class="section-sub">The interactive interface for real-time virtual simulations.</p>
+        <div class="section-head reveal reveal-up">
+          <span class="badge">SIMULATION HUB</span>
+          <h2 class="section-title">Development Versions</h2>
+          <p class="section-sub">Interactive prototypes and core engines for the Digital Twin project.</p>
         </div>
         
-        <div class="grid" style="grid-template-columns: 1fr;">
-          <div class="card" style="text-align: center;">
-            <i class="fa-solid fa-laptop-code"></i>
-            <h3>Interactive Frontend</h3>
-            <p>Direct access to the frontend application for the digital twin visualization.</p>
-            <div style="margin-top: 20px;">
-              <a href="{{ site.data.downloads.app_download | default: '#' }}" target="_blank" class="btn btn-primary">Download Local App <i class="fa-solid fa-download"></i></a>
+        <div class="grid">
+          <!-- 1D Core Engine -->
+          <div class="card reveal reveal-up">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-wave-square" style="font-size: 2rem; color: var(--accent);"></i>
+                <span class="badge" style="font-size: 0.7rem;">Phase 1</span>
+            </div>
+            <h3>1D Core Engine</h3>
+            <p>Real-time visualization of B-spline basis functions using the Cox-de Boor recursion. High-performance Canvas rendering.</p>
+            <div style="margin-top: 25px; display: grid; gap: 10px;">
+              <a href="iga-sim/index.html" class="btn btn-primary" style="width: 100%;">Launch App <i class="fa-solid fa-rocket"></i></a>
+              <button onclick="openModal('modal-1d')" class="btn btn-outline" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open"></i></button>
+            </div>
+          </div>
+
+          <!-- Placeholder for 2D Expansion -->
+          <div class="card reveal reveal-up delay-1" style="opacity: 0.7;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-bezier-curve" style="font-size: 2rem; color: var(--text-secondary);"></i>
+                <span class="badge" style="font-size: 0.7rem; background: #334155;">Phase 2</span>
+            </div>
+            <h3>2D Expansion (Upcoming)</h3>
+            <p>Introducing NURBS mapping to physical space, control point grids, and surface rendering logic.</p>
+            <div style="margin-top: 25px;">
+              <button class="btn btn-outline" disabled style="width: 100%; cursor: not-allowed;">Coming Soon</button>
             </div>
           </div>
         </div>
@@ -56,11 +112,54 @@
     </section>
   </main>
 
+  <!-- Modals -->
+  <div id="modal-1d" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('modal-1d')">&times;</span>
+      <h2 style="margin-bottom: 20px;">1D Core Engine: Mathematical Basis</h2>
+      
+      <h3>B-spline Basis Functions</h3>
+      <p>The core of Isogeometric Analysis (IGA) relies on B-spline basis functions, which are defined recursively using the **Cox-de Boor formula**:</p>
+      
+      <div class="math-block">
+        $$N_{i,p}(\xi) = \frac{\xi - \xi_i}{\xi_{i+p} - \xi_i} N_{i,p-1}(\xi) + \frac{\xi_{i+p+1} - \xi}{\xi_{i+p+1} - \xi_{i+1}} N_{i+1,p-1}(\xi)$$
+      </div>
+
+      <h3>How it works</h3>
+      <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.8;">
+        <li>**Recursive Evaluation**: The engine implements this recurrence formula in JavaScript. For a degree $p$, it takes $O(p^2)$ operations per evaluation point.</li>
+        <li>**Knot Vector ($\Xi$)**: The distribution of knots determines the continuity and range of influence of each basis function. We use *Open Uniform* knot vectors to ensure interpolation at the boundaries.</li>
+        <li>**Real-time Rendering**: To achieve 60 FPS, the app pre-calculates the basis functions across a fine sampling grid (200+ points) and renders them to an HTML5 Canvas using direct stroke paths.</li>
+      </ul>
+
+      <p>This 1D engine serves as the foundational "Online Phase" for the Digital Twin, allowing for instantaneous updates when structural parameters change.</p>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="container">
       <p>&copy; 2026 WEHBEMUMEN & LMSSC, Cnam.</p>
     </div>
   </footer>
+
+  <script src="../scripts.js"></script>
+  <script>
+    function openModal(id) {
+      document.getElementById(id).style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      if (event.target.className === 'modal') {
+        event.target.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    }
+  </script>
 
 </body>
 </html>
