@@ -1,0 +1,8 @@
+{
+  "title": "B-Splines (Basis Splines)",
+  "category": "Technology",
+  "body": "B-Splines (Basis Splines) are a type of curve used in computer graphics and design. They are defined by a set of control points which act like 'magnets' to pull the curve into shape. Unlike some other types of curves, B-splines do not necessarily pass through their control points. One of the main advantages of B-splines is 'local control', meaning that moving one control point only affects a small part of the curve, making them very flexible for design.",
+  "related": [
+    { "slug": "nurbs" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": "Meshing",
+  "category": "Technology",
+  "body": "Meshing is the process of breaking down a complex geometric model into many small, simple shapes, creating a 'mesh'. This is a crucial step in traditional Finite Element Analysis (FEA) because it allows complex problems to be solved by computers. However, this process can be time-consuming and is one of the bottlenecks that Isogeometric Analysis (IGA) aims to eliminate.",
+  "related": [
+    { "slug": "finite-element-method" },
+    { "slug": "isogeometric-analysis" }
+  ]
+}
