@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IGA Sim | 1D Core Engine</title>
+    <title>IGA Sim | Phase 1.5 k-refinement</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,22 +17,27 @@
     <div class="app-container">
         <aside class="sidebar">
             <header class="sidebar-header">
-                <i class="fa-solid fa-cube logo-icon"></i>
-                <h1>IGA Simulator</h1>
-                <span class="badge">v0.1.0-alpha</span>
+                <i class="fa-solid fa-layer-group logo-icon"></i>
+                <h1>k-refinement Engine</h1>
+                <span class="badge">Phase 1.5</span>
             </header>
 
             <section class="controls">
                 <div class="control-group">
-                    <label for="degree">Degree ($p$)</label>
-                    <input type="range" id="degree" min="0" max="5" value="2" step="1">
-                    <span class="value-display" id="degree-val">2</span>
+                    <label for="degree">Target Degree ($p$)</label>
+                    <input type="range" id="degree" min="2" max="6" value="3" step="1">
+                    <span class="value-display" id="degree-val">3</span>
                 </div>
 
                 <div class="control-group">
-                    <label for="cp-count">Control Points ($n$)</label>
-                    <input type="range" id="cp-count" min="3" max="15" value="6" step="1">
-                    <span class="value-display" id="cp-val">6</span>
+                    <label for="knots-count">Insert Knots ($K$)</label>
+                    <input type="range" id="knots-count" min="1" max="100" value="10" step="1">
+                    <span class="value-display" id="knots-val">10</span>
+                </div>
+
+                <div class="control-group" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                    <button id="execute-k-refinement" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-bolt"></i> Execute k-Refinement</button>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 10px; line-height: 1.4;">Elevates structural degree $p$ first natively, then floods exact mathematical knots to guarantee extreme $C^{p-1}$ continuity everywhere.</p>
                 </div>
 
                 <div class="control-group">
@@ -66,8 +71,8 @@
                     <input type="file" id="import-json-file" accept=".json" style="display: none;">
                     
                     <div style="flex-basis: 100%; border-top: 1px solid var(--border); margin-top: 15px; padding-top: 15px;">
-                        <span style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:8px;"><strong>Core Engine Benchmark:</strong> Sequentially bounds and isolates recursion complexity scaling tests against purely structural mapping density limits.</span>
-                        <button id="benchmark-btn" class="btn btn-primary" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-gauge-high"></i> Core Performance Test</button>
+                        <span style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:8px;"><strong>Continuity Benchmark:</strong> Maps exact limits bound resolving dense algorithmic limits computing high structural density.</span>
+                        <button id="benchmark-btn" class="btn btn-primary" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-gauge-high"></i> Benchmark Meshing</button>
                     </div>
                 </div>
             </section>

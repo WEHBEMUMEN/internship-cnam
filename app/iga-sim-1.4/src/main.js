@@ -15,6 +15,7 @@ class App {
         
         // Interaction State
         this.draggingPoint = -1;
+        this.evalPoint = 0.5;
         
         this.setupEventListeners();
         this.updateKnotUI();
@@ -41,6 +42,7 @@ class App {
         const resetBtn = document.getElementById('reset-btn');
         const viewBasisBtn = document.getElementById('view-basis');
         const viewCurveBtn = document.getElementById('view-curve');
+        const evalPointInput = document.getElementById('eval-point');
 
         degreeInput.addEventListener('input', (e) => {
             this.p = parseInt(e.target.value);
@@ -56,6 +58,14 @@ class App {
             this.rebuildKnotVector();
             this.updateWeightsUI();
         });
+
+        if (evalPointInput) {
+            evalPointInput.addEventListener('input', (e) => {
+                this.evalPoint = parseFloat(e.target.value);
+                document.getElementById('eval-val').textContent = this.evalPoint.toFixed(2);
+                this.render();
+            });
+        }
 
         viewBasisBtn.addEventListener('click', () => {
             this.mode = 'basis';
@@ -131,32 +141,6 @@ class App {
             document.body.appendChild(dlAnchor);
             dlAnchor.click();
             dlAnchor.remove();
-        });
-
-        document.getElementById('import-json-btn').addEventListener('click', () => document.getElementById('import-json-file').click());
-        document.getElementById('import-json-file').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    this.p = data.degree || data.p;
-                    this.n = data.controlPointsCount || data.n;
-                    this.points = data.points;
-                    this.weights = data.weights;
-                    this.knotVector.update(this.n, this.p);
-                    this.knotVector.values = data.knots;
-                    document.getElementById('degree').value = this.p;
-                    document.getElementById('degree-val').textContent = this.p;
-                    document.getElementById('cp-count').value = this.n;
-                    document.getElementById('cp-val').textContent = this.n;
-                    this.updateKnotUI();
-                    this.updateWeightsUI();
-                    this.render();
-                } catch (err) { alert("Invalid Matrix Data Frame format."); }
-            };
-            reader.readAsText(file);
         });
 
         const benchmarkBtn = document.getElementById('benchmark-btn');
@@ -334,6 +318,7 @@ class App {
         } else {
             this.plot.drawControlPolygon(this.points, this.draggingPoint);
             this.plot.drawCurve(this.p, this.knotVector.values, this.points, this.weights, Curve);
+            this.plot.drawCalculusVectors(this.evalPoint, this.p, this.knotVector.values, this.points, this.weights, Curve);
         }
     }
 }
