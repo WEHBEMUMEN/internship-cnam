@@ -89,3 +89,56 @@ export class BasisFunctions {
         return results;
     }
 }
+
+export class NURBS {
+    /**
+     * Evaluates all rational basis functions at parameter xi
+     * @param {number} n - Number of control points
+     * @param {number} p - Degree
+     * @param {number} xi - Parameter
+     * @param {Array} U - Knot vector
+     * @param {Array} weights - Array of weights w_i
+     */
+    static evaluateAll(n, p, xi, U, weights) {
+        const N = BasisFunctions.evaluateAll(n, p, xi, U);
+        const R = new Array(n).fill(0);
+        
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+            sum += N[i] * weights[i];
+        }
+
+        if (sum > 0) {
+            for (let i = 0; i < n; i++) {
+                R[i] = (N[i] * weights[i]) / sum;
+            }
+        }
+
+        return R;
+    }
+}
+
+export class Curve {
+    /**
+     * Evaluates the physical curve point C(xi)
+     * @param {number} xi - Parameter
+     * @param {number} p - Degree
+     * @param {Array} U - Knot vector
+     * @param {Array} points - Array of {x, y} control points
+     * @param {Array} weights - Array of weights
+     */
+    static evaluate(xi, p, U, points, weights) {
+        const n = points.length;
+        const R = NURBS.evaluateAll(n, p, xi, U, weights);
+        
+        let x = 0;
+        let y = 0;
+        
+        for (let i = 0; i < n; i++) {
+            x += R[i] * points[i].x;
+            y += R[i] * points[i].y;
+        }
+        
+        return { x, y };
+    }
+}

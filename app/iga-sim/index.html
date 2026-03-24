@@ -30,9 +30,24 @@
                 </div>
 
                 <div class="control-group">
-                    <label for="knot-count">Control Points ($n$)</label>
+                    <label for="cp-count">Control Points ($n$)</label>
                     <input type="range" id="cp-count" min="3" max="15" value="6" step="1">
                     <span class="value-display" id="cp-val">6</span>
+                </div>
+
+                <div class="control-group">
+                    <label>View Mode</label>
+                    <div class="toggle-group">
+                        <button id="view-basis" class="btn btn-tab active">Basis</button>
+                        <button id="view-curve" class="btn btn-tab">Curve</button>
+                    </div>
+                </div>
+
+                <div class="control-group" id="weights-section">
+                    <label>Weights ($w_i$)</label>
+                    <div id="weights-editor" class="weights-editor">
+                        <!-- Weights will be added here dynamically -->
+                    </div>
                 </div>
 
                 <div class="control-group">

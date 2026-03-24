@@ -23,14 +23,20 @@
       overflow-y: auto;
     }
     .modal-content {
-      background: var(--card-bg);
+      background: #1e293b; /* Lighter background */
       margin: 5% auto;
       padding: 40px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--accent); /* Glowing border */
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
       width: 90%;
       max-width: 800px;
-      border-radius: 16px;
+      border-radius: 24px;
       position: relative;
+      color: #f8fafc; /* Force light text */
+    }
+    .modal-content p, .modal-content li {
+      color: #cbd5e1; /* Soft grey for body text */
+      font-size: 1.05rem;
     }
     .close-modal {
       position: absolute;
@@ -40,16 +46,30 @@
       color: var(--text-secondary);
       transition: color 0.2s;
     }
-    .close-modal:hover { color: white; }
+    .close-modal:hover { color: var(--accent); }
     .math-block {
-      background: #0f172a;
+      background: #020617; /* Very dark for math contrast */
       padding: 24px;
       border-radius: 12px;
       margin: 24px 0;
       overflow-x: auto;
-      border: 1px solid rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: white;
     }
-    h3 { margin-top: 30px; margin-bottom: 15px; color: var(--accent); }
+    h3 { margin-top: 35px; margin-bottom: 15px; color: var(--accent); font-weight: 800; font-size: 1.4rem; }
+    
+    /* Centering buttons */
+    .app-actions {
+      margin-top: 25px;
+      display: grid;
+      gap: 12px;
+    }
+    .btn-center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -87,13 +107,13 @@
           <div class="card reveal reveal-up">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-wave-square" style="font-size: 2rem; color: var(--accent);"></i>
-                <span class="badge" style="font-size: 0.7rem;">Phase 1</span>
+                <span class="badge" style="font-size: 0.7rem;">Phase 1.1</span>
             </div>
-            <h3>1D Core Engine</h3>
-            <p>Real-time visualization of B-spline basis functions using the Cox-de Boor recursion. High-performance Canvas rendering.</p>
-            <div style="margin-top: 25px; display: grid; gap: 10px;">
-              <a href="iga-sim/index.html" class="btn btn-primary" style="width: 100%;">Launch App <i class="fa-solid fa-rocket"></i></a>
-              <button onclick="openModal('modal-1d')" class="btn btn-outline" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open"></i></button>
+            <h3>1D Core Engine (NURBS)</h3>
+            <p>Interactive visualization of B-spline and NURBS basis functions. Direct manipulation of control points and weights.</p>
+            <div class="app-actions">
+              <a href="iga-sim/index.html" class="btn btn-primary btn-center" style="width: 100%;">Launch Simulation <i class="fa-solid fa-rocket" style="margin-left: 8px;"></i></a>
+              <button onclick="openModal('modal-1d')" class="btn btn-outline btn-center" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></button>
             </div>
           </div>
 
@@ -103,10 +123,10 @@
                 <i class="fa-solid fa-bezier-curve" style="font-size: 2rem; color: var(--text-secondary);"></i>
                 <span class="badge" style="font-size: 0.7rem; background: #334155;">Phase 2</span>
             </div>
-            <h3>2D Expansion (Upcoming)</h3>
-            <p>Introducing NURBS mapping to physical space, control point grids, and surface rendering logic.</p>
-            <div style="margin-top: 25px;">
-              <button class="btn btn-outline" disabled style="width: 100%; cursor: not-allowed;">Coming Soon</button>
+            <h3>2D Mapping (Upcoming)</h3>
+            <p>NURBS surface evaluation and mapping to physical manifolds for structural analysis.</p>
+            <div class="app-actions">
+              <button class="btn btn-outline btn-center" disabled style="width: 100%; cursor: not-allowed;">Coming Soon</button>
             </div>
           </div>
         </div>
@@ -118,23 +138,34 @@
   <div id="modal-1d" class="modal">
     <div class="modal-content">
       <span class="close-modal" onclick="closeModal('modal-1d')">&times;</span>
-      <h2 style="margin-bottom: 20px;">1D Core Engine: Mathematical Basis</h2>
+      <h2 style="margin-bottom: 20px; color: var(--accent); font-weight: 800;">Mathematical Foundation</h2>
       
-      <h3>B-spline Basis Functions</h3>
-      <p>The core of Isogeometric Analysis (IGA) relies on B-spline basis functions, which are defined recursively using the **Cox-de Boor formula**:</p>
+      <h3>1. B-spline Basis Functions</h3>
+      <p>The foundation of IGA is the **Cox-de Boor formula**, which defines parametric basis functions of degree $p$ recursively:</p>
       
       <div class="math-block">
         $$N_{i,p}(\xi) = \frac{\xi - \xi_i}{\xi_{i+p} - \xi_i} N_{i,p-1}(\xi) + \frac{\xi_{i+p+1} - \xi}{\xi_{i+p+1} - \xi_{i+1}} N_{i+1,p-1}(\xi)$$
       </div>
 
-      <h3>Technical Implementation</h3>
-      <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.8;">
-        <li>**Recursive Evaluation**: The engine implements this recurrence formula in JavaScript. For a degree $p$, it takes $O(p^2)$ operations per evaluation point.</li>
-        <li>**Knot Vector ($\Xi$)**: The distribution of knots determines the continuity and range of influence of each basis function. We use *Open Uniform* knot vectors to ensure interpolation at the boundaries.</li>
-        <li>**Real-time Rendering**: To achieve 60 FPS, the app pre-calculates the basis functions across a fine sampling grid (200+ points) and renders them to an HTML5 Canvas using direct stroke paths.</li>
-      </ul>
+      <h3>2. From B-Splines to NURBS</h3>
+      <p>To exactly represent conic sections (circles, ellipses) and add local control through weights $w_i$, we use **Non-Uniform Rational B-Splines (NURBS)**:</p>
+      
+      <div class="math-block">
+        $$R_{i,p}(\xi) = \frac{N_{i,p}(\xi) w_i}{\sum_{j=0}^{n} N_{j,p}(\xi) w_j}$$
+      </div>
 
-      <p>This 1D engine serves as the foundational "Online Phase" for the Digital Twin, allowing for instantaneous updates when structural parameters change.</p>
+      <h3>3. Geometry Construction</h3>
+      <p>The final physical curve $\mathbf{C}(\xi)$ is the linear combination of these rational basis functions and a set of **Control Points** $\mathbf{P}_i$:</p>
+
+      <div class="math-block">
+        $$\mathbf{C}(\xi) = \sum_{i=0}^{n} R_{i,p}(\xi) \mathbf{P}_i$$
+      </div>
+
+      <h3>Software Logic</h3>
+      <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.8;">
+        <li>**Dynamic Interaction**: Dragging control points $\mathbf{P}_i$ in the UI performs a real-time re-evaluation of the curve mapping.</li>
+        <li>**Rational Pull**: Increasing $w_i$ "pulls" the curve closer to control point $\mathbf{P}_i$, a key feature of NURBS over standard B-splines.</li>
+      </ul>
     </div>
   </div>
 

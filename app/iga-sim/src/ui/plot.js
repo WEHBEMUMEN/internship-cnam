@@ -91,4 +91,89 @@ export class BasisPlot {
             this.ctx.fill();
         }
     }
+
+    /**
+     * Draws the physical NURBS curve C(xi)
+     */
+    drawCurve(p, knots, points, weights, CurveEngine) {
+        const { width, height } = this.canvas;
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 4;
+        this.ctx.lineJoin = 'round';
+        this.ctx.setLineDash([]); // Ensure solid line
+
+        this.ctx.beginPath();
+        let first = true;
+
+        for (let xi = 0; xi <= 1; xi += 0.002) {
+            const pt = CurveEngine.evaluate(xi, p, knots, points, weights);
+            // In 1D, pt.x is parameter, pt.y is the mapped value
+            // But here the user wants "interactive points" to draw a line.
+            // We will treat points[i].x and points[i].y as actual screen coords (normalized 0-1)
+            const px = width * (0.1 + pt.x * 0.8);
+            const py = height * (0.1 + pt.y * 0.8);
+
+            if (first) {
+                this.ctx.moveTo(px, py);
+                first = false;
+            } else {
+                this.ctx.lineTo(px, py);
+            }
+        }
+        this.ctx.stroke();
+    }
+
+    /**
+     * Draws the control polygon and points
+     */
+    drawControlPolygon(points, activeIndex = -1) {
+        const { width, height } = this.canvas;
+        
+        // Draw lines between points
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        points.forEach((pt, i) => {
+            const px = width * (0.1 + pt.x * 0.8);
+            const py = height * (0.1 + pt.y * 0.8);
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        });
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+
+        // Draw points
+        points.forEach((pt, i) => {
+            const px = width * (0.1 + pt.x * 0.8);
+            const py = height * (0.1 + pt.y * 0.8);
+            
+            this.ctx.fillStyle = i === activeIndex ? '#3b82f6' : '#94a3b8';
+            this.ctx.beginPath();
+            this.ctx.arc(px, py, i === activeIndex ? 8 : 6, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Halo for active point
+            if (i === activeIndex) {
+                this.ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+                this.ctx.lineWidth = 4;
+                this.ctx.stroke();
+            }
+        });
+    }
+
+    /**
+     * Gets normalized coordinates from mouse event
+     */
+    getMousePos(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        
+        // Normalize back to the [0, 1] range inside our 0.1-0.9 padding
+        return {
+            x: (x - 0.1) / 0.8,
+            y: (y - 0.1) / 0.8
+        };
+    }
 }

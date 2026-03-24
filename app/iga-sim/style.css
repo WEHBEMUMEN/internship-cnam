@@ -147,6 +147,52 @@ input[type="range"] {
 .btn-secondary { background: #334155; color: white; }
 .btn-secondary:hover { background: #475569; }
 
+/* Toggle Group */
+.toggle-group {
+    display: flex;
+    background: #0f172a;
+    padding: 4px;
+    border-radius: 8px;
+    gap: 4px;
+}
+
+.btn-tab {
+    flex: 1;
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-tab.active {
+    background: var(--accent);
+    color: white;
+}
+
+.weights-editor {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.weights-editor input {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    padding: 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
 /* Main Viewport */
 .viewport {
     flex: 1;
