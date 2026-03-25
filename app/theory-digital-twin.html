@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theory Context | The Digital Twin Connection</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-sub: #475569;
+      --accent-primary: #3b82f6;
+      --accent-secondary: #8b5cf6;
+      --border-color: #e2e8f0;
+    }
+    body {
+      background-color: var(--bg-page);
+      background-image: 
+        radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.04) 0%, transparent 40%);
+      min-height: 100vh;
+      color: var(--text-main);
+    }
+    .theory-content { max-width: 900px; margin: 80px auto; padding: 0 20px; padding-bottom: 60px; }
+    h2 { font-size: 3.5rem; margin-bottom: 25px; font-weight: 900; letter-spacing: -0.04em; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    h3 { font-size: 2rem; margin-top: 60px; margin-bottom: 25px; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 15px; }
+    h3::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, rgba(59, 130, 246, 0.2), transparent); }
+    p { line-height: 1.8; color: var(--text-sub); font-size: 1.15rem; margin-bottom: 20px; }
+    
+    .analogy-box {
+      background: linear-gradient(to right, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+      border-left: 4px solid var(--accent-primary);
+      padding: 25px;
+      border-radius: 0 16px 16px 0;
+      margin-bottom: 40px;
+    }
+    .analogy-box h4 { margin-top: 0; color: var(--accent-primary); font-size: 1.25rem; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    .analogy-box p { color: var(--text-main); margin-bottom: 0; font-size: 1.1rem; line-height: 1.7; }
+    
+    .algo-step { display: flex; gap: 25px; margin-bottom: 30px; padding: 25px; background: #ffffff; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+    .step-num { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+    .step-content h4 { margin-top: 0; color: var(--text-main); font-size: 1.25rem; margin-bottom: 10px; }
+    
+    .badge { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: var(--accent-primary); padding: 8px 16px; border-radius: 100px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; display: inline-block; }
+    
+    header { background: rgba(255, 255, 255, 0.9) !important; backdrop-filter: blur(12px) !important; border-bottom: 1px solid var(--border-color) !important; }
+    .logo span { color: var(--text-main) !important; }
+    .nav-links a { color: var(--text-sub) !important; }
+    .nav-links a:hover { color: var(--accent-primary) !important; }
+    .footer { border-top: 1px solid var(--border-color); background: var(--bg-page); color: var(--text-sub); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Simulation Hub</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="home-link"><i class="fa-solid fa-arrow-left"></i> <span>Back to Hub</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="theory-content">
+    <span class="badge">VISION & CONTEXT</span>
+    <h2>The Digital Twin Connection</h2>
+    <p>A "<a href="../term.html?id=digital-twin" style="color: var(--accent-primary); font-weight: 700; text-decoration: none;">Digital Twin</a>" is exactly what it sounds like: a perfect, virtual replica of a physical object, machine, or environment. Engineers use Digital Twins to run hundreds of thousands of simulations—testing stress, aerodynamics, and heat—before anything is built in the real world.</p>
+
+    <div class="analogy-box">
+      <h4><i class="fa-solid fa-lightbulb"></i> The "Translation" Analogy</h4>
+      <p>Imagine a brilliant French poet (the CAD design software) who writes a perfectly smooth, beautiful poem. <br><br>Historically, physics simulators (<a href="../term.html?id=finite-element-method" style="color: var(--accent-primary); font-weight: 700; text-decoration: none;">Finite Element Analysis</a>) could only understand English. So, engineers had to spend days translating the beautiful, original French poem into clunky, broken English (converting the smooth CAD geometry into a jagged, triangular mesh). By the time the simulator runs its physics, the original beauty and precision of the concept are totally lost in translation.<br><br><a href="../term.html?id=isogeometric-analysis" style="color: var(--accent-primary); font-weight: 700; text-decoration: none;">Isogeometric Analysis (IGA)</a> is revolutionary because it simply teaches the physics simulator to read French. There is no translation, no mesh, and no lost data.</p>
+    </div>
+
+    <h3>1. The Bottleneck of Modern Engineering</h3>
+    <p>In traditional engineering, roughly <strong>80% of a computational engineer's time is spent building the mesh</strong> (translating to English). For complex geometries like an airplane turbine, a single mesh can take weeks to perfectly tune. If a designer changes one tiny curve on the turbine blade in the CAD software, the engineer has to throw their entire mesh away and start over from scratch.</p>
+    <p>This massive disconnect between Design (CAD) and Analysis (FEA) makes creating true real-time Digital Twins impossible using traditional methods.</p>
+
+    <h3>2. Isogeometric Analysis (IGA) as the Solution</h3>
+    <p>IGA completely eliminates this 80% bottleneck by using the exact same mathematical language as the design software: <strong>NURBS</strong>.</p>
+    
+    <div class="algo-step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Native Integration</h4>
+        <p>Because IGA uses the exact same geometry (Control Points and Basis Functions) that the designer created, there is zero data loss. The digital twin matches the physical reality to the molecular level.</p>
+      </div>
+    </div>
+
+    <div class="algo-step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Hyper-Smooth Physics</h4>
+        <p>Because we aren't using jagged triangles, the physics simulations (like bending and fluid dynamics) inherit the extreme $C^{p-1}$ mathematical smoothness of NURBS, yielding vastly more accurate results with significantly less computational power.</p>
+      </div>
+    </div>
+
+    <div class="algo-step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Real-Time Iteration</h4>
+        <p>If a designer drags a control point to change the shape of an object, the Digital Twin doesn't need to generate a new mesh. The IGA simulation simply adapts to the new shape instantly. This is the holy grail for product design loops.</p>
+      </div>
+    </div>
+
+    <div style="margin-top: 50px; text-align: center;">
+        <a href="theory-1.1.html" class="btn btn-primary" style="padding: 15px 30px; font-size: 1.1rem; border-radius: 12px; box-shadow: 0 10px 20px rgba(59,130,246,0.3);">Explore Phase 1.1 Core Math <i class="fa-solid fa-arrow-right" style="margin-left:8px;"></i></a>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container" style="text-align: center; padding: 20px 0;">
+      <p>&copy; 2026 LMSSC, Cnam. Digital Twin Project.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

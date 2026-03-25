@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theory 1.5 | k-Refinement</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-sub: #475569;
+      --accent-primary: #3b82f6;
+      --accent-secondary: #8b5cf6;
+      --border-color: #e2e8f0;
+    }
+    body {
+      background-color: var(--bg-page);
+      background-image: 
+        radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.04) 0%, transparent 40%);
+      min-height: 100vh;
+      color: var(--text-main);
+    }
+    .theory-content { max-width: 900px; margin: 80px auto; padding: 0 20px; padding-bottom: 60px; }
+    h2 { font-size: 3.5rem; margin-bottom: 25px; font-weight: 900; letter-spacing: -0.04em; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    h3 { font-size: 2rem; margin-top: 60px; margin-bottom: 25px; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 15px; }
+    h3::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, rgba(59, 130, 246, 0.2), transparent); }
+    p { line-height: 1.8; color: var(--text-sub); font-size: 1.15rem; margin-bottom: 20px; }
+    
+    .math-card {
+      background: var(--card-bg);
+      padding: 35px;
+      border-radius: 24px;
+      border: 1px solid var(--border-color);
+      margin: 40px 0;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .math-card:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.3); box-shadow: 0 15px 35px rgba(59, 130, 246, 0.08); }
+    
+    .analogy-box {
+      background: linear-gradient(to right, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+      border-left: 4px solid var(--accent-primary);
+      padding: 25px;
+      border-radius: 0 16px 16px 0;
+      margin-bottom: 40px;
+    }
+    .analogy-box h4 { margin-top: 0; color: var(--accent-primary); font-size: 1.25rem; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    .analogy-box p { color: var(--text-main); margin-bottom: 0; font-size: 1.1rem; line-height: 1.7; }
+    
+    .algo-step { display: flex; gap: 25px; margin-bottom: 30px; padding: 25px; background: #ffffff; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+    .step-num { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+    .step-content h4 { margin-top: 0; color: var(--text-main); font-size: 1.25rem; margin-bottom: 10px; }
+    
+    .badge { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: var(--accent-primary); padding: 8px 16px; border-radius: 100px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; display: inline-block; }
+    
+    header { background: rgba(255, 255, 255, 0.9) !important; backdrop-filter: blur(12px) !important; border-bottom: 1px solid var(--border-color) !important; }
+    .logo span { color: var(--text-main) !important; }
+    .nav-links a { color: var(--text-sub) !important; }
+    .nav-links a:hover { color: var(--accent-primary) !important; }
+    .footer { border-top: 1px solid var(--border-color); background: var(--bg-page); color: var(--text-sub); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Simulation Hub</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="home-link"><i class="fa-solid fa-arrow-left"></i> <span>Back to Hub</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="theory-content">
+    <span class="badge">PHASE 1.5</span>
+    <h2>k-Refinement Optimization</h2>
+    <p>We've explored Degree Elevation (Phase 1.2, replacing stiff wire with flexible wire) and Knot Insertion (Phase 1.3, adding new strings to our puppet). <strong>k-Refinement</strong> is the ultimate technique exclusive to Isogeometric Analysis that strategically combines both to achieve hyper-smoothness.</p>
+
+    <div class="analogy-box">
+      <h4><i class="fa-solid fa-lightbulb"></i> The "Seamless Clay" Analogy</h4>
+      <p>Traditional engineering (FEA) builds structures out of tiny Lego blocks. Even if you use millions of blocks, the edges between them are always slightly jagged ($C^0$ continuity). If water flows over those blocks, it will always catch on the tiny edges.<br><br>k-Refinement allows us to build with seamless clay instead. If we want a more detailed shape, we don't chop the clay into smaller blocks (Knot Insertion first). Instead, we first make the clay infinitely stretchable (Degree Elevation), and <em>then</em> we add the new detail points. Because we elevated the flexibility first, the clay never develops a sharp corner or a crack, no matter how much detail we pack into it.</p>
+    </div>
+
+    <h3>1. The Order Matters</h3>
+    <p>In NURBS math, every time you insert a knot (add detail), you actually drop the "smoothness" ($C$) at that specific location by 1. For a degree $p$ curve, inserting one knot makes the continuity at that spot $C^{p-1}$. Inserting it again makes it $C^{p-2}$, and so on until it creates a sharp point ($C^0$).</p>
+    
+    <div class="math-card">
+      <h4 style="color: var(--text-main); margin-top: 0;">The k-Refinement Loop</h4>
+      <p>If we want to add detail <em>without</em> creating sharp edges, we must elevate the degree $p$ BEFORE we insert the knots. If we insert the knots first, the damage is already done, and elevating the degree later won't fix the jaggedness.</p>
+      $$\mathbf{C}^{math}_{smoothness} = \text{Elevate}(p \to p+1) \quad \text{THEN} \quad \text{Insert}(\xi)$$
+      <p>By forcing the math to follow Degree Elevation $\to$ Knot Insertion, we guarantee that the new refined curve has the maximum possible continuity across its entire surface.</p>
+    </div>
+
+    <h3>2. Why is this Revolutionary?</h3>
+    <p>Because traditional FEA cannot do this. Finite Element meshes are inextricably stuck at $C^0$ continuity across element boundaries. By using k-refinement, IGA constructs massive mathematical matrices for structural analysis that are incredibly sparse (meaning they calculate fast) but have hyper-smooth ($C^2$ or higher) properties.</p>
+
+    <div class="algo-step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Base state</h4>
+        <p>Start with a simple curve. Let's say degree $p=2$, which means it has $C^1$ continuity (smooth tangents, but not smooth curvature).</p>
+      </div>
+    </div>
+
+    <div class="algo-step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Elevate Degree Natively</h4>
+        <p>Upgrade the degree to $p=3$. The curve is now capable of $C^2$ continuity (smooth curvature).</p>
+      </div>
+    </div>
+
+    <div class="algo-step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Insert the Knots</h4>
+        <p>Now insert the new knots to add the localized detail points. Because the degree was already elevated algebraically, these new intersections drop from $C^3$ down to $C^2$. That guarantees the resulting geometry is perfectly smooth and ideal for advanced fluid and structural simulation!</p>
+      </div>
+    </div>
+    
+    <div style="margin-top: 50px; text-align: center;">
+        <a href="iga-sim-1.5/index.html" class="btn btn-primary" style="padding: 15px 30px; font-size: 1.1rem; border-radius: 12px; box-shadow: 0 10px 20px rgba(59,130,246,0.3);">Launch 1.5 Prototype <i class="fa-solid fa-bolt" style="margin-left:8px;"></i></a>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container" style="text-align: center; padding: 20px 0;">
+      <p>&copy; 2026 LMSSC, Cnam. Digital Twin Project.</p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ]
+      });
+    });
+  </script>
+</body>
+</html>

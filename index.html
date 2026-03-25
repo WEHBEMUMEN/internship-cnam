@@ -44,9 +44,9 @@
           <span class="badge reveal reveal-up">RESEARCH INTERNSHIP 2026</span>
           <h1 class="reveal reveal-up delay-1">Digital Twin & <span>Reduced Order Modelling</span></h1>
           <p class="hero-sub reveal reveal-up delay-2">Exploring nonlinear dynamics with Isogeometric Analysis (IGA) and hyper-reduction at LMSSC, Cnam.</p>
-          <div class="hero-buttons reveal reveal-up delay-3">
-            <a href="repository.html" class="btn btn-primary">Explore Project</a>
-            <a href="overview.html" class="btn btn-outline">Read Abstract</a>
+          <div class="hero-buttons reveal reveal-up delay-3" style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <a href="app/index.html" class="btn btn-primary" style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border: none; padding: 15px 35px; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);">Launch Simulation Hub <i class="fa-solid fa-rocket" style="margin-left: 10px;"></i></a>
+            <a href="overview.html" class="btn btn-outline" style="padding: 15px 35px; font-size: 1.1rem;">Read Abstract</a>
           </div>
         </div>
         <div class="hero-visual reveal reveal-right">
@@ -58,27 +58,46 @@
     <section class="section">
       <div class="container">
         <div class="section-head reveal reveal-up">
-          <h2 class="section-title">Project Highlights</h2>
-          <p class="section-sub">Key components of the research internship and technological focus.</p>
+          <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2); margin-bottom: 15px;">NAVIGATION DASHBOARD</span>
+          <h2 class="section-title">Project Architecture</h2>
+          <p class="section-sub">Direct access to the core modules and theoretical documentation.</p>
         </div>
-        <div class="grid">
-          <div class="card reveal reveal-up">
-            <i class="fa-solid fa-microchip"></i>
-            <h3>Digital Twin Design</h3>
-            <p>Developing high-fidelity virtual counterparts for structural systems to monitor and predict real-time performance.</p>
-            <a href="overview.html" class="card-link">Learn more <i class="fa-solid fa-arrow-right"></i></a>
+        
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px;">
+          <!-- Hub Card (Full Width) -->
+          <div class="card reveal reveal-up" onclick="window.location.href='app/index.html'" style="cursor: pointer; grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 60px 20px; background: linear-gradient(to bottom right, rgba(15,23,42,0.8), rgba(30,41,59,0.9)); border: 1px solid rgba(139, 92, 246, 0.3);">
+            <div style="background: rgba(139, 92, 246, 0.1); padding: 25px; border-radius: 50%; border: 1px solid rgba(139, 92, 246, 0.2); margin-bottom: 25px; display: flex; align-items: center; justify-content: center;">
+              <i class="fa-solid fa-cube" style="font-size: 3rem; color: #8b5cf6;"></i>
+            </div>
+            <h3 style="font-size: 2.5rem; margin-bottom: 15px; color: #ffffff;">The Development Hub</h3>
+            <p style="font-size: 1.15rem; max-width: 650px; margin: 0 auto; color: #cbd5e1; line-height: 1.8;">Our flagship interactive environment. Experience real-time Isogeometric Analysis (IGA), manipulate NURBS surfaces natively, and explore mathematically hyper-smooth physics prototypes directly in your browser.</p>
+            <div style="margin-top: 35px;">
+              <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 20px; font-size: 0.95rem; letter-spacing: 0.1em;"><i class="fa-solid fa-circle-play" style="margin-right: 8px;"></i> PHASE 1 LIVE</span>
+            </div>
           </div>
-          <div class="card reveal reveal-up delay-1">
-            <i class="fa-solid fa-gauge-high"></i>
-            <h3>Hyper-reduction</h3>
-            <p>Implementing ECW and other hyper-reduction techniques to significantly accelerate nonlinear simulations.</p>
-            <a href="overview.html" class="card-link">Learn more <i class="fa-solid fa-arrow-right"></i></a>
+          
+          <!-- Encyclopedia -->
+          <div class="card reveal reveal-up delay-1" onclick="window.location.href='dictionary.html'" style="cursor: pointer; padding: 40px;">
+            <i class="fa-solid fa-book-bookmark" style="color: #3b82f6; font-size: 2rem; margin-bottom: 20px;"></i>
+            <h3 style="font-size: 1.6rem; color: #ffffff;">The Encyclopedia</h3>
+            <p style="color: #94a3b8; font-size: 1.05rem;">A comprehensive, interactive deep-dive glossary explaining core concepts like Knot Insertion, Degree Elevation, and Hyper-reduction.</p>
+            <a href="dictionary.html" class="card-link" style="pointer-events: none; margin-top: 25px; font-size: 1.05rem;">Read Glossary <i class="fa-solid fa-arrow-right"></i></a>
           </div>
-          <div class="card reveal reveal-up delay-2">
-            <i class="fa-solid fa-bezier-curve"></i>
-            <h3>Isogeometric Analysis</h3>
-            <p>Leveraging IGA for precise geometry representation and improved convergence in structural mechanics.</p>
-            <a href="repository.html" class="card-link">View Files <i class="fa-solid fa-arrow-right"></i></a>
+
+          <!-- Project Tracking -->
+          <div class="card reveal reveal-up delay-2" onclick="window.location.href='tasks.html'" style="cursor: pointer; padding: 40px;">
+            <i class="fa-solid fa-list-check" style="color: #f59e0b; font-size: 2rem; margin-bottom: 20px;"></i>
+            <h3 style="font-size: 1.6rem; color: #ffffff;">Project Tracker</h3>
+            <p style="color: #94a3b8; font-size: 1.05rem;">View the internship roadmap, outstanding task items, and architectural timelines mapping our progress to completion.</p>
+            <a href="tasks.html" class="card-link" style="pointer-events: none; color: #f59e0b; margin-top: 25px; font-size: 1.05rem;">View Tasks <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+
+          <!-- Repository -->
+          <div class="card reveal reveal-up delay-3" onclick="window.location.href='repository.html'" style="cursor: pointer; padding: 40px;">
+            <i class="fa-solid fa-folder-tree" style="color: #10b981; font-size: 2rem; margin-bottom: 20px;"></i>
+            <h3 style="font-size: 1.6rem; color: #ffffff;">Data & Repository</h3>
+            <p style="color: #94a3b8; font-size: 1.05rem;">Access the core source code, geometry JSON datasets, abstract overviews, and original mathematical reference documentation.</p>
+            <a href="repository.html" class="card-link" style="pointer-events: none; color: #10b981; margin-top: 25px; font-size: 1.05rem;">Browse Files <i class="fa-solid fa-arrow-right"></i></a>
           </div>
         </div>
       </div>

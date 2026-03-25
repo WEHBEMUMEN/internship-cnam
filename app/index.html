@@ -102,7 +102,31 @@
           <p class="section-sub">Interactive prototypes and core engines for the Digital Twin project.</p>
         </div>
         
+        <div class="section-head reveal reveal-up">
+          <span class="badge">SIMULATION HUB</span>
+          <h2 class="section-title">Development Roadmap</h2>
+          <p class="section-sub">Interactive prototypes and core engines for the Digital Twin project.</p>
+        </div>
+
+        <!-- Phase 1: 1D Foundation -->
+        <h3 style="color: #60a5fa; font-size: 1.8rem; margin-bottom: 30px; letter-spacing: -0.02em; font-weight: 800; display: flex; align-items: center; gap: 15px;">
+            <i class="fa-solid fa-1"></i> Phase 1: 1D Core & Refinement
+        </h3>
+        
         <div class="grid">
+          <!-- Digital Twin Context -->
+          <div class="card reveal reveal-up">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-earth-americas" style="font-size: 2rem; color: #f59e0b;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">CONTEXT</span>
+            </div>
+            <h3>The Digital Twin Connection</h3>
+            <p>Why Isogeometric Analysis is the missing mathematical link for true real-time Digital Twins.</p>
+            <div class="app-actions">
+              <a href="theory-digital-twin.html" class="btn btn-primary btn-center" style="width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+
           <!-- 1D Core Engine -->
           <div class="card reveal reveal-up">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
@@ -113,7 +137,7 @@
             <p>Interactive visualization of B-spline and NURBS basis functions. Direct manipulation of control points and weights.</p>
             <div class="app-actions">
               <a href="iga-sim/index.html" class="btn btn-primary btn-center" style="width: 100%;">Launch Simulation <i class="fa-solid fa-rocket" style="margin-left: 8px;"></i></a>
-              <button onclick="openModal('modal-1d')" class="btn btn-outline btn-center" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></button>
+              <button onclick="openModal('modal-1_1')" class="btn btn-outline btn-center" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></button>
             </div>
           </div>
 
@@ -172,12 +196,21 @@
               <button onclick="openModal('modal-1_5')" class="btn btn-outline btn-center" style="width: 100%;">Theory & Logic <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></button>
             </div>
           </div>
+        </div>
 
+        <hr style="margin: 80px 0; border: none; height: 1px; background: linear-gradient(to right, transparent, rgba(59, 130, 246, 0.3), transparent);">
+
+        <!-- Phase 2: Dimensional Expansion -->
+        <h3 style="color: #94a3b8; font-size: 1.8rem; margin-bottom: 30px; letter-spacing: -0.02em; font-weight: 800; display: flex; align-items: center; gap: 15px;">
+            <i class="fa-solid fa-2"></i> Phase 2: Surface Mapping (Upcoming)
+        </h3>
+        
+        <div class="grid">
           <!-- Placeholder for 2D Expansion -->
-          <div class="card reveal reveal-up delay-2" style="opacity: 0.7;">
+          <div class="card reveal reveal-up" style="opacity: 0.7;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-bezier-curve" style="font-size: 2rem; color: var(--text-secondary);"></i>
-                <span class="badge" style="font-size: 0.7rem; background: #334155;">Phase 2</span>
+                <span class="badge" style="font-size: 0.7rem; background: #334155;">Phase 2.1</span>
             </div>
             <h3>2D Mapping (Upcoming)</h3>
             <p>NURBS surface evaluation and mapping to physical manifolds for structural analysis.</p>
@@ -186,14 +219,48 @@
             </div>
           </div>
         </div>
+
+        <hr style="margin: 80px 0; border: none; height: 1px; background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.2), transparent);">
+
+        <!-- methodology Section -->
+        <div class="section-head reveal reveal-up" style="text-align: left; margin-top: 100px;">
+          <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">METHODOLOGY</span>
+          <h2 class="section-title">Visualization Mechanics</h2>
+          <p class="section-sub" style="margin: 0;">How we achieve real-time isogeometric smoothness in the browser.</p>
+        </div>
+
+        <div class="grid" style="margin-top: 40px;">
+            <div class="card reveal reveal-up" onclick="openModal('modal-sampling')" style="cursor: pointer;">
+                <i class="fa-solid fa-chart-line" style="color: #60a5fa;"></i>
+                <h3>High-Resolution Sampling <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem; margin-left: 5px; opacity: 0.5;"></i></h3>
+                <p>To make the lines look perfectly smooth, we utilize dense sampling algorithms. Every curve is evaluated at increments of <strong>0.002</strong> in parametric space, resulting in 500 segments per spline that eliminate any visible "kinks".</p>
+            </div>
+            <div class="card reveal reveal-up delay-1" onclick="openModal('modal-smoothness')" style="cursor: pointer;">
+                <i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i>
+                <h3>Mathematical Smoothness <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem; margin-left: 5px; opacity: 0.5;"></i></h3>
+                <p>By leveraging NURBS, our models inherit <strong>$C^{p-1}$ continuity</strong>. Unlike standard FEA meshes which are only $C^0$ (physically connected but visually sharp), IGA ensures the geometry is differentiable at all knot intersections.</p>
+            </div>
+            <div class="card reveal reveal-up delay-2" onclick="openModal('modal-recursion')" style="cursor: pointer;">
+                <i class="fa-solid fa-gauge-high" style="color: #10b981;"></i>
+                <h3>Real-time Recursion <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem; margin-left: 5px; opacity: 0.5;"></i></h3>
+                <p>Our core IGA engine performs <strong>Cox-de Boor recursion</strong> in real-time. This allows for direct manipulation of control points with sub-millisecond lag, ensuring an interactive and intuitive design experience.</p>
+            </div>
+            <div class="card reveal reveal-up delay-3" onclick="window.location.href='theory-engine.html'" style="cursor: pointer; grid-column: 1 / -1; margin-top: 20px;">
+                <div style="display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;">
+                  <i class="fa-brands fa-js" style="color: #f59e0b; font-size: 2.5rem; margin-bottom: 15px;"></i>
+                  <h3>JS Rendering Engine Under the Hood <i class="fa-solid fa-arrow-right" style="font-size: 1rem; margin-left: 10px; opacity: 0.8;"></i></h3>
+                  <p style="max-width: 600px; margin: 10px auto 0;">Read our deep-dive on how the math engine achieves 60 FPS real-time Canvas rendering inside standard web browsers without degrading performance.</p>
+                </div>
+            </div>
+        </div>
       </div>
     </section>
   </main>
 
   <!-- Modals -->
-  <div id="modal-1d" class="modal">
+  <div id="modal-1_1" class="modal">
     <div class="modal-content">
-      <span class="close-modal" onclick="closeModal('modal-1d')">&times;</span>
+      <span class="close-modal" onclick="closeModal('modal-1_1')">&times;</span>
       <h2 style="margin-bottom: 20px; color: var(--accent); font-weight: 800;">Mathematical Foundation</h2>
       
       <h3>1. B-spline Basis Functions</h3>
@@ -222,6 +289,9 @@
         <li><strong>Dynamic Interaction</strong>: Dragging control points $\mathbf{P}_i$ in the UI performs a real-time re-evaluation of the curve mapping.</li>
         <li><strong>Rational Pull</strong>: Increasing $w_i$ "pulls" the curve closer to control point $\mathbf{P}_i$, a key feature of NURBS over standard B-splines.</li>
       </ul>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="theory-1.1.html" class="btn btn-primary" style="display: inline-block; padding: 12px 24px;">Read More <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></a>
+      </div>
     </div>
   </div>
 
@@ -240,6 +310,9 @@
 
       <h3>3. Why it matters</h3>
       <p>In Isogeometric Analysis, higher order polynomials give better differential accuracy for measuring stress matrices, but manually creating smooth splines from scratch is difficult. Elevating degree dynamically handles this automatically.</p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="theory-1.2.html" class="btn btn-primary" style="display: inline-block; padding: 12px 24px;">Read More <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></a>
+      </div>
     </div>
   </div>
 
@@ -259,6 +332,9 @@
       
       <h3>3. Practical Significance</h3>
       <p>It allows mathematical engineers and digital twin structural analysts to selectively subdivide and pack denser nodes tightly around an area of high physical pressure/stress without having to blindly compute and expand polynomial computational cost complexity around standard stable uniform domains globally.</p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="theory-1.3.html" class="btn btn-primary" style="display: inline-block; padding: 12px 24px;">Read More <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></a>
+      </div>
     </div>
   </div>
 
@@ -272,6 +348,9 @@
       </div>
       <p>Where independently calculated domains limit $\mathbf{A}(\xi) = \sum N_{i,p}(\xi) w_i \mathbf{P}_i$ and purely non-physical mapping $W(\xi) = \sum N_{i,p}(\xi) w_i$.</p>
       <p>By extracting these, Phase 1.4 accurately reconstructs absolutely exact precision boundary tangents natively needed when computing velocity, bending dynamics or internal strain matrix physics inside Digital Twin domains without estimation mapping falloff!</p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="theory-1.4.html" class="btn btn-primary" style="display: inline-block; padding: 12px 24px;">Read More <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></a>
+      </div>
     </div>
   </div>
 
@@ -284,6 +363,61 @@
         $$\mathbf{C}^{p-1}_{smoothness} = (p + 1)_{\text{elevated}} \to \mathbf{Knot_{split}}$$
       </div>
       <p>Instead of dense localized fragmentation, k-Refinement computationally spawns huge structural limits mathematically matching structural integrity constraints efficiently.</p>
+      <div style="margin-top: 30px; text-align: center;">
+        <a href="theory-1.5.html" class="btn btn-primary" style="display: inline-block; padding: 12px 24px;">Read More <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Methodology Modals -->
+  <div id="modal-sampling" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('modal-sampling')">&times;</span>
+      <h2 style="margin-bottom: 20px; color: #60a5fa; font-weight: 800;">High-Resolution Sampling</h2>
+      <h3>Computational Fluidity</h3>
+      <p>The visual smoothness you see in our prototypes is a result of excessive parametric evaluation. Rather than using simplified "tessellation" (which breaks the curve into a fixed number of segments), we use a dynamic sampling rate.</p>
+      <div class="math-block">
+        $$\text{Samples } (\xi) = \lceil \frac{1}{\Delta \xi} \rceil, \quad \Delta \xi = 0.002$$
+      </div>
+      <ul style="margin-left: 20px; color: #cbd5e1; line-height: 1.8;">
+        <li><strong>Resolution:</strong> 500 segments per curve ensure sub-pixel precision.</li>
+        <li><strong>Performance:</strong> Efficiently cached basis values minimize re-computation during Drag-and-Drop.</li>
+        <li><strong>Consistency:</strong> The sampling density is invariant to the complexity of the knot vector.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="modal-smoothness" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('modal-smoothness')">&times;</span>
+      <h2 style="margin-bottom: 20px; color: #8b5cf6; font-weight: 800;">Mathematical Smoothness ($C^{p-1}$)</h2>
+      <h3>Higher-Order Physics</h3>
+      <p>Traditional Finite Element Analysis (FEA) typically uses piecewise linear elements, which results in sharp corners or "broken" tangents at element boundaries. IGA leverages the inherent differentiability of NURBS:</p>
+      <div class="math-block">
+        $$\mathbf{C}(\xi) \in C^{p-1}(\Omega)$$
+      </div>
+      <ul style="margin-left: 20px; color: #cbd5e1; line-height: 1.8;">
+        <li><strong>$C^0$ Continuity:</strong> Only the physical position is connected.</li>
+        <li><strong>$C^1$ Continuity:</strong> Tangents are smooth across knots.</li>
+        <li><strong>$C^{p-1}$ Continuity:</strong> Curvature and higher derivatives are smooth, ensuring accurate stress distribution.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="modal-recursion" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal('modal-recursion')">&times;</span>
+      <h2 style="margin-bottom: 20px; color: #10b981; font-weight: 800;">Real-time Recursion</h2>
+      <h3>Recursive Spline Evaluation</h3>
+      <p>Our simulator executes the **Cox-de Boor formula** at 60 FPS. Every time you drag a control point, the entire curve is recalculated from scratch in a single frame.</p>
+      <div class="math-block">
+        $$N_{i,p}(\xi) = \omega N_{i,p-1} + (1-\omega') N_{i+1,p-1}$$
+      </div>
+      <ul style="margin-left: 20px; color: #cbd5e1; line-height: 1.8;">
+        <li><strong>Complexity:</strong> The algorithm scales as $O(p^2)$, manageable for high-degree interpolation.</li>
+        <li><strong>WebAssembly-like Speed:</strong> Optimized JavaScript loops handle thousands of floating-point operations per second.</li>
+        <li><strong>Dynamic Weights:</strong> Rational calculation allows the "pull" effect of weight manipulation to happen instantaneously.</li>
+      </ul>
     </div>
   </div>
 
