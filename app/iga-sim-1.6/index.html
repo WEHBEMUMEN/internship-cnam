@@ -110,6 +110,18 @@
                 <div id="dynamics-settings" class="control-group" style="display: none;">
                     <label>Animation Speed: <span id="speed-val">1.0</span>x</label>
                     <input type="range" id="input-speed" min="0.1" max="5.0" step="0.1" value="1.0">
+                    
+                    <div class="toggle-row" style="margin-top: 15px;">
+                        <span>Apply Structural Damping</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-damping" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <button id="btn-impulse" class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 0.8rem;">
+                        <i class="fa-solid fa-hand-pointer"></i> Re-Trigger Impulse
+                    </button>
                 </div>
 
                 <!-- NURBS Basis Params -->

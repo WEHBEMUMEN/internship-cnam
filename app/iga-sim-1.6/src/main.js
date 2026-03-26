@@ -21,6 +21,8 @@ class MechanicsApp {
         
         this.time = 0;
         this.animSpeed = 1.0;
+        this.isDamping = true;
+        this.dynamicAmplitude = 1.0;
         this.deflection = null;
         this.femDeflection = null;
         this.femDeflection = null;
@@ -161,6 +163,7 @@ class MechanicsApp {
         document.getElementById('mode-dynamics').addEventListener('click', (e) => {
             this.isStatics = false;
             this.time = 0;
+            this.dynamicAmplitude = 1.0;
             e.target.classList.add('active');
             document.getElementById('mode-statics').classList.remove('active');
             document.getElementById('dynamics-settings').style.display = 'block';
@@ -172,6 +175,15 @@ class MechanicsApp {
         document.getElementById('input-speed').addEventListener('input', (e) => {
             this.animSpeed = parseFloat(e.target.value);
             document.getElementById('speed-val').textContent = this.animSpeed.toFixed(1);
+        });
+
+        document.getElementById('toggle-damping').addEventListener('change', (e) => {
+            this.isDamping = e.target.checked;
+        });
+
+        document.getElementById('btn-impulse').addEventListener('click', () => {
+            this.time = 0;
+            this.dynamicAmplitude = 1.0;
         });
 
         document.getElementById('btn-reset').addEventListener('click', () => location.reload());
@@ -296,7 +308,17 @@ traditional Classical FEM approaches.`;
             let dynamicScale = 1.0;
             if (!this.isStatics) {
                 this.time += 0.05 * this.animSpeed;
-                dynamicScale = Math.sin(this.time);
+                
+                // Damping logic: exponential decay of amplitude
+                if (this.isDamping) {
+                    this.dynamicAmplitude *= (1.0 - (0.01 * this.animSpeed)); // Scaled by anim speed for consistency
+                    if (this.dynamicAmplitude < 0.001) this.dynamicAmplitude = 0;
+                } else {
+                    // Smooth recovery to full amplitude if damping is turned off
+                    this.dynamicAmplitude = (this.dynamicAmplitude * 0.95) + 0.05;
+                }
+                
+                dynamicScale = Math.sin(this.time) * this.dynamicAmplitude;
             }
 
             const renderedScale = this.visualScale * 0.005 * dynamicScale;
