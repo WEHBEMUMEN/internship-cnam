@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theory 1.6 | Structural Mechanics — Deep Dive</title>
+  <meta name="description" content="A comprehensive, layperson-friendly theory guide for Phase 1.6 IGA Structural Mechanics, covering beam bending, FEM, IGA, and analytical beam theory.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-sub: #475569;
+      --accent: #10b981;
+      --accent-dark: #059669;
+      --border: #e2e8f0;
+      --iga-color: #ffffff;
+      --fem-color: #10b981;
+      --beam-color: #facc15;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background-color: var(--bg-page);
+      background-image:
+        radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 100% 50%, rgba(250, 204, 21, 0.04) 0%, transparent 50%),
+        radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+
+    /* ─── Header ─── */
+    .top-nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 30px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .top-nav a { text-decoration: none; color: var(--text-sub); font-weight: 600; font-size: 0.9rem; transition: color 0.2s; }
+    .top-nav a:hover { color: var(--accent); }
+    .top-nav .logo { display: flex; align-items: center; gap: 10px; color: var(--text-main); font-weight: 800; font-size: 1.1rem; }
+    .top-nav .logo i { color: var(--accent); }
+
+    /* ─── Layout ─── */
+    .content { max-width: 860px; margin: 0 auto; padding: 60px 24px 100px; }
+
+    /* ─── Typography ─── */
+    .badge {
+      display: inline-block; margin-bottom: 16px;
+      background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+      color: var(--accent); padding: 6px 16px; border-radius: 100px;
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.5rem); font-weight: 900; letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #1e293b 0%, #059669 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 20px;
+    }
+    .subtitle { font-size: 1.2rem; color: var(--text-sub); margin-bottom: 50px; max-width: 650px; }
+
+    h2 {
+      font-size: 1.9rem; font-weight: 800; margin-top: 70px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 14px; color: var(--text-main);
+    }
+    h2 .icon { font-size: 1.4rem; color: var(--accent); }
+    h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, rgba(16,185,129,0.25), transparent); }
+
+    h3 { font-size: 1.35rem; font-weight: 700; margin-top: 35px; margin-bottom: 12px; color: var(--text-main); }
+
+    p, li { font-size: 1.05rem; color: var(--text-sub); margin-bottom: 16px; }
+    ul { padding-left: 24px; margin-bottom: 20px; }
+    li { margin-bottom: 8px; }
+    strong { color: var(--text-main); }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
+      padding: 32px; margin: 30px 0;
+      box-shadow: 0 8px 25px rgba(15,23,42,0.04);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .card:hover { transform: translateY(-3px); border-color: rgba(16,185,129,0.3); }
+    .card h4 { font-size: 1.15rem; font-weight: 700; margin-bottom: 14px; color: var(--text-main); }
+    .card p:last-child { margin-bottom: 0; }
+
+    .card.highlight { border-left: 4px solid var(--accent); }
+    .card.math { background: #fafffe; border-color: rgba(16,185,129,0.15); }
+
+    /* Equation centering */
+    .eq { text-align: center; margin: 24px 0; font-size: 1.1rem; }
+
+    /* ─── Comparison Grid ─── */
+    .compare-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 30px 0;
+    }
+    @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
+    .compare-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 24px; text-align: center; transition: all 0.3s ease;
+    }
+    .compare-card:hover { transform: translateY(-3px); }
+    .compare-card .dot { width: 40px; height: 4px; border-radius: 2px; margin: 0 auto 14px; }
+    .compare-card h4 { font-size: 1rem; margin-bottom: 8px; }
+    .compare-card p { font-size: 0.9rem; margin-bottom: 0; }
+
+    /* ─── Analogy Box ─── */
+    .analogy {
+      background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(250,204,21,0.04));
+      border: 1px solid rgba(16,185,129,0.15); border-radius: 16px;
+      padding: 24px 28px; margin: 24px 0;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .analogy i { color: var(--accent); font-size: 1.3rem; margin-top: 3px; flex-shrink: 0; }
+    .analogy p { margin-bottom: 0; }
+
+    /* ─── Pillar Grid ─── */
+    .pillar-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin: 30px 0; }
+    @media (max-width: 600px) { .pillar-grid { grid-template-columns: 1fr; } }
+    .pillar {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 24px; transition: all 0.3s ease;
+    }
+    .pillar:hover { scale: 1.02; border-color: var(--accent); }
+    .pillar i { font-size: 1.4rem; color: var(--accent); margin-bottom: 12px; }
+    .pillar h4 { margin-bottom: 8px; }
+    .pillar p { font-size: 0.92rem; margin-bottom: 0; }
+
+    /* ─── Footer ─── */
+    .page-footer {
+      border-top: 1px solid var(--border); text-align: center;
+      padding: 24px; color: var(--text-sub); font-size: 0.85rem;
+    }
+
+    /* ─── CTA ─── */
+    .cta {
+      margin-top: 60px; text-align: center;
+    }
+    .cta a {
+      display: inline-block; padding: 16px 36px; font-size: 1.05rem; font-weight: 700;
+      color: white; background: var(--accent); border-radius: 14px; text-decoration: none;
+      box-shadow: 0 10px 25px rgba(16,185,129,0.3); transition: all 0.3s ease;
+    }
+    .cta a:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(16,185,129,0.4); }
+
+    /* ─── Flow Diagram ─── */
+    .flow {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      flex-wrap: wrap; margin: 30px 0;
+    }
+    .flow-step {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 20px; font-weight: 600; font-size: 0.9rem; text-align: center;
+      min-width: 120px;
+    }
+    .flow-arrow { color: var(--accent); font-size: 1.2rem; font-weight: 800; }
+
+    /* Step numbers */
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%; background: var(--accent);
+      color: white; font-weight: 800; font-size: 0.8rem; margin-right: 10px; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Navigation ─── -->
+  <nav class="top-nav">
+    <a href="index.html" class="logo"><i class="fa-solid fa-cube"></i> Simulation Hub</a>
+    <a href="iga-sim-1.6/index.html"><i class="fa-solid fa-arrow-left"></i> Back to Simulator</a>
+  </nav>
+
+  <!-- ─── Main Content ─── -->
+  <main class="content">
+    <span class="badge">Phase 1.6 — Deep Dive</span>
+    <h1>Structural Mechanics Theory</h1>
+    <p class="subtitle">A complete, layperson-friendly guide to how beams bend, how computers predict it, and why Isogeometric Analysis changes the game.</p>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 1: THE REAL WORLD PROBLEM              -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-bridge"></i></span> What Problem Are We Solving?</h2>
+
+    <p>Imagine you're holding a ruler by pressing both ends flat against a table, and you push down in the middle. The ruler bends into a curve. That's <strong>beam bending</strong> — and it happens everywhere in engineering: bridges sag under traffic, airplane wings flex in turbulence, skyscrapers sway in the wind.</p>
+
+    <p>Engineers need to predict <em>exactly</em> how much something bends — before it's built. Too much bending = structural failure. Too little material = wasteful and expensive. The goal is to find the <strong>perfect curve of deformation</strong> that tells us how every point on the structure moves when a force is applied.</p>
+
+    <div class="analogy">
+      <i class="fa-solid fa-lightbulb"></i>
+      <p><strong>Real-world analogy:</strong> Think of a diving board. When a diver stands at the tip, the board curves downward. The shape of that curve depends on the board's material (stiffness), its length, and where the diver stands. Our simulator computes this exact curve using three different mathematical approaches — and lets you compare them!</p>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 2: THE GOVERNING EQUATION              -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-square-root-variable"></i></span> The One Equation That Rules Them All</h2>
+
+    <p>All beam bending in classical physics is governed by a single, beautiful equation called the <strong>Euler-Bernoulli Beam Equation</strong>:</p>
+
+    <div class="card math">
+      <div class="eq">$$EI \cdot \frac{d^4 w}{dx^4} = q(x)$$</div>
+      <p>This says: <em>"The stiffness of the beam times how sharply the curve changes (its 4th derivative) equals the external load."</em></p>
+    </div>
+
+    <p>Let's break down each piece in plain English:</p>
+    <ul>
+      <li><strong>$w(x)$</strong> — The deflection: how far each point on the beam moves downward. This is what we're solving for.</li>
+      <li><strong>$E$</strong> — Young's Modulus: a number that describes how stiff the material is. Steel has a huge $E$; rubber has a tiny one.</li>
+      <li><strong>$I$</strong> — Moment of Inertia: describes the cross-section shape. A tall I-beam has more $I$ than a flat plate, which is why bridges use I-beams.</li>
+      <li><strong>$EI$</strong> — Together, <strong>Flexural Rigidity</strong>: the beam's total resistance to bending. Bigger $EI$ = less bending.</li>
+      <li><strong>$q(x)$</strong> — The load: the force pushing on the beam. In our simulator, this is the red arrow you drag around.</li>
+      <li><strong>$\frac{d^4 w}{dx^4}$</strong> — The 4th derivative: measures how "wavy" the curve is. This is the mathematical heart of bending physics.</li>
+    </ul>
+
+    <div class="analogy">
+      <i class="fa-solid fa-lightbulb"></i>
+      <p><strong>Why the 4th derivative?</strong> Think of it this way: the 1st derivative is the slope (angle of tilt), the 2nd derivative is the curvature (how much it curves), the 3rd derivative is how the curvature changes, and the 4th derivative is how the <em>change in curvature</em> changes. Beams are governed by this deepest level of geometric change because bending involves internal forces (shear and moment) that are related to higher-order shape changes.</p>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 3: BOUNDARY CONDITIONS                 -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-lock"></i></span> Boundary Conditions: How the Beam is Held</h2>
+
+    <p>The equation above has infinitely many mathematical solutions. To find <em>the one</em> that matches reality, we need to know how the beam is supported at its ends. These constraints are called <strong>Boundary Conditions (BCs)</strong>.</p>
+
+    <p>In our simulator, both ends are <strong>"Clamped" (Fixed)</strong>. This means:</p>
+
+    <div class="card highlight">
+      <h4><i class="fa-solid fa-clamp" style="color: var(--accent); margin-right: 8px;"></i> Clamped Boundary Conditions</h4>
+      <ul>
+        <li><strong>Zero displacement:</strong> $w(0) = 0$ and $w(L) = 0$ — the ends don't move up or down.</li>
+        <li><strong>Zero slope:</strong> $w'(0) = 0$ and $w'(L) = 0$ — the ends stay perfectly horizontal (flat).</li>
+      </ul>
+      <p>Imagine the beam is <em>welded</em> into a wall at both ends. It cannot move OR rotate at the supports. This is the most restrictive type of boundary condition, and it produces a distinctive S-shaped deflection curve.</p>
+    </div>
+
+    <p>You can also toggle the boundaries to <strong>"Free"</strong> in the simulator, which releases the constraint and lets the end move freely — like a cantilever beam (a diving board clamped only at one end).</p>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 4: THREE SOLUTION METHODS              -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-code-compare"></i></span> Three Ways to Solve the Same Problem</h2>
+
+    <p>Our simulator shows you three different approaches to finding the deflection curve $w(x)$. Each one attacks the problem from a different angle, but they should all produce the <strong>same answer</strong>.</p>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="dot" style="background: #facc15;"></div>
+        <h4>Analytical (Exact)</h4>
+        <p>The textbook formula. A perfect mathematical equation for the exact curve, derived by hand using calculus.</p>
+      </div>
+      <div class="compare-card">
+        <div class="dot" style="background: #10b981;"></div>
+        <h4>FEM (Hermite)</h4>
+        <p>The classical engineering approach. Chops the beam into small pieces and solves each one.</p>
+      </div>
+      <div class="compare-card">
+        <div class="dot" style="background: white; border: 2px solid #94a3b8;"></div>
+        <h4>IGA (NURBS)</h4>
+        <p>The next generation. Uses perfectly smooth mathematical curves instead of choppy pieces.</p>
+      </div>
+    </div>
+
+    <!-- ─── Method 1: Analytical ─── -->
+    <h3><span class="step-num">1</span> Analytical Beam Theory (The "Exact Answer")</h3>
+
+    <p>For simple beam configurations, mathematicians have derived exact, closed-form solutions by hand. For a clamped-clamped beam with a single point load $P$ at position $a$ from the left end (with $b = L - a$):</p>
+
+    <div class="card math">
+      <h4>Exact Deflection Formula</h4>
+      <div class="eq">$$w(x) = \frac{P b^2 x^2}{6EIL^3}\left(3aL - (L + 2a)x\right), \quad x \le a$$</div>
+      <div class="eq">$$w(x) = \frac{P a^2 (L-x)^2}{6EIL^3}\left(3bL - (L + 2b)(L-x)\right), \quad x > a$$</div>
+      <p>This gives the <strong>gold dotted curve</strong> in the simulator. It's the "truth" that the numerical methods aim to reproduce. However, exact formulas only exist for simple cases — you can't write a formula for a complex bridge or an airplane wing. That's why we need numerical methods.</p>
+    </div>
+
+    <div class="analogy">
+      <i class="fa-solid fa-lightbulb"></i>
+      <p><strong>Analogy:</strong> The analytical solution is like solving $2 + 3 = 5$ with mental arithmetic. It's perfect, but you can only do it for simple problems. For $\int_0^\pi \sin^{47}(x)\,dx$, you need a calculator (numerical methods).</p>
+    </div>
+
+    <!-- ─── Method 2: FEM ─── -->
+    <h3><span class="step-num">2</span> Finite Element Method (FEM) — The Industry Standard</h3>
+
+    <p>FEM is the workhorse of modern engineering. The idea is deceptively simple:</p>
+
+    <div class="card">
+      <h4>The Core Idea of FEM</h4>
+      <p><strong>Step 1:</strong> Chop the beam into many small pieces called <strong>"elements"</strong>.</p>
+      <p><strong>Step 2:</strong> For each element, assume the deflection follows a simple polynomial shape (a cubic curve).</p>
+      <p><strong>Step 3:</strong> Stitch all the pieces together and solve one big system of equations.</p>
+    </div>
+
+    <p>In our simulator, the FEM uses <strong>Hermite Cubic Elements</strong>. Each element is a tiny beam segment with 4 unknowns:</p>
+    <ul>
+      <li>The <strong>displacement</strong> at the left node: $w_i$ (how far down)</li>
+      <li>The <strong>rotation</strong> at the left node: $\theta_i$ (the slope/angle)</li>
+      <li>The <strong>displacement</strong> at the right node: $w_{i+1}$</li>
+      <li>The <strong>rotation</strong> at the right node: $\theta_{i+1}$</li>
+    </ul>
+
+    <p>The stiffness of each tiny beam element is captured in a <strong>$4 \times 4$ element stiffness matrix</strong>:</p>
+
+    <div class="card math">
+      <h4>Hermite Element Stiffness Matrix</h4>
+      <div class="eq">$$\mathbf{k}_e = \frac{EI}{L_e^3}\begin{bmatrix} 12 & 6L_e & -12 & 6L_e \\ 6L_e & 4L_e^2 & -6L_e & 2L_e^2 \\ -12 & -6L_e & 12 & -6L_e \\ 6L_e & 2L_e^2 & -6L_e & 4L_e^2 \end{bmatrix}$$</div>
+      <p>Each number in this matrix describes how a displacement or rotation at one node "resists" movement at another node. The matrix is assembled by overlapping neighboring elements — like interlocking puzzle pieces.</p>
+    </div>
+
+    <div class="analogy">
+      <i class="fa-solid fa-lightbulb"></i>
+      <p><strong>Analogy:</strong> Imagine approximating a smooth mountain landscape with LEGO bricks. Each brick is a "finite element." With very few bricks, the mountain looks blocky. With thousands, it looks smooth. FEM works the same way — more elements = better accuracy, but more computation.</p>
+    </div>
+
+    <p>The <strong>"FEM Nodes" slider</strong> in the simulator controls how many elements are used. Watch how the green dashed line becomes smoother as you increase the resolution!</p>
+
+    <!-- ─── Method 3: IGA ─── -->
+    <h3><span class="step-num">3</span> Isogeometric Analysis (IGA) — The Future</h3>
+
+    <p>IGA is the revolutionary approach invented by Professor T.J.R. Hughes in 2005. Instead of chopping the beam into flat pieces, IGA represents it using <strong>NURBS curves</strong> — the same perfectly smooth mathematical functions used by CAD software to design car bodies and airplane fuselages.</p>
+
+    <div class="card highlight">
+      <h4>Why is IGA Different?</h4>
+      <p>In traditional FEM, there are two separate representations of the beam:</p>
+      <ul>
+        <li>The <strong>design geometry</strong> (smooth CAD curves used by designers)</li>
+        <li>The <strong>analysis mesh</strong> (a choppy approximation used by engineers)</li>
+      </ul>
+      <p>IGA <strong>eliminates</strong> this gap. The exact same smooth NURBS curve used to design the beam is directly used as the mathematical basis for solving the physics equations. <em>Design = Analysis.</em></p>
+    </div>
+
+    <p>The IGA stiffness matrix is assembled by integrating the <strong>second derivatives</strong> of the B-spline basis functions:</p>
+
+    <div class="card math">
+      <h4>IGA Stiffness Matrix Assembly</h4>
+      <div class="eq">$$K_{ij} = \int_0^1 N_i''(\xi) \cdot EI \cdot N_j''(\xi) \, d\xi$$</div>
+      <p>Where $N_i''(\xi)$ is the second derivative of the $i$-th B-spline basis function. Because B-splines are inherently smooth (they have $C^{p-1}$ continuity, meaning the curve and its first $p-1$ derivatives are all continuous), these second derivatives are well-defined and accurate — no artificial "corners" or "jumps" like in FEM.</p>
+    </div>
+
+    <div class="card">
+      <h4>What Are B-Spline Basis Functions?</h4>
+      <p>Imagine a set of invisible bell-shaped "influence zones" spread along the beam. Each one controls a small region. When we push on the beam, these influence zones each contribute a little bit to the deflection shape. The final curve is a blending of all their contributions.</p>
+      <p>In the simulator, you can see these basis functions directly by switching to the <strong>"IGA Basis Functions"</strong> view tab! Each colored hump is one basis function — and together they form a smooth "partition of unity" (they all add up to exactly 1.0 at every point).</p>
+    </div>
+
+    <div class="analogy">
+      <i class="fa-solid fa-lightbulb"></i>
+      <p><strong>Analogy:</strong> If FEM is building a mountain from LEGO bricks, IGA is sculpting it from a smooth sheet of clay. The clay <em>inherently</em> has the smoothness that LEGO can only approximate. With fewer control points, IGA can achieve the same accuracy that FEM needs thousands of elements for.</p>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 5: SOLVING THE SYSTEM                  -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-gears"></i></span> How the Computer Actually Solves It</h2>
+
+    <p>Regardless of whether we use FEM or IGA, the physics equation gets converted into a <strong>system of linear equations</strong>:</p>
+
+    <div class="card math">
+      <h4>The Master Equation</h4>
+      <div class="eq">$$[\mathbf{K}]\{\mathbf{u}\} = \{\mathbf{F}\}$$</div>
+      <ul>
+        <li><strong>$\mathbf{K}$</strong> — The Global Stiffness Matrix: a big table of numbers describing how every point on the beam resists movement.</li>
+        <li><strong>$\mathbf{u}$</strong> — The unknowns: the deflection at every point. This is what we're solving for.</li>
+        <li><strong>$\mathbf{F}$</strong> — The force vector: describes where and how hard we're pushing.</li>
+      </ul>
+      <p>The computer solves this using <strong>Gaussian Elimination</strong> — systematically reducing the matrix to find each unknown, one by one. It's like solving a giant system of simultaneous equations from high school algebra, but with potentially millions of variables.</p>
+    </div>
+
+    <div class="flow">
+      <div class="flow-step"><i class="fa-solid fa-pen-ruler"></i><br>Define Geometry</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><i class="fa-solid fa-table-cells"></i><br>Assemble $\mathbf{K}$</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><i class="fa-solid fa-bolt"></i><br>Apply Loads $\mathbf{F}$</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><i class="fa-solid fa-lock"></i><br>Apply BCs</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><i class="fa-solid fa-calculator"></i><br>Solve for $\mathbf{u}$</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step"><i class="fa-solid fa-chart-line"></i><br>Plot Curve</div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 6: DYNAMICS                            -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-wave-square"></i></span> Dynamics: When Structures Vibrate</h2>
+
+    <p>In <strong>Statics</strong>, the beam deforms and stays still. In <strong>Dynamics</strong>, the beam oscillates back and forth over time — like a tuning fork or a vibrating guitar string.</p>
+
+    <div class="card math">
+      <h4>The Dynamic Equation</h4>
+      <div class="eq">$$\mathbf{M}\ddot{\mathbf{u}} + \mathbf{K}\mathbf{u} = \mathbf{F}(t)$$</div>
+      <p>The new ingredient is the <strong>Mass Matrix $\mathbf{M}$</strong>, which captures how heavy each part of the beam is. The $\ddot{\mathbf{u}}$ is the acceleration — how quickly the deflection is changing.</p>
+      <p>In our simulator, Dynamics Mode shows the static deflection shape oscillating with a $\sin(t)$ sinusoidal motion — a simplified visualization of the beam's first <strong>natural vibration mode</strong>. You control the speed of this oscillation with the Animation Speed slider.</p>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 7: FOUR PILLARS                        -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-layer-group"></i></span> The Four Pillars of Complexity</h2>
+
+    <p>Engineering simulations fall into four categories of increasing difficulty:</p>
+
+    <div class="pillar-grid">
+      <div class="pillar">
+        <i class="fa-solid fa-anchor"></i>
+        <h4>Linear Statics</h4>
+        <p>A constant load, small deformations. Like a book resting on a shelf. Stiffness stays constant: $\mathbf{K}\mathbf{u} = \mathbf{F}$. This is what our simulator mainly demonstrates.</p>
+      </div>
+      <div class="pillar">
+        <i class="fa-solid fa-wave-square"></i>
+        <h4>Linear Dynamics</h4>
+        <p>Vibrations and time-varying loads. Like a bell ringing. We add mass and acceleration: $\mathbf{M}\ddot{\mathbf{u}} + \mathbf{K}\mathbf{u} = \mathbf{F}(t)$.</p>
+      </div>
+      <div class="pillar">
+        <i class="fa-solid fa-link-slash"></i>
+        <h4>Nonlinear Statics</h4>
+        <p>Large deformations where the stiffness itself changes. Like bending a paperclip — you can't un-bend it the same way. $\mathbf{K}$ becomes $\mathbf{K}(\mathbf{u})$.</p>
+      </div>
+      <div class="pillar">
+        <i class="fa-solid fa-bolt-lightning"></i>
+        <h4>Nonlinear Dynamics</h4>
+        <p>The "boss level": car crashes, earthquakes, explosions. Everything changes over time and nothing is proportional. Requires massive parallel computing.</p>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 8: WHY IGA WINS                        -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-trophy"></i></span> Why IGA Outperforms Classical FEM</h2>
+
+    <div class="card highlight">
+      <h4>The Key Advantages</h4>
+      <ul>
+        <li><strong>Exact geometry:</strong> No approximation of the shape. The analysis uses the real CAD geometry.</li>
+        <li><strong>Higher continuity:</strong> B-splines with degree $p$ have $C^{p-1}$ smoothness across element boundaries. FEM only guarantees $C^0$ (continuous but with "kinks").</li>
+        <li><strong>Fewer degrees of freedom:</strong> IGA achieves the same accuracy as FEM with fewer unknowns, meaning faster computation.</li>
+        <li><strong>Better stress accuracy:</strong> Because there are no artificial corners between elements, stress fields are smooth and physically realistic.</li>
+        <li><strong>No meshing:</strong> The most time-consuming part of traditional FEM (creating a mesh) is completely eliminated.</li>
+      </ul>
+    </div>
+
+    <p>In our simulator, you can see this directly: even with just 4 elements and degree 3, the <strong>white IGA curve</strong> matches the gold exact solution almost perfectly. The green FEM curve needs significantly more nodes to achieve the same accuracy!</p>
+
+    <div class="analogy">
+      <i class="fa-solid fa-lightbulb"></i>
+      <p><strong>Final Analogy:</strong> IGA is to FEM what vector graphics (SVG) are to raster images (JPEG). A vector circle is mathematically perfect at any zoom level. A JPEG circle is made of tiny squares — zoom in enough and you see the pixels. IGA gives you the "vector graphics" of structural simulation.</p>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- SECTION 9: WHAT THE SIMULATOR SHOWS            -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <h2><span class="icon"><i class="fa-solid fa-display"></i></span> How to Read the Simulator</h2>
+
+    <div class="card">
+      <h4>Controls Cheat Sheet</h4>
+      <ul>
+        <li><strong>Degree (p):</strong> The polynomial order of the B-spline. Higher = smoother, more accurate. Minimum 3 for beam bending (needs 2nd derivatives).</li>
+        <li><strong>Elements:</strong> How many knot spans (segments) the B-spline has. More = more resolution.</li>
+        <li><strong>Load Position (ξ):</strong> Where along the beam the force is applied (0 = left, 1 = right).</li>
+        <li><strong>Load Intensity (F):</strong> How hard we push. Negative = push upward.</li>
+        <li><strong>Scale Factor:</strong> Purely visual amplification — makes the tiny deflection values large enough to see on screen. Does not affect the physics.</li>
+        <li><strong>FEM Nodes:</strong> How many nodes the FEM mesh uses. More nodes = smoother green curve, but slower computation.</li>
+        <li><strong>Boundary Conditions:</strong> Toggle each end between Fixed (clamped, no movement) and Free (unconstrained).</li>
+      </ul>
+    </div>
+
+
+    <!-- ─── CTA ─── -->
+    <div class="cta">
+      <a href="iga-sim-1.6/index.html">Launch the Simulator <i class="fa-solid fa-rocket" style="margin-left: 8px;"></i></a>
+    </div>
+  </main>
+
+  <!-- ─── Footer ─── -->
+  <footer class="page-footer">
+    <p>&copy; 2026 LMSSC, Cnam — Digital Twin Project. Phase 1.6 Structural Mechanics.</p>
+  </footer>
+
+  <!-- ─── KaTeX Auto-Render ─── -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</body>
+</html>
