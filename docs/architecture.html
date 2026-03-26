@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture | Digital Twin & ROM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.2.4/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --accent: #10b981;
+            --bg: #020617;
+            --card: #0f172a;
+            --card-hover: #1e293b;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+            --surface: #0f172a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 80px 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            display: inline-block;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 24px;
+            letter-spacing: -0.03em;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+            transition: border-color 0.3s ease;
+        }
+
+        .section:hover {
+            border-color: var(--primary);
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #fff;
+        }
+
+        h2 i { color: var(--primary); }
+
+        p {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+
+        strong { color: #fff; }
+
+        .mermaid-container {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 30px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .tech-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .tech-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .tech-item h4 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .math-box {
+            background: #020617;
+            padding: 25px;
+            border-radius: 16px;
+            border-left: 4px solid var(--primary);
+            margin: 25px 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            margin-top: 60px;
+        }
+
+        .btn-back {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: color 0.2s;
+        }
+
+        .btn-back:hover { color: #fff; }
+
+        .alert-box {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Phase 2 | Computational Core</span>
+            <h1>Technical Architecture</h1>
+            <p style="font-size: 1.3rem; max-width: 700px; margin: 0 auto; color: var(--text-dim);">The bridge between High-Fidelity IGA Solvers and Real-Time Digital Twin interfaces.</p>
+        </header>
+
+        <div class="alert-box">
+            <i class="fa-solid fa-circle-info" style="color: var(--primary); margin-right: 10px;"></i>
+            This architecture defines the transition from **1D Prototypes** (Phase 1) to **2D/3D Reduced Order Models** (Phase 2).
+        </div>
+
+        <section class="section">
+            <h2><i class="fa-solid fa-fire"></i> 1. The Offline Forge</h2>
+            <p>During the offline phase, we condense high-fidelity simulation data into a low-dimensional mathematical manifold. This is where the heavy lifting happens.</p>
+            
+            <div class="mermaid-container">
+                <div class="mermaid">
+                    graph LR
+                        A["Parameter Sampling (LHS)"] --> B["IGA Solver (FOM)"]
+                        B --> C["Snapshot Database (S)"]
+                        C --> D["SVD Basis Extraction"]
+                        D --> E["ROM Basis (Φ)"]
+                        style E fill:#3b82f6,stroke:#fff,stroke-width:2px,color:#fff
+                </div>
+            </div>
+
+            <div class="tech-list">
+                <div class="tech-item">
+                    <h4><i class="fa-brands fa-python"></i> High-Fidelity Infrastructure</h4>
+                    <p style="font-size: 0.9rem;">Using **Nutils** (Python-based IGA) to run nonlinear elastic simulations on multi-patch NURBS geometries.</p>
+                </div>
+                <div class="tech-item">
+                    <h4><i class="fa-solid fa-calculator"></i> Matrix Compression</h4>
+                    <p style="font-size: 0.9rem;">Applying **POD (Proper Orthogonal Decomposition)** to find the optimal basis $\mathbf{\Phi}$ that captures 99.9% energy.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><i class="fa-solid fa-bolt"></i> 2. The Online Engine</h2>
+            <p>The online phase is designed for millisecond responsiveness in the browser. We solve a projected system that mimics the complex physics at a fraction of the cost.</p>
+            
+            <div class="math-box" id="math-projection"></div>
+
+            <p>By solving for reduced coordinates $\hat{\mathbf{u}}$ of size $r \approx 10$, we bypass the need for inversions of size $2000 \times 2000$, resulting in a **100x to 1000x speedup**.</p>
+        </section>
+
+        <section class="section">
+            <h2><i class="fa-solid fa-puzzle-piece"></i> 3. Deployment Strategy</h2>
+            <div class="tech-list">
+                <div class="tech-item" style="grid-column: 1 / -1;">
+                    <h4><i class="fa-solid fa-share-nodes"></i> Seamless Integration</h4>
+                    <p style="font-size: 0.95rem;">- **Data**: Offline results serialized to `.json` and distributed via static CDNs.<br>
+                    - **Frontend**: A custom JavaScript/WebAssembly core projecting new parameter queries at **60 FPS**.<br>
+                    - **Visuals**: Three.js rendering of deformed NURBS surfaces natively mapped from the ROM output.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-nav">
+            <a href="../index.html" class="btn-back">
+                <i class="fa-solid fa-arrow-left"></i> Return to Simulation Hub
+            </a>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        window.onload = function() {
+            katex.render("\\mathbf{K}_{red} = \\mathbf{\\Phi}^T \\mathbf{K}_{full}(\\mu) \\mathbf{\\Phi} \\quad \\text{and} \\quad \\mathbf{f}_{red} = \\mathbf{\\Phi}^T \\mathbf{f}_{full}(\\mu)", document.getElementById('math-projection'), {
+                displayMode: true,
+                throwOnError: false
+            });
+        };
+    </script>
+</body>
+</html>
