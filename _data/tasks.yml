@@ -24,7 +24,6 @@ tasks:
     deadline: 2026-03-23
     description: Reorganize reference_catalog.md into 5 annotated categories — IGA, ROM, FSI, Nonlinear Dynamics, Digital Twin.
 
-  # ── IN PROGRESS ───────────────────────────────────────────────────────────
   - title: Read Hoareau et al. 2025 (Supervisor's Paper)
     status: Done
     priority: High
@@ -37,7 +36,6 @@ tasks:
     deadline: 2026-04-05
     description: Foundation text on Isogeometric Analysis. Focus on chapters covering NURBS basis and structural mechanics.
 
-  # ── TO DO (Planning) ──────────────────────────────────────────────────────
   - title: Phase 1.6 & 1.7 ROM Prototypes
     status: Done
     priority: High
@@ -45,23 +43,25 @@ tasks:
     description: "Implemented 1D IGA Structural Mechanics simulator and 1.7 ROM Benchmark with 96% efficiency gain."
 
   - title: Lock Software Stack & Write architecture.md
-    status: To Do
+    status: Done
     priority: High
     deadline: 2026-04-07
-    description: "Decide: IGA solver (Nutils vs. lab code), ROM library (pyMOR), DT communication (static JSON → Flask API). Document in docs/architecture.md."
+    description: "Decide: IGA solver (Nutils vs. lab code), ROM library (pyMOR), DT communication (static JSON → Flask API). Documented in docs/architecture.md."
 
   - title: Write Parameter Space Definition (parameter_space.md)
-    status: To Do
+    status: Done
     priority: High
     deadline: 2026-04-07
-    description: Define parameter vector (geometry, material, load), ranges, and sampling strategy based on supervisor Q1–Q2 answers.
+    description: Defined parameter vector (geometry, material, load), ranges, and sampling strategy. Documented in docs/parameter_space.md.
 
-  # ── TO DO (Phase 2A — FOM Geometry) ──────────────────────────────────────
+  # ── IN PROGRESS ───────────────────────────────────────────────────────────
   - title: "Phase 2A: Define & Implement Parameterized IGA Geometry"
-    status: To Do
+    status: In Progress
     priority: High
     deadline: 2026-04-14
     description: Implement NURBS parametrization of the 2D test case (cantilever beam or equivalent). Verify patch with geometry plots.
+
+  # ── TO DO (Phase 2A — FOM Geometry) ──────────────────────────────────────
 
   # ── TO DO (Phase 2B — Full Order Model) ───────────────────────────────────
   - title: "Phase 2B: Assemble IGA Full Order Model (FOM)"
