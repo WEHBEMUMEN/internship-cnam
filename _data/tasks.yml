@@ -73,34 +73,56 @@ tasks:
     description: "Build interactive interface with time/parameter sliders and a live plot for the 1D simulation."
 
   # ── IN PROGRESS ───────────────────────────────────────────────────────────
-  - title: "Phase 2A: Define & Implement Parameterized IGA Geometry"
+  - title: "Phase 2A.1: 2D NURBS Surface Mapping"
     status: In Progress
     priority: High
+    deadline: 2026-04-10
+    description: Implement bivariate NURBS mapping $x(\xi, \eta)$ for 2D surface patches.
+  
+  - title: "Phase 2A.2: Compute Jacobians & Basis Derivatives"
+    status: To Do
+    priority: High
     deadline: 2026-04-14
-    description: Implement NURBS parametrization of the 2D test case (cantilever beam or equivalent). Verify patch with geometry plots.
-
-  # ── TO DO (Phase 2A — FOM Geometry) ──────────────────────────────────────
+    description: Develop routines for physical space derivatives of 2D basis functions.
 
   # ── TO DO (Phase 2B — Full Order Model) ───────────────────────────────────
-  - title: "Phase 2B: Assemble IGA Full Order Model (FOM)"
+  - title: "Phase 2B.1: Assemble 2D Stiffness Matrix (K)"
+    status: To Do
+    priority: High
+    deadline: 2026-04-21
+    description: Assemble global stiffness matrix for a 2D cantilever plate or shell.
+
+  - title: "Phase 2B.2: Nonlinear Newton-Raphson (2D)"
     status: To Do
     priority: High
     deadline: 2026-04-28
-    description: Assemble stiffness K(u) and mass M matrices. Implement Newton-Raphson + Newmark-beta integrator. Validate against analytical solution (error < 0.1%).
+    description: "Integrate geometric nonlinearity into the 2D solver with convergence monitoring."
 
   # ── TO DO (Phase 2C — Snapshots) ─────────────────────────────────────────
-  - title: "Phase 2C: Generate Snapshot Database"
+  - title: "Phase 2C.1: Latin Hypercube Parameter Sampling"
+    status: To Do
+    priority: High
+    deadline: 2026-05-05
+    description: Execute LHS strategy for parameter vector $\mu$ (stiffness, load, geometry).
+
+  - title: "Phase 2C.2: Generate Snapshot Database"
     status: To Do
     priority: High
     deadline: 2026-05-12
-    description: Run FOM across 25-point Latin Hypercube Sample of parameter space. Store as .npy files. Plot singular value decay to confirm low-dimensional manifold.
+    description: Run and save 50+ high-fidelity snapshots in .npy format for ROM training.
 
   # ── TO DO (Phase 2D — POD ROM) ────────────────────────────────────────────
-  - title: "Phase 2D: Build Reduced Order Model (POD)"
+  - title: "Phase 2D.1: SVD Reduction & POD Basis"
+    status: To Do
+    priority: High
+    deadline: 2026-05-19
+    description: Apply SVD to snapshot matrix and extract principal modes (POD basis $\Phi$).
+
+  - title: "Phase 2D.2: Projection of ROM Operators"
     status: To Do
     priority: High
     deadline: 2026-05-26
-    description: Apply SVD to snapshot matrix. Select r modes (99.9% energy). Project FOM equations. Validate on out-of-sample parameters (target error < 1%).
+    description: Project FOM equations onto the reduced basis ($K_{red} = \Phi^T K \Phi$).
 
   # ── TO DO (Phase 2E — Hyper-reduction) ────────────────────────────────────
   - title: "Phase 2E: Implement & Compare Hyper-reduction (DEIM / ECS / ECSW)"
