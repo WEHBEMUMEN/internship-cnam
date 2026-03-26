@@ -192,11 +192,11 @@
             
             <div class="mermaid-container">
                 <div class="mermaid">
-                    graph LR
-                        A["Parameter Sampling (LHS)"] --> B["IGA Solver (FOM)"]
-                        B --> C["Snapshot Database (S)"]
-                        C --> D["SVD Basis Extraction"]
-                        D --> E["ROM Basis (Φ)"]
+                    graph TD
+                        A["<i class='fa-solid fa-vial'></i> Parameter Sampling (LHS)"] --> B["<i class='fa-solid fa-microchip'></i> IGA Solver (FOM)"]
+                        B --> C["<i class='fa-solid fa-database'></i> Snapshot Database (S)"]
+                        C --> D["<i class='fa-solid fa-scissors'></i> SVD Basis Extraction"]
+                        D --> E["<i class='fa-solid fa-dna'></i> ROM Basis (Φ)"]
                         style E fill:#3b82f6,stroke:#fff,stroke-width:2px,color:#fff
                 </div>
             </div>
@@ -242,7 +242,18 @@
     </div>
 
     <script>
-        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'dark',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis',
+                nodeSpacing: 50,
+                rankSpacing: 40
+            }
+        });
         window.onload = function() {
             katex.render("\\mathbf{K}_{red} = \\mathbf{\\Phi}^T \\mathbf{K}_{full}(\\mu) \\mathbf{\\Phi} \\quad \\text{and} \\quad \\mathbf{f}_{red} = \\mathbf{\\Phi}^T \\mathbf{f}_{full}(\\mu)", document.getElementById('math-projection'), {
                 displayMode: true,
