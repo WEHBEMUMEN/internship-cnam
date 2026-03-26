@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2.1 | Bivariate NURBS & Surfaces</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --accent: #10b981;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-dim: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        section {
+            background: var(--card);
+            padding: 50px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 1.05rem;
+        }
+
+        .math-block {
+            background: #f1f5f9;
+            padding: 30px;
+            border-radius: 16px;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+
+        .theory-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .theory-link:hover { opacity: 0.8; }
+
+        .concept-card {
+            border-left: 4px solid var(--accent);
+            padding-left: 20px;
+            margin: 25px 0;
+            background: rgba(16, 185, 129, 0.03);
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: #0f172a;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .btn-back:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Phase 2.0 | Computational Core</span>
+            <h1>From Lines to Surfaces</h1>
+            <p class="subtitle">Extending 1D Isogeometric Analysis to bivariate patches through Tensor Product structures.</p>
+        </header>
+
+        <section>
+            <h2>Bivariate Basis Functions</h2>
+            <p>In Phase 1, we defined univariate basis functions $N_{i,p}(\xi)$ along a single parametric direction. To model surfaces (plates, shells, membranes), we construct a **Tensor Product** of two 1D basis systems.</p>
+            
+            <p>The resulting bivariate basis function $R_{i,j}^{p,q}(\xi, \eta)$ is the normalized product of the 1D bases along dimensions $\xi$ and $\eta$:</p>
+            
+            <div class="math-block" id="math-basis"></div>
+
+            <div class="concept-card">
+                <strong><i class="fa-solid fa-link"></i> Dependency:</strong> For a refresher on knots and Cox-de Boor recursion, see <a href="theory-1.6.html" class="theory-link">Theory 1.6: IGA Foundations</a>.
+            </div>
+        </section>
+
+        <section>
+            <h2>Surface Mapping</h2>
+            <p>A 2D NURBS surface patch is a mapping from a unit square parametric domain $[0,1] \times [0,1]$ to a 3D physical domain. The physical position $\mathbf{x}(\xi, \eta)$ is computed as a weighted sum of a control point grid $\mathbf{P}_{i,j}$:</p>
+            
+            <div class="math-block" id="math-mapping"></div>
+
+            <p>This allows us to describe complex topologies like wings, car bodies, or sloshing tank walls using only a small set of control points, maintaining **perfect geometric accuracy** regardless of the mesh resolution.</p>
+        </section>
+
+        <section>
+            <h2>The Jacobian Matrix</h2>
+            <p>To integrate physical quantities (like stiffness or stress) over the surface, we must calculate the mapping derivatives. These form the 2D Jacobian matrix $\mathbf{J}$:</p>
+            
+            <div class="math-block" id="math-jacobian"></div>
+
+            <p>The Jacobian relates the parametric area $d\xi d\eta$ to the physical area $dA$, a critical step for the Finite Element assembly phase (Phase 2B).</p>
+        </section>
+
+        <footer>
+            <a href="phase-2-core/index.html" class="btn-back">
+                Launch 2D Verification Lab <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </footer>
+    </div>
+
+    <script>
+        window.onload = function() {
+            katex.render("R_{i,j}^{p,q}(\\xi, \\eta) = \\frac{N_{i,p}(\\xi) M_{j,q}(\\eta) w_{i,j}}{\\sum_{k} \\sum_{l} N_{k,p}(\\xi) M_{l,q}(\\eta) w_{k,l}}", document.getElementById('math-basis'), { displayMode: true });
+            katex.render("\\mathbf{x}(\\xi, \\eta) = \\sum_{i} \\sum_{j} R_{i,j}^{p,q}(\\xi, \\eta) \\mathbf{P}_{i,j}", document.getElementById('math-mapping'), { displayMode: true });
+            katex.render("\\mathbf{J} = \\begin{bmatrix} \\frac{\\partial x}{\\partial \\xi} & \\frac{\\partial x}{\\partial \\eta} \\\\ \\frac{\\partial y}{\\partial \\xi} & \\frac{\\partial y}{\\partial \\eta} \\\\ \\frac{\\partial z}{\\partial \\xi} & \\frac{\\partial z}{\\partial \\eta} \\end{bmatrix}", document.getElementById('math-jacobian'), { displayMode: true });
+        };
+    </script>
+</body>
+</html>
