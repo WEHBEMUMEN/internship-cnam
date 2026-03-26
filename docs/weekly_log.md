@@ -36,10 +36,11 @@ Use this document to track weekly goals, daily tasks, and notes from meetings wi
 - [x] Create project Gantt chart (timeline.html) and deploy GitHub Pages site.
 - [x] Configure Sveltia CMS with tasks and downloads collections.
 - [x] Restructure literature reference catalog into 5 annotated categories.
-- [ ] Read Hoareau et al. 2025 (supervisor's paper) — **first priority**.
-- [ ] Read Cottrell et al. 2009 chapters 1–4 (IGA foundations).
-- [ ] Check "Shared resources Mumen" link and catalog contents.
-- [ ] Explore `slosh_ml` GitHub repository.
+- [x] Read Hoareau et al. 2025 (supervisor's paper) — **first priority**.
+- [x] Read Cottrell et al. 2009 chapters 1–4 (IGA foundations).
+- [x] Check "Shared resources Mumen" link and catalog contents.
+- [x] Explore `slosh_ml` GitHub repository.
+- [x] **Milestone:** Completed Phase 1.6 IGA Simulator & Phase 1.7 ROM Benchmark.
 
 ### 🤝 Supervisor Meeting Notes
 **Date:** *(Fill in when meeting is scheduled)*

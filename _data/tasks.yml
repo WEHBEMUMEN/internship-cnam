@@ -26,23 +26,23 @@ tasks:
 
   # ── IN PROGRESS ───────────────────────────────────────────────────────────
   - title: Read Hoareau et al. 2025 (Supervisor's Paper)
-    status: In Progress
+    status: Done
     priority: High
     deadline: 2026-03-30
     description: "Primary reference — IGA + ROM + hyper-reduction applied to sloshing. Read first before any other paper."
 
   - title: Read Cottrell et al. 2009 (IGA Foundations)
-    status: In Progress
+    status: Done
     priority: High
     deadline: 2026-04-05
     description: Foundation text on Isogeometric Analysis. Focus on chapters covering NURBS basis and structural mechanics.
 
   # ── TO DO (Planning) ──────────────────────────────────────────────────────
-  - title: Prepare & Hold First Supervisor Meeting
-    status: To Do
+  - title: Phase 1.6 & 1.7 ROM Prototypes
+    status: Done
     priority: High
-    deadline: 2026-03-30
-    description: "Answer Q1–Q5 with Christophe Hoareau: parameter space, test case geometry, accuracy tolerance, deliverable format, existing lab code."
+    deadline: 2026-03-26
+    description: "Implemented 1D IGA Structural Mechanics simulator and 1.7 ROM Benchmark with 96% efficiency gain."
 
   - title: Lock Software Stack & Write architecture.md
     status: To Do
