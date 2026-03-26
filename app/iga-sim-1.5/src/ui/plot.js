@@ -28,27 +28,65 @@ export class BasisPlot {
         const { width, height } = this.canvas;
         this.ctx.strokeStyle = '#334155';
         this.ctx.lineWidth = 1;
+        this.ctx.font = '12px "JetBrains Mono", monospace';
+        this.ctx.fillStyle = '#94a3b8';
+        this.ctx.textAlign = 'center';
         
-        // Horizontal lines
+        // Horizontal lines (Grid)
         for (let i = 0; i <= 4; i++) {
             const y = height * (1 - i/4) * 0.8 + height * 0.1;
             this.ctx.beginPath();
             this.ctx.moveTo(width * 0.1, y);
             this.ctx.lineTo(width * 0.9, y);
             this.ctx.stroke();
+            
+            // Y-Axis Ticks
+            const val = (i/4).toFixed(2);
+            if (i % 2 === 0) { // Labels for 0, 0.5, 1.0
+                this.ctx.fillText(val, width * 0.07, y + 4);
+            }
         }
         
-        // Vertical axis
+        // Vertical axis (Y)
         this.ctx.beginPath();
-        this.ctx.moveTo(width * 0.1, height * 0.1);
-        this.ctx.lineTo(width * 0.1, height * 0.9);
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = '#475569';
+        this.ctx.moveTo(width * 0.1, height * 0.9);
+        this.ctx.lineTo(width * 0.1, height * 0.05);
         this.ctx.stroke();
         
-        // Horizontal axis
+        // Y arrowhead
+        this.ctx.beginPath();
+        this.ctx.moveTo(width * 0.1 - 5, height * 0.07);
+        this.ctx.lineTo(width * 0.1, height * 0.05);
+        this.ctx.lineTo(width * 0.1 + 5, height * 0.07);
+        this.ctx.stroke();
+
+        // Y label
+        const yLabel = document.getElementById('view-basis')?.classList.contains('active') ? 'N(ξ)' : 'y';
+        this.ctx.fillText(yLabel, width * 0.1, height * 0.03);
+        
+        // Horizontal axis (X)
         this.ctx.beginPath();
         this.ctx.moveTo(width * 0.1, height * 0.9);
-        this.ctx.lineTo(width * 0.9, height * 0.9);
+        this.ctx.lineTo(width * 0.95, height * 0.9);
         this.ctx.stroke();
+        
+        // X arrowhead
+        this.ctx.beginPath();
+        this.ctx.moveTo(width * 0.93, height * 0.9 - 5);
+        this.ctx.lineTo(width * 0.95, height * 0.9);
+        this.ctx.lineTo(width * 0.93, height * 0.9 + 5);
+        this.ctx.stroke();
+
+        // X label
+        this.ctx.fillText('ξ', width * 0.97, height * 0.9 + 4);
+
+        // X ticks (0, 0.5, 1.0)
+        [0, 0.5, 1.0].forEach(val => {
+            const tx = width * 0.1 + val * width * 0.8;
+            this.ctx.fillText(val.toFixed(1), tx, height * 0.93);
+        });
     }
 
     /**
