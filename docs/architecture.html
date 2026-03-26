@@ -108,12 +108,25 @@
 
         .mermaid-container {
             background: rgba(15, 23, 42, 0.5);
-            padding: 30px;
+            padding: 40px;
             border-radius: 16px;
             border: 1px solid var(--border);
             margin: 30px 0;
             display: flex;
             justify-content: center;
+            overflow: hidden;
+        }
+
+        .mermaid {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .mermaid svg {
+            max-width: 100% !important;
+            height: auto !important;
+            transform: scale(1.15); /* Slightly increase scale for readability */
         }
 
         .tech-list {
