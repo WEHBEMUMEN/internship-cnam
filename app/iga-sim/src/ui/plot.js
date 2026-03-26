@@ -90,14 +90,16 @@ export class BasisPlot {
     }
 
     /**
-     * Draws all basis functions
+     * Draws all basis functions with variable resolution
      */
-    drawBasisFunctions(n, p, knots, BasisEngine) {
+    drawBasisFunctions(n, p, knots, BasisEngine, resolution = 200) {
         const { width, height } = this.canvas;
         const colors = [
             '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
             '#ec4899', '#06b6d4', '#f97316', '#22c55e', '#a855f7'
         ];
+
+        const step = 1.0 / (resolution - 1);
 
         for (let i = 0; i < n; i++) {
             const color = colors[i % colors.length];
@@ -107,8 +109,8 @@ export class BasisPlot {
             this.ctx.beginPath();
 
             let first = true;
-            // Sampling across Xi interval [0, 1]
-            for (let x = 0; x <= 1; x += 0.005) {
+            for (let j = 0; j < resolution; j++) {
+                const x = j * step;
                 const val = BasisEngine.evaluate(i, p, x, knots);
                 const px = width * 0.1 + x * width * 0.8;
                 const py = height * 0.9 - val * height * 0.7;
@@ -124,32 +126,35 @@ export class BasisPlot {
             
             // Draw area under curve with transparency
             this.ctx.fillStyle = color + '22';
-            this.ctx.lineTo(width * 0.9, height * 0.9); // Close to bottom right
-            this.ctx.lineTo(width * 0.1, height * 0.9); // Back to bottom left
+            this.ctx.lineTo(width * 0.9, height * 0.9);
+            this.ctx.lineTo(width * 0.1, height * 0.9);
             this.ctx.fill();
         }
     }
 
     /**
-     * Draws the physical NURBS curve C(xi)
+     * Draws the physical NURBS curve C(xi) with variable resolution
      */
-    drawCurve(p, knots, points, weights, CurveEngine) {
+    drawCurve(p, knots, points, weights, CurveEngine, resolution = 500, showPoints = false) {
         const { width, height } = this.canvas;
         this.ctx.strokeStyle = '#ffffff';
         this.ctx.lineWidth = 4;
         this.ctx.lineJoin = 'round';
-        this.ctx.setLineDash([]); // Ensure solid line
+        this.ctx.setLineDash([]);
 
         this.ctx.beginPath();
         let first = true;
 
-        for (let xi = 0; xi <= 1; xi += 0.002) {
+        const step = 1.0 / (resolution - 1);
+        const evaluatedPoints = [];
+
+        for (let i = 0; i < resolution; i++) {
+            const xi = i * step;
             const pt = CurveEngine.evaluate(xi, p, knots, points, weights);
-            // In 1D, pt.x is parameter, pt.y is the mapped value
-            // But here the user wants "interactive points" to draw a line.
-            // We will treat points[i].x and points[i].y as actual screen coords (normalized 0-1)
             const px = width * (0.1 + pt.x * 0.8);
             const py = height * (0.1 + pt.y * 0.8);
+            
+            evaluatedPoints.push({x: px, y: py});
 
             if (first) {
                 this.ctx.moveTo(px, py);
@@ -159,6 +164,16 @@ export class BasisPlot {
             }
         }
         this.ctx.stroke();
+
+        // Optional: Draw evaluation points as dots
+        if (showPoints) {
+            this.ctx.fillStyle = '#3b82f6';
+            evaluatedPoints.forEach(pt => {
+                this.ctx.beginPath();
+                this.ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+        }
     }
 
     /**

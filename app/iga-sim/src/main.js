@@ -13,6 +13,11 @@ class App {
         this.points = this.initPoints();
         this.weights = new Array(this.n).fill(1.0);
         
+        // Performance & Resolution State
+        this.resolution = 500;
+        this.showPoints = false;
+        this.evalTime = 0;
+        
         // Interaction State
         this.draggingPoint = -1;
         
@@ -56,6 +61,23 @@ class App {
             this.rebuildKnotVector();
             this.updateWeightsUI();
         });
+
+        const resSlider = document.getElementById('input-res');
+        if (resSlider) {
+            resSlider.addEventListener('input', (e) => {
+                this.resolution = parseInt(e.target.value);
+                document.getElementById('res-val').textContent = this.resolution;
+                this.render();
+            });
+        }
+
+        const showPointsCheck = document.getElementById('check-show-points');
+        if (showPointsCheck) {
+            showPointsCheck.addEventListener('change', (e) => {
+                this.showPoints = e.target.checked;
+                this.render();
+            });
+        }
 
         viewBasisBtn.addEventListener('click', () => {
             this.mode = 'basis';
@@ -169,29 +191,24 @@ class App {
             
             const originalN = this.n;
             const originalP = this.p;
+            const originalRes = this.resolution;
             
-            // --- Test 1: Vary Control Points (Fix Degree at Current) ---
-            const n_refinements = [10, 50, 100, 200, 500];
-            const n_results = [];
+            // --- Test 1: Scaling Resolution (Evaluation Throughput) ---
+            const res_refinements = [10, 100, 500, 1000, 5000];
+            const res_results = [];
             
-            for (let n of n_refinements) {
-                this.n = n;
-                this.p = originalP;
-                this.points = this.initPoints();
-                this.weights = new Array(this.n).fill(1.0);
-                this.knotVector.update(this.n, this.p);
-                
+            for (let res of res_refinements) {
+                this.resolution = res;
                 let frames = 0;
-                let angle = 0;
+                let totalEval = 0;
                 
                 const startTime = performance.now();
                 await new Promise(resolve => {
                     const loop = () => {
-                        if (frames >= 60) { resolve(); return; }
-                        this.weights = this.weights.map((w, i) => 1.0 + 0.8 * Math.sin(angle + i));
-                        this.points.forEach((pt, i) => { pt.y = 0.5 + 0.3 * Math.sin(angle * 2 + i); });
+                        if (frames >= 30) { resolve(); return; }
+                        const t0 = performance.now();
                         this.render(); 
-                        angle += 0.2;
+                        totalEval += (performance.now() - t0);
                         frames++;
                         requestAnimationFrame(loop);
                     };
@@ -199,45 +216,48 @@ class App {
                 });
                 
                 const endTime = performance.now();
-                n_results.push(Math.floor(60 / ((endTime - startTime) / 1000)));
+                res_results.push({
+                    fps: Math.floor(30 / ((endTime - startTime) / 1000)),
+                    avgCpu: (totalEval / 30).toFixed(3)
+                });
             }
             
-            // --- Test 2: Vary Degree (Fix Control Points at safe constant N=50) ---
-            const p_refinements = [2, 3, 4, 5, 6]; 
-            const fixedN = Math.max(originalN, 15);
-            const p_results = [];
+            // --- Test 2: Scaling Control Points at High Res ---
+            const n_refinements = [6, 20, 50, 100];
+            const n_results = [];
+            this.resolution = 1000;
 
-            for (let p of p_refinements) {
-                this.p = p;
-                this.n = fixedN; 
+            for (let n of n_refinements) {
+                this.n = n;
                 this.points = this.initPoints();
                 this.weights = new Array(this.n).fill(1.0);
                 this.knotVector.update(this.n, this.p);
                 
                 let frames = 0;
-                let angle = 0;
-                
+                let totalEval = 0;
                 const startTime = performance.now();
                 await new Promise(resolve => {
                     const loop = () => {
-                        if (frames >= 60) { resolve(); return; }
-                        this.weights = this.weights.map((w, i) => 1.0 + 0.8 * Math.sin(angle + i));
-                        this.points.forEach((pt, i) => { pt.y = 0.5 + 0.3 * Math.sin(angle * 2 + i); });
+                        if (frames >= 30) { resolve(); return; }
+                        const t0 = performance.now();
                         this.render(); 
-                        angle += 0.2;
+                        totalEval += (performance.now() - t0);
                         frames++;
                         requestAnimationFrame(loop);
                     };
                     requestAnimationFrame(loop);
                 });
-                
                 const endTime = performance.now();
-                p_results.push(Math.floor(60 / ((endTime - startTime) / 1000)));
+                n_results.push({
+                    fps: Math.floor(30 / ((endTime - startTime) / 1000)),
+                    avgCpu: (totalEval / 30).toFixed(3)
+                });
             }
 
             // Restore Safe State
             this.n = originalN;
             this.p = originalP;
+            this.resolution = originalRes;
             this.points = this.initPoints();
             this.weights = new Array(this.n).fill(1.0);
             this.rebuildKnotVector();
@@ -249,31 +269,37 @@ class App {
             
             // Generate Unified Multi-Variable Report
             const reportDiv = document.createElement('div');
-            reportDiv.style.cssText = "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--sidebar-bg); padding:30px; border-radius:16px; border:1px solid var(--accent); z-index:9999; box-shadow:0 20px 40px rgba(0,0,0,0.8); min-width: 360px;";
+            reportDiv.style.cssText = "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--sidebar-bg); padding:30px; border-radius:16px; border:1px solid var(--accent); z-index:9999; box-shadow:0 20px 40px rgba(0,0,0,0.8); min-width: 450px;";
             reportDiv.innerHTML = `
-                <h3 style="margin-top:0; margin-bottom: 24px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 12px; font-size:1.4rem;">Isolated Architecture Benchmark</h3>
+                <h3 style="margin-top:0; margin-bottom: 24px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 12px; font-size:1.4rem;">Performance Architecture Report</h3>
                 
-                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 1: Scaling Nodes (Fixed p=${originalP})</h4>
+                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 1: Sampling Scaling (Fixed n, p)</h4>
                 <ul style="list-style:none; padding:0; margin-bottom: 24px;">
-                    ${n_refinements.map((n, i) => `
-                        <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace;">
-                            <span style="color:var(--text-secondary);">Nodes (n=${n})</span>
-                            <span style="color:var(--success); font-weight:bold;">${n_results[i]} FPS</span>
+                    ${res_refinements.map((res, i) => `
+                        <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">
+                            <span style="color:var(--text-secondary);">Pts: ${res}</span>
+                            <span>
+                                <span style="color:var(--accent); margin-right:15px;">${res_results[i].avgCpu}ms</span>
+                                <span style="color:var(--success); font-weight:bold;">${res_results[i].fps} FPS</span>
+                            </span>
                         </li>
                     `).join('')}
                 </ul>
 
-                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 2: Scaling Degree (Fixed n=${fixedN})</h4>
+                <h4 style="margin:0 0 12px 0; color:var(--text-secondary); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Test 2: Complexity Scaling (at 1000 Pts)</h4>
                 <ul style="list-style:none; padding:0; margin-bottom: 30px;">
-                    ${p_refinements.map((p, i) => `
-                        <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace;">
-                            <span style="color:var(--text-secondary);">Degree (p=${p})</span>
-                            <span style="color:var(--success); font-weight:bold;">${p_results[i]} FPS</span>
+                    ${n_refinements.map((n, i) => `
+                        <li style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">
+                            <span style="color:var(--text-secondary);">Nodes: ${n}</span>
+                            <span>
+                                <span style="color:var(--accent); margin-right:15px;">${n_results[i].avgCpu}ms</span>
+                                <span style="color:var(--success); font-weight:bold;">${n_results[i].fps} FPS</span>
+                            </span>
                         </li>
                     `).join('')}
                 </ul>
 
-                <button class="btn btn-primary" style="width:100%; font-weight:bold;" onclick="this.parentElement.remove()">Close Constraints Report</button>
+                <button class="btn btn-primary" style="width:100%; font-weight:bold;" onclick="this.parentElement.remove()">Close Performance Report</button>
             `;
             document.body.appendChild(reportDiv);
         });
@@ -326,15 +352,23 @@ class App {
     }
 
     render() {
+        const t0 = performance.now();
         this.plot.clear();
         this.plot.drawGrid();
         
         if (this.mode === 'basis') {
-            this.plot.drawBasisFunctions(this.n, this.p, this.knotVector.values, BasisFunctions);
+            this.plot.drawBasisFunctions(this.n, this.p, this.knotVector.values, BasisFunctions, this.resolution);
         } else {
             this.plot.drawControlPolygon(this.points, this.draggingPoint);
-            this.plot.drawCurve(this.p, this.knotVector.values, this.points, this.weights, Curve);
+            this.plot.drawCurve(this.p, this.knotVector.values, this.points, this.weights, Curve, this.resolution, this.showPoints);
         }
+        const t1 = performance.now();
+        this.evalTime = t1 - t0;
+        
+        const cpuEl = document.getElementById('cpu-time');
+        if (cpuEl) cpuEl.textContent = this.evalTime.toFixed(3);
+        const ptsEl = document.getElementById('pts-count');
+        if (ptsEl) ptsEl.textContent = this.resolution;
     }
 }
 

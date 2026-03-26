@@ -43,6 +43,16 @@
                     </div>
                 </div>
 
+                <div class="control-group">
+                    <label for="input-res">Resolution (Points): <span id="res-val">500</span></label>
+                    <input type="range" id="input-res" min="10" max="5000" step="10" value="500">
+                    
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+                        <input type="checkbox" id="check-show-points" style="width: 16px; height: 16px; cursor: pointer;">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">Show Evaluation Points</span>
+                    </div>
+                </div>
+
                 <div class="control-group" id="weights-section">
                     <label>Weights ($w_i$)</label>
                     <div id="weights-editor" class="weights-editor">
@@ -66,8 +76,8 @@
                     <input type="file" id="import-json-file" accept=".json" style="display: none;">
                     
                     <div style="flex-basis: 100%; border-top: 1px solid var(--border); margin-top: 15px; padding-top: 15px;">
-                        <span style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:8px;"><strong>Core Engine Benchmark:</strong> Sequentially bounds and isolates recursion complexity scaling tests against purely structural mapping density limits.</span>
-                        <button id="benchmark-btn" class="btn btn-primary" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-gauge-high"></i> Core Performance Test</button>
+                        <span style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:8px;"><strong>Performance Benchmark:</strong> Measures evaluation throughput across varying sampling resolutions and node counts.</span>
+                        <button id="benchmark-btn" class="btn btn-primary" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-gauge-high"></i> Run Performance Test</button>
                     </div>
                 </div>
             </section>
@@ -83,7 +93,9 @@
                     <h2>B-Spline Basis Functions</h2>
                     <p>Interactive visualization of $N_{i,p}(\xi)$</p>
                 </div>
-                <div class="status-group">
+                <div class="status-group" style="display: flex; gap: 15px;">
+                    <span class="status-item"><i class="fa-solid fa-microchip"></i> <span id="cpu-time">0.000</span> ms</span>
+                    <span class="status-item"><i class="fa-solid fa-layer-group"></i> <span id="pts-count">500</span> Pts</span>
                     <span class="status-item"><i class="fa-solid fa-bolt"></i> <span id="fps">60</span> FPS</span>
                 </div>
             </div>
