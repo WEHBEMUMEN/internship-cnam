@@ -108,7 +108,7 @@
 
         .mermaid-container {
             background: rgba(15, 23, 42, 0.5);
-            padding: 40px;
+            padding: 30px;
             border-radius: 16px;
             border: 1px solid var(--border);
             margin: 30px 0;
@@ -126,7 +126,12 @@
         .mermaid svg {
             max-width: 100% !important;
             height: auto !important;
-            transform: scale(1.15); /* Slightly increase scale for readability */
+        }
+
+        /* Standardize Mermaid text to match Inter font */
+        .nodeLabel, .label {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 0.95rem !important;
         }
 
         .tech-list {
