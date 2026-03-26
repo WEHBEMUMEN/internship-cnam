@@ -54,6 +54,24 @@ tasks:
     deadline: 2026-04-07
     description: Defined parameter vector (geometry, material, load), ranges, and sampling strategy. Documented in docs/parameter_space.md.
 
+  - title: "Phase 3.1: 1D Core Engine"
+    status: Done
+    priority: High
+    deadline: 2026-03-26
+    description: "Setup parametric space, generate basis functions, and evaluate derivatives for the 1D case. (Fulfills foundations for 1.6/1.7)"
+
+  - title: "Phase 3.2: Real-Time Benchmarking"
+    status: Done
+    priority: High
+    deadline: 2026-03-26
+    description: "Profile the evaluation loop against existing libraries. Achieved 60+ FPS in Phase 1.7 Benchmark."
+
+  - title: "Phase 3.3: 1D UI Prototype"
+    status: Done
+    priority: Medium
+    deadline: 2026-03-26
+    description: "Build interactive interface with time/parameter sliders and a live plot for the 1D simulation."
+
   # ── IN PROGRESS ───────────────────────────────────────────────────────────
   - title: "Phase 2A: Define & Implement Parameterized IGA Geometry"
     status: In Progress
@@ -99,23 +117,6 @@ tasks:
     description: Build online query script that returns displacement field for new parameter in < 1 second. Export as JSON for Digital Twin frontend.
 
   # ── TO DO (Phase 3 — Real-Time Application Roadmap) ──────────────────────────
-  - title: "Phase 3.1: 1D Core Engine"
-    status: Done
-    priority: High
-    deadline: 2026-03-26
-    description: "Setup parametric space, generate basis functions, and evaluate derivatives for the 1D case. (Fulfills foundations for 1.6/1.7)"
-
-  - title: "Phase 3.2: Real-Time Benchmarking"
-    status: Done
-    priority: High
-    deadline: 2026-03-26
-    description: "Profile the evaluation loop against existing libraries. Achieved 60+ FPS in Phase 1.7 Benchmark."
-
-  - title: "Phase 3.3: 1D UI Prototype"
-    status: Done
-    priority: Medium
-    deadline: 2026-03-26
-    description: "Build interactive interface with time/parameter sliders and a live plot for the 1D simulation."
 
   - title: "Phase 3.4: 2D NURBS Expansion"
     status: To Do
