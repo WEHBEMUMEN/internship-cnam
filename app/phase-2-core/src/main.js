@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
 class NURBSLab {
     constructor() {
@@ -8,6 +9,7 @@ class NURBSLab {
         
         this.setupScene();
         this.setupPatch();
+        this.setupInteractivity();
         this.setupUI();
         this.render();
 
@@ -28,6 +30,24 @@ class NURBSLab {
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
+
+        // Transform Controls (for clicking CP)
+        this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
+        this.transformControls.addEventListener('dragging-changed', (event) => {
+            this.controls.enabled = !event.value;
+        });
+        this.transformControls.addEventListener('change', () => {
+            if (this.selectedCP) {
+                // Sync sphere position back to patch data
+                const i = this.selectedCP.userData.i;
+                const j = this.selectedCP.userData.j;
+                this.patch.controlPoints[i][j].x = this.selectedCP.position.x;
+                this.patch.controlPoints[i][j].y = this.selectedCP.position.y;
+                this.patch.controlPoints[i][j].z = this.selectedCP.position.z;
+                this.updateSurface();
+            }
+        });
+        this.scene.add(this.transformControls);
 
         // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -77,8 +97,31 @@ class NURBSLab {
         // Control Points Visualization
         this.cpGroup = new THREE.Group();
         this.scene.add(this.cpGroup);
+        this.cpSpheres = [];
         
         this.updateSurface();
+    }
+
+    setupInteractivity() {
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+
+        this.container.addEventListener('mousedown', (event) => {
+            const rect = this.container.getBoundingClientRect();
+            this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.cpSpheres);
+
+            if (intersects.length > 0) {
+                this.selectedCP = intersects[0].object;
+                this.transformControls.attach(this.selectedCP);
+            } else if (!this.transformControls.dragging) {
+                this.transformControls.detach();
+                this.selectedCP = null;
+            }
+        });
     }
 
     updateSurface() {
@@ -102,18 +145,28 @@ class NURBSLab {
         this.geometry.attributes.position.needsUpdate = true;
         this.geometry.computeVertexNormals();
 
-        // Update CP helpers
-        this.cpGroup.clear();
-        for (let i = 0; i < this.patch.controlPoints.length; i++) {
-            for (let j = 0; j < this.patch.controlPoints[0].length; j++) {
-                const cp = this.patch.controlPoints[i][j];
-                const sphere = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.05),
-                    new THREE.MeshBasicMaterial({ color: 0x10b981 })
-                );
-                sphere.position.set(cp.x, cp.y, cp.z);
-                this.cpGroup.add(sphere);
+        // One-time creation or sync of spheres
+        if (this.cpSpheres.length === 0) {
+            for (let i = 0; i < this.patch.controlPoints.length; i++) {
+                for (let j = 0; j < this.patch.controlPoints[0].length; j++) {
+                    const cp = this.patch.controlPoints[i][j];
+                    const sphere = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.12),
+                        new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.8 })
+                    );
+                    sphere.position.set(cp.x, cp.y, cp.z);
+                    sphere.userData = { i, j };
+                    this.cpGroup.add(sphere);
+                    this.cpSpheres.push(sphere);
+                }
             }
+        } else {
+            // Update sphere positions from data (in case slider changed them)
+            this.cpSpheres.forEach(sphere => {
+                const { i, j } = sphere.userData;
+                const cp = this.patch.controlPoints[i][j];
+                sphere.position.set(cp.x, cp.y, cp.z);
+            });
         }
     }
 
