@@ -343,18 +343,21 @@ export class ReferenceFEM {
         const N3 = 3 * xi * xi - 2 * xi * xi * xi;
         const N4 = h * (-xi * xi + xi * xi * xi);
 
+        // Apply point load at loadPos
         const dIdx = eIdx * 2;
         F[dIdx] += loadMag * N1;
         F[dIdx + 1] += loadMag * N2;
         F[dIdx + 2] += loadMag * N3;
         F[dIdx + 3] += loadMag * N4;
 
-        // Apply BCs: Clamped at both ends (typical for our sim 1.6 defaults)
-        const fixedDofs = [0, 1, numDofs - 2, numDofs - 1];
-        fixedDofs.forEach(idx => {
-            for (let j = 0; j < numDofs; j++) K[idx][j] = 0;
-            K[idx][idx] = 1.0;
-            F[idx] = 0;
+        // Apply BCs from the arguments
+        bcs.forEach(bc => {
+            const idx = bc.index;
+            if (idx >= 0 && idx < numDofs) {
+                for (let j = 0; j < numDofs; j++) K[idx][j] = 0;
+                K[idx][idx] = 1.0;
+                F[idx] = bc.value;
+            }
         });
 
         const u = this.gaussianElimination(K, F);

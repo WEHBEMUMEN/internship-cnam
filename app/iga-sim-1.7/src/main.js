@@ -15,7 +15,7 @@ class MechanicsApp {
         this.visualScale = 100.0;
         this.isStatics = true;
         this.isNonlinear = false;
-        this.showFEM = false;
+        this.showFEM = true; // Enabled by default for 1.7 Bench
         this.bcLeft = true;
         this.bcRight = true;
         
@@ -25,9 +25,6 @@ class MechanicsApp {
         this.dynamicAmplitude = 1.0;
         this.deflection = null;
         this.femDeflection = null;
-        this.femDeflection = null;
-        this.femQuality = 9;
-        this.femType = 'linear';
         this.showAnalytical = false;
         
         // Initialize Engines
@@ -41,24 +38,30 @@ class MechanicsApp {
         this.updatePhysics();
         this.renderMath();
         this.animate();
+        
+        // For Debugging
+        window.app = this;
     }
 
     renderMath() {
         const formula = document.getElementById('math-formula');
-        if (!formula || !window.katex) return;
+        if (!formula) return;
         
         let tex = this.isNonlinear 
             ? "[K(u)]\\{u\\} = \\{F(u)\\}" 
             : "[K]\\{u\\} = \\{F\\}";
         
-        window.katex.render(tex, formula, {
-            throwOnError: false,
-            displayMode: true
-        });
+        if (window.katex) {
+            window.katex.render(tex, formula, {
+                throwOnError: false,
+                displayMode: true
+            });
+        } else {
+            formula.textContent = tex;
+        }
     }
 
     initEngines() {
-        // Create a simple straight line NURBS as our structure
         const numCP = this.numElements + this.degree;
         const knots = [];
         for (let i = 0; i <= this.degree; i++) knots.push(0);
@@ -72,16 +75,13 @@ class MechanicsApp {
 
         this.nurbs = new NURBSEngine(this.degree, knots, controlPoints);
         this.physics = new PhysicsEngine(this.nurbs);
-        this.referenceFEM = new ReferenceFEM(100); // 100 elements Reference Truth
+        this.referenceFEM = new ReferenceFEM(100);
     }
 
     updatePhysics() {
         const numCP = this.nurbs.controlPoints.length;
-        
-        // Exact Point Load Assembly
         this.loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
 
-        // IGA BCs: Clamped means pinning first/last TWO control points (locks value AND derivative)
         const igaBCs = [];
         if (this.bcLeft) {
             igaBCs.push({ index: 0, value: 0 });
@@ -92,47 +92,56 @@ class MechanicsApp {
             igaBCs.push({ index: numCP - 2, value: 0 });
         }
 
-        // Always solve the static shape — in dynamics mode it serves as the vibration mode shape
         if (this.isNonlinear) {
             this.deflection = this.physics.solveNonlinear(this.loadF, igaBCs);
         } else {
             this.deflection = this.physics.solveStatics(this.loadF, igaBCs);
         }
 
-        // FEM BCs: Hermite elements use DOF indices 0 and last node
-        const femBCs = [];
-        if (this.bcLeft) femBCs.push({ index: 0, value: 0 });
-        if (this.bcRight) femBCs.push({ index: numCP - 1, value: 0 });
-
         if (this.showFEM) {
-            // Reference High-Res FEM Solution
+            // Apply similar logic for Reference FEM (Clamping)
+            const femBCs = [];
+            if (this.bcLeft) {
+                femBCs.push({ index: 0, value: 0 });
+                femBCs.push({ index: 1, value: 0 });
+            }
+            if (this.bcRight) {
+                const lastNodeDof = 202 - 2; // (100+1)*2 = 202. last node starts at 200
+                femBCs.push({ index: lastNodeDof, value: 0 });
+                femBCs.push({ index: lastNodeDof + 1, value: 0 });
+            }
             this.femDeflection = this.referenceFEM.solve(this.loadPos, this.loadMag, femBCs);
         }
     }
 
     setupEventListeners() {
-        const inputs = {
+        const inputMap = {
             'input-degree': (v) => { this.degree = parseInt(v); document.getElementById('degree-val').textContent = v; this.initEngines(); },
             'input-elements': (v) => { this.numElements = parseInt(v); document.getElementById('elements-val').textContent = v; this.initEngines(); },
             'input-load-pos': (v) => { this.loadPos = parseFloat(v); document.getElementById('load-pos-val').textContent = v; },
             'input-load-mag': (v) => { this.loadMag = parseFloat(v); document.getElementById('load-mag-val').textContent = v; },
-            'input-fem-quality': (v) => { this.femQuality = parseInt(v); document.getElementById('fem-quality-val').textContent = v; }
+            'input-scale-factor': (v) => { this.visualScale = parseFloat(v); document.getElementById('scale-factor-val').textContent = v; }
         };
 
-        Object.entries(inputs).forEach(([id, fn]) => {
-            document.getElementById(id).addEventListener('input', (e) => {
+        Object.entries(inputMap).forEach(([id, fn]) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', (e) => {
                 fn(e.target.value);
                 this.updatePhysics();
             });
         });
 
-        document.getElementById('toggle-nonlinear').addEventListener('change', (e) => {
-            this.isNonlinear = e.target.checked;
-            this.updatePhysics();
-            this.renderMath();
-        });
+        const toggles = {
+            'toggle-nonlinear': (v) => { this.isNonlinear = v; this.updatePhysics(); this.renderMath(); },
+            'toggle-fem': (v) => { this.showFEM = v; document.getElementById('fem-settings-container').style.display = v ? 'block' : 'none'; document.getElementById('legend-fem').style.display = v ? 'flex' : 'none'; this.updatePhysics(); },
+            'toggle-analytical': (v) => { this.showAnalytical = v; document.getElementById('legend-analytical').style.display = v ? 'flex' : 'none'; this.updatePhysics(); },
+            'toggle-damping': (v) => { this.isDamping = v; }
+        };
 
-        // Moved to the block below to handle legend logic
+        Object.entries(toggles).forEach(([id, fn]) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', (e) => fn(e.target.checked));
+        });
 
         document.getElementById('bc-left').addEventListener('click', (e) => {
             this.bcLeft = !this.bcLeft;
@@ -153,9 +162,7 @@ class MechanicsApp {
             e.target.classList.add('active');
             document.getElementById('mode-dynamics').classList.remove('active');
             document.getElementById('dynamics-settings').style.display = 'none';
-            document.getElementById('state-desc').textContent = 'Solving natively on NURBS basis for C¹-smooth continuous deflection.';
             this.updatePhysics();
-            this.renderMath();
         });
 
         document.getElementById('mode-dynamics').addEventListener('click', (e) => {
@@ -165,92 +172,26 @@ class MechanicsApp {
             e.target.classList.add('active');
             document.getElementById('mode-statics').classList.remove('active');
             document.getElementById('dynamics-settings').style.display = 'block';
-            document.getElementById('state-desc').textContent = 'Simulating structural vibration mode shapes using NURBS Basis.';
             this.updatePhysics();
-            this.renderMath();
-        });
-
-        document.getElementById('input-speed').addEventListener('input', (e) => {
-            this.animSpeed = parseFloat(e.target.value);
-            document.getElementById('speed-val').textContent = this.animSpeed.toFixed(1);
-        });
-
-        document.getElementById('toggle-damping').addEventListener('change', (e) => {
-            this.isDamping = e.target.checked;
-        });
-
-        document.getElementById('btn-impulse').addEventListener('click', () => {
-            this.time = 0;
-            this.dynamicAmplitude = 1.0;
         });
 
         document.getElementById('btn-reset').addEventListener('click', () => location.reload());
         
-        // View modes
         document.getElementById('view-basis').addEventListener('click', (e) => {
             e.target.classList.add('active');
             document.getElementById('view-deflection').classList.remove('active');
             document.getElementById('canvas-legend').style.display = 'none';
         });
+
         document.getElementById('view-deflection').addEventListener('click', (e) => {
             e.target.classList.add('active');
             document.getElementById('view-basis').classList.remove('active');
             document.getElementById('canvas-legend').style.display = 'flex';
         });
 
-        // Legend logic for FEM
-        document.getElementById('toggle-fem').addEventListener('change', (e) => {
-            this.showFEM = e.target.checked;
-            document.getElementById('fem-settings-container').style.display = this.showFEM ? 'block' : 'none';
-            document.getElementById('legend-fem').style.display = this.showFEM ? 'flex' : 'none';
-            this.updatePhysics();
-        });
-
-        // Legend logic for Analytical Beam Theory
-        document.getElementById('toggle-analytical').addEventListener('change', (e) => {
-            this.showAnalytical = e.target.checked;
-            document.getElementById('legend-analytical').style.display = this.showAnalytical ? 'flex' : 'none';
-            this.updatePhysics();
-        });
-
-        document.getElementById('input-scale-factor').addEventListener('input', (e) => {
-            this.visualScale = parseFloat(e.target.value);
-            document.getElementById('scale-factor-val').textContent = this.visualScale.toString();
-        });
-
-        // Benchmark Modal Logic
         document.getElementById('btn-benchmark').addEventListener('click', () => {
             const results = this.physics.runBenchmark(this.loadMag, 100);
-            const report = `===========================================
-    PERFORMANCE & CONVERGENCE BENCHMARK
-===========================================
-
-System Information:
--------------------
-IGA Degree (p) : ${this.degree}
-IGA Elements   : ${this.numElements}
-IGA Total DOFs : ${results.dofs}
-
-FEM Elements   : ${Math.floor(results.femDofs/2)} (Quadratic) / ${results.femDofs-1} (Linear)
-FEM Total DOFs : ${results.femDofs}
-
-Average Solve Times (100 Iterations):
--------------------------------------
-[1] Isogeometric Analysis Solver
-    Time: ${results.iga} ms
-
-[2] Linear FEM Solver (2-node)
-    Time: ${results.lin} ms
-
-[3] Quadratic FEM Solver (3-node)
-    Time: ${results.quad} ms
-    
-Conclusion:
------------
-IGA enables superior smoothness and accuracy 
-using fewer degrees of freedom compared to 
-traditional Classical FEM approaches.`;
-            
+            const report = `PERFORMANCE BENCHMARK\nIGA DOFs: ${results.dofs}\nSolve Time: ${results.iga} ms\nFEM (Ref) DOFs: 202`;
             document.getElementById('benchmark-results').textContent = report;
             document.getElementById('modal-container').style.display = 'flex';
         });
@@ -258,38 +199,22 @@ traditional Classical FEM approaches.`;
         document.getElementById('btn-close-modal').addEventListener('click', () => {
             document.getElementById('modal-container').style.display = 'none';
         });
-
-        // Toolbar
-        document.getElementById('btn-zoom-in').addEventListener('click', () => this.plot.handleZoom(1.5));
-        document.getElementById('btn-zoom-out').addEventListener('click', () => this.plot.handleZoom(0.7));
-        document.getElementById('btn-zoom-reset').addEventListener('click', () => this.plot.resetView());
-        
-        // Default legend setup
-        document.getElementById('canvas-legend').style.display = 'flex';
     }
 
     resize() {
+        if (!this.canvas) return;
         this.canvas.width = this.canvas.parentElement.clientWidth;
         this.canvas.height = this.canvas.parentElement.clientHeight;
     }
 
-    drawLoadVector() {
+    drawLoadVector(renderedScale) {
         const pt = this.plot.worldToScreen(this.loadPos, 0.5);
         const length = this.loadMag * this.plot.camera.zoom * 1.5;
-        
         this.ctx.strokeStyle = '#ef4444';
         this.ctx.lineWidth = 3;
         this.ctx.beginPath();
         this.ctx.moveTo(pt.x, pt.y);
         this.ctx.lineTo(pt.x, pt.y + length);
-        this.ctx.stroke();
-        
-        // Arrowhead
-        const head = length > 0 ? 10 : -10;
-        this.ctx.beginPath();
-        this.ctx.moveTo(pt.x - 5, pt.y + length - head);
-        this.ctx.lineTo(pt.x, pt.y + length);
-        this.ctx.lineTo(pt.x + 5, pt.y + length - head);
         this.ctx.stroke();
     }
 
@@ -302,74 +227,52 @@ traditional Classical FEM approaches.`;
         if (isBasisView) {
             this.plot.drawBasis(this.nurbs);
         } else {
-            // Draw Deflection Shape
             let dynamicScale = 1.0;
             if (!this.isStatics) {
                 this.time += 0.05 * this.animSpeed;
-                
-                // Damping logic: exponential decay of amplitude
                 if (this.isDamping) {
-                    this.dynamicAmplitude *= (1.0 - (0.01 * this.animSpeed)); // Scaled by anim speed for consistency
-                    if (this.dynamicAmplitude < 0.001) this.dynamicAmplitude = 0;
+                    this.dynamicAmplitude *= 0.99;
                 } else {
-                    // Smooth recovery to full amplitude if damping is turned off
-                    this.dynamicAmplitude = (this.dynamicAmplitude * 0.95) + 0.05;
+                    this.dynamicAmplitude = 1.0;
                 }
-                
                 dynamicScale = Math.sin(this.time) * this.dynamicAmplitude;
             }
 
             const renderedScale = this.visualScale * 0.005 * dynamicScale;
 
-            // Create temporary NURBS with Y coordinates shifted by deflection
-            // Sign mapping: Y increases upwards in math, so downwards physical deflection means we subtract
-            const shiftedCPs = this.nurbs.controlPoints.map((cp, i) => ({
-                x: cp.x,
-                y: 0.5 - (this.deflection[i] * renderedScale), 
-                w: cp.w
-            }));
-            
-            const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
-            this.plot.drawCurve(tempNurbs, '#3b82f6', renderedScale);
-            
-            // Draw Reference FEM Comparison if enabled
-            if (this.showFEM && this.femDeflection) {
-                this.plot.drawReferenceFEM(this.femDeflection, renderedScale);
+            if (this.deflection) {
+                const shiftedCPs = this.nurbs.controlPoints.map((cp, i) => ({
+                    x: cp.x,
+                    y: 0.5 - (this.deflection[i] * renderedScale), 
+                    w: cp.w
+                }));
+                const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
+                this.plot.drawCurve(tempNurbs, '#3b82f6');
+                
+                if (this.showFEM && this.femDeflection) {
+                    this.plot.drawReferenceFEM(this.femDeflection, renderedScale);
+                }
+                
+                if (this.showAnalytical) {
+                    this.plot.drawAnalyticalCurve({
+                        loadPos: this.loadPos,
+                        effectiveLoad: this.loadMag,
+                        engine: this.physics,
+                        visualScale: renderedScale
+                    });
+                }
+                this.updateROMStats();
             }
-
-            this.updateROMStats();
-
-            // Draw Analytical Theory if enabled
-            if (this.showAnalytical) {
-                this.plot.drawAnalyticalCurve({
-                    loadPos: this.loadPos,
-                    effectiveLoad: this.loadMag,
-                    engine: this.physics,
-                    visualScale: renderedScale
-                });
-            }
-
-            this.drawLoadVector();
-            
-            // Handle hover logic
-            const mX = this.plot.mousePos.worldX;
-            if (mX >= 0 && mX <= 1) {
-                // Approximate exact value from NURBS or array
-                const numCP = this.deflection.length;
-                const idx = Math.max(0, Math.min(numCP - 1, Math.round(mX * (numCP - 1))));
-                const val = this.deflection[idx];
-                this.plot.hoverValue = val;
-            } else {
-                this.plot.hoverValue = null;
-            }
+            this.drawLoadVector(renderedScale);
         }
 
         this.plot.drawCrosshair();
         requestAnimationFrame(() => this.animate());
     }
+
     updateROMStats() {
         const romDofs = this.physics.getDegreesOfFreedom();
-        const refDofs = this.referenceFEM.getDegreesOfFreedom();
+        const refDofs = this.referenceFEM ? this.referenceFEM.getDegreesOfFreedom() : 202;
         const savings = ((1 - romDofs / refDofs) * 100).toFixed(1);
 
         const romDofEl = document.getElementById('rom-dofs');
@@ -378,7 +281,7 @@ traditional Classical FEM approaches.`;
 
         if (romDofEl) romDofEl.textContent = romDofs;
         if (refDofEl) refDofEl.textContent = refDofs;
-        if (savingsEl) savingsEl.textContent = savings + '% Reduction';
+        if (savingsEl) savingsEl.textContent = savings + '%';
     }
 }
 
