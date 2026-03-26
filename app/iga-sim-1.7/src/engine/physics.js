@@ -304,7 +304,7 @@ export class ReferenceFEM {
         return (this.numElements + 1) * 2;
     }
 
-    solve(loadPos, loadMag, bcs) {
+    solve(loadPos, loadMag, bcs, isNonlinear = false) {
         const n = this.numElements;
         const L = 1.0;
         const h = L / n;
@@ -362,7 +362,7 @@ export class ReferenceFEM {
 
         const u = this.gaussianElimination(K, F);
 
-        // Interpolate for smooth plotting (optional, but since it's 100 elements, dots are enough)
+        // Interpolate for smooth plotting
         const result = [];
         for (let i = 0; i <= n; i++) {
             result.push({

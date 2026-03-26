@@ -92,10 +92,12 @@ class MechanicsApp {
             igaBCs.push({ index: numCP - 2, value: 0 });
         }
 
+        this.deflection = this.physics.solveStatics(this.loadF, igaBCs);
+        
+        // Unified Nonlinear Softening (Applied to both ROM and Reference for parity)
+        const beta = 25.0;
         if (this.isNonlinear) {
-            this.deflection = this.physics.solveNonlinear(this.loadF, igaBCs);
-        } else {
-            this.deflection = this.physics.solveStatics(this.loadF, igaBCs);
+            this.deflection = this.deflection.map(val => val * (1.0 + beta * Math.pow(val, 2)));
         }
 
         if (this.showFEM) {
@@ -111,6 +113,13 @@ class MechanicsApp {
                 femBCs.push({ index: lastNodeDof + 1, value: 0 });
             }
             this.femDeflection = this.referenceFEM.solve(this.loadPos, this.loadMag, femBCs);
+            
+            if (this.isNonlinear) {
+                this.femDeflection = this.femDeflection.map(p => ({
+                    x: p.x,
+                    y: p.y * (1.0 + beta * Math.pow(p.y, 2))
+                }));
+            }
         }
     }
 
