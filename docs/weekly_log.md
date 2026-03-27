@@ -11,13 +11,13 @@ Use this document to track weekly goals, daily tasks, and notes from meetings wi
 ## ❓ Open Questions for Supervisor — Priority List
 *To be answered at the **first meeting**. These block the start of the Computational Core phase.*
 
-| # | Question | Blocks |
-|---|---|---|
-| Q1 | What parameters should be controllable in real-time? (stiffness, damping, geometry dimensions, load?) | Parameter space definition (`docs/parameter_space.md`) |
-| Q2 | Is the 2D test case a cantilever beam, a plate, or a 2D fluid tank cross-section? | FOM geometry & boundary conditions (`src/fom/`) |
-| Q3 | What is the acceptable ROM accuracy tolerance vs. FOM? (e.g., < 1% relative L2 error?) | Number of POD modes & snapshots needed |
-| Q4 | What is the final Digital Twin deliverable? (Web app? Jupyter notebook? Dash/Streamlit app?) | Entire frontend architecture |
-| Q5 | Are there existing IGA codes in the lab (MATLAB, Python, Fortran) that I can reuse or extend? | Choice of IGA solver and implementation language |
+| # | Question | My Proposed Default | Blocks |
+|---|---|---|---|
+| Q1 | What parameters should be controllable in real-time? | E, ν, F, L/H, ζ — as defined in `docs/parameter_space.md`. Should I add/remove any? | Parameter space definition |
+| Q2 | Is the 2D test case a cantilever beam, a plate, or a 2D fluid tank cross-section? | Cantilever plate (single-patch NURBS). I have a working 2D surface viewer in `phase-2-core/`. | FOM geometry & boundary conditions |
+| Q3 | What is the acceptable ROM accuracy tolerance vs. FOM? | < 1% relative L2 error, 99.9% energy capture via SVD (as in `docs/architecture.md`). | Number of POD modes & snapshots needed |
+| Q4 | What is the final Digital Twin deliverable? | Web app (the entire hub is already web-based with Three.js for 3D). | Entire frontend architecture |
+| Q5 | Are there existing IGA codes in the lab I can reuse or extend? | I've explored `slosh_ml`. If none, I'll proceed with Nutils (Python IGA). | Choice of IGA solver & language |
 
 **Answers (fill in during meeting):**
 - **A1:**
