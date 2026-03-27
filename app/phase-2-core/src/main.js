@@ -126,16 +126,17 @@ class NURBSLab {
 
     updateSurface() {
         const positions = this.geometry.attributes.position.array;
-        const resolution = 30; // Matches PlaneGeometry segments
+        const segU = this.geometry.parameters.widthSegments;
+        const segV = this.geometry.parameters.heightSegments;
         
-        for (let i = 0; i <= resolution; i++) {
-            for (let j = 0; j <= resolution; j++) {
-                const u = i / resolution;
-                const v = j / resolution;
+        for (let i = 0; i <= segU; i++) {
+            for (let j = 0; j <= segV; j++) {
+                const u = i / segU;
+                const v = j / segV;
                 
                 const point = this.engine.evaluateSurface(this.patch, u, v);
                 
-                const index = (i * (resolution + 1) + j) * 3;
+                const index = (i * (segV + 1) + j) * 3;
                 positions[index] = point.x;
                 positions[index + 1] = point.y;
                 positions[index + 2] = point.z;
