@@ -30,6 +30,7 @@ class MechanicsApp {
         this.isTorqueMode = false; // New state for torque interaction
         this.physicsMode = 'bending';
         this.femOrder = 1;
+        this.femElements = 40;
         
         // Initialize Engines
         this.initEngines();
@@ -98,8 +99,8 @@ class MechanicsApp {
         this.physics.physicsMode = this.physicsMode;
         this.physics.femOrder = this.femOrder;
         
-        // Sync FEM resolution with IGA resolution so shape functions become distinct
-        this.referenceFEM.numElements = this.numElements;
+        // Sync FEM resolution
+        this.referenceFEM.numElements = this.femElements;
 
         // Apply BCs
         const igaBCs = [];
@@ -147,6 +148,7 @@ class MechanicsApp {
         const inputMap = {
             'input-degree': (v) => { this.degree = parseInt(v); document.getElementById('degree-val').textContent = v; this.initEngines(); },
             'input-elements': (v) => { this.numElements = parseInt(v); document.getElementById('elements-val').textContent = v; this.initEngines(); },
+            'input-fem-elements': (v) => { this.femElements = parseInt(v); document.getElementById('fem-elements-val').textContent = v; this.updatePhysics(); },
             'input-stiffness': (v) => { 
                 this.stiffness = parseFloat(v); 
                 document.getElementById('stiffness-val').textContent = v;
