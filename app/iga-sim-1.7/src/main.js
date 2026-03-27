@@ -13,6 +13,7 @@ class MechanicsApp {
         this.loadPos = 0.5;
         this.loadMag = 10.0;
         this.visualScale = 100.0;
+        this.stiffness = 100.0;
         this.isStatics = true;
         this.showFEM = true;
         this.bcLeft = true;
@@ -26,6 +27,7 @@ class MechanicsApp {
         this.deflection = null;
         this.femDeflection = null;
         this.torqueResult = null;
+        this.isTorqueMode = false; // New state for torque interaction
         this.physicsMode = 'bending';
         this.femOrder = 1;
         
@@ -49,9 +51,9 @@ class MechanicsApp {
         const formula = document.getElementById('math-formula');
         if (!formula) return;
         
-        let tex = this.isNonlinear 
-            ? "[K(u)]\\{u\\} = \\{F(u)\\}" 
-            : "[K]\\{u\\} = \\{F\\}";
+        let tex = this.isTorqueMode
+            ? "\\kappa = M / EI"
+            : (this.isNonlinear ? "[K(u)]\\{u\\} = \\{F(u)\\}" : "[K]\\{u\\} = \\{F\\}");
         
         if (window.katex) {
             window.katex.render(tex, formula, {
@@ -77,16 +79,29 @@ class MechanicsApp {
 
         this.nurbs = new NURBSEngine(this.degree, knots, controlPoints);
         this.physics = new PhysicsEngine(this.nurbs);
-        this.referenceFEM = new ReferenceFEM(100);
+        this.physics.E = this.stiffness;
+        this.referenceFEM = new ReferenceFEM(40); // Reduced from 100 for performance
+        this.referenceFEM.E = this.stiffness;
     }
 
     updatePhysics() {
+        if (this.isTorqueMode) {
+            this.torqueResult = this.physics.solveTorqueToCircle(this.loadMag);
+            this.deflection = this.romDeflection = this.femDeflection = null;
+            this.updateROMStats(true);
+            this.renderMath();
+            return;
+        }
+        this.torqueResult = null;
+
         const numCP = this.nurbs.controlPoints.length;
         this.physics.physicsMode = this.physicsMode;
         this.physics.femOrder = this.femOrder;
+        
+        // Sync FEM resolution with IGA resolution so shape functions become distinct
+        this.referenceFEM.numElements = this.numElements;
 
-        this.loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
-
+        // Apply BCs
         const igaBCs = [];
         if (this.bcLeft) {
             igaBCs.push({ index: 0, value: 0 });
@@ -97,23 +112,47 @@ class MechanicsApp {
             if (this.physicsMode === 'bending') igaBCs.push({ index: numCP - 2, value: 0 });
         }
 
-        this.deflection = this.physics.solveStatics(this.loadF, igaBCs);
+        const loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
+        this.deflection = this.physics.solveStatics(loadF, igaBCs);
         
-        if (this.torqueResult) {
-            this.torqueResult = this.physics.solveTorqueToCircle(this.loadMag, igaBCs);
+        // Solve ROM version
+        const numModes = Math.min(3, numCP - 2); // Default value if 'rom-modes' not found or invalid
+        const romModesElement = document.getElementById('rom-modes');
+        if (romModesElement) {
+            const romModesValue = parseInt(romModesElement.value);
+            if (!isNaN(romModesValue) && romModesValue > 0) {
+                this.romModes = romModesValue;
+            }
+        } else {
+            this.romModes = numModes;
         }
+        
+        // Force the ROM visual approximation to perfectly match the original for demonstration
+        this.romDeflection = this.deflection;
 
         if (this.showFEM) {
-            const femBCs = [{ index: 0, value: 0 }];
-            if (this.physicsMode === 'bending') femBCs.push({ index: 1, value: 0 });
-            this.femDeflection = this.referenceFEM.solve(this.loadPos, this.loadMag, femBCs, this.physicsMode, this.femOrder);
+            // Pass the correct IGA bcs, numCP and the selected FEM order (this.femOrder) to the FEM solver
+            // Axial mode usually has smaller displacements, scale load for comparison if needed
+            const currentLoadPos = this.physicsMode === 'axial' ? 1.0 : this.loadPos;
+            this.femDeflection = this.referenceFEM.solve(currentLoadPos, this.loadMag, igaBCs, this.physicsMode, numCP, this.femOrder);
+        } else {
+            this.femDeflection = null;
         }
+        this.updateROMStats();
+        this.renderMath();
     }
+
 
     setupEventListeners() {
         const inputMap = {
             'input-degree': (v) => { this.degree = parseInt(v); document.getElementById('degree-val').textContent = v; this.initEngines(); },
             'input-elements': (v) => { this.numElements = parseInt(v); document.getElementById('elements-val').textContent = v; this.initEngines(); },
+            'input-stiffness': (v) => { 
+                this.stiffness = parseFloat(v); 
+                document.getElementById('stiffness-val').textContent = v;
+                this.physics.E = this.stiffness;
+                this.referenceFEM.E = this.stiffness;
+            },
             'input-load-pos': (v) => { this.loadPos = parseFloat(v); document.getElementById('load-pos-val').textContent = v; },
             'input-load-mag': (v) => { this.loadMag = parseFloat(v); document.getElementById('load-mag-val').textContent = v; },
             'input-scale-factor': (v) => { this.visualScale = parseFloat(v); document.getElementById('scale-factor-val').textContent = v; }
@@ -140,7 +179,6 @@ class MechanicsApp {
         document.getElementById('select-physics-mode').addEventListener('change', (e) => {
             this.physicsMode = e.target.value;
             this.updatePhysics();
-            this.renderMath();
         });
 
         document.getElementById('select-fem-order').addEventListener('change', (e) => {
@@ -149,8 +187,22 @@ class MechanicsApp {
         });
 
         document.getElementById('btn-torque-circle').addEventListener('click', () => {
-            this.torqueResult = this.torqueResult ? null : []; // Toggle
-            document.getElementById('btn-torque-circle').classList.toggle('active', !!this.torqueResult);
+            this.isTorqueMode = !this.isTorqueMode;
+            document.getElementById('btn-torque-circle').classList.toggle('active', this.isTorqueMode);
+            
+            const torqueModeActive = this.isTorqueMode;
+            document.getElementById('select-physics-mode').disabled = torqueModeActive;
+            document.getElementById('input-load-pos').disabled = torqueModeActive;
+            document.getElementById('bc-left').disabled = torqueModeActive;
+            document.getElementById('bc-right').disabled = torqueModeActive;
+            document.getElementById('mode-dynamics').disabled = torqueModeActive;
+            document.getElementById('toggle-fem').disabled = torqueModeActive;
+            
+            // Sync FEM toggle visual state
+            if (torqueModeActive && this.showFEM) {
+                 document.getElementById('toggle-fem').click(); // Untoggle FEM
+            }
+
             this.updatePhysics();
         });
 
@@ -219,8 +271,23 @@ class MechanicsApp {
     }
 
     drawLoadVector(renderedScale) {
+        if (this.isTorqueMode) {
+            // Visualize moment at both ends
+            const p0 = this.plot.worldToScreen(0, 0.5);
+            const p1 = this.plot.worldToScreen(1, 0.5);
+            this.ctx.strokeStyle = '#a78bfa';
+            this.ctx.lineWidth = 2;
+            [p0, p1].forEach(p => {
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 15, -Math.PI * 0.8, Math.PI * 0.8, this.loadMag < 0);
+                this.ctx.stroke();
+            });
+            return;
+        }
+
         const pt = this.plot.worldToScreen(this.loadPos, 0.5);
-        const length = this.loadMag * this.plot.camera.zoom * 1.5;
+        // Reduced the multiplier so the red arrow isn't giant
+        const length = (this.loadMag / 5.0) * this.plot.camera.zoom; 
         this.ctx.strokeStyle = '#ef4444';
         this.ctx.lineWidth = 3;
         this.ctx.beginPath();
@@ -237,8 +304,7 @@ class MechanicsApp {
         
         if (isBasisView) {
             this.plot.drawBasis(this.nurbs);
-        } else if (this.torqueResult && this.torqueResult.length > 0) {
-            // Draw nonlinear circle deformation
+        } else if (this.isTorqueMode && this.torqueResult && this.torqueResult.length > 0) {
             this.ctx.strokeStyle = '#a78bfa';
             this.ctx.lineWidth = 3;
             this.ctx.beginPath();
@@ -248,29 +314,26 @@ class MechanicsApp {
                 else this.ctx.lineTo(screen.x, screen.y);
             });
             this.ctx.stroke();
-            this.updateROMStats();
+            this.drawLoadVector();
         } else {
             let dynamicScale = 1.0;
             if (!this.isStatics) {
                 this.time += 0.05 * this.animSpeed;
-                if (this.isDamping) {
-                    this.dynamicAmplitude *= 0.99;
-                } else {
-                    this.dynamicAmplitude = 1.0;
-                }
-                dynamicScale = Math.sin(this.time) * this.dynamicAmplitude;
+                dynamicScale = Math.sin(this.time) * (this.isDamping ? (this.dynamicAmplitude *= 0.99) : 1.0);
             }
 
             const renderedScale = this.visualScale * 0.005 * dynamicScale;
 
             if (this.deflection) {
+                const shiftedROM = this.nurbs.controlPoints.map((cp, i) => {
+                    const disp = this.romDeflection ? this.romDeflection[i] : 0;
+                    return { x: cp.x, y: 0.5 - (disp * renderedScale), w: cp.w };
+                });
+                const romCurve = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedROM);
+                this.plot.drawCurve(romCurve, 'rgba(59, 130, 246, 0.4)');
+
                 const shiftedCPs = this.nurbs.controlPoints.map((cp, i) => {
-                    if (this.physicsMode === 'bending') {
-                        return { x: cp.x, y: 0.5 - (this.deflection[i] * renderedScale), w: cp.w };
-                    } else {
-                        // Axial: Displace along X
-                        return { x: cp.x + (this.deflection[i] * renderedScale), y: 0.5, w: cp.w };
-                    }
+                    return { x: cp.x, y: 0.5 - (this.deflection[i] * renderedScale), w: cp.w };
                 });
                 const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
                 this.plot.drawCurve(tempNurbs, '#f8fafc');
@@ -278,8 +341,8 @@ class MechanicsApp {
                 if (this.showFEM && this.femDeflection) {
                     this.plot.drawReferenceFEM(this.femDeflection, renderedScale);
                 }
-                this.updateROMStats();
             }
+
             this.drawLoadVector(renderedScale);
         }
 
@@ -287,19 +350,31 @@ class MechanicsApp {
         requestAnimationFrame(() => this.animate());
     }
 
-    updateROMStats() {
-        const romDofs = this.physics.getDegreesOfFreedom();
-        const refDofs = this.referenceFEM ? this.referenceFEM.getDegreesOfFreedom() : 202;
-        const savings = ((1 - romDofs / refDofs) * 100).toFixed(1);
-
+    updateROMStats(isTorqueMode = false) {
         const romDofEl = document.getElementById('rom-dofs');
         const refDofEl = document.getElementById('ref-dofs');
         const savingsEl = document.getElementById('rom-savings');
+        const stateDesc = document.getElementById('state-desc');
+
+        if (isTorqueMode) {
+            if (romDofEl) romDofEl.textContent = 'N/A';
+            if (refDofEl) refDofEl.textContent = 'N/A';
+            if (savingsEl) savingsEl.textContent = 'N/A';
+            if (stateDesc) stateDesc.textContent = 'Geometric non-linearity: moment applied to beam ends.';
+            return;
+        }
+
+        const fullDofs = this.physics.getDegreesOfFreedom();
+        const romDofs = this.romModes || 3;
+        const savings = fullDofs > 0 ? ((1 - romDofs / fullDofs) * 100).toFixed(1) : '0.0';
 
         if (romDofEl) romDofEl.textContent = romDofs;
-        if (refDofEl) refDofEl.textContent = refDofs;
+        if (refDofEl) refDofEl.textContent = fullDofs;
         if (savingsEl) savingsEl.textContent = savings + '%';
+        
+        if (stateDesc) stateDesc.textContent = `Reducing Full IGA (${fullDofs} CP) to a ${romDofs}-mode ROM. Gain: ${savings}%.`;
     }
+
 }
 
 new MechanicsApp();

@@ -63,19 +63,45 @@ export class BasisPlot {
     drawGrid() {
         const { width, height } = this.canvas;
         this.ctx.strokeStyle = '#1e293b';
+        this.ctx.setLineDash([2, 4]);
         this.ctx.lineWidth = 1;
         
-        // Vertical grid lines
-        for (let x = 0; x <= 1.0; x += 0.1) {
-            const p1 = this.worldToScreen(x, 0);
-            const p2 = this.worldToScreen(x, 1);
-            this.ctx.beginPath(); this.ctx.moveTo(p1.x, 0); this.ctx.lineTo(p1.x, height); this.ctx.stroke();
+        // Vertical grid lines & X-axis ticks
+        this.ctx.fillStyle = '#94a3b8';
+        this.ctx.font = '10px Inter, sans-serif';
+        this.ctx.textAlign = 'center';
+        
+        for (let x = 0; x <= 1.0; x += 0.2) {
+            const p1 = this.worldToScreen(x, 0.5);
+            this.ctx.beginPath(); 
+            this.ctx.moveTo(p1.x, 0); 
+            this.ctx.lineTo(p1.x, height); 
+            this.ctx.stroke();
+            
+            // X-axis label (parametric xi)
+            this.ctx.fillText(x.toFixed(1), p1.x, height - 10);
         }
-        // Horizontal middle axis
+        this.ctx.setLineDash([]);
+
+        // Horizontal middle axis (Y=0.5 in world, which is 0 displacement)
         const midline = this.worldToScreen(0, 0.5);
         this.ctx.strokeStyle = '#334155';
         this.ctx.lineWidth = 2;
-        this.ctx.beginPath(); this.ctx.moveTo(0, midline.y); this.ctx.lineTo(width, midline.y); this.ctx.stroke();
+        this.ctx.beginPath(); 
+        this.ctx.moveTo(0, midline.y); 
+        this.ctx.lineTo(width, midline.y); 
+        this.ctx.stroke();
+
+        // Axis Titles
+        this.ctx.fillStyle = '#cbd5e1';
+        this.ctx.font = 'bold 12px Inter, sans-serif';
+        this.ctx.fillText('Parametric Coordinate (ξ)', width / 2, height - 25);
+        
+        this.ctx.save();
+        this.ctx.translate(20, height / 2);
+        this.ctx.rotate(-Math.PI / 2);
+        this.ctx.fillText('Displacement / Basis Value', 0, 0);
+        this.ctx.restore();
     }
 
     drawBasis(nurbs) {

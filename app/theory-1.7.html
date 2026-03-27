@@ -426,6 +426,22 @@
             </p>
         </section>
 
+        <section class="content-section">
+            <h2><i class="fa-solid fa-shapes"></i> Visualizing Shape Functions: FEM vs IGA</h2>
+            <p>
+                In the Phase 1.7 benchmark, you can now actively compare <strong>FEM Shape Functions</strong> against the exact IGA solution. When you drastically lower the element count (e.g., to 4 elements) and select <strong>Linear (p=1)</strong> for the FEM solver, the green dashed line becomes highly jagged. This visibly demonstrates how low-order FEM elements break the geometry into discrete, straight-line segments.
+            </p>
+            <p>
+                As you increase the polynomial order to <strong>Quadratic (p=2)</strong> or <strong>Cubic (p=3)</strong>, the FEM solution begins to smooth out and wrap closely around the true continuous IGA solution. In <em>Traction/Compression (Axial)</em> space, these polynomials describe stretch along the 1D domain, while in <em>Elastic Bending</em>, they determine the complex curvature of the beam subject to transverse forces. 
+            </p>
+            <div class="note-box">
+                <h4><i class="fa-solid fa-eye"></i> Try it in the Simulator</h4>
+                <p>
+                    Set <strong>Elements (Resolution)</strong> to 3 or 4. Toggle <strong>Compare with FEM</strong> on. Watch how the green FEM line transforms from a rough, piecewise-linear approximation into a smooth curve purely by changing the "FEM Shape Functions" dropdown, without adding any new nodes!
+                </p>
+            </div>
+        </section>
+
         <div class="footer-nav">
             <a href="iga-sim-1.7/index.html" class="btn btn-primary">
                 <i class="fa-solid fa-flask"></i> Try the Interactive Benchmark
