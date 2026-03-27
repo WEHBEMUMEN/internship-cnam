@@ -436,6 +436,17 @@
         </div>
     </div>
 
+    <section class="content-section" style="max-width: 1000px; margin: 0 auto 60px auto;">
+        <h2><i class="fa-solid fa-location-crosshairs"></i> Force & Torque Positioning</h2>
+        <p>
+            A common question in IGA is: <em>"How do we apply a point load at an arbitrary position?"</em> Unlike traditional FEM where loads are often restricted to nodes, IGA allows for precise loading at any parametric coordinate $\xi \in [0, 1]$.
+        </p>
+        <div class="math-card" id="math-point-load"></div>
+        <p>
+            Using the <strong>NURBS Basis Functions</strong> $R_{i,p}(\xi)$, we distribute the point load $P$ across the control points by multiplying the load magnitude by the basis function value at that specific coordinate. For torque, we apply a pair of equivalent nodal forces or a direct moment contribution to the rotational degrees of freedom ($C^1$ continuity ensures smooth rotation transfer).
+        </p>
+    </section>
+
     <script>
         window.addEventListener('scroll', () => {
             const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
@@ -462,6 +473,12 @@
 
             // Formula 3: Galerkin Projection on Reduced Basis
             katex.render("\\mathbf{K}_{red} = \\mathbf{\\Phi}^T \\mathbf{K}_{full} \\mathbf{\\Phi} \\quad [8 \\times 8]", document.getElementById('math-galerkin'), {
+                displayMode: true,
+                throwOnError: false
+            });
+
+            // Formula 4: Point Load Assembly
+            katex.render("f_i = \\int_{\\Omega} R_{i,p}(\\xi) \\, \\delta(\\xi - \\xi_{load}) P \\, d\\xi = R_{i,p}(\\xi_{load}) P", document.getElementById('math-point-load'), {
                 displayMode: true,
                 throwOnError: false
             });

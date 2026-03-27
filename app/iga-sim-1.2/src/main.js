@@ -245,8 +245,8 @@ class App {
             samples.push(Curve.evaluate(xi, this.p, this.knotVector.values, this.points, this.weights));
         }
 
-        // Increase control points to maintain shape accuracy
-        const newN = this.n + Math.abs(newP - this.p) * 2; 
+        // Adjust control points proportionally to degree change
+        const newN = Math.max(newP + 1, this.n + (newP - this.p) * 2); 
         const newKnotVector = new KnotVector(newN, newP);
         const newU = newKnotVector.values;
         const newWeights = new Array(newN).fill(1.0);

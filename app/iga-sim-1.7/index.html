@@ -156,12 +156,29 @@
                 <div class="control-group physics-controls">
                     <h3>Physics Parameters</h3>
                     
-                    <div class="toggle-row">
-                        <span>Nonlinear Response</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-nonlinear">
-                            <span class="slider"></span>
-                        </label>
+                    <label>Load Position (ξ): <span id="load-pos-val">0.50</span></label>
+                    <input type="range" id="input-load-pos" min="0" max="1" step="0.01" value="0.5">
+
+                    <label>Load Intensity (F): <span id="load-mag-val">10.0</span></label>
+                    <input type="range" id="input-load-mag" min="-50" max="50" step="1" value="10">
+
+                    <!-- Physics Model Selection -->
+                    <div class="control-group" style="margin-top: 20px;">
+                        <label>Physics Model:</label>
+                        <select id="select-physics-mode" class="btn btn-outline" style="width: 100%; padding: 8px; background: #0f172a; color: white;">
+                            <option value="bending">Elastic Bending (Beam)</option>
+                            <option value="axial">Traction / Compression (Axial)</option>
+                        </select>
+                    </div>
+
+                    <!-- FEM Order Selection -->
+                    <div class="control-group">
+                        <label>FEM Shape Functions:</label>
+                        <select id="select-fem-order" class="btn btn-outline" style="width: 100%; padding: 8px; background: #0f172a; color: white;">
+                            <option value="1">Linear (p=1)</option>
+                            <option value="2">Quadratic (p=2)</option>
+                            <option value="3">Cubic (p=3)</option>
+                        </select>
                     </div>
 
                     <div class="toggle-row">
@@ -172,13 +189,13 @@
                         </label>
                     </div>
 
-                    <div class="toggle-row">
-                        <span>Analytical Beam Theory</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-analytical">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px;">
+                        <i class="fa-solid fa-circle-info"></i> Bending uses Kirchhoff-Love theory. Axial uses 1D bar theory.
+                    </p>
+
+                    <button id="btn-torque-circle" class="btn btn-secondary" style="width: 100%; margin-top: 15px; font-size: 0.8rem; background: rgba(167, 139, 250, 0.2); border: 1px solid #a78bfa; color: #a78bfa;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Nonlinear Torque → Circle
+                    </button>
 
                     <div id="fem-settings-container" style="display: none;">
                         <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">Reference truth uses 100 fixed elements for comparison.</p>
@@ -193,12 +210,6 @@
                         <button id="bc-left" class="btn btn-outline active" style="font-size: 0.75rem;">Left: Fixed</button>
                         <button id="bc-right" class="btn btn-outline active" style="font-size: 0.75rem;">Right: Fixed</button>
                     </div>
-
-                    <label>Load Position (ξ): <span id="load-pos-val">0.50</span></label>
-                    <input type="range" id="input-load-pos" min="0" max="1" step="0.01" value="0.5">
-
-                    <label>Load Intensity (F): <span id="load-mag-val">10.0</span></label>
-                    <input type="range" id="input-load-mag" min="-50" max="50" step="1" value="10">
 
                     <div class="control-group">
                         <label>Scale Factor (Visual): <span id="scale-factor-val">100</span>x</label>

@@ -99,10 +99,11 @@ export class BasisPlot {
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = 5;
         this.ctx.beginPath();
-        for (let step = 0; step <= 200; step++) {
-            const xi = step / 200;
+        const steps = 200;
+        for (let step = 0; step <= steps; step++) {
+            const xi = step / steps;
             const ptWorld = nurbs.evaluate(xi);
-            const ptScreen = this.worldToScreen(xi, ptWorld.y);
+            const ptScreen = this.worldToScreen(ptWorld.x, ptWorld.y);
             step === 0 ? this.ctx.moveTo(ptScreen.x, ptScreen.y) : this.ctx.lineTo(ptScreen.x, ptScreen.y);
         }
         this.ctx.stroke();

@@ -14,8 +14,7 @@ class MechanicsApp {
         this.loadMag = 10.0;
         this.visualScale = 100.0;
         this.isStatics = true;
-        this.isNonlinear = false;
-        this.showFEM = true; // Enabled by default for 1.7 Bench
+        this.showFEM = true;
         this.bcLeft = true;
         this.bcRight = true;
         
@@ -23,9 +22,12 @@ class MechanicsApp {
         this.animSpeed = 1.0;
         this.isDamping = true;
         this.dynamicAmplitude = 1.0;
+
         this.deflection = null;
         this.femDeflection = null;
-        this.showAnalytical = false;
+        this.torqueResult = null;
+        this.physicsMode = 'bending';
+        this.femOrder = 1;
         
         // Initialize Engines
         this.initEngines();
@@ -80,46 +82,31 @@ class MechanicsApp {
 
     updatePhysics() {
         const numCP = this.nurbs.controlPoints.length;
+        this.physics.physicsMode = this.physicsMode;
+        this.physics.femOrder = this.femOrder;
+
         this.loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
 
         const igaBCs = [];
         if (this.bcLeft) {
             igaBCs.push({ index: 0, value: 0 });
-            igaBCs.push({ index: 1, value: 0 });
+            if (this.physicsMode === 'bending') igaBCs.push({ index: 1, value: 0 });
         }
         if (this.bcRight) {
             igaBCs.push({ index: numCP - 1, value: 0 });
-            igaBCs.push({ index: numCP - 2, value: 0 });
+            if (this.physicsMode === 'bending') igaBCs.push({ index: numCP - 2, value: 0 });
         }
 
         this.deflection = this.physics.solveStatics(this.loadF, igaBCs);
         
-        // Unified Nonlinear Softening (Applied to both ROM and Reference for parity)
-        const beta = 25.0;
-        if (this.isNonlinear) {
-            this.deflection = this.deflection.map(val => val * (1.0 + beta * Math.pow(val, 2)));
+        if (this.torqueResult) {
+            this.torqueResult = this.physics.solveTorqueToCircle(this.loadMag, igaBCs);
         }
 
         if (this.showFEM) {
-            // Apply similar logic for Reference FEM (Clamping)
-            const femBCs = [];
-            if (this.bcLeft) {
-                femBCs.push({ index: 0, value: 0 });
-                femBCs.push({ index: 1, value: 0 });
-            }
-            if (this.bcRight) {
-                const lastNodeDof = 202 - 2; // (100+1)*2 = 202. last node starts at 200
-                femBCs.push({ index: lastNodeDof, value: 0 });
-                femBCs.push({ index: lastNodeDof + 1, value: 0 });
-            }
-            this.femDeflection = this.referenceFEM.solve(this.loadPos, this.loadMag, femBCs);
-            
-            if (this.isNonlinear) {
-                this.femDeflection = this.femDeflection.map(p => ({
-                    x: p.x,
-                    y: p.y * (1.0 + beta * Math.pow(p.y, 2))
-                }));
-            }
+            const femBCs = [{ index: 0, value: 0 }];
+            if (this.physicsMode === 'bending') femBCs.push({ index: 1, value: 0 });
+            this.femDeflection = this.referenceFEM.solve(this.loadPos, this.loadMag, femBCs, this.physicsMode, this.femOrder);
         }
     }
 
@@ -141,15 +128,30 @@ class MechanicsApp {
         });
 
         const toggles = {
-            'toggle-nonlinear': (v) => { this.isNonlinear = v; this.updatePhysics(); this.renderMath(); },
             'toggle-fem': (v) => { this.showFEM = v; document.getElementById('fem-settings-container').style.display = v ? 'block' : 'none'; document.getElementById('legend-fem').style.display = v ? 'flex' : 'none'; this.updatePhysics(); },
-            'toggle-analytical': (v) => { this.showAnalytical = v; document.getElementById('legend-analytical').style.display = v ? 'flex' : 'none'; this.updatePhysics(); },
             'toggle-damping': (v) => { this.isDamping = v; }
         };
 
         Object.entries(toggles).forEach(([id, fn]) => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', (e) => fn(e.target.checked));
+        });
+
+        document.getElementById('select-physics-mode').addEventListener('change', (e) => {
+            this.physicsMode = e.target.value;
+            this.updatePhysics();
+            this.renderMath();
+        });
+
+        document.getElementById('select-fem-order').addEventListener('change', (e) => {
+            this.femOrder = parseInt(e.target.value);
+            this.updatePhysics();
+        });
+
+        document.getElementById('btn-torque-circle').addEventListener('click', () => {
+            this.torqueResult = this.torqueResult ? null : []; // Toggle
+            document.getElementById('btn-torque-circle').classList.toggle('active', !!this.torqueResult);
+            this.updatePhysics();
         });
 
         document.getElementById('bc-left').addEventListener('click', (e) => {
@@ -199,8 +201,8 @@ class MechanicsApp {
         });
 
         document.getElementById('btn-benchmark').addEventListener('click', () => {
-            const results = this.physics.runBenchmark(this.loadMag, 100);
-            const report = `PERFORMANCE BENCHMARK\nIGA DOFs: ${results.dofs}\nSolve Time: ${results.iga} ms\nFEM (Ref) DOFs: 202`;
+            const results = this.physics.runBenchmark(this.loadMag, 50);
+            const report = `PERFORMANCE BENCHMARK (Mode: ${results.mode})\nIGA Elements: ${this.numElements}\nIGA DOFs: ${results.dofs}\nAvg Solve Time: ${results.iga} ms\nReference FEM DOFs: 101/202`;
             document.getElementById('benchmark-results').textContent = report;
             document.getElementById('modal-container').style.display = 'flex';
         });
@@ -235,6 +237,18 @@ class MechanicsApp {
         
         if (isBasisView) {
             this.plot.drawBasis(this.nurbs);
+        } else if (this.torqueResult && this.torqueResult.length > 0) {
+            // Draw nonlinear circle deformation
+            this.ctx.strokeStyle = '#a78bfa';
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.torqueResult.forEach((p, i) => {
+                const screen = this.plot.worldToScreen(p.x, p.y);
+                if (i === 0) this.ctx.moveTo(screen.x, screen.y);
+                else this.ctx.lineTo(screen.x, screen.y);
+            });
+            this.ctx.stroke();
+            this.updateROMStats();
         } else {
             let dynamicScale = 1.0;
             if (!this.isStatics) {
@@ -250,25 +264,19 @@ class MechanicsApp {
             const renderedScale = this.visualScale * 0.005 * dynamicScale;
 
             if (this.deflection) {
-                const shiftedCPs = this.nurbs.controlPoints.map((cp, i) => ({
-                    x: cp.x,
-                    y: 0.5 - (this.deflection[i] * renderedScale), 
-                    w: cp.w
-                }));
+                const shiftedCPs = this.nurbs.controlPoints.map((cp, i) => {
+                    if (this.physicsMode === 'bending') {
+                        return { x: cp.x, y: 0.5 - (this.deflection[i] * renderedScale), w: cp.w };
+                    } else {
+                        // Axial: Displace along X
+                        return { x: cp.x + (this.deflection[i] * renderedScale), y: 0.5, w: cp.w };
+                    }
+                });
                 const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
-                this.plot.drawCurve(tempNurbs, '#3b82f6');
+                this.plot.drawCurve(tempNurbs, '#f8fafc');
                 
                 if (this.showFEM && this.femDeflection) {
                     this.plot.drawReferenceFEM(this.femDeflection, renderedScale);
-                }
-                
-                if (this.showAnalytical) {
-                    this.plot.drawAnalyticalCurve({
-                        loadPos: this.loadPos,
-                        effectiveLoad: this.loadMag,
-                        engine: this.physics,
-                        visualScale: renderedScale
-                    });
                 }
                 this.updateROMStats();
             }
