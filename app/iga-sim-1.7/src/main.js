@@ -180,6 +180,13 @@ class MechanicsApp {
 
         document.getElementById('select-physics-mode').addEventListener('change', (e) => {
             this.physicsMode = e.target.value;
+            if (this.physicsMode === 'axial' && this.bcRight) {
+                // Auto free the right side for axial loads
+                this.bcRight = false;
+                const bcBtn = document.getElementById('bc-right');
+                bcBtn.classList.remove('active');
+                bcBtn.textContent = 'Right: Free';
+            }
             this.updatePhysics();
         });
 
@@ -287,14 +294,34 @@ class MechanicsApp {
             return;
         }
 
-        const pt = this.plot.worldToScreen(this.loadPos, 0.5);
+        const currentLoadPos = this.physicsMode === 'axial' ? 1.0 : this.loadPos;
+        const pt = this.plot.worldToScreen(currentLoadPos, 0.5);
         // Reduced the multiplier so the red arrow isn't giant
         const length = (this.loadMag / 5.0) * this.plot.camera.zoom; 
+        
         this.ctx.strokeStyle = '#ef4444';
         this.ctx.lineWidth = 3;
         this.ctx.beginPath();
+        
+        // Draw the main line of the vector
         this.ctx.moveTo(pt.x, pt.y);
-        this.ctx.lineTo(pt.x, pt.y + length);
+        if (this.physicsMode === 'axial') {
+            this.ctx.lineTo(pt.x + length, pt.y);
+            // Draw arrowhead
+            const dir = length > 0 ? 1 : -1;
+            this.ctx.moveTo(pt.x + length, pt.y);
+            this.ctx.lineTo(pt.x + length - (10 * dir), pt.y - 5);
+            this.ctx.moveTo(pt.x + length, pt.y);
+            this.ctx.lineTo(pt.x + length - (10 * dir), pt.y + 5);
+        } else {
+            this.ctx.lineTo(pt.x, pt.y + length);
+            // Draw arrowhead
+            const dir = length > 0 ? 1 : -1;
+            this.ctx.moveTo(pt.x, pt.y + length);
+            this.ctx.lineTo(pt.x - 5, pt.y + length - (10 * dir));
+            this.ctx.moveTo(pt.x, pt.y + length);
+            this.ctx.lineTo(pt.x + 5, pt.y + length - (10 * dir));
+        }
         this.ctx.stroke();
     }
 
@@ -329,19 +356,21 @@ class MechanicsApp {
             if (this.deflection) {
                 const shiftedROM = this.nurbs.controlPoints.map((cp, i) => {
                     const disp = this.romDeflection ? this.romDeflection[i] : 0;
+                    if (this.physicsMode === 'axial') return { x: cp.x + (disp * renderedScale), y: 0.5, w: cp.w };
                     return { x: cp.x, y: 0.5 - (disp * renderedScale), w: cp.w };
                 });
                 const romCurve = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedROM);
                 this.plot.drawCurve(romCurve, 'rgba(59, 130, 246, 0.4)');
 
                 const shiftedCPs = this.nurbs.controlPoints.map((cp, i) => {
+                    if (this.physicsMode === 'axial') return { x: cp.x + (this.deflection[i] * renderedScale), y: 0.5, w: cp.w };
                     return { x: cp.x, y: 0.5 - (this.deflection[i] * renderedScale), w: cp.w };
                 });
                 const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
                 this.plot.drawCurve(tempNurbs, '#f8fafc');
                 
                 if (this.showFEM && this.femDeflection) {
-                    this.plot.drawReferenceFEM(this.femDeflection, renderedScale);
+                    this.plot.drawReferenceFEM(this.femDeflection, renderedScale, this.physicsMode);
                 }
             }
 

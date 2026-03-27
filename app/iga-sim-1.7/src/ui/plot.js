@@ -135,14 +135,18 @@ export class BasisPlot {
         this.ctx.stroke();
     }
 
-    drawReferenceFEM(femData, visualScale) {
+    drawReferenceFEM(femData, visualScale, physicsMode = 'bending') {
         this.ctx.strokeStyle = '#10b981';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([5, 5]);
         this.ctx.beginPath();
         femData.forEach((pt, i) => {
-            const wy = 0.5 - pt.y * visualScale;
-            const pScreen = this.worldToScreen(pt.x, wy);
+            let wx = pt.x, wy = 0.5 - pt.y * visualScale;
+            if (physicsMode === 'axial') {
+                wx = pt.x + pt.y * visualScale;
+                wy = 0.5;
+            }
+            const pScreen = this.worldToScreen(wx, wy);
             i === 0 ? this.ctx.moveTo(pScreen.x, pScreen.y) : this.ctx.lineTo(pScreen.x, pScreen.y);
         });
         this.ctx.stroke();
@@ -152,8 +156,12 @@ export class BasisPlot {
         this.ctx.fillStyle = 'rgba(16, 185, 129, 0.5)';
         femData.forEach((pt, i) => {
             if (i % 10 === 0) {
-                const wy = 0.5 - pt.y * visualScale;
-                const pScreen = this.worldToScreen(pt.x, wy);
+                let wx = pt.x, wy = 0.5 - pt.y * visualScale;
+                if (physicsMode === 'axial') {
+                    wx = pt.x + pt.y * visualScale;
+                    wy = 0.5;
+                }
+                const pScreen = this.worldToScreen(wx, wy);
                 this.ctx.beginPath(); this.ctx.arc(pScreen.x, pScreen.y, 3, 0, Math.PI*2); this.ctx.fill();
             }
         });
