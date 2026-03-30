@@ -1,4 +1,4 @@
-﻿import { NURBSEngine } from './engine/iga.js';
+import { NURBSEngine } from './engine/iga.js';
 import { PhysicsEngine, ReferenceFEM } from './engine/physics.js';
 import { BasisPlot } from './ui/plot.js';
 
@@ -26,8 +26,6 @@ class MechanicsApp {
 
         this.deflection = null;
         this.femDeflection = null;
-        this.torqueResult = null;
-        this.isTorqueMode = false; // New state for torque interaction
         this.physicsMode = 'bending';
         this.femOrder = 1;
         this.femElements = 40;
@@ -52,9 +50,7 @@ class MechanicsApp {
         const formula = document.getElementById('math-formula');
         if (!formula) return;
         
-        let tex = this.isTorqueMode
-            ? "\\kappa = M / EI"
-            : (false ? "[K(u)]\\{u\\} = \\{F(u)\\}" : "[K]\\{u\\} = \\{F\\}");
+        let tex = "[K]\\{u\\} = \\{F\\}";
         
         if (window.katex) {
             window.katex.render(tex, formula, {
@@ -86,15 +82,6 @@ class MechanicsApp {
     }
 
     updatePhysics() {
-        if (this.isTorqueMode) {
-            this.torqueResult = this.physics.solveTorqueToCircle(this.loadMag);
-            this.deflection = this.romDeflection = this.femDeflection = null;
-            this.updateROMStats(true);
-            this.renderMath();
-            return;
-        }
-        this.torqueResult = null;
-
         const numCP = this.nurbs.controlPoints.length;
         this.physics.physicsMode = this.physicsMode;
         this.physics.femOrder = this.femOrder;
@@ -195,26 +182,6 @@ class MechanicsApp {
             this.updatePhysics();
         });
 
-        document.getElementById('btn-torque-circle').addEventListener('click', () => {
-            this.isTorqueMode = !this.isTorqueMode;
-            document.getElementById('btn-torque-circle').classList.toggle('active', this.isTorqueMode);
-            
-            const torqueModeActive = this.isTorqueMode;
-            document.getElementById('select-physics-mode').disabled = torqueModeActive;
-            document.getElementById('input-load-pos').disabled = torqueModeActive;
-            document.getElementById('bc-left').disabled = torqueModeActive;
-            document.getElementById('bc-right').disabled = torqueModeActive;
-            document.getElementById('mode-dynamics').disabled = torqueModeActive;
-            document.getElementById('toggle-fem').disabled = torqueModeActive;
-            
-            // Sync FEM toggle visual state
-            if (torqueModeActive && this.showFEM) {
-                 document.getElementById('toggle-fem').click(); // Untoggle FEM
-            }
-
-            this.updatePhysics();
-        });
-
         document.getElementById('bc-left').addEventListener('click', (e) => {
             this.bcLeft = !this.bcLeft;
             e.target.classList.toggle('active', this.bcLeft);
@@ -280,20 +247,6 @@ class MechanicsApp {
     }
 
     drawLoadVector(renderedScale) {
-        if (this.isTorqueMode) {
-            // Visualize moment at both ends
-            const p0 = this.plot.worldToScreen(0, 0.5);
-            const p1 = this.plot.worldToScreen(1, 0.5);
-            this.ctx.strokeStyle = '#a78bfa';
-            this.ctx.lineWidth = 2;
-            [p0, p1].forEach(p => {
-                this.ctx.beginPath();
-                this.ctx.arc(p.x, p.y, 15, -Math.PI * 0.8, Math.PI * 0.8, this.loadMag < 0);
-                this.ctx.stroke();
-            });
-            return;
-        }
-
         const currentLoadPos = this.physicsMode === 'axial' ? 1.0 : this.loadPos;
         const pt = this.plot.worldToScreen(currentLoadPos, 0.5);
         // Reduced the multiplier so the red arrow isn't giant
@@ -333,17 +286,6 @@ class MechanicsApp {
         
         if (isBasisView) {
             this.plot.drawBasis(this.nurbs);
-        } else if (this.isTorqueMode && this.torqueResult && this.torqueResult.length > 0) {
-            this.ctx.strokeStyle = '#a78bfa';
-            this.ctx.lineWidth = 3;
-            this.ctx.beginPath();
-            this.torqueResult.forEach((p, i) => {
-                const screen = this.plot.worldToScreen(p.x, p.y);
-                if (i === 0) this.ctx.moveTo(screen.x, screen.y);
-                else this.ctx.lineTo(screen.x, screen.y);
-            });
-            this.ctx.stroke();
-            this.drawLoadVector();
         } else {
             let dynamicScale = 1.0;
             if (!this.isStatics) {
@@ -381,19 +323,11 @@ class MechanicsApp {
         requestAnimationFrame(() => this.animate());
     }
 
-    updateROMStats(isTorqueMode = false) {
+    updateROMStats() {
         const romDofEl = document.getElementById('rom-dofs');
         const refDofEl = document.getElementById('ref-dofs');
         const savingsEl = document.getElementById('rom-savings');
         const stateDesc = document.getElementById('state-desc');
-
-        if (isTorqueMode) {
-            if (romDofEl) romDofEl.textContent = 'N/A';
-            if (refDofEl) refDofEl.textContent = 'N/A';
-            if (savingsEl) savingsEl.textContent = 'N/A';
-            if (stateDesc) stateDesc.textContent = 'Geometric non-linearity: moment applied to beam ends.';
-            return;
-        }
 
         const fullDofs = this.physics.getDegreesOfFreedom();
         const romDofs = this.romModes || 3;

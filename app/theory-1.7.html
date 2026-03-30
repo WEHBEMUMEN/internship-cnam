@@ -418,39 +418,7 @@
             </p>
         </section>
 
-        <section class="content-section">
-            <h2><i class="fa-solid fa-link"></i> True Geometric Non-Linearity</h2>
-            <p>
-                A severe limitation of standard stiffness matrices ($\mathbf{K}_{lin} \mathbf{u} = \mathbf{F}$) is that they only model <strong>linear elasticity</strong> (very small deflections). In a linear simulation, applying an immense force to a beam tip causes it to stretch infinitely along a straight vertical line because the matrix $\mathbf{K}_{lin}$ never updates as the shape deforms.
-            </p>
-            <p>
-                To achieve true geometric mechanics, we implemented a <strong>Newton-Raphson</strong> solver combined with <strong>Geometric Stress-Stiffening (von Kármán approximation)</strong>.
-            </p>
-            
-            <div class="note-box">
-                <h4><i class="fa-solid fa-arrows-spin"></i> 1. The Tangent Stiffness Matrix ($\mathbf{K}_T$)</h4>
-                <p>
-                    As the beam bends downwards significantly, its arc length increases, generating internal axial tension $N_{ax}$ that resists further bending. We update the stiffness matrix iteratively at each load step:
-                </p>
-                $$\mathbf{K}_T(\mathbf{u}) = \mathbf{K}_{lin} + \mathbf{K}_{geom}(\mathbf{u})$$
-            </div>
-            
-            <div class="note-box">
-                <h4><i class="fa-solid fa-compress"></i> 2. Non-Linear ROM (NL-ROM)</h4>
-                <p>
-                    Reducing a non-linear system is complex because $\mathbf{K}_T$ is no longer constant. Instead of applying Galerkin Projection just once, the NL-ROM reconstructs the current deflection $\mathbf{u} = \mathbf{\Phi} \mathbf{q}_r$, evaluates the full $\mathbf{K}_T(\mathbf{u})$, and then projects the evolving tangent matrix into the modal subspace iteratively:
-                </p>
-                $$\mathbf{K}_{red-T} = \mathbf{\Phi}^T \mathbf{K}_T(\mathbf{\Phi} \mathbf{q}_r) \mathbf{\Phi}$$
-                $$\mathbf{K}_{red-T} \Delta \mathbf{q}_r = \mathbf{R}_{red}$$
-                <p style="margin-top: 15px; font-size: 0.9rem;">
-                    This allows the Digital Twin to capture complex, changing geometric stiffening while still only solving a tiny $[3 \times 3]$ matrix per iteration rather than performing Gaussian Elimination on hundreds of DOFs.
-                </p>
-            </div>
-            
-            <p style="margin-top: 30px;">
-                <em>Note: Phase 1.7 also includes a closed-form <strong>Torque-to-Circle</strong> visualization ($\kappa = M/EI$) to demonstrate large rotational strains exactly without requiring the Newton-Raphson loops.</em>
-            </p>
-        </section>
+
 
         <div class="footer-nav">
             <a href="iga-sim-1.7/index.html" class="btn btn-primary">

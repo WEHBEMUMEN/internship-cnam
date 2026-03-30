@@ -14,6 +14,21 @@ export class PhysicsEngine {
     get flexuralRigidity() { return this.E * this.I; }
     get axialRigidity() { return this.E * this.A; }
 
+    solveTorqueToCircle(moment) {
+        const kappa = moment / this.flexuralRigidity;
+        const L = 1.0, numNodes = 100, result = [];
+        for (let i = 0; i < numNodes; i++) {
+            const s = (i / (numNodes - 1)) * L;
+            if (Math.abs(kappa) < 1e-8) {
+                result.push({ x: s, y: 0.5 });
+            } else {
+                const r = 1 / kappa, theta = s * kappa;
+                result.push({ x: r * Math.sin(theta), y: 0.5 + r * (1 - Math.cos(theta)) });
+            }
+        }
+        return result;
+    }
+
     assembleStiffness() {
         const numCP = this.nurbs.controlPoints.length;
         const K = Array.from({ length: numCP }, () => new Float64Array(numCP));
