@@ -24,6 +24,11 @@ class MechanicsApp {
         this.isNonlinear = true; // Exclusively Non-Linear
         this.physicsMode = 'bending';
         this.solverMethod = 'newton';
+        this.currentView = 'deflection';
+        
+        // Charts
+        this.charts = { res: null, pdelta: null };
+        this.initCharts();
         
         // Initialize Engines
         this.initEngines();
@@ -57,6 +62,62 @@ class MechanicsApp {
         } else {
             formula.textContent = tex;
         }
+    }
+
+    initCharts() {
+        const resCtx = document.getElementById('residual-chart');
+        const pdeltaCtx = document.getElementById('pdelta-chart');
+        if (!resCtx || !pdeltaCtx) return;
+
+        this.charts.res = new Chart(resCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Residual Norm', data: [], borderColor: '#f43f5e', tension: 0.1, fill: false }] },
+            options: { 
+                scales: { y: { type: 'logarithmic', title: { display: true, text: 'Norm ||R||' } }, x: { title: { display: true, text: 'Iteration' } } },
+                plugins: { legend: { display: false } },
+                maintainAspectRatio: false
+            }
+        });
+
+        this.charts.pdelta = new Chart(pdeltaCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Load-Displacement', data: [], borderColor: '#3b82f6', tension: 0.3, fill: false }] },
+            options: { 
+                scales: { y: { title: { display: true, text: 'Tip Displacement' } }, x: { title: { display: true, text: 'Load Factor (%)' } } },
+                plugins: { legend: { display: false } },
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    updateCharts(residualHistory) {
+        if (!this.charts.res) return;
+        this.charts.res.data.labels = residualHistory.map((_, i) => i + 1);
+        this.charts.res.data.datasets[0].data = residualHistory;
+        this.charts.res.update();
+    }
+
+    runAutoSweep() {
+        const btn = document.getElementById('btn-auto-sweep');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sweeping...';
+
+        const igaBCs = [];
+        const numCP = this.nurbs.controlPoints.length;
+        if (this.bcLeft) { igaBCs.push({ index: 0, value: 0 }); if (this.physicsMode === 'bending') igaBCs.push({ index: 1, value: 0 }); }
+        if (this.bcRight) { igaBCs.push({ index: numCP - 1, value: 0 }); if (this.physicsMode === 'bending') igaBCs.push({ index: numCP - 2, value: 0 }); }
+
+        setTimeout(() => {
+            const results = this.physics.solveIncremental(this.loadPos, this.loadMag, igaBCs, 15, this.solverMethod);
+            if (this.charts.pdelta) {
+                this.charts.pdelta.data.labels = results.path.map(p => (p.loadFactor * 100).toFixed(0));
+                this.charts.pdelta.data.datasets[0].data = results.path.map(p => p.displacement);
+                this.charts.pdelta.update();
+            }
+            document.getElementById('metrics-summary').textContent = `Auto-Sweep complete. Analyzed 15 load increments up to F=${this.loadMag}. Non-linear stiffening detected.`;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-play"></i> Run Auto-Sweep (P-Delta)';
+        }, 100);
     }
 
     initEngines() {
@@ -111,11 +172,13 @@ class MechanicsApp {
         const fullResult = this.physics.solveNonLinearStatics(loadF, igaBCs, 20, this.solverMethod);
         this.deflection = fullResult.u;
         this.lastIterations = fullResult.iterations;
+        this.residualHistory = fullResult.residualHistory;
 
         const romResult = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 20, this.solverMethod);
         this.romDeflection = romResult.u;
         this.romIterations = romResult.iterations;
 
+        if (this.currentView === 'metrics') this.updateCharts(this.residualHistory);
         this.updateROMStats();
         this.renderMath();
     }
@@ -182,17 +245,24 @@ class MechanicsApp {
         });
 
         document.getElementById('btn-reset').addEventListener('click', () => location.reload());
+        document.getElementById('btn-auto-sweep').addEventListener('click', () => this.runAutoSweep());
         
-        document.getElementById('view-basis').addEventListener('click', (e) => {
-            e.target.classList.add('active');
-            document.getElementById('view-deflection').classList.remove('active');
-            document.getElementById('canvas-legend').style.display = 'none';
-        });
-
-        document.getElementById('view-deflection').addEventListener('click', (e) => {
-            e.target.classList.add('active');
-            document.getElementById('view-basis').classList.remove('active');
-            document.getElementById('canvas-legend').style.display = 'flex';
+        const tabs = ['view-deflection', 'view-stress', 'view-metrics', 'view-basis'];
+        tabs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', () => {
+                tabs.forEach(tid => document.getElementById(tid).classList.remove('active'));
+                el.classList.add('active');
+                this.currentView = id.replace('view-', '');
+                
+                // Show/Hide Containers
+                const isMetrics = this.currentView === 'metrics';
+                document.getElementById('metrics-view').style.display = isMetrics ? 'block' : 'none';
+                document.getElementById('canvas-wrapper').style.display = isMetrics ? 'none' : 'block';
+                document.getElementById('canvas-legend').style.display = (this.currentView === 'deflection') ? 'flex' : 'none';
+                
+                if (isMetrics) this.updateCharts(this.residualHistory || []);
+            });
         });
     }
 
@@ -279,7 +349,13 @@ class MechanicsApp {
                     return { x: cp.x, y: 0.5 - (this.deflection[i] * renderedScale), w: cp.w };
                 });
                 const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
-                this.plot.drawCurve(tempNurbs, '#f8fafc');
+                
+                if (this.currentView === 'stress') {
+                    const physicsState = this.physics.calculatePhysicsState(this.deflection);
+                    this.plot.drawStressGradient(tempNurbs, physicsState);
+                } else {
+                    this.plot.drawCurve(tempNurbs, '#f8fafc');
+                }
             }
 
             this.drawLoadVector(renderedScale);

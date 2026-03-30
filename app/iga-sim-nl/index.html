@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
     <style>
         .control-group.physics-controls {
             border-top: 1px solid var(--border);
@@ -85,6 +87,36 @@
             margin: 10px 0;
             font-size: 1.1rem;
             color: white;
+        }
+
+        /* Metrics Styles */
+        .metrics-container {
+            display: none;
+            padding: 20px;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+            background: #020617;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            height: 350px;
+        }
+        .chart-card h3 {
+            font-size: 0.9rem;
+            color: white;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
     </style>
 </head>
@@ -216,15 +248,40 @@
         <main class="main-content">
             <header class="top-bar">
                 <div class="view-modes">
-                    <button id="view-deflection" class="view-btn active">Deformation Shape</button>
-                    <button id="view-basis" class="view-btn">IGA Basis Functions</button>
+                    <button id="view-deflection" class="view-btn active"><i class="fa-solid fa-shapes"></i> Deformation</button>
+                    <button id="view-stress" class="view-btn"><i class="fa-solid fa-fire"></i> Analysis (Stress)</button>
+                    <button id="view-metrics" class="view-btn"><i class="fa-solid fa-chart-line"></i> Metrics</button>
+                    <button id="view-basis" class="view-btn"><i class="fa-solid fa-wave-square"></i> Basis</button>
                 </div>
                 <div class="stats">
                     <div class="stat-item"><i class="fa-solid fa-bolt"></i> 60 FPS</div>
                 </div>
             </header>
 
-            <div class="canvas-wrapper">
+            <div id="metrics-view" class="metrics-container" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 1.2rem; color: white;">Analysis Metrics</h2>
+                    <button id="btn-auto-sweep" class="btn btn-secondary" style="font-size: 0.8rem; background: #f43f5e; color: white;">
+                        <i class="fa-solid fa-play"></i> Run Auto-Sweep (P-Delta)
+                    </button>
+                </div>
+                <div class="metrics-grid">
+                    <div class="chart-card">
+                        <h3><i class="fa-solid fa-check-double"></i> Convergence Residuals</h3>
+                        <canvas id="residual-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3><i class="fa-solid fa-diagram-project"></i> Load-Deflection (P-Delta)</h3>
+                        <canvas id="pdelta-chart"></canvas>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
+                    <h4 style="color: #60a5fa; font-size: 0.85rem; margin-bottom: 10px;">Simulation Summary</h4>
+                    <p id="metrics-summary" style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6;">No analysis performed yet. Use the "Auto-Sweep" button or adjust parameters to see real-time performance data.</p>
+                </div>
+            </div>
+
+            <div id="canvas-wrapper" class="canvas-wrapper">
                 <canvas id="plot-canvas"></canvas>
                 
                 <!-- Interactive Controls -->
@@ -241,13 +298,7 @@
                     <div class="legend-item" id="legend-fem" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dashed #10b981;"></span> FEM Solution</div>
                     <div class="legend-item" id="legend-analytical" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dotted #facc15;"></span> Euler-Bernoulli Beam (Exact)</div>
                 </div>
-                
-                <!-- Information Overlay -->
-                <div class="info-card" id="info-overlay">
-                    <div class="info-header">
-                        <i class="fa-solid fa-circle-info"></i>
-                        <span>Reduced Order Modeling</span>
-                    </div>
+            </div>
                     <div id="math-formula"></div>
                     <p style="font-size: 0.8rem; color: var(--text-dim);" id="state-desc">Comparing High-Resolution Reference ($100$ elements) against Isogeometric ROM.</p>
                 </div>

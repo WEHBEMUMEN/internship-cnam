@@ -135,6 +135,42 @@ export class BasisPlot {
         this.ctx.stroke();
     }
 
+    drawStressGradient(nurbs, physicsState) {
+        const { stresses, maxStress } = physicsState;
+        const steps = stresses.length - 1;
+        this.ctx.lineWidth = 6;
+        
+        for (let i = 0; i < steps; i++) {
+            const xi1 = i / steps;
+            const xi2 = (i + 1) / steps;
+            const s1 = stresses[i];
+            const s2 = stresses[i+1];
+            const avgStress = (s1 + s2) / 2;
+            
+            // Map stress to color (Blue-White-Red)
+            const normalized = maxStress > 0 ? avgStress / maxStress : 0; // -1 to 1
+            this.ctx.strokeStyle = this.getStressColor(normalized);
+            
+            const pt1World = nurbs.evaluate(xi1);
+            const pt2World = nurbs.evaluate(xi2);
+            const pt1 = this.worldToScreen(pt1World.x, pt1World.y);
+            const pt2 = this.worldToScreen(pt2World.x, pt2World.y);
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(pt1.x, pt1.y);
+            this.ctx.lineTo(pt2.x, pt2.y);
+            this.ctx.stroke();
+        }
+    }
+
+    getStressColor(val) {
+        // val is -1 to 1. -1: Blue, 0: White/Gray, 1: Red
+        const r = val > 0 ? 244 : Math.floor(255 + val * 200);
+        const g = val > 0 ? Math.floor(255 - val * 200) : Math.floor(255 + val * 200);
+        const b = val < 0 ? 255 : Math.floor(255 - val * 200);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
     drawReferenceFEM(femData, visualScale, physicsMode = 'bending') {
         this.ctx.strokeStyle = '#10b981';
         this.ctx.lineWidth = 2;

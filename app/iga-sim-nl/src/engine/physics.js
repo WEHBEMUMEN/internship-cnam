@@ -159,12 +159,12 @@ export class PhysicsEngine {
         return Kg;
     }
 
-    solveNonLinearStatics(loadF, bcs, iterations = 20, method = 'newton') {
+    solveNonLinearStatics(loadF, bcs, iterations = 20, method = 'newton', initialU = null) {
         const numCP = this.nurbs.controlPoints.length;
-        let u = new Float64Array(numCP).fill(0);
+        let u = initialU ? new Float64Array(initialU) : new Float64Array(numCP).fill(0);
         let iterCount = 0;
+        let residualHistory = [];
         
-        // Prepare constant matrices for modified methods
         const K_lin = this.assembleStiffness();
         let K_tangent = null;
         if (method === 'modified_newton' || method === 'incremental') {
@@ -175,14 +175,11 @@ export class PhysicsEngine {
             }
         }
 
-        // Solver Loop
         for (let iter = 0; iter < iterations; iter++) {
             iterCount++;
             
-            // 1. Determine Current Tangent/Iteration Matrix
             let K_curr;
             if (method === 'newton' || (method === 'picard' && iter % 2 === 0)) {
-                // Full Newton or periodic Picard update
                 const K_geom = this.assembleGeometricStiffness(u);
                 K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
                 for (let i = 0; i < numCP; i++) {
@@ -191,11 +188,9 @@ export class PhysicsEngine {
             } else if (method === 'modified_newton' || method === 'incremental') {
                 K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(K_tangent[i]));
             } else {
-                // Pure Picard (Linear stiffness only)
                 K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(K_lin[i]));
             }
 
-            // 2. Compute Internal Force and Residual
             const K_geom_curr = this.assembleGeometricStiffness(u);
             const F_int = new Float64Array(numCP).fill(0);
             for (let i = 0; i < numCP; i++) {
@@ -207,15 +202,14 @@ export class PhysicsEngine {
             const R = new Float64Array(numCP);
             for (let i = 0; i < numCP; i++) R[i] = loadF[i] - F_int[i];
 
-            // 3. Convergence Check
             let resNorm = 0;
             for (let i = 0; i < numCP; i++) resNorm += R[i] * R[i];
-            if (Math.sqrt(resNorm) < 1e-7 && iter > 0) break;
-            if (method === 'incremental') {
-                if (iter > 0) break; // Only 1 step for incremental
-            }
+            const currentRes = Math.sqrt(resNorm);
+            residualHistory.push(currentRes);
 
-            // 4. Boundary Conditions
+            if (currentRes < 1e-7 && iter > 0) break;
+            if (method === 'incremental' && iter > 0) break;
+
             bcs.forEach(bc => {
                 const idx = bc.index;
                 if (idx < 0 || idx >= numCP) return;
@@ -228,26 +222,25 @@ export class PhysicsEngine {
                 K_curr[idx][idx] = 1.0; R[idx] = 0;
             });
 
-            // 5. Solve and Update
             const du = this.gaussianElimination(K_curr, R);
             let updateNorm = 0;
             for (let i = 0; i < numCP; i++) {
                 u[i] += du[i];
                 updateNorm += du[i] * du[i];
             }
-            if (Math.sqrt(updateNorm) < 1e-8) break;
+            if (Math.sqrt(updateNorm) < 1e-9) break;
         }
 
-        return { u, iterations: iterCount };
+        return { u, iterations: iterCount, residualHistory };
     }
 
-    solveNonLinearROM(loadF, bcs, modes = 3, iterations = 20, method = 'newton') {
+    solveNonLinearROM(loadF, bcs, modes = 3, iterations = 20, method = 'newton', initialQ = null) {
         const numCP = this.nurbs.controlPoints.length;
         const phi = this.getModalBasis(modes, bcs);
-        let q = new Float64Array(modes).fill(0);
+        let q = initialQ ? new Float64Array(initialQ) : new Float64Array(modes).fill(0);
         let iterCount = 0;
+        let residualHistory = [];
 
-        // Prepare constant matrices for modified methods
         const K_lin_full = this.assembleStiffness();
         let Kr_tangent = null;
         if (method === 'modified_newton' || method === 'incremental') {
@@ -256,7 +249,6 @@ export class PhysicsEngine {
             for (let i = 0; i < numCP; i++) {
                 for (let j = 0; j < numCP; j++) K_T_init[i][j] = K_lin_full[i][j] + K_geom_init[i][j];
             }
-            // Project
             Kr_tangent = Array.from({ length: modes }, () => new Float64Array(modes));
             for (let i = 0; i < modes; i++) {
                 for (let j = 0; j < modes; j++) {
@@ -290,7 +282,6 @@ export class PhysicsEngine {
                 R_full[i] = loadF[i] - F_int[i];
             }
 
-            // Determine Projection Matrix
             let Kr_curr;
             if (method === 'newton' || (method === 'picard' && iter % 2 === 0)) {
                 const K_T = Array.from({ length: numCP }, () => new Float64Array(numCP));
@@ -312,7 +303,6 @@ export class PhysicsEngine {
             } else if (method === 'modified_newton' || method === 'incremental') {
                 Kr_curr = Array.from({ length: modes }, (_, i) => new Float64Array(Kr_tangent[i]));
             } else {
-                // Picard/Linear
                 Kr_curr = Array.from({ length: modes }, () => new Float64Array(modes));
                 for (let i = 0; i < modes; i++) {
                     for (let j = 0; j < modes; j++) {
@@ -334,10 +324,11 @@ export class PhysicsEngine {
 
             let resNorm = 0;
             for (let i = 0; i < modes; i++) resNorm += R_red[i] * R_red[i];
-            if (Math.sqrt(resNorm) < 1e-7 && iter > 0) break;
-            if (method === 'incremental') {
-                if (iter > 0) break;
-            }
+            const currentRes = Math.sqrt(resNorm);
+            residualHistory.push(currentRes);
+
+            if (currentRes < 1e-7 && iter > 0) break;
+            if (method === 'incremental' && iter > 0) break;
 
             const dq = this.gaussianElimination(Kr_curr, R_red);
             let updateNorm = 0;
@@ -345,14 +336,60 @@ export class PhysicsEngine {
                 q[i] += dq[i];
                 updateNorm += dq[i] * dq[i];
             }
-            if (Math.sqrt(updateNorm) < 1e-8) break;
+            if (Math.sqrt(updateNorm) < 1e-9) break;
         }
 
         const u_final = new Float64Array(numCP).fill(0);
         for (let i = 0; i < numCP; i++) {
             for (let j = 0; j < modes; j++) u_final[i] += phi[i][j] * q[j];
         }
-        return { u: u_final, iterations: iterCount };
+        return { u: u_final, iterations: iterCount, residualHistory, q };
+    }
+
+
+    calculatePhysicsState(u) {
+        const samples = 100, results = { stresses: [], maxStress: 0 };
+        const E = this.E, I = this.I, A = this.A;
+        const numCP = this.nurbs.controlPoints.length;
+
+        for (let i = 0; i <= samples; i++) {
+            const xi = i / samples;
+            let stress = 0;
+            
+            if (this.physicsMode === 'bending') {
+                const d2 = this.nurbs.evaluateAllBasisDerivatives(xi, 2);
+                let curvature = 0;
+                for (let j = 0 ; j < numCP; j++) curvature += d2[j] * u[j];
+                // Fiber stress at top: sigma = E * y * kappa (y = half beam depth, assuming 0.1 for visual)
+                stress = E * 0.1 * curvature;
+            } else {
+                const d1 = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
+                let strain = 0;
+                for (let j = 0; j < numCP; j++) strain += d1[j] * u[j];
+                stress = E * strain;
+            }
+            results.stresses.push(stress);
+            if (Math.abs(stress) > results.maxStress) results.maxStress = Math.abs(stress);
+        }
+        return results;
+    }
+
+    solveIncremental(loadPos, totalMag, bcs, steps = 10, method = 'newton') {
+        const results = { path: [] };
+        const numCP = this.nurbs.controlPoints.length;
+        let currentU = new Float64Array(numCP).fill(0);
+        
+        for (let s = 1; s <= steps; s++) {
+            const stepMag = (s / steps) * totalMag;
+            const stepLoadF = this.assembleIGALoad(loadPos, stepMag);
+            const solveRes = this.solveNonLinearStatics(stepLoadF, bcs, 20, method, currentU);
+            currentU = solveRes.u;
+            
+            // Track tip displacement (assuming right end is DOFs near numCP-1)
+            const tipDisp = currentU[numCP - 1]; 
+            results.path.push({ loadFactor: s / steps, displacement: tipDisp });
+        }
+        return results;
     }
 
     gaussianElimination(A, b) {

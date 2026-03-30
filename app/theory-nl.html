@@ -277,6 +277,52 @@
             </div>
         </section>
 
+        <!-- Section 5: Internal Stress Analysis -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-fire"></i> Fiber Stress & Curvature</h2>
+            <p>
+                Once the displacement field $\mathbf{u}$ is found, we evaluate the internal state of the material. In IGA bending, we focus on the longitudinal fiber stress:
+            </p>
+            <div class="math-card">
+                $$\sigma(\xi, y) = -E \cdot y \cdot \kappa(\xi)$$
+            </div>
+            <p>
+                where $\kappa(\xi)$ is the curvature, approximated here by the second derivative of the vertical displacement $v''(\xi)$. For a beam of thickness $h$, the maximum tension and compression occur at the outer fibers ($y = \pm h/2$).
+            </p>
+            <div class="note-box-green">
+                <h4><i class="fa-solid fa-palette"></i> Stress Visualization</h4>
+                <p>In the <strong>Analysis Tab</strong>, the beam is color-coded using a diverging scale: <strong>Red</strong> indicates high tensile stress, <strong>Blue</strong> indicates high compressive stress, and <strong>White</strong> represents the neutral axis (zero stress).</p>
+            </div>
+        </section>
+
+        <!-- Section 6: Convergence Metrics -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-chart-line"></i> Convergence & Residuals</h2>
+            <p>
+                The quality of a non-linear solution is measured by the <strong>Residual Norm</strong> $\|\mathbf{R}\|$. This represents the "out-of-balance" force that the solver must eliminate to reach equilibrium.
+            </p>
+            <div class="math-card">
+                $$\|\mathbf{R}\| = \sqrt{\sum (F_{ext} - F_{int})^2}$$
+            </div>
+            <p>
+                In the <strong>Metrics Tab</strong>, we plot the logarithm of this norm over iterations. A truly quadratic solver (Newton) will show a steep downward "cliff," whereas linear solvers (Picard) show a constant slope.
+            </p>
+        </section>
+
+        <!-- Section 7: Incremental Loading (P-Delta) -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-route"></i> Path-Following & P-Delta</h2>
+            <p>
+                Complex non-linearities often require <strong>Incremental Loading</strong>. Instead of applying 100% of the force at once, we apply it in small steps $\Delta F$. This ensures the solver stays close to the equilibrium path.
+            </p>
+            <div class="math-card">
+                $$\mathbf{F}_{step} = \lambda \cdot \mathbf{F}_{final} \quad \text{where } \lambda \in [0, 1]$$
+            </div>
+            <p>
+                Plotting the tip displacement against the load factor $\lambda$ produces the <strong>P-Delta Curve</strong>. In our app, you will see a "stiffening" curve where the slope increases as axial tension pulls the beam back, resisting further bending.
+            </p>
+        </section>
+
         <!-- Section 4: NL-ROM -->
         <section class="content-section">
             <h2><i class="fa-solid fa-bolt"></i> Non-Linear Reduced Order Model (NL-ROM)</h2>
