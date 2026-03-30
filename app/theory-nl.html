@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory NL | Non-Linear IGA & ROM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --primary-glow: rgba(244, 63, 94, 0.4);
+            --accent: #10b981;
+            --bg: #020617;
+            --card: #0f172a;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        .scroll-progress {
+            position: fixed; top: 0; left: 0;
+            height: 4px; background: var(--primary);
+            width: 0%; z-index: 1000;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 100px 30px; }
+        header { text-align: center; margin-bottom: 100px; position: relative; }
+        header::before {
+            content: ''; position: absolute;
+            top: -50px; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 300px;
+            background: var(--primary); filter: blur(150px); opacity: 0.15; z-index: -1;
+        }
+        .badge {
+            background: rgba(244, 63, 94, 0.1); color: var(--primary);
+            padding: 8px 20px; border-radius: 100px; font-size: 0.85rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            display: inline-block; margin-bottom: 30px;
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800;
+            margin-bottom: 24px; letter-spacing: -0.03em;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; line-height: 1.1;
+        }
+        .subtitle { font-size: 1.4rem; color: var(--text-dim); max-width: 700px; margin: 0 auto; font-weight: 300; }
+        .hero-stats {
+            display: flex; justify-content: center; gap: 40px;
+            margin-top: 50px; flex-wrap: wrap;
+        }
+        .stat-item { text-align: center; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; font-weight: 700; color: var(--primary); display: block; }
+        .stat-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+        .content-section {
+            background: var(--card); border: 1px solid var(--border); border-radius: 32px;
+            padding: 60px; margin-bottom: 60px; position: relative; overflow: hidden;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .content-section:hover { border-color: var(--primary); }
+        h2 {
+            font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700;
+            margin-bottom: 30px; display: flex; align-items: center; gap: 15px; color: #fff;
+        }
+        h2 i { color: var(--primary); font-size: 1.8rem; }
+        p { font-size: 1.15rem; margin-bottom: 25px; color: #cbd5e1; font-weight: 400; }
+        strong { color: #fff; font-weight: 600; }
+        .math-card {
+            background: #020617; padding: 30px; border-radius: 20px; margin: 30px 0;
+            border-left: 5px solid var(--primary);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); overflow-x: auto;
+        }
+        .note-box {
+            background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.2);
+            padding: 25px; border-radius: 16px; margin-top: 30px;
+        }
+        .note-box h4 { color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .note-box-green {
+            background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 25px; border-radius: 16px; margin-top: 30px;
+        }
+        .note-box-green h4 { color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 40px 0; }
+        .comparison-table th {
+            text-align: left; padding: 20px; color: var(--text-dim);
+            font-size: 0.9rem; text-transform: uppercase; border-bottom: 1px solid var(--border);
+        }
+        .comparison-table td { padding: 20px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); font-size: 1.1rem; }
+        .highlight-text { color: var(--primary); font-weight: 700; }
+        .footer-nav { display: flex; flex-direction: column; align-items: center; margin-top: 100px; gap: 20px; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 12px;
+            padding: 18px 36px; border-radius: 16px; font-weight: 700;
+            text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.1rem;
+        }
+        .btn-primary {
+            background: var(--primary); color: white;
+            box-shadow: 0 10px 20px -10px var(--primary-glow);
+        }
+        .btn-primary:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -15px var(--primary-glow); filter: brightness(1.1); }
+        .back-link { color: var(--text-dim); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: color 0.2s; }
+        .back-link:hover { color: var(--text); }
+        code { font-family: 'JetBrains Mono', monospace; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: var(--primary); }
+        .step-number {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--primary); color: white; font-weight: 800; font-size: 1rem;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-progress"></div>
+
+    <div class="container">
+        <header>
+            <span class="badge">NL-IGA | Non-Linear Engine</span>
+            <h1>Geometric Non-Linearity<br>& Reduced Order Modeling</h1>
+            <p class="subtitle">How iterative Newton-Raphson stiffness updates and Galerkin Projection combine to create a real-time non-linear Digital Twin.</p>
+
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-value">N-R</span>
+                    <span class="stat-label">Newton-Raphson</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">K<sub>T</sub></span>
+                    <span class="stat-label">Tangent Stiffness</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">K<sub>g</sub></span>
+                    <span class="stat-label">Geometric Stiffness</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">NL-ROM</span>
+                    <span class="stat-label">Iterative Reduction</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Section 1: The Problem with Linear -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-triangle-exclamation"></i> The Limitation of Linear Statics</h2>
+            <p>
+                In the standard linear IGA solver from Phase 1.7, the governing equation is:
+            </p>
+            <div class="math-card">
+                $$\mathbf{K}_{lin} \mathbf{u} = \mathbf{F}$$
+            </div>
+            <p>
+                The stiffness matrix $\mathbf{K}_{lin}$ is assembled <strong>once</strong> and never changes. This is valid for small deflections. However, when the applied load $\mathbf{F}$ is large enough that the beam deflects significantly, the geometry itself changes — the beam stretches, its arc length increases, and internal axial tension develops.
+            </p>
+            <p>
+                The linear solver is completely blind to these effects. If you push an immense force onto a cantilevered beam, the linear math will happily stretch the tip infinitely downward in a straight line. It will never curl, stiffen, or behave like a real physical structure because $\mathbf{K}_{lin}$ remains frozen at the undeformed configuration.
+            </p>
+        </section>
+
+        <!-- Section 2: Geometric Stiffness -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-compress"></i> The Geometric Stiffness Matrix ($\mathbf{K}_{geom}$)</h2>
+            <p>
+                When a beam bends significantly, its centerline stretches. This stretching generates <strong>internal axial tension</strong> $N_{ax}$ that resists further bending — a phenomenon called <em>stress stiffening</em>. This is the von Kármán approximation for geometric non-linearity.
+            </p>
+            
+            <div class="note-box">
+                <h4><span class="step-number">1</span> Compute the Induced Axial Force</h4>
+                <p>
+                    The slope $v'(\xi)$ of the current deformed shape is evaluated using the IGA basis function derivatives. The induced axial tension is computed from the stretching energy:
+                </p>
+                $$N_{ax} = \frac{EA}{2L} \int_0^1 \left( v'(\xi) \right)^2 d\xi$$
+            </div>
+
+            <div class="note-box">
+                <h4><span class="step-number">2</span> Assemble $\mathbf{K}_{geom}$</h4>
+                <p>
+                    The geometric stiffness matrix is assembled using the <strong>first derivatives</strong> of the IGA basis functions, scaled by the induced axial force $N_{ax}$:
+                </p>
+                $$(K_{geom})_{ij} = \int_0^1 N_{ax} \frac{dR_i}{d\xi} \frac{dR_j}{d\xi} d\xi$$
+            </div>
+            
+            <p>
+                This matrix grows larger as the beam bends more — it's the mathematical representation of "the more you bend, the stiffer you get."
+            </p>
+        </section>
+
+        <!-- Section 3: Newton-Raphson -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-arrows-spin"></i> Newton-Raphson Iteration</h2>
+            <p>
+                The non-linear equilibrium equation becomes:
+            </p>
+            <div class="math-card">
+                $$\mathbf{K}_T(\mathbf{u}) \, \Delta\mathbf{u} = \mathbf{R}(\mathbf{u})$$
+            </div>
+            <p>
+                where $\mathbf{K}_T = \mathbf{K}_{lin} + \mathbf{K}_{geom}(\mathbf{u})$ is the <strong>Tangent Stiffness</strong> and $\mathbf{R} = \mathbf{F}_{ext} - \mathbf{F}_{int}(\mathbf{u})$ is the <strong>Residual Force</strong> (the out-of-balance force). This is solved iteratively:
+            </p>
+
+            <div class="note-box">
+                <h4><span class="step-number">1</span> Assemble Tangent Stiffness</h4>
+                <p>Build $\mathbf{K}_T(\mathbf{u})$ from the current deformed shape.</p>
+            </div>
+            <div class="note-box">
+                <h4><span class="step-number">2</span> Compute Internal Force</h4>
+                <p>$\mathbf{F}_{int}(\mathbf{u}) = \mathbf{K}_{lin} \mathbf{u} + \frac{1}{2} \mathbf{K}_{geom}(\mathbf{u}) \mathbf{u}$</p>
+            </div>
+            <div class="note-box">
+                <h4><span class="step-number">3</span> Compute Residual</h4>
+                <p>$\mathbf{R} = \mathbf{F}_{ext} - \mathbf{F}_{int}(\mathbf{u})$</p>
+            </div>
+            <div class="note-box">
+                <h4><span class="step-number">4</span> Solve for Increment</h4>
+                <p>$\Delta\mathbf{u} = \mathbf{K}_T^{-1} \mathbf{R}$</p>
+            </div>
+            <div class="note-box">
+                <h4><span class="step-number">5</span> Update & Check Convergence</h4>
+                <p>$\mathbf{u} \leftarrow \mathbf{u} + \Delta\mathbf{u}$. Repeat until $\|\Delta\mathbf{u}\| < \epsilon$.</p>
+            </div>
+        </section>
+
+        <!-- Section 4: NL-ROM -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-bolt"></i> Non-Linear Reduced Order Model (NL-ROM)</h2>
+            <p>
+                In the linear ROM (Phase 1.7), Galerkin Projection maps the system into a modal subspace <strong>once</strong>. For non-linear problems, the Tangent Stiffness $\mathbf{K}_T$ changes every iteration — so the projection must be <strong>repeated at every Newton-Raphson step</strong>.
+            </p>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Full NL-IGA ($N \times N$)</th>
+                        <th>NL-ROM ($m \times m$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Build Tangent</strong></td>
+                        <td>$\mathbf{K}_T(\mathbf{u})$ at full DOF</td>
+                        <td class="highlight-text">$\mathbf{K}_T(\mathbf{\Phi q}_r)$ then project</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Project</strong></td>
+                        <td>Not needed — already full</td>
+                        <td class="highlight-text">$\mathbf{K}_{red-T} = \mathbf{\Phi}^T \mathbf{K}_T \mathbf{\Phi}$</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Solve</strong></td>
+                        <td>Gaussian Elimination ($O(N^3)$)</td>
+                        <td class="highlight-text">$\mathbf{K}_{red-T} \Delta \mathbf{q}_r = \mathbf{R}_{red}$</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Reconstruct</strong></td>
+                        <td>Direct physical DOFs</td>
+                        <td class="highlight-text">$\mathbf{u} = \mathbf{\Phi} \mathbf{q}_r$</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="note-box-green">
+                <h4><i class="fa-solid fa-lightbulb"></i> The Key Insight</h4>
+                <p>
+                    Even though we must rebuild $\mathbf{K}_T$ in full space each iteration (because the geometry-dependent $\mathbf{K}_{geom}$ requires the full displacement field), the <strong>actual solve</strong> operates on the tiny $[3 \times 3]$ reduced system. This means each iteration costs roughly $O(N^2)$ for projection but only $O(m^3)$ for the solve — a dramatic speedup when $m \ll N$.
+                </p>
+            </div>
+
+            <div class="math-card" style="margin-top: 40px;">
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px;">NL-ROM Iteration Loop:</p>
+                $$\mathbf{u}^{(k)} = \mathbf{\Phi} \mathbf{q}_r^{(k)}$$
+                $$\mathbf{K}_{red-T}^{(k)} = \mathbf{\Phi}^T \mathbf{K}_T(\mathbf{u}^{(k)}) \mathbf{\Phi}$$
+                $$\mathbf{R}_{red}^{(k)} = \mathbf{\Phi}^T \left( \mathbf{F}_{ext} - \mathbf{F}_{int}(\mathbf{u}^{(k)}) \right)$$
+                $$\mathbf{K}_{red-T}^{(k)} \Delta \mathbf{q}_r = \mathbf{R}_{red}^{(k)}$$
+                $$\mathbf{q}_r^{(k+1)} = \mathbf{q}_r^{(k)} + \Delta \mathbf{q}_r$$
+            </div>
+        </section>
+
+        <!-- Section 5: Legacy Torque-to-Circle -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-circle-notch"></i> Torque-to-Circle (Closed-Form Bypass)</h2>
+            <p>
+                Phase 1.7 also includes a <strong>closed-form analytical solution</strong> for the special case of a pure uniform bending moment $M$. When the moment is constant along the beam, the curvature $\kappa$ is also constant, producing a perfect circular arc:
+            </p>
+            <div class="math-card">
+                $$\kappa = \frac{M}{EI} \implies r = \frac{1}{\kappa}$$
+            </div>
+            <p>
+                This bypasses the Newton-Raphson loop entirely and maps control points directly onto a circle. It serves as a visual validation tool — if the NL solver is correct, applying a uniform moment should produce a shape that closely matches this exact circular geometry.
+            </p>
+        </section>
+
+        <div class="footer-nav">
+            <a href="iga-sim-nl/index.html" class="btn btn-primary">
+                <i class="fa-solid fa-flask"></i> Launch NL Benchmark
+            </a>
+            <a href="index.html" class="back-link">
+                <i class="fa-solid fa-house"></i> Return to Simulation Hub
+            </a>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            document.querySelector(".scroll-progress").style.width = (winScroll / height) * 100 + "%";
+        });
+    </script>
+</body>
+</html>

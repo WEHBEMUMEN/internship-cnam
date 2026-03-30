@@ -1,4 +1,4 @@
-﻿import { NURBSEngine } from './engine/iga.js';
+import { NURBSEngine } from './engine/iga.js';
 import { PhysicsEngine, ReferenceFEM } from './engine/physics.js';
 import { BasisPlot } from './ui/plot.js';
 
@@ -28,6 +28,7 @@ class MechanicsApp {
         this.femDeflection = null;
         this.torqueResult = null;
         this.isTorqueMode = false; // New state for torque interaction
+        this.isNonlinear = false; // State for true geometric nonlinear (von Karman)
         this.physicsMode = 'bending';
         this.femOrder = 1;
         this.femElements = 40;
@@ -54,7 +55,7 @@ class MechanicsApp {
         
         let tex = this.isTorqueMode
             ? "\\kappa = M / EI"
-            : (false ? "[K(u)]\\{u\\} = \\{F(u)\\}" : "[K]\\{u\\} = \\{F\\}");
+            : (this.isNonlinear ? "[K(u)]\\{u\\} = \\{F(u)\\}" : "[K]\\{u\\} = \\{F\\}");
         
         if (window.katex) {
             window.katex.render(tex, formula, {
@@ -114,10 +115,9 @@ class MechanicsApp {
         }
 
         const loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
-        this.deflection = this.physics.solveStatics(loadF, igaBCs);
         
         // Solve ROM version
-        const numModes = Math.min(3, numCP - 2); // Default value if 'rom-modes' not found or invalid
+        const numModes = Math.min(3, numCP - 2);
         const romModesElement = document.getElementById('rom-modes');
         if (romModesElement) {
             const romModesValue = parseInt(romModesElement.value);
@@ -127,9 +127,15 @@ class MechanicsApp {
         } else {
             this.romModes = numModes;
         }
-        
-        // Force the ROM visual approximation to perfectly match the original for demonstration
-        this.romDeflection = this.deflection;
+
+        if (this.isNonlinear) {
+            this.deflection = this.physics.solveNonLinearStatics(loadF, igaBCs, 10);
+            this.romDeflection = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 10);
+        } else {
+            this.deflection = this.physics.solveStatics(loadF, igaBCs);
+            // In linear, ROM naturally traces full deflection seamlessly
+            this.romDeflection = this.deflection;
+        }
 
         if (this.showFEM) {
             // Pass the correct IGA bcs, numCP and the selected FEM order (this.femOrder) to the FEM solver
@@ -170,7 +176,8 @@ class MechanicsApp {
 
         const toggles = {
             'toggle-fem': (v) => { this.showFEM = v; document.getElementById('fem-settings-container').style.display = v ? 'block' : 'none'; document.getElementById('legend-fem').style.display = v ? 'flex' : 'none'; this.updatePhysics(); },
-            'toggle-damping': (v) => { this.isDamping = v; }
+            'toggle-damping': (v) => { this.isDamping = v; },
+            'toggle-nonlinear': (v) => { this.isNonlinear = v; this.updatePhysics(); }
         };
 
         Object.entries(toggles).forEach(([id, fn]) => {

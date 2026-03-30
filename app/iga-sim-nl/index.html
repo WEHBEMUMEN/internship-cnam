@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1.7 | ROM Benchmark</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <style>
+        .control-group.physics-controls {
+            border-top: 1px solid var(--border);
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+        .bc-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .mode-toggle {
+            display: flex;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; width: 14px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(16px); }
+        
+        #math-formula {
+            display: block;
+            margin: 10px 0;
+            font-size: 1.1rem;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-microchip" style="color: #60a5fa;"></i>
+                <div>
+                    <h1>ROM Benchmark</h1>
+                    <span class="version">Phase 1.7 App</span>
+                </div>
+            </div>
+
+            <div class="rom-dashboard" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 15px; border-radius: 12px; margin: 15px 0;">
+                <h4 style="margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; color: #60a5fa; letter-spacing: 1px;">ROM Performance</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="stat-box">
+                        <span style="display: block; font-size: 0.7rem; color: #94a3b8;">Ref DoFs</span>
+                        <span id="ref-dofs" style="font-family: 'JetBrains Mono'; font-weight: 700; color: #f8fafc;">202</span>
+                    </div>
+                    <div class="stat-box">
+                        <span style="display: block; font-size: 0.7rem; color: #94a3b8;">ROM DoFs</span>
+                        <span id="rom-dofs" style="font-family: 'JetBrains Mono'; font-weight: 700; color: #3b82f6;">8</span>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                    <span style="font-size: 0.8rem; color: #10b981; font-weight: 700;">Efficiency Gain: <span id="rom-savings">96%</span></span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <!-- Mode Toggle -->
+                <div class="mode-toggle">
+                    <button id="mode-statics" class="mode-btn active">Statics</button>
+                    <button id="mode-dynamics" class="mode-btn">Dynamics</button>
+                </div>
+
+                <div id="dynamics-settings" class="control-group" style="display: none;">
+                    <label>Animation Speed: <span id="speed-val">1.0</span>x</label>
+                    <input type="range" id="input-speed" min="0.1" max="5.0" step="0.1" value="1.0">
+                    
+                    <div class="toggle-row" style="margin-top: 15px;">
+                        <span>Apply Structural Damping</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-damping" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <button id="btn-impulse" class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 0.8rem;">
+                        <i class="fa-solid fa-hand-pointer"></i> Re-Trigger Impulse
+                    </button>
+                </div>
+
+                <!-- NURBS Basis Params -->
+                <div class="control-group">
+                    <label>Degree (p): <span id="degree-val">3</span></label>
+                    <input type="range" id="input-degree" min="3" max="5" value="3">
+                </div>
+
+                <div class="control-group">
+                    <label>Elements (Resolution): <span id="elements-val">4</span></label>
+                    <input type="range" id="input-elements" min="1" max="10" value="4">
+                </div>
+
+                <!-- Physics Params -->
+                <div class="control-group physics-controls">
+                    <h3>Physics Parameters</h3>
+                    
+                    <div class="control-group">
+                        <label>Material Stiffness (E): <span id="stiffness-val">100</span></label>
+                        <input type="range" id="input-stiffness" min="1" max="1000" step="1" value="100">
+                    </div>
+
+                    <label>Load Position (ξ): <span id="load-pos-val">0.50</span></label>
+                    <input type="range" id="input-load-pos" min="0" max="1" step="0.01" value="0.5">
+
+                    <label>Load Intensity (F): <span id="load-mag-val">50.0</span></label>
+                    <input type="range" id="input-load-mag" min="-700" max="700" step="10" value="50">
+
+                    <!-- Physics Model Selection -->
+                    <div class="control-group" style="margin-top: 20px;">
+                        <label>Physics Model:</label>
+                        <select id="select-physics-mode" class="btn btn-outline" style="width: 100%; padding: 8px; background: #0f172a; color: white;">
+                            <option value="bending">Elastic Bending (Beam)</option>
+                            <option value="axial">Traction / Compression (Axial)</option>
+                        </select>
+                    </div>
+
+                    <div class="toggle-row" style="margin-top: 15px; margin-bottom: 15px;">
+                        <span><i class="fa-solid fa-link"></i> True Geometric Non-Linearity</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-nonlinear">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- FEM Order Selection -->
+                    <div class="control-group">
+                        <label>FEM Shape Functions:</label>
+                        <select id="select-fem-order" class="btn btn-outline" style="width: 100%; padding: 8px; background: #0f172a; color: white;">
+                            <option value="1">Linear (p=1)</option>
+                            <option value="2">Quadratic (p=2)</option>
+                            <option value="3">Cubic (p=3)</option>
+                        </select>
+                    </div>
+
+                    <div class="toggle-row">
+                        <span>Compare with FEM</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-fem">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px;">
+                        <i class="fa-solid fa-circle-info"></i> Bending uses Kirchhoff-Love theory. Axial uses 1D bar theory.
+                    </p>
+
+                    <button id="btn-torque-circle" class="btn btn-secondary" style="width: 100%; margin-top: 15px; font-size: 0.8rem; background: rgba(167, 139, 250, 0.2); border: 1px solid #a78bfa; color: #a78bfa;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Nonlinear Torque → Circle
+                    </button>
+
+                    <div id="fem-settings-container" style="display: none;">
+                        <div class="control-group">
+                            <label>FEM Elements: <span id="fem-elements-val">40</span></label>
+                            <input type="range" id="input-fem-elements" min="1" max="100" value="40">
+                        </div>
+                        
+                        <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">Adjust FEM mesh resolution for benchmark comparison.</p>
+                        
+                        <button id="btn-benchmark" class="btn btn-secondary" style="width: 100%; margin-bottom: 20px; font-size: 0.8rem;">
+                            <i class="fa-solid fa-stopwatch"></i> Run Convergence Benchmark
+                        </button>
+                    </div>
+
+                    <label style="margin-top: 10px; display: block;">Boundary Conditions:</label>
+                    <div class="bc-toggle">
+                        <button id="bc-left" class="btn btn-outline active" style="font-size: 0.75rem;">Left: Fixed</button>
+                        <button id="bc-right" class="btn btn-outline active" style="font-size: 0.75rem;">Right: Fixed</button>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Scale Factor (Visual): <span id="scale-factor-val">100</span>x</label>
+                        <input type="range" id="input-scale-factor" min="1" max="1000" step="10" value="100">
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="btn-reset" class="btn btn-outline">
+                        <i class="fa-solid fa-rotate-left"></i> Reset System
+                    </button>
+                    <a href="../theory-nl.html" class="btn btn-primary" style="text-align: center; background: #f43f5e;">
+                        <i class="fa-solid fa-book"></i> Read Theory
+                    </a>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>© 2026 LMSSC | Simulation Hub</p>
+                <a href="../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Hub Dashboard</a>
+            </div>
+        </aside>
+
+        <!-- Main View -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="view-modes">
+                    <button id="view-deflection" class="view-btn active">Deformation Shape</button>
+                    <button id="view-basis" class="view-btn">IGA Basis Functions</button>
+                </div>
+                <div class="stats">
+                    <div class="stat-item"><i class="fa-solid fa-bolt"></i> 60 FPS</div>
+                </div>
+            </header>
+
+            <div class="canvas-wrapper">
+                <canvas id="plot-canvas"></canvas>
+                
+                <!-- Interactive Controls -->
+                <div class="canvas-toolbar">
+                    <button id="btn-zoom-in" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
+                    <button id="btn-zoom-out" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+                    <button id="btn-zoom-reset" title="Reset View"><i class="fa-solid fa-compress"></i></button>
+                </div>
+
+                <div id="coord-readout" class="coord-readout">ξ: 0.000 | y: 0.000</div>
+
+                <div id="canvas-legend" class="canvas-legend" style="display: none;">
+                    <div class="legend-item"><span class="legend-color" style="background: white;"></span> IGA Solution</div>
+                    <div class="legend-item" id="legend-fem" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dashed #10b981;"></span> FEM Solution</div>
+                    <div class="legend-item" id="legend-analytical" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dotted #facc15;"></span> Euler-Bernoulli Beam (Exact)</div>
+                </div>
+                
+                <!-- Information Overlay -->
+                <div class="info-card" id="info-overlay">
+                    <div class="info-header">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Reduced Order Modeling</span>
+                    </div>
+                    <div id="math-formula"></div>
+                    <p style="font-size: 0.8rem; color: var(--text-dim);" id="state-desc">Comparing High-Resolution Reference ($100$ elements) against Isogeometric ROM.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-container" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; padding: 30px; border-radius: 12px; width: 500px; border: 1px solid #334155;">
+            <h2 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;"><i class="fa-solid fa-chart-line"></i> Benchmark Results</h2>
+            <div id="benchmark-results" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #94a3b8; white-space: pre-wrap; line-height: 1.5; margin-bottom: 20px;"></div>
+            <button id="btn-close-modal" class="btn btn-primary" style="width: 100%;">Close Report</button>
+        </div>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>

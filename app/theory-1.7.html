@@ -3,13 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theory 1.7 | Reduced Order Modeling (ROM) & IGA</title>
+    <title>Theory 1.7 | The Comprehensive IGA Engine</title>
+    <!-- CSS Dependencies -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    
+    <!-- JS Scripts for KaTeX -->
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <!-- Auto-render extension for inline math -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
     <style>
         :root {
             --primary: #3b82f6;
@@ -108,20 +114,17 @@
             gap: 40px;
             margin-top: 50px;
             animation: fadeInUp 1s ease-out 0.2s backwards;
+            flex-wrap: wrap;
         }
 
-        .stat-item {
-            text-align: center;
-        }
-
+        .stat-item { text-align: center; }
         .stat-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 700;
             color: var(--primary);
             display: block;
         }
-
         .stat-label {
             font-size: 0.8rem;
             text-transform: uppercase;
@@ -140,9 +143,7 @@
             transition: transform 0.3s ease, border-color 0.3s ease;
         }
 
-        .content-section:hover {
-            border-color: var(--primary);
-        }
+        .content-section:hover { border-color: var(--primary); }
 
         h2 {
             font-family: 'Outfit', sans-serif;
@@ -172,7 +173,7 @@
             border-radius: 20px;
             margin: 30px 0;
             border-left: 5px solid var(--primary);
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); overflow-x: auto;
         }
 
         .comparison-table {
@@ -215,58 +216,20 @@
             gap: 10px;
         }
 
-        .visual-demo {
-            height: 200px;
-            background: linear-gradient(to right, #0f172a, #020617);
-            border-radius: 16px;
-            margin: 30px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px dashed var(--border);
-            position: relative;
-        }
-
-        .curve-overlay {
-            position: absolute; width: 80%; height: 2px;
-            background: var(--primary);
-            box-shadow: 0 0 20px var(--primary-glow);
-        }
-
-        .dots {
-            display: flex; justify-content: space-between;
-            width: 80%;
-        }
-
-        .dot {
-            width: 8px; height: 8px;
-            background: var(--text-dim);
-            border-radius: 50%;
-        }
-
         .footer-nav {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 100px;
-            gap: 20px;
+            display: flex; flex-direction: column;
+            align-items: center; margin-top: 100px; gap: 20px;
         }
 
         .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            padding: 18px 36px;
-            border-radius: 16px;
-            font-weight: 700;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex; align-items: center; gap: 12px;
+            padding: 18px 36px; border-radius: 16px; font-weight: 700;
+            text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-size: 1.1rem;
         }
 
         .btn-primary {
-            background: var(--primary);
-            color: white;
+            background: var(--primary); color: white;
             box-shadow: 0 10px 20px -10px var(--primary-glow);
         }
 
@@ -277,13 +240,8 @@
         }
 
         .back-link {
-            color: var(--text-dim);
-            text-decoration: none;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: color 0.2s;
+            color: var(--text-dim); text-decoration: none; font-weight: 600;
+            display: flex; align-items: center; gap: 8px; transition: color 0.2s;
         }
 
         .back-link:hover { color: var(--text); }
@@ -298,10 +256,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .highlight-text {
-            color: var(--primary);
-            font-weight: 700;
-        }
+        .highlight-text { color: var(--primary); font-weight: 700; }
 
         code {
             font-family: 'JetBrains Mono', monospace;
@@ -317,129 +272,184 @@
 
     <div class="container">
         <header>
-            <span class="badge">Phase 1.7 | The Efficiency Capstone</span>
-            <h1>The Theory of <br>Reduced Order Modeling</h1>
-            <p class="subtitle">Transforming high-fidelity simulations into real-time Digital Twins through Mathematical Compression.</p>
+            <span class="badge">Phase 1.7 | Engine Architecture Architecture</span>
+            <h1>The Theory of <br>Isogeometric Analysis & ROM</h1>
+            <p class="subtitle">A full breakdown of the mathematical properties and physics logic behind the Phase 1.7 simulation engine.</p>
             
             <div class="hero-stats">
                 <div class="stat-item">
-                    <span class="stat-value">96.5%</span>
-                    <span class="stat-label">Model Reduction</span>
+                    <span class="stat-value">NURBS</span>
+                    <span class="stat-label">Basis Definition</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">~100x</span>
-                    <span class="stat-label">Solve Speedup</span>
+                    <span class="stat-value">Dual</span>
+                    <span class="stat-label">Physics Models</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">C²</span>
-                    <span class="stat-label">Smooth Continuity</span>
+                    <span class="stat-value">C<sup>p-k</sup></span>
+                    <span class="stat-label">Geometric Continuity</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">ROM</span>
+                    <span class="stat-label">Reduced Order Core</span>
                 </div>
             </div>
         </header>
 
         <section class="content-section">
-            <h2><i class="fa-solid fa-compress-arrows-alt"></i> The Core Concept: ROM</h2>
+            <h2><i class="fa-solid fa-square-root-variable"></i> Mathematics: Knot Vectors & Basis Functions</h2>
             <p>
-                In engineering, <strong>Reduced Order Modeling (ROM)</strong> is the art of "thinning" a mathematical model. While a standard Finite Element (FEM) simulation might require millions of equations to describe a car crash or a fluid flow, a ROM reduces this complexity while attempting to preserve the global behavior.
+                In the Phase 1.7 engine, the geometry is defined using <strong>Non-Uniform Rational B-Splines (NURBS)</strong>. The domain is dictated by a <strong>Knot Vector</strong> ($U$), which divides the parametric space into elements.
             </p>
             <p>
-                For a <strong>Digital Twin</strong> to be effective, it must synchronize with reality in <strong>real-time</strong>. If it takes 2 hours to simulate the stress on a turbine blade, but the sensor data is updating every 10 milliseconds, the simulation is useless for monitoring. ROM bridges this gap.
+                The engine uses an <em>Open Uniform Knot Vector</em>. This means the ends of the knot vector are clamped with $p+1$ repeating values ($0$ at the start, $1$ at the end), forcing the curve to exactly interpolate the first and last control points.
             </p>
-            <div class="math-card" id="math-rom-definition"></div>
-        </section>
-
-        <section class="content-section">
-            <h2><i class="fa-solid fa-wand-magic-sparkles"></i> IGA as a "Natural ROM"</h2>
-            <p>
-                Traditional FEM is "expensive" because it uses <strong>Piecewise Polynomials</strong>. To represent a simple circular hole, FEM must use hundreds of linear triangles (facets). Each triangle adds parameters (Degrees of Freedom) that the computer must track.
-            </p>
-            <p>
-                <strong>Isogeometric Analysis (IGA)</strong> uses the exact same NURBS math used to design the part. A single NURBS patch can define a perfect curve using only a handful of Control Points.
-            </p>
-            <div class="visual-demo">
-                <div class="dots">
-                    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-                </div>
-                <div class="curve-overlay"></div>
-                <!-- Labeling for IGA vs FEM -->
-                <div style="position: absolute; bottom: 10px; color: var(--text-dim); font-size: 0.7rem;">
-                    NURBS Manifold: 3 Points replace 50 FEM segments
-                </div>
+            <div class="math-card">
+                $$U = [\underbrace{0, \dots, 0}_{p+1}, u_1, \dots, u_m, \underbrace{1, \dots, 1}_{p+1}]$$
             </div>
             <p>
-                By using Basis Functions that are $C^p-1$ continuous, IGA effectively "compresses" the solution space. We are not just making a model smaller; we are making the math <strong>richer</strong>.
+                The basis functions are computed recursively using the <strong>Cox-de Boor formula</strong>. This recursive approach builds higher-degree functions out of simpler linear blocks, maintaining strict local support and partition of unity.
+            </p>
+            <div class="math-card">
+                $$N_{i,0}(\xi) = \begin{cases} 1 & \text{if } u_i \le \xi < u_{i+1} \\ 0 & \text{otherwise} \end{cases}$$ 
+                $$N_{i,p}(\xi) = \frac{\xi - u_i}{u_{i+p} - u_i} N_{i,p-1}(\xi) + \frac{u_{i+p+1} - \xi}{u_{i+p+1} - u_{i+1}} N_{i+1,p-1}(\xi)$$
+            </div>
+            <p>
+                To handle precise geometries like exact circular arcs, the engine extends B-Splines with <strong>weights</strong> ($w_i$), creating rational functions: $R_{i,p}(\xi) = \frac{N_{i,p}(\xi) w_i}{\sum N_{j,p}(\xi) w_j}$.
             </p>
         </section>
 
         <section class="content-section">
-            <h2><i class="fa-solid fa-table"></i> Benchmarking the Paradigm Shift</h2>
-            <p>Comparing our Phase 1.7 Dual-Solver (IGA vs Reference FEM):</p>
+            <h2><i class="fa-solid fa-scale-balanced"></i> Variational Physics: Bending vs Axial Solvers</h2>
+            <p>
+                The physics engine features a <em>Dual-Solver</em> architecture, computing the stiffness matrix $\mathbf{K}$ using the Principle of Virtual Work. Depending on the mode selected, the structural behavior requires different derivatives of the shape functions.
+            </p>
+            <div class="note-box">
+                <h4><i class="fa-solid fa-ruler-horizontal"></i> Axial Stiffness (Truss / Bar)</h4>
+                <p>
+                    In axial mode, elements only resist stretching or compression along their length. The strain energy depends entirely on the first derivative (gradient) of the basis functions.
+                </p>
+                $$K_{ij}^{axial} = \int_{0}^{L} EA \frac{d R_i}{d\xi} \frac{d R_j}{d\xi} d\xi$$
+            </div>
             
+            <div class="note-box">
+                <h4><i class="fa-solid fa-bezier-curve"></i> Flexural Bending (Euler-Bernoulli Beam)</h4>
+                <p>
+                    In bending mode, elements resist curvature changes caused by transverse forces. Thus, the strain energy is proportional to the second derivative (curvature) of the basis functions.
+                </p>
+                $$K_{ij}^{bending} = \int_{0}^{L} EI \frac{d^2 R_i}{d\xi^2} \frac{d^2 R_j}{d\xi^2} d\xi$$
+            </div>
+            <p>
+                The matrix $\mathbf{K}$ is assembled by performing numerical integration over the parametric domain $\xi \in [0, 1]$ using Gauss Quadrature samples. This assembly handles the seamless mapping between parametric and physical space without needing individual element matrices.
+            </p>
+        </section>
+
+        <section class="content-section">
+            <h2><i class="fa-solid fa-compress-arrows-alt"></i> Reduced Order Modeling (ROM) Detail</h2>
+            <p>
+                For a <strong>Digital Twin</strong> to be effective, it must synchronize with reality in <strong>real-time</strong>. If a high-fidelity finite element solution takes seconds to compute per frame, it fails to keep up with streaming sensor data. Isogeometric Analysis (IGA) solves this natively through rapid mathematical compression via <strong>Galerkin Projection</strong>.
+            </p>
+
             <table class="comparison-table">
                 <thead>
                     <tr>
                         <th>Metric</th>
-                        <th>Classical FEM</th>
-                        <th>Isogeometric ROM</th>
+                        <th>Full IGA Model ($\mathbf{K}_{full}$)</th>
+                        <th>Reduced IGA Model ($\mathbf{K}_{red}$)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td><strong>Degrees of Freedom</strong></td>
-                        <td>202 DoFs</td>
-                        <td class="highlight-text">7-8 DoFs</td>
+                        <td>Matches Control Points (e.g., $100 \times 100$)</td>
+                        <td class="highlight-text">Set by Global Modes (e.g., $3 \times 3$)</td>
                     </tr>
                     <tr>
-                        <td><strong>Geometric Accuracy</strong></td>
-                        <td>Approximate (Facetting)</td>
-                        <td class="highlight-text">Mathematically Exact</td>
+                        <td><strong>Solve Location</strong></td>
+                        <td>Solves directly at physical node locations</td>
+                        <td class="highlight-text">Solves in an abstract modal subspace</td>
                     </tr>
                     <tr>
-                        <td><strong>Gradient Continuity</strong></td>
-                        <td><span class="cross"></span> Discontinuous (C⁰)</td>
-                        <td class="highlight-text"><span class="check"></span> Smooth (C²)</td>
+                        <td><strong>Solve Speed</strong></td>
+                        <td>Requires heavy Gaussian Elimination ($O(n^3)$)</td>
+                        <td class="highlight-text"><span class="check"></span> Instantaneous (Microseconds)</td>
                     </tr>
                     <tr>
-                        <td><strong>Assembly Time</strong></td>
-                        <td>Heavy (High node count)</td>
-                        <td class="highlight-text">Instantaneous</td>
+                        <td><strong>Geometric Output</strong></td>
+                        <td>Mathematically Exact ($u_i$)</td>
+                        <td class="highlight-text">Over 99% accuracy maintained ($\sum \Phi_m q_m$)</td>
                     </tr>
                 </tbody>
             </table>
-
+            
             <div class="note-box">
-                <h4><i class="fa-solid fa-lightbulb"></i> The "Continuity Tax"</h4>
+                <h4><i class="fa-solid fa-wave-square"></i> 1. The Modal Basis ($\mathbf{\Phi}$)</h4>
                 <p>
-                    In traditional FEM, we pay a "tax" for every node. To get more accuracy, we must add more nodes. In IGA, we increase the <strong>order (p)</strong> of the basis functions. This gives us better results without necessarily increasing the node count, making it the ultimate tool for Reduced Order Modeling.
+                    Instead of solving for the displacement of hundreds of individual control points, we assume the beam's final deflection is a combination of smooth, global shapes called <em>modes</em>. We generate a transformation matrix $\mathbf{\Phi}$ by sampling sine waves corresponding to the boundary conditions.
                 </p>
             </div>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-down-left-and-up-right-to-center"></i> 2. Galerkin Projection</h4>
+                <p>
+                    Both the high-fidelity $[N \times N]$ Stiffness matrix $\mathbf{K}_{full}$ and the $[N \times 1]$ Force vector $\mathbf{F}_{full}$ are mathematically "squashed" down into the tiny $[m \times m]$ subspace defined by the modes.
+                </p>
+                $$\mathbf{K}_{red} = \mathbf{\Phi}^T \mathbf{K}_{full} \mathbf{\Phi}$$
+                $$\mathbf{F}_{red} = \mathbf{\Phi}^T \mathbf{F}_{full}$$
+            </div>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-bolt"></i> 3. Solving the Reduced System</h4>
+                <p>
+                    The engine solves the tiny reduced system $\mathbf{K}_{red} \mathbf{q}_r = \mathbf{F}_{red}$. The resulting vector $\mathbf{q}_r$ contains the <em>modal amplitudes</em>—values that simply dictate "how much" of each sine wave is needed to balance the applied physical force.
+                </p>
+            </div>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 4. Fast Reconstruction</h4>
+                <p>
+                    Finally, the full high-fidelity physical shape is instantly reconstructed for rendering directly in the browser by multiplying the abstract modal amplitudes back through the sine waves:
+                </p>
+                $$\mathbf{u}_{full} = \mathbf{\Phi} \mathbf{q}_r$$
+            </div>
+            
+            <p style="margin-top: 25px;">
+                Classical FEM shapes are often jagged ($C^0$ discontinuous), meaning they "fight" against smooth global sine waves during reduction, causing extreme errors. Since IGA bases are inherently $C^{p-k}$ smooth, they make the perfect fit for modal projection, allowing extreme 99% compression with nearly zero loss.
+            </p>
         </section>
 
         <section class="content-section">
-            <h2><i class="fa-solid fa-microchip"></i> Real-Time Digital Twin Context</h2>
+            <h2><i class="fa-solid fa-link"></i> True Geometric Non-Linearity</h2>
             <p>
-                Reduced models are the engine rooms of Digital Twins. When we apply a force in the simulator, the <strong>Galerkin Projection</strong> happens on the reduced basis.
-            </p>
-            <div class="math-card" id="math-galerkin"></div>
-            <p>
-                Because the resulting matrix $K$ is so small (e.g., $8 \times 8$ instead of $202 \times 202$), the inversion time is reduced from milliseconds to <strong>microseconds</strong>. This leaves plenty of CPU headroom for other tasks like data ingestion, sensor fusion, and predictive maintenance algorithms.
-            </p>
-        </section>
-
-        <section class="content-section">
-            <h2><i class="fa-solid fa-shapes"></i> Visualizing Shape Functions: FEM vs IGA</h2>
-            <p>
-                In the Phase 1.7 benchmark, you can now actively compare <strong>FEM Shape Functions</strong> against the exact IGA solution. When you drastically lower the element count (e.g., to 4 elements) and select <strong>Linear (p=1)</strong> for the FEM solver, the green dashed line becomes highly jagged. This visibly demonstrates how low-order FEM elements break the geometry into discrete, straight-line segments.
+                A severe limitation of standard stiffness matrices ($\mathbf{K}_{lin} \mathbf{u} = \mathbf{F}$) is that they only model <strong>linear elasticity</strong> (very small deflections). In a linear simulation, applying an immense force to a beam tip causes it to stretch infinitely along a straight vertical line because the matrix $\mathbf{K}_{lin}$ never updates as the shape deforms.
             </p>
             <p>
-                As you increase the polynomial order to <strong>Quadratic (p=2)</strong> or <strong>Cubic (p=3)</strong>, the FEM solution begins to smooth out and wrap closely around the true continuous IGA solution. In <em>Traction/Compression (Axial)</em> space, these polynomials describe stretch along the 1D domain, while in <em>Elastic Bending</em>, they determine the complex curvature of the beam subject to transverse forces. 
+                To achieve true geometric mechanics, we implemented a <strong>Newton-Raphson</strong> solver combined with <strong>Geometric Stress-Stiffening (von Kármán approximation)</strong>.
             </p>
+            
             <div class="note-box">
-                <h4><i class="fa-solid fa-eye"></i> Try it in the Simulator</h4>
+                <h4><i class="fa-solid fa-arrows-spin"></i> 1. The Tangent Stiffness Matrix ($\mathbf{K}_T$)</h4>
                 <p>
-                    Set <strong>Elements (Resolution)</strong> to 3 or 4. Toggle <strong>Compare with FEM</strong> on. Watch how the green FEM line transforms from a rough, piecewise-linear approximation into a smooth curve purely by changing the "FEM Shape Functions" dropdown, without adding any new nodes!
+                    As the beam bends downwards significantly, its arc length increases, generating internal axial tension $N_{ax}$ that resists further bending. We update the stiffness matrix iteratively at each load step:
+                </p>
+                $$\mathbf{K}_T(\mathbf{u}) = \mathbf{K}_{lin} + \mathbf{K}_{geom}(\mathbf{u})$$
+            </div>
+            
+            <div class="note-box">
+                <h4><i class="fa-solid fa-compress"></i> 2. Non-Linear ROM (NL-ROM)</h4>
+                <p>
+                    Reducing a non-linear system is complex because $\mathbf{K}_T$ is no longer constant. Instead of applying Galerkin Projection just once, the NL-ROM reconstructs the current deflection $\mathbf{u} = \mathbf{\Phi} \mathbf{q}_r$, evaluates the full $\mathbf{K}_T(\mathbf{u})$, and then projects the evolving tangent matrix into the modal subspace iteratively:
+                </p>
+                $$\mathbf{K}_{red-T} = \mathbf{\Phi}^T \mathbf{K}_T(\mathbf{\Phi} \mathbf{q}_r) \mathbf{\Phi}$$
+                $$\mathbf{K}_{red-T} \Delta \mathbf{q}_r = \mathbf{R}_{red}$$
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    This allows the Digital Twin to capture complex, changing geometric stiffening while still only solving a tiny $[3 \times 3]$ matrix per iteration rather than performing Gaussian Elimination on hundreds of DOFs.
                 </p>
             </div>
+            
+            <p style="margin-top: 30px;">
+                <em>Note: Phase 1.7 also includes a closed-form <strong>Torque-to-Circle</strong> visualization ($\kappa = M/EI$) to demonstrate large rotational strains exactly without requiring the Newton-Raphson loops.</em>
+            </p>
         </section>
 
         <div class="footer-nav">
@@ -453,13 +463,15 @@
     </div>
 
     <section class="content-section" style="max-width: 1000px; margin: 0 auto 60px auto;">
-        <h2><i class="fa-solid fa-location-crosshairs"></i> Force & Torque Positioning</h2>
+        <h2><i class="fa-solid fa-location-crosshairs"></i> Force Positioning</h2>
         <p>
-            A common question in IGA is: <em>"How do we apply a point load at an arbitrary position?"</em> Unlike traditional FEM where loads are often restricted to nodes, IGA allows for precise loading at any parametric coordinate $\xi \in [0, 1]$.
+            Unlike traditional FEM where loads are often restricted to the discrete nodes between elements, IGA allows for precise loading at any continuous parametric coordinate $\xi \in [0, 1]$.
         </p>
-        <div class="math-card" id="math-point-load"></div>
+        <div class="math-card">
+            $$F_i = \int_{0}^{1} R_{i,p}(\xi) \, \delta(\xi - \xi_{load}) P \, d\xi = R_{i,p}(\xi_{load}) P$$
+        </div>
         <p>
-            Using the <strong>NURBS Basis Functions</strong> $R_{i,p}(\xi)$, we distribute the point load $P$ across the control points by multiplying the load magnitude by the basis function value at that specific coordinate. For torque, we apply a pair of equivalent nodal forces or a direct moment contribution to the rotational degrees of freedom ($C^1$ continuity ensures smooth rotation transfer).
+            By sampling the basis functions $R_{i,p}(\xi_{load})$ at the exact point of application, the force vector $\mathbf{F}$ correctly distributes the point load across the surrounding control points smoothly.
         </p>
     </section>
 
@@ -470,35 +482,8 @@
             const scrolled = (winScroll / height) * 100;
             document.querySelector(".scroll-progress").style.width = scrolled + "%";
         });
-
-        window.onload = function() {
-            // Formula 1: State Space Reduction
-            katex.render("\\mathcal{M}_{high} \\xrightarrow{\\Phi} \\mathcal{M}_{reduced} \\quad \\text{where } \\dim(\\mathcal{M}_{red}) \\ll \\dim(\\mathcal{M}_{high})", document.getElementById('math-rom-definition'), {
-                displayMode: true,
-                throwOnError: false
-            });
-
-            // Formula 2: NURBS Approximation
-            const approxEl = document.createElement('div');
-            approxEl.id = 'math-nurbs-approx';
-            document.getElementById('math-rom-definition').after(approxEl);
-            katex.render("u(x) \\approx \\sum_{i=1}^{n} R_{i,p}(x) d_i", approxEl, {
-                displayMode: true,
-                throwOnError: false
-            });
-
-            // Formula 3: Galerkin Projection on Reduced Basis
-            katex.render("\\mathbf{K}_{red} = \\mathbf{\\Phi}^T \\mathbf{K}_{full} \\mathbf{\\Phi} \\quad [8 \\times 8]", document.getElementById('math-galerkin'), {
-                displayMode: true,
-                throwOnError: false
-            });
-
-            // Formula 4: Point Load Assembly
-            katex.render("f_i = \\int_{\\Omega} R_{i,p}(\\xi) \\, \\delta(\\xi - \\xi_{load}) P \\, d\\xi = R_{i,p}(\\xi_{load}) P", document.getElementById('math-point-load'), {
-                displayMode: true,
-                throwOnError: false
-            });
-        };
+        
+        // Removed manual katex.render lines since auto-render script now handles everything
     </script>
 </body>
 </html>
