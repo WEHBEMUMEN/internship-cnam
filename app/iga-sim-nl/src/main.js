@@ -24,6 +24,9 @@ class MechanicsApp {
         this.isNonlinear = true; // Exclusively Non-Linear
         this.physicsMode = 'bending';
         this.solverMethod = 'newton';
+        this.basisType = 'igen';
+        this.cachedBasis = null;
+        this.basisKey = "";
         this.currentView = 'deflection';
         
         // Charts
@@ -149,10 +152,9 @@ class MechanicsApp {
         }
         this.torqueResult = null;
 
-        const numCP = this.nurbs.controlPoints.length;
         this.physics.physicsMode = this.physicsMode;
         
-        // Apply BCs
+        // Setup BCs
         const igaBCs = [];
         if (this.bcLeft) {
             igaBCs.push({ index: 0, value: 0 });
@@ -163,10 +165,17 @@ class MechanicsApp {
             if (this.physicsMode === 'bending') igaBCs.push({ index: numCP - 2, value: 0 });
         }
 
+        // Basis Caching
+        const currentKey = `${this.numElements}-${this.degree}-${this.physicsMode}-${this.bcLeft}-${this.bcRight}-${this.basisType}`;
+        if (this.basisKey !== currentKey) {
+            this.cachedBasis = this.physics.getModalBasis(3, igaBCs, this.basisType);
+            this.basisKey = currentKey;
+        }
+
         const loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
         
-        // Non-Linear Solver Selection
-        const numModes = Math.min(3, numCP - 2);
+        // NL ROM with cached basis
+        const numModes = 3;
         this.romModes = numModes;
 
         const fullResult = this.physics.solveNonLinearStatics(loadF, igaBCs, 20, this.solverMethod);
@@ -174,7 +183,7 @@ class MechanicsApp {
         this.lastIterations = fullResult.iterations;
         this.residualHistory = fullResult.residualHistory;
 
-        const romResult = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 20, this.solverMethod);
+        const romResult = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 20, this.solverMethod, null, this.cachedBasis);
         this.romDeflection = romResult.u;
         this.romIterations = romResult.iterations;
 
@@ -195,7 +204,8 @@ class MechanicsApp {
             'input-load-pos': (v) => { this.loadPos = parseFloat(v); document.getElementById('load-pos-val').textContent = v; },
             'input-load-mag': (v) => { this.loadMag = parseFloat(v); document.getElementById('load-mag-val').textContent = v; },
             'input-scale-factor': (v) => { this.visualScale = parseFloat(v); document.getElementById('scale-factor-val').textContent = v; },
-            'select-solver-method': (v) => { this.solverMethod = v; }
+            'select-solver-method': (v) => { this.solverMethod = v; },
+            'select-basis-type': (v) => { this.basisType = v; }
         };
 
         Object.entries(inputMap).forEach(([id, fn]) => {

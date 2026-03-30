@@ -57,17 +57,89 @@ export class PhysicsEngine {
         return F;
     }
 
-    getModalBasis(modes, bcs) {
+    getModalBasis(modes, bcs, type = 'igen') {
         const numCP = this.nurbs.controlPoints.length;
+        if (type === 'igen') return this.getTrueIGAModes(modes, bcs);
+
+        // Improved Analytic Basis (Zero-Slope aware)
         const phi = Array.from({ length: numCP }, () => new Float64Array(modes));
+        const isLeftFixed = bcs.some(bc => bc.index === 0);
         const isRightFixed = bcs.some(bc => bc.index >= numCP - 2);
+
         for (let m = 0; m < modes; m++) {
             for (let i = 0; i < numCP; i++) {
                 const xi = i / (numCP - 1);
-                phi[i][m] = isRightFixed ? Math.sin((m + 1) * Math.PI * xi) : Math.sin((m + 0.5) * Math.PI * xi);
+                if (isLeftFixed && !isRightFixed) {
+                    // Cantilever: Clamped at 0, Free at 1. Use (1 - cos((m+0.5)PI*xi))
+                    phi[i][m] = 1 - Math.cos((m + 0.5) * Math.PI * xi);
+                } else if (isLeftFixed && isRightFixed) {
+                    // Clamped-Clamped: Use (1 - cos(2*PI*(m+1)*xi))
+                    phi[i][m] = 1 - Math.cos(2 * Math.PI * (m + 1) * xi);
+                } else {
+                    // Pinned-Pinned: Pure Sine
+                    phi[i][m] = Math.sin((m + 1) * Math.PI * xi);
+                }
             }
         }
         return phi;
+    }
+
+    getTrueIGAModes(modes, bcs) {
+        const K_full = this.assembleStiffness();
+        const numCP = K_full.length;
+        
+        // 1. Identify Free DOF house (Not in BCs)
+        const fixedIndices = new Set(bcs.map(bc => bc.index));
+        const freeIndices = [];
+        for (let i = 0; i < numCP; i++) if (!fixedIndices.has(i)) freeIndices.push(i);
+        const nFree = freeIndices.length;
+        if (nFree === 0) return Array.from({ length: numCP }, () => new Float64Array(modes));
+
+        // 2. Extract Constrained Submatrix A
+        const A = Array.from({ length: nFree }, () => new Float64Array(nFree));
+        for (let i = 0; i < nFree; i++) {
+            for (let j = 0; j < nFree; j++) A[i][j] = K_full[freeIndices[i]][freeIndices[j]];
+        }
+
+        const phiFull = Array.from({ length: numCP }, () => new Float64Array(modes));
+        
+        // 3. Power Iteration + Hotelling Deflation for first M modes
+        // Note: For stiffness K, the smallest eigenvalues are the lowest frequencies.
+        // To use power iteration, we need to invert A or use the shifting/inverse iteration trick.
+        // For simplicity and 1D performance, we'll invert A once (Gaussian).
+        const I = Array.from({ length: nFree }, (_, i) => {
+            const row = new Float64Array(nFree); row[i] = 1.0; return row;
+        });
+        const A_inv = I.map(row => this.gaussianElimination(Array.from(A, r => new Float64Array(r)), row));
+
+        let Current_A = A_inv;
+        for (let m = 0; m < modes; m++) {
+            let v = new Float64Array(nFree).fill(1).map(() => Math.random());
+            let lambda = 0;
+
+            // Power iteration
+            for (let iter = 0; iter < 50; iter++) {
+                const next_v = new Float64Array(nFree);
+                for (let i = 0; i < nFree; i++) {
+                    for (let j = 0; j < nFree; j++) next_v[i] += Current_A[i][j] * v[j];
+                }
+                const norm = Math.sqrt(next_v.reduce((acc, val) => acc + val * val, 0));
+                for (let i = 0; i < nFree; i++) v[i] = next_v[i] / norm;
+                lambda = norm;
+            }
+
+            // Map back to global coordinates
+            for (let i = 0; i < nFree; i++) phiFull[freeIndices[i]][m] = v[i];
+
+            // Hotelling Deflation: A = A - lambda * v * vT
+            for (let i = 0; i < nFree; i++) {
+                for (let j = 0; j < nFree; j++) {
+                    Current_A[i][j] -= lambda * v[i] * v[j];
+                }
+            }
+        }
+        
+        return phiFull;
     }
 
     solveROM(loadF, bcs, modes = 3) {
@@ -234,9 +306,9 @@ export class PhysicsEngine {
         return { u, iterations: iterCount, residualHistory };
     }
 
-    solveNonLinearROM(loadF, bcs, modes = 3, iterations = 20, method = 'newton', initialQ = null) {
+    solveNonLinearROM(loadF, bcs, modes = 3, iterations = 20, method = 'newton', initialQ = null, phi = null) {
         const numCP = this.nurbs.controlPoints.length;
-        const phi = this.getModalBasis(modes, bcs);
+        phi = phi || this.getModalBasis(modes, bcs);
         let q = initialQ ? new Float64Array(initialQ) : new Float64Array(modes).fill(0);
         let iterCount = 0;
         let residualHistory = [];
