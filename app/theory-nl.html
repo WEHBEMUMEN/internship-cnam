@@ -232,6 +232,51 @@
             </div>
         </section>
 
+        <!-- Section 4: Numerical Strategies -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-layer-group"></i> Numerical Strategies Compared</h2>
+            <p>
+                The NL App allows you to compare different numerical strategies to solve the non-linear equation. Each has trade-offs between speed, stability, and accuracy per iteration:
+            </p>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Stiffness Update ($\mathbf{K}_{curr}$)</th>
+                        <th>Convergence Speed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Full Newton</strong></td>
+                        <td>Updated every iteration</td>
+                        <td class="highlight-text">Quadratic (Fastest)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Modified Newton</strong></td>
+                        <td>Updated once per load step</td>
+                        <td>Linear (Slower)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Picard (Fixed Point)</strong></td>
+                        <td>Secant / Lagged Stiffness</td>
+                        <td>Linear (Stable)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Incremental</strong></td>
+                        <td>No iterations (Euler)</td>
+                        <td style="color: #f43f5e;">Numerical Drift Error</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-vial"></i> Observation Goal</h4>
+                <p>Notice that while <strong>Newton-Raphson</strong> converges in 3-5 iterations for most loads, the <strong>Incremental</strong> method results in a curve that "drifts" away from the true equilibrium because it never corrects the tangent error.</p>
+            </div>
+        </section>
+
         <!-- Section 4: NL-ROM -->
         <section class="content-section">
             <h2><i class="fa-solid fa-bolt"></i> Non-Linear Reduced Order Model (NL-ROM)</h2>

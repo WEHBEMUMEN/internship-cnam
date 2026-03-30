@@ -159,128 +159,200 @@ export class PhysicsEngine {
         return Kg;
     }
 
-    solveNonLinearStatics(loadF, bcs, iterations = 10) {
+    solveNonLinearStatics(loadF, bcs, iterations = 20, method = 'newton') {
         const numCP = this.nurbs.controlPoints.length;
         let u = new Float64Array(numCP).fill(0);
+        let iterCount = 0;
         
-        // Newton-Raphson Iteration Loop
-        for (let iter = 0; iter < iterations; iter++) {
-            // 1. Tangent Stiffness: K_T = K_linear + K_geometric(u)
-            const K_lin_orig = this.assembleStiffness();
-            const K_geom = this.assembleGeometricStiffness(u);
-            const K_T = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
-            
+        // Prepare constant matrices for modified methods
+        const K_lin = this.assembleStiffness();
+        let K_tangent = null;
+        if (method === 'modified_newton' || method === 'incremental') {
+            K_tangent = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
+            const K_geom_init = this.assembleGeometricStiffness(u);
             for (let i = 0; i < numCP; i++) {
-                for (let j = 0; j < numCP; j++) {
-                    K_T[i][j] = K_lin_orig[i][j] + K_geom[i][j];
+                for (let j = 0; j < numCP; j++) K_tangent[i][j] = K_lin[i][j] + K_geom_init[i][j];
+            }
+        }
+
+        // Solver Loop
+        for (let iter = 0; iter < iterations; iter++) {
+            iterCount++;
+            
+            // 1. Determine Current Tangent/Iteration Matrix
+            let K_curr;
+            if (method === 'newton' || (method === 'picard' && iter % 2 === 0)) {
+                // Full Newton or periodic Picard update
+                const K_geom = this.assembleGeometricStiffness(u);
+                K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
+                for (let i = 0; i < numCP; i++) {
+                    for (let j = 0; j < numCP; j++) K_curr[i][j] = K_lin[i][j] + K_geom[i][j];
                 }
+            } else if (method === 'modified_newton' || method === 'incremental') {
+                K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(K_tangent[i]));
+            } else {
+                // Pure Picard (Linear stiffness only)
+                K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(K_lin[i]));
             }
 
-            // 2. Internal Force: F_int = K_secant * u  (simplified)
-            // For von Karman, F_int(u) = K_lin * u + (1/2)*K_geom(u) * u
+            // 2. Compute Internal Force and Residual
+            const K_geom_curr = this.assembleGeometricStiffness(u);
             const F_int = new Float64Array(numCP).fill(0);
             for (let i = 0; i < numCP; i++) {
                 for (let j = 0; j < numCP; j++) {
-                    F_int[i] += (K_lin_orig[i][j] + 0.5 * K_geom[i][j]) * u[j];
+                    F_int[i] += (K_lin[i][j] + 0.5 * K_geom_curr[i][j]) * u[j];
                 }
             }
 
-            // 3. Residual Force: R = F_ext - F_int
             const R = new Float64Array(numCP);
             for (let i = 0; i < numCP; i++) R[i] = loadF[i] - F_int[i];
 
-            // Apply Boundary Conditions to Tangent system (K_T * du = R)
+            // 3. Convergence Check
+            let resNorm = 0;
+            for (let i = 0; i < numCP; i++) resNorm += R[i] * R[i];
+            if (Math.sqrt(resNorm) < 1e-7 && iter > 0) break;
+            if (method === 'incremental') {
+                if (iter > 0) break; // Only 1 step for incremental
+            }
+
+            // 4. Boundary Conditions
             bcs.forEach(bc => {
                 const idx = bc.index;
                 if (idx < 0 || idx >= numCP) return;
                 for (let j = 0; j < numCP; j++) {
                     if (j !== idx) {
-                        R[j] -= K_T[j][idx] * 0; // assuming bc is fixed (du=0)
-                        K_T[idx][j] = 0; K_T[j][idx] = 0;
+                        R[j] -= K_curr[j][idx] * 0;
+                        K_curr[idx][j] = 0; K_curr[j][idx] = 0;
                     }
                 }
-                K_T[idx][idx] = 1.0; R[idx] = 0;
+                K_curr[idx][idx] = 1.0; R[idx] = 0;
             });
 
-            // 4. Solve for Delta u
-            const du = this.gaussianElimination(K_T, R);
-            
-            // 5. Update Displacements
-            let err = 0;
+            // 5. Solve and Update
+            const du = this.gaussianElimination(K_curr, R);
+            let updateNorm = 0;
             for (let i = 0; i < numCP; i++) {
                 u[i] += du[i];
-                err += Math.abs(du[i]);
+                updateNorm += du[i] * du[i];
             }
-            if (err < 1e-6) break; // Converged
+            if (Math.sqrt(updateNorm) < 1e-8) break;
         }
-        return u;
+
+        return { u, iterations: iterCount };
     }
 
-    solveNonLinearROM(loadF, bcs, modes = 3, iterations = 10) {
+    solveNonLinearROM(loadF, bcs, modes = 3, iterations = 20, method = 'newton') {
         const numCP = this.nurbs.controlPoints.length;
         const phi = this.getModalBasis(modes, bcs);
         let q = new Float64Array(modes).fill(0);
+        let iterCount = 0;
 
-        for (let iter = 0; iter < iterations; iter++) {
-            // Reconstruct full u from q to calculate geometry-dependent terms
-            const u = new Float64Array(numCP).fill(0);
+        // Prepare constant matrices for modified methods
+        const K_lin_full = this.assembleStiffness();
+        let Kr_tangent = null;
+        if (method === 'modified_newton' || method === 'incremental') {
+            const K_geom_init = this.assembleGeometricStiffness(new Float64Array(numCP).fill(0));
+            const K_T_init = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
             for (let i = 0; i < numCP; i++) {
-                for (let j = 0; j < modes; j++) u[i] += phi[i][j] * q[j];
+                for (let j = 0; j < numCP; j++) K_T_init[i][j] = K_lin_full[i][j] + K_geom_init[i][j];
             }
-
-            // 1. Build Full Matrices
-            const K_lin = this.assembleStiffness();
-            const K_geom = this.assembleGeometricStiffness(u);
-            const K_T = Array.from({ length: numCP }, () => new Float64Array(numCP));
-            const F_int = new Float64Array(numCP).fill(0);
-            const R_full = new Float64Array(numCP);
-
-            for (let i = 0; i < numCP; i++) {
-                for (let j = 0; j < numCP; j++) {
-                    K_T[i][j] = K_lin[i][j] + K_geom[i][j];
-                    F_int[i] += (K_lin[i][j] + 0.5 * K_geom[i][j]) * u[j];
-                }
-                R_full[i] = loadF[i] - F_int[i];
-            }
-
-            // 2. Project Tangent Stiffness: Kr_T = phi^T * K_T * phi
-            const Kr_T = Array.from({ length: modes }, () => new Float64Array(modes));
+            // Project
+            Kr_tangent = Array.from({ length: modes }, () => new Float64Array(modes));
             for (let i = 0; i < modes; i++) {
                 for (let j = 0; j < modes; j++) {
                     let val = 0;
                     for (let m = 0; m < numCP; m++) {
                         let temp = 0;
-                        for (let l = 0; l < numCP; l++) temp += K_T[m][l] * phi[l][j];
+                        for (let l = 0; l < numCP; l++) temp += K_T_init[m][l] * phi[l][j];
                         val += phi[m][i] * temp;
                     }
-                    Kr_T[i][j] = val;
+                    Kr_tangent[i][j] = val;
+                }
+            }
+        }
+
+        for (let iter = 0; iter < iterations; iter++) {
+            iterCount++;
+            
+            const u = new Float64Array(numCP).fill(0);
+            for (let i = 0; i < numCP; i++) {
+                for (let j = 0; j < modes; j++) u[i] += phi[i][j] * q[j];
+            }
+
+            const K_geom = this.assembleGeometricStiffness(u);
+            const F_int = new Float64Array(numCP).fill(0);
+            const R_full = new Float64Array(numCP);
+
+            for (let i = 0; i < numCP; i++) {
+                for (let j = 0; j < numCP; j++) {
+                    F_int[i] += (K_lin_full[i][j] + 0.5 * K_geom[i][j]) * u[j];
+                }
+                R_full[i] = loadF[i] - F_int[i];
+            }
+
+            // Determine Projection Matrix
+            let Kr_curr;
+            if (method === 'newton' || (method === 'picard' && iter % 2 === 0)) {
+                const K_T = Array.from({ length: numCP }, () => new Float64Array(numCP));
+                for (let i = 0; i < numCP; i++) {
+                    for (let j = 0; j < numCP; j++) K_T[i][j] = K_lin_full[i][j] + K_geom[i][j];
+                }
+                Kr_curr = Array.from({ length: modes }, () => new Float64Array(modes));
+                for (let i = 0; i < modes; i++) {
+                    for (let j = 0; j < modes; j++) {
+                        let val = 0;
+                        for (let m = 0; m < numCP; m++) {
+                            let temp = 0;
+                            for (let l = 0; l < numCP; l++) temp += K_T[m][l] * phi[l][j];
+                            val += phi[m][i] * temp;
+                        }
+                        Kr_curr[i][j] = val;
+                    }
+                }
+            } else if (method === 'modified_newton' || method === 'incremental') {
+                Kr_curr = Array.from({ length: modes }, (_, i) => new Float64Array(Kr_tangent[i]));
+            } else {
+                // Picard/Linear
+                Kr_curr = Array.from({ length: modes }, () => new Float64Array(modes));
+                for (let i = 0; i < modes; i++) {
+                    for (let j = 0; j < modes; j++) {
+                        let val = 0;
+                        for (let m = 0; m < numCP; m++) {
+                            let temp = 0;
+                            for (let l = 0; l < numCP; l++) temp += K_lin_full[m][l] * phi[l][j];
+                            val += phi[m][i] * temp;
+                        }
+                        Kr_curr[i][j] = val;
+                    }
                 }
             }
 
-            // 3. Project Residual: R_red = phi^T * R_full
             const R_red = new Float64Array(modes).fill(0);
             for (let i = 0; i < modes; i++) {
                 for (let j = 0; j < numCP; j++) R_red[i] += phi[j][i] * R_full[j];
             }
 
-            // 4. Solve Small System: Kr_T * dq = R_red
-            const dq = this.gaussianElimination(Kr_T, R_red);
+            let resNorm = 0;
+            for (let i = 0; i < modes; i++) resNorm += R_red[i] * R_red[i];
+            if (Math.sqrt(resNorm) < 1e-7 && iter > 0) break;
+            if (method === 'incremental') {
+                if (iter > 0) break;
+            }
 
-            // 5. Update reduced state
-            let err = 0;
+            const dq = this.gaussianElimination(Kr_curr, R_red);
+            let updateNorm = 0;
             for (let i = 0; i < modes; i++) {
                 q[i] += dq[i];
-                err += Math.abs(dq[i]);
+                updateNorm += dq[i] * dq[i];
             }
-            if (err < 1e-6) break;
+            if (Math.sqrt(updateNorm) < 1e-8) break;
         }
 
-        // Final reconstruction
         const u_final = new Float64Array(numCP).fill(0);
         for (let i = 0; i < numCP; i++) {
             for (let j = 0; j < modes; j++) u_final[i] += phi[i][j] * q[j];
         }
-        return u_final;
+        return { u: u_final, iterations: iterCount };
     }
 
     gaussianElimination(A, b) {

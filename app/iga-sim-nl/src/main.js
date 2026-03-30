@@ -23,6 +23,7 @@ class MechanicsApp {
         this.isTorqueMode = false;
         this.isNonlinear = true; // Exclusively Non-Linear
         this.physicsMode = 'bending';
+        this.solverMethod = 'newton';
         
         // Initialize Engines
         this.initEngines();
@@ -107,8 +108,13 @@ class MechanicsApp {
         const numModes = Math.min(3, numCP - 2);
         this.romModes = numModes;
 
-        this.deflection = this.physics.solveNonLinearStatics(loadF, igaBCs, 10);
-        this.romDeflection = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 10);
+        const fullResult = this.physics.solveNonLinearStatics(loadF, igaBCs, 20, this.solverMethod);
+        this.deflection = fullResult.u;
+        this.lastIterations = fullResult.iterations;
+
+        const romResult = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 20, this.solverMethod);
+        this.romDeflection = romResult.u;
+        this.romIterations = romResult.iterations;
 
         this.updateROMStats();
         this.renderMath();
@@ -125,7 +131,8 @@ class MechanicsApp {
             },
             'input-load-pos': (v) => { this.loadPos = parseFloat(v); document.getElementById('load-pos-val').textContent = v; },
             'input-load-mag': (v) => { this.loadMag = parseFloat(v); document.getElementById('load-mag-val').textContent = v; },
-            'input-scale-factor': (v) => { this.visualScale = parseFloat(v); document.getElementById('scale-factor-val').textContent = v; }
+            'input-scale-factor': (v) => { this.visualScale = parseFloat(v); document.getElementById('scale-factor-val').textContent = v; },
+            'select-solver-method': (v) => { this.solverMethod = v; }
         };
 
         Object.entries(inputMap).forEach(([id, fn]) => {
@@ -304,7 +311,10 @@ class MechanicsApp {
         if (refDofEl) refDofEl.textContent = fullDofs;
         if (savingsEl) savingsEl.textContent = savings + '%';
         
-        if (stateDesc) stateDesc.textContent = `Reducing Full NL-IGA (${fullDofs} CP) to a ${romDofs}-mode NL-ROM. Gain: ${savings}%.`;
+        const iterEl = document.getElementById('stat-iters');
+        if (iterEl) iterEl.textContent = this.lastIterations || '-';
+        
+        if (stateDesc) stateDesc.textContent = `Reducing Full NL-IGA (${fullDofs} CP) to a ${romDofs}-mode NL-ROM via ${this.solverMethod}.`;
     }
 }
 

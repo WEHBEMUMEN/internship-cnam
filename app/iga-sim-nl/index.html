@@ -111,6 +111,10 @@
                         <span style="display: block; font-size: 0.7rem; color: #94a3b8;">ROM DoFs</span>
                         <span id="rom-dofs" style="font-family: 'JetBrains Mono'; font-weight: 700; color: #3b82f6;">8</span>
                     </div>
+                    <div class="stat-box">
+                        <span style="display: block; font-size: 0.7rem; color: #94a3b8;">Iterations</span>
+                        <span id="stat-iters" style="font-family: 'JetBrains Mono'; font-weight: 700; color: #f43f5e;">-</span>
+                    </div>
                 </div>
                 <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
                     <span style="font-size: 0.8rem; color: #10b981; font-weight: 700;">Efficiency Gain: <span id="rom-savings">96%</span></span>
@@ -157,13 +161,14 @@
 
 
 
-                    <!-- FEM Order Selection -->
+                    <!-- Solver Selection -->
                     <div class="control-group">
-                        <label>FEM Shape Functions:</label>
-                        <select id="select-fem-order" class="btn btn-outline" style="width: 100%; padding: 8px; background: #0f172a; color: white;">
-                            <option value="1">Linear (p=1)</option>
-                            <option value="2">Quadratic (p=2)</option>
-                            <option value="3">Cubic (p=3)</option>
+                        <label>Solver Strategy:</label>
+                        <select id="select-solver-method" class="btn btn-outline" style="width: 100%; padding: 8px; background: #0f172a; color: white; border: 1px solid #f43f5e;">
+                            <option value="newton">Full Newton-Raphson (Iterative Tartget)</option>
+                            <option value="modified_newton">Modified Newton (Lazy K-update)</option>
+                            <option value="picard">Picard Iteration (Secant Lag)</option>
+                            <option value="incremental">Incremental (1-Step Tangent Euler)</option>
                         </select>
                     </div>
 
