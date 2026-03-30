@@ -258,25 +258,32 @@
                     <tr>
                         <td><strong>Full Newton</strong></td>
                         <td>Updated every iteration</td>
-                        <td class="highlight-text">Quadratic (Fastest)</td>
+                        <td class="highlight-text">Quadratic. Finds the exact Jacobian $\mathbf{K}_L + 3\mathbf{K}_g$.</td>
                     </tr>
                     <tr>
                         <td><strong>Modified Newton</strong></td>
                         <td>Updated once per load step</td>
-                        <td>Linear (Slower)</td>
+                        <td>Linear. Reuses the same tangent for all iterations in a step.</td>
                     </tr>
                     <tr>
-                        <td><strong>Picard (Fixed Point)</strong></td>
+                        <td><strong>Picard (Secant)</strong></td>
                         <td>Secant / Lagged Stiffness</td>
-                        <td>Linear (Stable)</td>
+                        <td>Linear. Uses the secant matrix $\mathbf{K}_L + \mathbf{K}_g$ (half-stiffness). Very stable.</td>
                     </tr>
                     <tr>
                         <td><strong>Incremental</strong></td>
                         <td>No iterations (Euler)</td>
-                        <td style="color: #f43f5e;">Numerical Drift Error</td>
+                        <td style="color: #f43f5e;">Approximation. Purely tangential, prone to drift.</td>
                     </tr>
                 </tbody>
             </table>
+
+            <div class="note-box-green">
+                <h4><i class="fa-solid fa-code-branch"></i> The Newton-Raphson Jacobian</h4>
+                <p>
+                    Because the internal force $\mathbf{F}_{int} = (\mathbf{K}_L + \mathbf{K}_g)\mathbf{u}$ is cubic, its derivative (the Tangent) results in a factor of 3 for the geometric term: $\mathbf{K}_T = \mathbf{K}_L + 3\mathbf{K}_g$. Our solver implements this exact Jacobian for "Full Newton" to achieve machine-precision convergence in just 3-4 steps.
+                </p>
+            </div>
 
             <div class="note-box">
                 <h4><i class="fa-solid fa-vial"></i> Observation Goal</h4>
@@ -332,8 +339,14 @@
                 $$\mathbf{F}_{step} = \lambda \cdot \mathbf{F}_{final} \quad \text{where } \lambda \in [0, 1]$$
             </div>
             <p>
-                Plotting the tip displacement against the load factor $\lambda$ produces the <strong>P-Delta Curve</strong>. In our app, you will see a "stiffening" curve where the slope increases as axial tension pulls the beam back, resisting further bending.
+                Plotting the maximum displacement against the load factor $\lambda$ produces the <strong>P-Delta Curve</strong>. In our app, you will see a "stiffening" curve where the slope increases as axial tension pulls the beam back, resisting further bending.
             </p>
+            <div class="note-box">
+                <h4><i class="fa-solid fa-anchor"></i> Important: Boundary Dependence</h4>
+                <p>
+                    Non-linear stiffening (the "curve") only occurs if the beam's ends are **axially constrained** (e.g. Clamped-Clamped). In a simple Cantilever (Free end), the beam can bend without stretching, resulting in a nearly linear P-Delta response. Switch to "Fixed-Fixed" BCs to see the logarithmic stiffening curve!
+                </p>
+            </div>
         </section>
 
         <!-- Section 4: NL-ROM -->
@@ -392,7 +405,41 @@
             </div>
         </section>
 
-        <!-- Section 5: Legacy Torque-to-Circle -->
+            <div class="math-card" style="margin-top: 40px;">
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px;">NL-ROM Iteration Loop:</p>
+                $$\mathbf{u}^{(k)} = \mathbf{\Phi} \mathbf{q}_r^{(k)}$$
+                $$\mathbf{K}_{red-T}^{(k)} = \mathbf{\Phi}^T \mathbf{K}_T(\mathbf{u}^{(k)}) \mathbf{\Phi}$$
+                $$\mathbf{R}_{red}^{(k)} = \mathbf{\Phi}^T \left( \mathbf{F}_{ext} - \mathbf{F}_{int}(\mathbf{u}^{(k)}) \right)$$
+                $$\mathbf{K}_{red-T}^{(k)} \Delta \mathbf{q}_r = \mathbf{R}_{red}^{(k)}$$
+                $$\mathbf{q}_r^{(k+1)} = \mathbf{q}_r^{(k)} + \Delta \mathbf{q}_r$$
+            </div>
+        </section>
+
+        <!-- Section 8: ROM Basis Selection -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-microscope"></i> ROM Mode Basis Selection</h2>
+            <p>
+                The Non-Linear ROM requires a set of modes $\Phi$ that capture both the linear behavior and the non-linear curvature. The app allows you to choose between two extraction methods:
+            </p>
+            
+            <div class="note-box">
+                <h4><i class="fa-solid fa-calculator"></i> Physical IGA Modes (Numerical EVD)</h4>
+                <p>
+                    The app solves the discrete eigenvalue problem $\mathbf{K}_{lin} \mathbf{\phi} = \lambda \mathbf{M} \mathbf{\phi}$ (using Power Iteration + Deflation) to find the exact free-vibration mode shapes of the current basis. 
+                    <strong>Benefit:</strong> Perfectly matches the IGA reference model.
+                </p>
+            </div>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-wave-square"></i> Approximate Analytic (Trigonometric)</h4>
+                <p>
+                    Uses analytical sine or cosine-based functions that are manually adjusted to satisfy boundary conditions (e.g. zero-slope at clamped supports).
+                    <strong>Benefit:</strong> Extremely fast, no numerical solve required.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 9: Legacy Torque-to-Circle -->
         <section class="content-section">
             <h2><i class="fa-solid fa-circle-notch"></i> Torque-to-Circle (Closed-Form Bypass)</h2>
             <p>

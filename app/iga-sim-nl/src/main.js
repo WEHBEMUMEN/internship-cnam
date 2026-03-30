@@ -94,11 +94,18 @@ class MechanicsApp {
         });
     }
 
-    updateCharts(residualHistory) {
+    updateCharts(residualHistory, pdeltaPath = null) {
         if (!this.charts.res) return;
         this.charts.res.data.labels = residualHistory.map((_, i) => i + 1);
         this.charts.res.data.datasets[0].data = residualHistory;
         this.charts.res.update();
+
+        if (pdeltaPath && this.charts.pdelta) {
+            this.charts.pdelta.data.labels = pdeltaPath.map(p => (p.loadFactor * 100).toFixed(0));
+            this.charts.pdelta.data.datasets[0].data = pdeltaPath.map(p => p.displacement);
+            this.charts.pdelta.update();
+            document.getElementById('metrics-summary').textContent = `Live P-Delta: Tracking path up to F=${this.loadMag.toFixed(1)}.`;
+        }
     }
 
     runAutoSweep() {
@@ -187,7 +194,13 @@ class MechanicsApp {
         this.romDeflection = romResult.u;
         this.romIterations = romResult.iterations;
 
-        if (this.currentView === 'metrics') this.updateCharts(this.residualHistory);
+        let pdeltaPath = null;
+        if (this.currentView === 'metrics') {
+            const sweepRes = this.physics.solveIncremental(this.loadPos, this.loadMag, igaBCs, 10, this.solverMethod);
+            pdeltaPath = sweepRes.path;
+        }
+
+        if (this.currentView === 'metrics') this.updateCharts(this.residualHistory, pdeltaPath);
         this.updateROMStats();
         this.renderMath();
     }

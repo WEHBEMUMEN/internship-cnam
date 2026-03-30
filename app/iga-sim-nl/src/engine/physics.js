@@ -267,7 +267,9 @@ export class PhysicsEngine {
             const F_int = new Float64Array(numCP).fill(0);
             for (let i = 0; i < numCP; i++) {
                 for (let j = 0; j < numCP; j++) {
-                    F_int[i] += (K_lin[i][j] + 0.5 * K_geom_curr[i][j]) * u[j];
+                    // F_int = (K_lin + K_geom) * u
+                    // This matches the Tangent K_T = K_lin + 3 * K_geom
+                    F_int[i] += (K_lin[i][j] + K_geom_curr[i][j]) * u[j];
                 }
             }
 
@@ -349,7 +351,8 @@ export class PhysicsEngine {
 
             for (let i = 0; i < numCP; i++) {
                 for (let j = 0; j < numCP; j++) {
-                    F_int[i] += (K_lin_full[i][j] + 0.5 * K_geom[i][j]) * u[j];
+                    // F_int = (K_lin + K_geom) * u
+                    F_int[i] += (K_lin_full[i][j] + K_geom[i][j]) * u[j];
                 }
                 R_full[i] = loadF[i] - F_int[i];
             }
