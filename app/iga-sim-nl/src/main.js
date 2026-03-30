@@ -9,11 +9,11 @@ class MechanicsApp {
         
         // State
         this.degree = 3;
-        this.numElements = 4;
+        this.numElements = 8;
         this.loadPos = 0.5;
-        this.loadMag = 10.0;
+        this.loadMag = 100.0;
         this.visualScale = 100.0;
-        this.stiffness = 100.0;
+        this.stiffness = 1000.0;
         this.bcLeft = true;
         this.bcRight = true;
         

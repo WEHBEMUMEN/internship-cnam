@@ -7,7 +7,8 @@
 export class PhysicsEngine {
     constructor(nurbs) {
         this.nurbs = nurbs;
-        this.E = 100.0; this.A = 1.0; this.I = 1.0; this.L = 1.0;
+        // Default: Slender Beam (L/h approx 30)
+        this.E = 1000.0; this.A = 0.1; this.I = 0.0001; this.L = 1.0;
         this.physicsMode = 'bending';
     }
 
@@ -218,13 +219,15 @@ export class PhysicsEngine {
         const N_ax = (EA / (2 * this.L)) * stretchEnergy;
 
         // 2. Assemble Geometric Stiffness Matrix (Kg)
+        // Note: Missing 1/L factor for mapping world-space derivative integration
+        const L_inv = 1.0 / this.L;
         for (let s = 0; s <= samples; s++) {
             const xi = s * dXi;
             const w = (s === 0 || s === samples) ? 0.5 * dXi : dXi;
             const d1 = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
             for (let i = 0; i < numCP; i++) {
                 for (let j = 0; j < numCP; j++) {
-                    Kg[i][j] += d1[i] * d1[j] * N_ax * w;
+                    Kg[i][j] += d1[i] * d1[j] * N_ax * L_inv * w;
                 }
             }
         }
