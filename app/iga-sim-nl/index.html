@@ -136,11 +136,11 @@
                 <h4 style="margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; color: #60a5fa; letter-spacing: 1px;">ROM Performance</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="stat-box">
-                        <span style="display: block; font-size: 0.7rem; color: #94a3b8;">Ref DoFs</span>
+                        <span style="display: block; font-size: 0.7rem; color: #94a3b8;">Full IGA (Ref)</span>
                         <span id="ref-dofs" style="font-family: 'JetBrains Mono'; font-weight: 700; color: #f8fafc;">202</span>
                     </div>
                     <div class="stat-box">
-                        <span style="display: block; font-size: 0.7rem; color: #94a3b8;">ROM DoFs</span>
+                        <span style="display: block; font-size: 0.7rem; color: #94a3b8;">NL-ROM (IGA)</span>
                         <span id="rom-dofs" style="font-family: 'JetBrains Mono'; font-weight: 700; color: #3b82f6;">8</span>
                     </div>
                     <div class="stat-box">
@@ -303,9 +303,8 @@
                 <div id="coord-readout" class="coord-readout">ξ: 0.000 | y: 0.000</div>
 
                 <div id="canvas-legend" class="canvas-legend" style="display: none;">
-                    <div class="legend-item"><span class="legend-color" style="background: white;"></span> IGA Solution</div>
-                    <div class="legend-item" id="legend-fem" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dashed #10b981;"></span> FEM Solution</div>
-                    <div class="legend-item" id="legend-analytical" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dotted #facc15;"></span> Euler-Bernoulli Beam (Exact)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: white;"></span> Full IGA (Ref)</div>
+                    <div class="legend-item"><span class="legend-color" style="background: rgba(59, 130, 246, 0.4); border: 1.5px solid #3b82f6;"></span> NL-ROM (IGA)</div>
                 </div>
             </div>
                     <div id="math-formula"></div>

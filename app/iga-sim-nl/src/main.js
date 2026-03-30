@@ -138,14 +138,13 @@ class MechanicsApp {
         this.nurbs = new NURBSEngine(this.degree, knots, controlPoints);
         this.physics = new PhysicsEngine(this.nurbs);
         this.physics.E = this.stiffness;
-        this.referenceFEM = new ReferenceFEM(40);
-        this.referenceFEM.E = this.stiffness;
     }
 
     updatePhysics() {
+        const numCP = this.nurbs.controlPoints.length;
         if (this.isTorqueMode) {
             this.torqueResult = this.physics.solveTorqueToCircle(this.loadMag);
-            this.deflection = this.romDeflection = this.femDeflection = null;
+            this.deflection = this.romDeflection = null;
             this.updateROMStats(true);
             this.renderMath();
             return;
@@ -400,7 +399,7 @@ class MechanicsApp {
         const iterEl = document.getElementById('stat-iters');
         if (iterEl) iterEl.textContent = this.lastIterations || '-';
         
-        if (stateDesc) stateDesc.textContent = `Reducing Full NL-IGA (${fullDofs} CP) to a ${romDofs}-mode NL-ROM via ${this.solverMethod}.`;
+        if (stateDesc) stateDesc.textContent = `Comparing Full IGA Reference (${fullDofs} CP) against ${romDofs}-mode NL-ROM.`;
     }
 }
 
