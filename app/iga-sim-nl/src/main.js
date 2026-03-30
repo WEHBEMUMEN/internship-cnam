@@ -14,24 +14,15 @@ class MechanicsApp {
         this.loadMag = 10.0;
         this.visualScale = 100.0;
         this.stiffness = 100.0;
-        this.isStatics = true;
-        this.showFEM = true;
         this.bcLeft = true;
         this.bcRight = true;
         
-        this.time = 0;
-        this.animSpeed = 1.0;
-        this.isDamping = true;
-        this.dynamicAmplitude = 1.0;
-
         this.deflection = null;
-        this.femDeflection = null;
+        this.romDeflection = null;
         this.torqueResult = null;
-        this.isTorqueMode = false; // New state for torque interaction
-        this.isNonlinear = false; // State for true geometric nonlinear (von Karman)
+        this.isTorqueMode = false;
+        this.isNonlinear = true; // Exclusively Non-Linear
         this.physicsMode = 'bending';
-        this.femOrder = 1;
-        this.femElements = 40;
         
         // Initialize Engines
         this.initEngines();
@@ -55,7 +46,7 @@ class MechanicsApp {
         
         let tex = this.isTorqueMode
             ? "\\kappa = M / EI"
-            : (this.isNonlinear ? "[K(u)]\\{u\\} = \\{F(u)\\}" : "[K]\\{u\\} = \\{F\\}");
+            : "[K(u)]\\{u\\} = \\{F(u)\\}";
         
         if (window.katex) {
             window.katex.render(tex, formula, {
@@ -82,7 +73,7 @@ class MechanicsApp {
         this.nurbs = new NURBSEngine(this.degree, knots, controlPoints);
         this.physics = new PhysicsEngine(this.nurbs);
         this.physics.E = this.stiffness;
-        this.referenceFEM = new ReferenceFEM(40); // Reduced from 100 for performance
+        this.referenceFEM = new ReferenceFEM(40);
         this.referenceFEM.E = this.stiffness;
     }
 
@@ -98,11 +89,7 @@ class MechanicsApp {
 
         const numCP = this.nurbs.controlPoints.length;
         this.physics.physicsMode = this.physicsMode;
-        this.physics.femOrder = this.femOrder;
         
-        // Sync FEM resolution
-        this.referenceFEM.numElements = this.femElements;
-
         // Apply BCs
         const igaBCs = [];
         if (this.bcLeft) {
@@ -116,50 +103,25 @@ class MechanicsApp {
 
         const loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
         
-        // Solve ROM version
+        // Non-Linear Solver Selection
         const numModes = Math.min(3, numCP - 2);
-        const romModesElement = document.getElementById('rom-modes');
-        if (romModesElement) {
-            const romModesValue = parseInt(romModesElement.value);
-            if (!isNaN(romModesValue) && romModesValue > 0) {
-                this.romModes = romModesValue;
-            }
-        } else {
-            this.romModes = numModes;
-        }
+        this.romModes = numModes;
 
-        if (this.isNonlinear) {
-            this.deflection = this.physics.solveNonLinearStatics(loadF, igaBCs, 10);
-            this.romDeflection = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 10);
-        } else {
-            this.deflection = this.physics.solveStatics(loadF, igaBCs);
-            // In linear, ROM naturally traces full deflection seamlessly
-            this.romDeflection = this.deflection;
-        }
+        this.deflection = this.physics.solveNonLinearStatics(loadF, igaBCs, 10);
+        this.romDeflection = this.physics.solveNonLinearROM(loadF, igaBCs, this.romModes, 10);
 
-        if (this.showFEM) {
-            // Pass the correct IGA bcs, numCP and the selected FEM order (this.femOrder) to the FEM solver
-            // Axial mode usually has smaller displacements, scale load for comparison if needed
-            const currentLoadPos = this.physicsMode === 'axial' ? 1.0 : this.loadPos;
-            this.femDeflection = this.referenceFEM.solve(currentLoadPos, this.loadMag, igaBCs, this.physicsMode, numCP, this.femOrder);
-        } else {
-            this.femDeflection = null;
-        }
         this.updateROMStats();
         this.renderMath();
     }
-
 
     setupEventListeners() {
         const inputMap = {
             'input-degree': (v) => { this.degree = parseInt(v); document.getElementById('degree-val').textContent = v; this.initEngines(); },
             'input-elements': (v) => { this.numElements = parseInt(v); document.getElementById('elements-val').textContent = v; this.initEngines(); },
-            'input-fem-elements': (v) => { this.femElements = parseInt(v); document.getElementById('fem-elements-val').textContent = v; this.updatePhysics(); },
             'input-stiffness': (v) => { 
                 this.stiffness = parseFloat(v); 
                 document.getElementById('stiffness-val').textContent = v;
                 this.physics.E = this.stiffness;
-                this.referenceFEM.E = this.stiffness;
             },
             'input-load-pos': (v) => { this.loadPos = parseFloat(v); document.getElementById('load-pos-val').textContent = v; },
             'input-load-mag': (v) => { this.loadMag = parseFloat(v); document.getElementById('load-mag-val').textContent = v; },
@@ -174,31 +136,14 @@ class MechanicsApp {
             });
         });
 
-        const toggles = {
-            'toggle-fem': (v) => { this.showFEM = v; document.getElementById('fem-settings-container').style.display = v ? 'block' : 'none'; document.getElementById('legend-fem').style.display = v ? 'flex' : 'none'; this.updatePhysics(); },
-            'toggle-damping': (v) => { this.isDamping = v; },
-            'toggle-nonlinear': (v) => { this.isNonlinear = v; this.updatePhysics(); }
-        };
-
-        Object.entries(toggles).forEach(([id, fn]) => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', (e) => fn(e.target.checked));
-        });
-
         document.getElementById('select-physics-mode').addEventListener('change', (e) => {
             this.physicsMode = e.target.value;
             if (this.physicsMode === 'axial' && this.bcRight) {
-                // Auto free the right side for axial loads
                 this.bcRight = false;
                 const bcBtn = document.getElementById('bc-right');
                 bcBtn.classList.remove('active');
                 bcBtn.textContent = 'Right: Free';
             }
-            this.updatePhysics();
-        });
-
-        document.getElementById('select-fem-order').addEventListener('change', (e) => {
-            this.femOrder = parseInt(e.target.value);
             this.updatePhysics();
         });
 
@@ -211,13 +156,6 @@ class MechanicsApp {
             document.getElementById('input-load-pos').disabled = torqueModeActive;
             document.getElementById('bc-left').disabled = torqueModeActive;
             document.getElementById('bc-right').disabled = torqueModeActive;
-            document.getElementById('mode-dynamics').disabled = torqueModeActive;
-            document.getElementById('toggle-fem').disabled = torqueModeActive;
-            
-            // Sync FEM toggle visual state
-            if (torqueModeActive && this.showFEM) {
-                 document.getElementById('toggle-fem').click(); // Untoggle FEM
-            }
 
             this.updatePhysics();
         });
@@ -236,24 +174,6 @@ class MechanicsApp {
             this.updatePhysics();
         });
 
-        document.getElementById('mode-statics').addEventListener('click', (e) => {
-            this.isStatics = true;
-            e.target.classList.add('active');
-            document.getElementById('mode-dynamics').classList.remove('active');
-            document.getElementById('dynamics-settings').style.display = 'none';
-            this.updatePhysics();
-        });
-
-        document.getElementById('mode-dynamics').addEventListener('click', (e) => {
-            this.isStatics = false;
-            this.time = 0;
-            this.dynamicAmplitude = 1.0;
-            e.target.classList.add('active');
-            document.getElementById('mode-statics').classList.remove('active');
-            document.getElementById('dynamics-settings').style.display = 'block';
-            this.updatePhysics();
-        });
-
         document.getElementById('btn-reset').addEventListener('click', () => location.reload());
         
         document.getElementById('view-basis').addEventListener('click', (e) => {
@@ -267,17 +187,6 @@ class MechanicsApp {
             document.getElementById('view-basis').classList.remove('active');
             document.getElementById('canvas-legend').style.display = 'flex';
         });
-
-        document.getElementById('btn-benchmark').addEventListener('click', () => {
-            const results = this.physics.runBenchmark(this.loadMag, 50);
-            const report = `PERFORMANCE BENCHMARK (Mode: ${results.mode})\nIGA Elements: ${this.numElements}\nIGA DOFs: ${results.dofs}\nAvg Solve Time: ${results.iga} ms\nReference FEM DOFs: 101/202`;
-            document.getElementById('benchmark-results').textContent = report;
-            document.getElementById('modal-container').style.display = 'flex';
-        });
-
-        document.getElementById('btn-close-modal').addEventListener('click', () => {
-            document.getElementById('modal-container').style.display = 'none';
-        });
     }
 
     resize() {
@@ -288,7 +197,6 @@ class MechanicsApp {
 
     drawLoadVector(renderedScale) {
         if (this.isTorqueMode) {
-            // Visualize moment at both ends
             const p0 = this.plot.worldToScreen(0, 0.5);
             const p1 = this.plot.worldToScreen(1, 0.5);
             this.ctx.strokeStyle = '#a78bfa';
@@ -303,18 +211,15 @@ class MechanicsApp {
 
         const currentLoadPos = this.physicsMode === 'axial' ? 1.0 : this.loadPos;
         const pt = this.plot.worldToScreen(currentLoadPos, 0.5);
-        // Reduced the multiplier so the red arrow isn't giant
         const length = (this.loadMag / 5.0) * this.plot.camera.zoom; 
         
         this.ctx.strokeStyle = '#ef4444';
         this.ctx.lineWidth = 3;
         this.ctx.beginPath();
         
-        // Draw the main line of the vector
         this.ctx.moveTo(pt.x, pt.y);
         if (this.physicsMode === 'axial') {
             this.ctx.lineTo(pt.x + length, pt.y);
-            // Draw arrowhead
             const dir = length > 0 ? 1 : -1;
             this.ctx.moveTo(pt.x + length, pt.y);
             this.ctx.lineTo(pt.x + length - (10 * dir), pt.y - 5);
@@ -322,7 +227,6 @@ class MechanicsApp {
             this.ctx.lineTo(pt.x + length - (10 * dir), pt.y + 5);
         } else {
             this.ctx.lineTo(pt.x, pt.y + length);
-            // Draw arrowhead
             const dir = length > 0 ? 1 : -1;
             this.ctx.moveTo(pt.x, pt.y + length);
             this.ctx.lineTo(pt.x - 5, pt.y + length - (10 * dir));
@@ -352,13 +256,7 @@ class MechanicsApp {
             this.ctx.stroke();
             this.drawLoadVector();
         } else {
-            let dynamicScale = 1.0;
-            if (!this.isStatics) {
-                this.time += 0.05 * this.animSpeed;
-                dynamicScale = Math.sin(this.time) * (this.isDamping ? (this.dynamicAmplitude *= 0.99) : 1.0);
-            }
-
-            const renderedScale = this.visualScale * 0.005 * dynamicScale;
+            const renderedScale = this.visualScale * 0.005;
 
             if (this.deflection) {
                 const shiftedROM = this.nurbs.controlPoints.map((cp, i) => {
@@ -375,10 +273,6 @@ class MechanicsApp {
                 });
                 const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
                 this.plot.drawCurve(tempNurbs, '#f8fafc');
-                
-                if (this.showFEM && this.femDeflection) {
-                    this.plot.drawReferenceFEM(this.femDeflection, renderedScale, this.physicsMode);
-                }
             }
 
             this.drawLoadVector(renderedScale);
@@ -410,9 +304,8 @@ class MechanicsApp {
         if (refDofEl) refDofEl.textContent = fullDofs;
         if (savingsEl) savingsEl.textContent = savings + '%';
         
-        if (stateDesc) stateDesc.textContent = `Reducing Full IGA (${fullDofs} CP) to a ${romDofs}-mode ROM. Gain: ${savings}%.`;
+        if (stateDesc) stateDesc.textContent = `Reducing Full NL-IGA (${fullDofs} CP) to a ${romDofs}-mode NL-ROM. Gain: ${savings}%.`;
     }
-
 }
 
 new MechanicsApp();

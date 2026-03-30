@@ -1,5 +1,5 @@
 /**
- * Phase 1.7+ Physics Engine (Clean & Robust)
+ * NL App Physics Engine (Clean & Robust)
  * Implements 1D IGA & FEM for Bending and Axial physics.
  * No external dependencies (mathjs removed for compatibility).
  */

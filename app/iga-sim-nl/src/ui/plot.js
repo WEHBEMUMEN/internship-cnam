@@ -1,5 +1,5 @@
 /**
- * IGA Plot Renderer - Simplified & Robust for Phase 1.7
+ * IGA Plot Renderer - Simplified & Robust for NL App
  */
 export class BasisPlot {
     constructor(canvasOrId) {

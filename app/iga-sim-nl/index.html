@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase 1.7 | ROM Benchmark</title>
+    <title>NL App | Non-Linear Digital Twin</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -95,8 +95,8 @@
             <div class="sidebar-header">
                 <i class="fa-solid fa-microchip" style="color: #60a5fa;"></i>
                 <div>
-                    <h1>ROM Benchmark</h1>
-                    <span class="version">Phase 1.7 App</span>
+                    <h1>NL Simulation</h1>
+                    <span class="version">Non-Linear App</span>
                 </div>
             </div>
 
@@ -118,28 +118,7 @@
             </div>
 
             <div class="controls">
-                <!-- Mode Toggle -->
-                <div class="mode-toggle">
-                    <button id="mode-statics" class="mode-btn active">Statics</button>
-                    <button id="mode-dynamics" class="mode-btn">Dynamics</button>
-                </div>
 
-                <div id="dynamics-settings" class="control-group" style="display: none;">
-                    <label>Animation Speed: <span id="speed-val">1.0</span>x</label>
-                    <input type="range" id="input-speed" min="0.1" max="5.0" step="0.1" value="1.0">
-                    
-                    <div class="toggle-row" style="margin-top: 15px;">
-                        <span>Apply Structural Damping</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-damping" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <button id="btn-impulse" class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 0.8rem;">
-                        <i class="fa-solid fa-hand-pointer"></i> Re-Trigger Impulse
-                    </button>
-                </div>
 
                 <!-- NURBS Basis Params -->
                 <div class="control-group">
@@ -176,13 +155,7 @@
                         </select>
                     </div>
 
-                    <div class="toggle-row" style="margin-top: 15px; margin-bottom: 15px;">
-                        <span><i class="fa-solid fa-link"></i> True Geometric Non-Linearity</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-nonlinear">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
+
 
                     <!-- FEM Order Selection -->
                     <div class="control-group">
@@ -194,13 +167,7 @@
                         </select>
                     </div>
 
-                    <div class="toggle-row">
-                        <span>Compare with FEM</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-fem">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
+
 
                     <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px;">
                         <i class="fa-solid fa-circle-info"></i> Bending uses Kirchhoff-Love theory. Axial uses 1D bar theory.
@@ -210,18 +177,7 @@
                         <i class="fa-solid fa-arrows-rotate"></i> Nonlinear Torque → Circle
                     </button>
 
-                    <div id="fem-settings-container" style="display: none;">
-                        <div class="control-group">
-                            <label>FEM Elements: <span id="fem-elements-val">40</span></label>
-                            <input type="range" id="input-fem-elements" min="1" max="100" value="40">
-                        </div>
-                        
-                        <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px;">Adjust FEM mesh resolution for benchmark comparison.</p>
-                        
-                        <button id="btn-benchmark" class="btn btn-secondary" style="width: 100%; margin-bottom: 20px; font-size: 0.8rem;">
-                            <i class="fa-solid fa-stopwatch"></i> Run Convergence Benchmark
-                        </button>
-                    </div>
+
 
                     <label style="margin-top: 10px; display: block;">Boundary Conditions:</label>
                     <div class="bc-toggle">
@@ -294,14 +250,7 @@
         </main>
     </div>
 
-    <!-- Modals -->
-    <div id="modal-container" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background: #1e293b; padding: 30px; border-radius: 12px; width: 500px; border: 1px solid #334155;">
-            <h2 style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;"><i class="fa-solid fa-chart-line"></i> Benchmark Results</h2>
-            <div id="benchmark-results" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #94a3b8; white-space: pre-wrap; line-height: 1.5; margin-bottom: 20px;"></div>
-            <button id="btn-close-modal" class="btn btn-primary" style="width: 100%;">Close Report</button>
-        </div>
-    </div>
+
 
     <script type="module" src="src/main.js"></script>
 </body>
