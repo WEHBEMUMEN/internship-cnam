@@ -118,6 +118,31 @@
             align-items: center;
             gap: 10px;
         }
+
+        /* Stress Legend */
+        .stress-legend {
+            position: absolute;
+            top: 20px;
+            right: 80px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #334155;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            backdrop-filter: blur(4px);
+            z-index: 100;
+        }
+        .legend-label { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .color-bar {
+            width: 15px;
+            height: 120px;
+            background: linear-gradient(to top, #3b82f6, #f8fafc, #ef4444);
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
     </style>
 </head>
 <body>
@@ -301,6 +326,14 @@
                 </div>
 
                 <div id="coord-readout" class="coord-readout">ξ: 0.000 | y: 0.000</div>
+
+                <!-- Stress Legend (Visible only in stress mode) -->
+                <div id="stress-legend" class="stress-legend" style="display: none;">
+                    <div class="legend-label">Tension (Max)</div>
+                    <div class="color-bar"></div>
+                    <div class="legend-label">Compression (Min)</div>
+                    <div id="stress-max-val" style="font-size: 0.75rem; color: #f43f5e; margin-top: 5px; font-weight: bold;">0.0 MPa</div>
+                </div>
 
                 <div id="canvas-legend" class="canvas-legend" style="display: none;">
                     <div class="legend-item"><span class="legend-color" style="background: white;"></span> Full IGA (Ref)</div>

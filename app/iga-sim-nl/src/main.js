@@ -86,7 +86,7 @@ class MechanicsApp {
             type: 'line',
             data: { labels: [], datasets: [{ label: 'Load-Displacement', data: [], borderColor: '#3b82f6', tension: 0.3, fill: false }] },
             options: { 
-                scales: { y: { title: { display: true, text: 'Tip Displacement' } }, x: { title: { display: true, text: 'Load Factor (%)' } } },
+                scales: { y: { title: { display: true, text: 'Max Beam Displacement' } }, x: { title: { display: true, text: 'Load Factor (%)' } } },
                 plugins: { legend: { display: false } },
                 maintainAspectRatio: false
             }
@@ -266,9 +266,11 @@ class MechanicsApp {
                 
                 // Show/Hide Containers
                 const isMetrics = this.currentView === 'metrics';
+                const isStress = this.currentView === 'stress';
                 document.getElementById('metrics-view').style.display = isMetrics ? 'block' : 'none';
                 document.getElementById('canvas-wrapper').style.display = isMetrics ? 'none' : 'block';
                 document.getElementById('canvas-legend').style.display = (this.currentView === 'deflection') ? 'flex' : 'none';
+                document.getElementById('stress-legend').style.display = isStress ? 'flex' : 'none';
                 
                 if (isMetrics) this.updateCharts(this.residualHistory || []);
             });
@@ -362,6 +364,8 @@ class MechanicsApp {
                 if (this.currentView === 'stress') {
                     const physicsState = this.physics.calculatePhysicsState(this.deflection);
                     this.plot.drawStressGradient(tempNurbs, physicsState);
+                    const maxS = document.getElementById('stress-max-val');
+                    if (maxS) maxS.textContent = `${physicsState.maxStress.toFixed(1)} MPa`;
                 } else {
                     this.plot.drawCurve(tempNurbs, '#f8fafc');
                 }

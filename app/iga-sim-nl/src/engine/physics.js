@@ -243,7 +243,7 @@ export class PhysicsEngine {
             K_tangent = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
             const K_geom_init = this.assembleGeometricStiffness(u);
             for (let i = 0; i < numCP; i++) {
-                for (let j = 0; j < numCP; j++) K_tangent[i][j] = K_lin[i][j] + K_geom_init[i][j];
+                for (let j = 0; j < numCP; j++) K_tangent[i][j] = K_lin[i][j] + 3.0 * K_geom_init[i][j];
             }
         }
 
@@ -255,7 +255,7 @@ export class PhysicsEngine {
                 const K_geom = this.assembleGeometricStiffness(u);
                 K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
                 for (let i = 0; i < numCP; i++) {
-                    for (let j = 0; j < numCP; j++) K_curr[i][j] = K_lin[i][j] + K_geom[i][j];
+                    for (let j = 0; j < numCP; j++) K_curr[i][j] = K_lin[i][j] + 3.0 * K_geom[i][j];
                 }
             } else if (method === 'modified_newton' || method === 'incremental') {
                 K_curr = Array.from({ length: numCP }, (_, i) => new Float64Array(K_tangent[i]));
@@ -319,7 +319,7 @@ export class PhysicsEngine {
             const K_geom_init = this.assembleGeometricStiffness(new Float64Array(numCP).fill(0));
             const K_T_init = Array.from({ length: numCP }, (_, i) => new Float64Array(numCP));
             for (let i = 0; i < numCP; i++) {
-                for (let j = 0; j < numCP; j++) K_T_init[i][j] = K_lin_full[i][j] + K_geom_init[i][j];
+                for (let j = 0; j < numCP; j++) K_T_init[i][j] = K_lin_full[i][j] + 3.0 * K_geom_init[i][j];
             }
             Kr_tangent = Array.from({ length: modes }, () => new Float64Array(modes));
             for (let i = 0; i < modes; i++) {
@@ -358,7 +358,7 @@ export class PhysicsEngine {
             if (method === 'newton' || (method === 'picard' && iter % 2 === 0)) {
                 const K_T = Array.from({ length: numCP }, () => new Float64Array(numCP));
                 for (let i = 0; i < numCP; i++) {
-                    for (let j = 0; j < numCP; j++) K_T[i][j] = K_lin_full[i][j] + K_geom[i][j];
+                    for (let j = 0; j < numCP; j++) K_T[i][j] = K_lin_full[i][j] + 3.0 * K_geom[i][j];
                 }
                 Kr_curr = Array.from({ length: modes }, () => new Float64Array(modes));
                 for (let i = 0; i < modes; i++) {
@@ -457,9 +457,12 @@ export class PhysicsEngine {
             const solveRes = this.solveNonLinearStatics(stepLoadF, bcs, 20, method, currentU);
             currentU = solveRes.u;
             
-            // Track tip displacement (assuming right end is DOFs near numCP-1)
-            const tipDisp = currentU[numCP - 1]; 
-            results.path.push({ loadFactor: s / steps, displacement: tipDisp });
+            // Track Maximum Absolute Displacement for P-Delta
+            let maxDisp = 0;
+            for (let i = 0; i < numCP; i++) {
+                if (Math.abs(currentU[i]) > Math.abs(maxDisp)) maxDisp = currentU[i];
+            }
+            results.path.push({ loadFactor: s / steps, displacement: maxDisp });
         }
         return results;
     }
