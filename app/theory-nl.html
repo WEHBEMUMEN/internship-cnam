@@ -195,6 +195,13 @@
             <p>
                 This matrix grows larger as the beam bends more — it's the mathematical representation of "the more you bend, the stiffer you get."
             </p>
+
+            <div class="note-box-green">
+                <h4><i class="fa-solid fa-link"></i> Membrane Action (Stretching)</h4>
+                <p>
+                    Because the beam is physically constrained at its ends (Clamped or Pinned), it cannot simply slide inward as it deflects. To form a curve, it <strong>must stretch</strong>. This stretching induces a uniform axial tension throughout the beam cross-section. This is why for very large deflections, the beam begins to behave more like a <strong>tensioned cable</strong> than a traditional bending beam.
+                </p>
+            </div>
         </section>
 
         <!-- Section 3: Newton-Raphson -->
@@ -284,14 +291,20 @@
                 Once the displacement field $\mathbf{u}$ is found, we evaluate the internal state of the material. In IGA bending, we focus on the longitudinal fiber stress:
             </p>
             <div class="math-card">
-                $$\sigma(\xi, y) = -E \cdot y \cdot \kappa(\xi)$$
+                $$\sigma_{total}(\xi, y) = \underbrace{E \cdot y \cdot \kappa(\xi)}_{\text{Bending}} + \underbrace{E \cdot \epsilon_m}_{\text{Membrane}}$$
             </div>
             <p>
-                where $\kappa(\xi)$ is the curvature, approximated here by the second derivative of the vertical displacement $v''(\xi)$. For a beam of thickness $h$, the maximum tension and compression occur at the outer fibers ($y = \pm h/2$).
+                where $\kappa(\xi)$ is the curvature ($v''$) and $\epsilon_m$ is the induced membrane strain. 
             </p>
+            <div class="note-box">
+                <h4><i class="fa-solid fa-layer-group"></i> Symmetry Breaking</h4>
+                <p>
+                    While bending stress is symmetric (Tension on one side, Compression on the other), <strong>Membrane Stress is always Tensile</strong>. This means that for a downward load, the total tension at the bottom fiber is amplified, while the compression at the top fiber is partially cancelled out by the stretching effect.
+                </p>
+            </div>
             <div class="note-box-green">
                 <h4><i class="fa-solid fa-palette"></i> Stress Visualization</h4>
-                <p>In the <strong>Analysis Tab</strong>, the beam is color-coded using a diverging scale: <strong>Red</strong> indicates high tensile stress, <strong>Blue</strong> indicates high compressive stress, and <strong>White</strong> represents the neutral axis (zero stress).</p>
+                <p>In the <strong>Analysis Tab</strong>, the beam is color-coded using a diverging scale: <strong>Red</strong> indicates high tensile stress, <strong>Blue</strong> indicates high compressive stress, and <strong>White</strong> represents the neutral axis (zero stress). You can toggle between the <strong>Top</strong> and <strong>Bottom</strong> fibers to see the coexisting states.</p>
             </div>
         </section>
 

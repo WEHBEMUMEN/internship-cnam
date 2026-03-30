@@ -419,11 +419,25 @@ export class PhysicsEngine {
     }
 
 
-    calculatePhysicsState(u) {
+    calculatePhysicsState(u, fiberY = 0.1) {
         const samples = 100, results = { stresses: [], maxStress: 0 };
-        const E = this.E, I = this.I, A = this.A;
+        const E = this.E, L = this.L;
         const numCP = this.nurbs.controlPoints.length;
 
+        // 1. Calculate Membrane Strain (Induced axial stretching)
+        let stretchEnergy = 0;
+        const dXi = 1.0 / samples;
+        for (let s = 0; s <= samples; s++) {
+            const xi = s * dXi;
+            const w = (s === 0 || s === samples) ? 0.5 * dXi : dXi;
+            const d1 = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
+            let slope = 0;
+            for (let j = 0; j < numCP; j++) slope += d1[j] * u[j];
+            stretchEnergy += (slope * slope) * w;
+        }
+        const epsilon_m = stretchEnergy / (2 * L); // Mean membrane strain (1/2L * integral(v'^2))
+
+        // 2. Calculate Combined Stress
         for (let i = 0; i <= samples; i++) {
             const xi = i / samples;
             let stress = 0;
@@ -432,8 +446,9 @@ export class PhysicsEngine {
                 const d2 = this.nurbs.evaluateAllBasisDerivatives(xi, 2);
                 let curvature = 0;
                 for (let j = 0 ; j < numCP; j++) curvature += d2[j] * u[j];
-                // Fiber stress at top: sigma = E * y * kappa (y = half beam depth, assuming 0.1 for visual)
-                stress = E * 0.1 * curvature;
+                
+                // sigma = E * (y*kappa + epsilon_m)
+                stress = E * (fiberY * curvature + epsilon_m);
             } else {
                 const d1 = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
                 let strain = 0;

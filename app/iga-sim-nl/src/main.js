@@ -25,6 +25,7 @@ class MechanicsApp {
         this.physicsMode = 'bending';
         this.solverMethod = 'newton';
         this.basisType = 'igen';
+        this.fiberY = 0.1; // Default to bottom fiber
         this.cachedBasis = null;
         this.basisKey = "";
         this.currentView = 'deflection';
@@ -271,9 +272,22 @@ class MechanicsApp {
                 document.getElementById('canvas-wrapper').style.display = isMetrics ? 'none' : 'block';
                 document.getElementById('canvas-legend').style.display = (this.currentView === 'deflection') ? 'flex' : 'none';
                 document.getElementById('stress-legend').style.display = isStress ? 'flex' : 'none';
+                document.getElementById('stress-fiber-control').style.display = isStress ? 'block' : 'none';
                 
                 if (isMetrics) this.updateCharts(this.residualHistory || []);
             });
+        });
+
+        // Stress Fiber Selection
+        document.getElementById('btn-fiber-top').addEventListener('click', (e) => {
+            this.fiberY = -0.1;
+            document.getElementById('btn-fiber-top').classList.add('active');
+            document.getElementById('btn-fiber-bottom').classList.remove('active');
+        });
+        document.getElementById('btn-fiber-bottom').addEventListener('click', (e) => {
+            this.fiberY = 0.1;
+            document.getElementById('btn-fiber-bottom').classList.add('active');
+            document.getElementById('btn-fiber-top').classList.remove('active');
         });
     }
 
@@ -362,7 +376,7 @@ class MechanicsApp {
                 const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
                 
                 if (this.currentView === 'stress') {
-                    const physicsState = this.physics.calculatePhysicsState(this.deflection);
+                    const physicsState = this.physics.calculatePhysicsState(this.deflection, this.fiberY);
                     this.plot.drawStressGradient(tempNurbs, physicsState);
                     const maxS = document.getElementById('stress-max-val');
                     if (maxS) maxS.textContent = `${physicsState.maxStress.toFixed(1)} MPa`;
