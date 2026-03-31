@@ -184,6 +184,70 @@ export class BasisPlot {
         this.ctx.setLineDash([]);
     }
 
+    drawErrorAnalysis(nurbs, igaDeflection, femDeflection, physicsMode, visualScale) {
+        if (!femDeflection || !igaDeflection) {
+            this.ctx.fillStyle = '#94a3b8';
+            this.ctx.font = '16px Inter, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText("Please enable 'Compare with FEM' to evaluate error.", this.canvas.width/2, this.canvas.height/2);
+            return;
+        }
+
+        try {
+            const { width, height } = this.canvas;
+            this.ctx.fillStyle = '#ef4444';
+            this.ctx.font = 'bold 16px Inter, sans-serif';
+            this.ctx.textAlign = 'center';
+
+            const errorData = [];
+            let maxError = 0;
+            let maxDisp = 1e-10;
+
+            femDeflection.forEach(femPt => {
+                const xi = femPt.x; 
+                // Directly use evaluateAllBasis since w=1
+                const basis = nurbs.evaluateAllBasis(xi);
+                let igaDisp = 0;
+                for (let j = 0; j < nurbs.controlPoints.length; j++) {
+                    igaDisp += basis[j] * igaDeflection[j];
+                }
+                
+                const err = Math.abs(igaDisp - femPt.y);
+                maxDisp = Math.max(maxDisp, Math.abs(femPt.y));
+                maxError = Math.max(maxError, err);
+                errorData.push({ x: xi, err: err });
+            });
+
+            const pct = (maxError / maxDisp) * 100;
+            this.ctx.fillText(`Maximum Absolute Deviation: ${maxError.toExponential(4)}`, width / 2, 60);
+            this.ctx.fillText(`Percent Error (rel. to max displ.): ${pct.toFixed(4)}%`, width / 2, 90);
+
+            this.ctx.strokeStyle = '#ef4444';
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            
+            const drawScale = maxError > 0 ? (height * 0.3) / maxError : 1;
+            const baselineY = this.worldToScreen(0, 0.5).y;
+
+            errorData.forEach((pt, i) => {
+                const px = this.worldToScreen(pt.x, 0.5).x;
+                const py = baselineY - pt.err * drawScale;
+                i === 0 ? this.ctx.moveTo(px, py) : this.ctx.lineTo(px, py);
+            });
+            
+            this.ctx.stroke();
+
+            this.ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+            this.ctx.lineTo(this.worldToScreen(1.0, 0.5).x, baselineY);
+            this.ctx.lineTo(this.worldToScreen(0, 0.5).x, baselineY);
+            this.ctx.fill();
+        } catch(e) {
+            console.error("Error drawing analysis:", e);
+            this.ctx.fillStyle = 'white';
+            this.ctx.fillText("Error rendering analysis: " + e.message, this.canvas.width/2, this.canvas.height/2);
+        }
+    }
+
     drawCrosshair() {
         const { x, y } = this.mousePos;
         if (x < 0 || y < 0 || x > this.canvas.width || y > this.canvas.height) return;

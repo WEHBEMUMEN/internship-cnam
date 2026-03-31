@@ -71,7 +71,15 @@ class MechanicsApp {
 
         const controlPoints = [];
         for(let i = 0; i < numCP; i++) {
-            controlPoints.push({ x: i / (numCP-1), y: 0.5, w: 1.0 });
+            // Use Greville abscissae (knot averages) for x-coordinates 
+            // to ensure a uniform isoparametric mapping: x(xi) = xi, J = 1.0
+            let x = 0;
+            for (let j = 1; j <= this.degree; j++) {
+                x += knots[i + j];
+            }
+            x /= this.degree;
+            
+            controlPoints.push({ x: x, y: 0.5, w: 1.0 });
         }
 
         this.nurbs = new NURBSEngine(this.degree, knots, controlPoints);
@@ -219,13 +227,22 @@ class MechanicsApp {
         document.getElementById('view-basis').addEventListener('click', (e) => {
             e.target.classList.add('active');
             document.getElementById('view-deflection').classList.remove('active');
+            document.getElementById('view-error').classList.remove('active');
             document.getElementById('canvas-legend').style.display = 'none';
         });
 
         document.getElementById('view-deflection').addEventListener('click', (e) => {
             e.target.classList.add('active');
             document.getElementById('view-basis').classList.remove('active');
+            document.getElementById('view-error').classList.remove('active');
             document.getElementById('canvas-legend').style.display = 'flex';
+        });
+
+        document.getElementById('view-error').addEventListener('click', (e) => {
+            e.target.classList.add('active');
+            document.getElementById('view-deflection').classList.remove('active');
+            document.getElementById('view-basis').classList.remove('active');
+            document.getElementById('canvas-legend').style.display = 'none';
         });
 
         document.getElementById('btn-benchmark').addEventListener('click', () => {
@@ -283,8 +300,11 @@ class MechanicsApp {
         this.plot.drawGrid();
         
         const isBasisView = document.getElementById('view-basis').classList.contains('active');
+        const isErrorView = document.getElementById('view-error').classList.contains('active');
         
-        if (isBasisView) {
+        if (isErrorView) {
+            this.plot.drawErrorAnalysis(this.nurbs, this.deflection, this.femDeflection, this.physicsMode, this.visualScale);
+        } else if (isBasisView) {
             this.plot.drawBasis(this.nurbs);
         } else {
             let dynamicScale = 1.0;

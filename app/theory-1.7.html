@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,13 +9,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-    
+
     <!-- JS Scripts for KaTeX -->
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-    <!-- Auto-render extension for inline math -->
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 
     <style>
         :root {
@@ -30,7 +32,11 @@
             --surface: #0f172a;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -42,9 +48,12 @@
 
         .scroll-progress {
             position: fixed;
-            top: 0; left: 0;
-            height: 4px; background: var(--primary);
-            width: 0%; z-index: 1000;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: var(--primary);
+            width: 0%;
+            z-index: 1000;
             box-shadow: 0 0 10px var(--primary-glow);
         }
 
@@ -63,9 +72,11 @@
         header::before {
             content: '';
             position: absolute;
-            top: -50px; left: 50%;
+            top: -50px;
+            left: 50%;
             transform: translateX(-50%);
-            width: 300px; height: 300px;
+            width: 300px;
+            height: 300px;
             background: var(--primary);
             filter: blur(150px);
             opacity: 0.15;
@@ -84,7 +95,6 @@
             border: 1px solid rgba(59, 130, 246, 0.2);
             display: inline-block;
             margin-bottom: 30px;
-            animation: fadeInDown 0.8s ease-out;
         }
 
         h1 {
@@ -113,11 +123,13 @@
             justify-content: center;
             gap: 40px;
             margin-top: 50px;
-            animation: fadeInUp 1s ease-out 0.2s backwards;
             flex-wrap: wrap;
         }
 
-        .stat-item { text-align: center; }
+        .stat-item {
+            text-align: center;
+        }
+
         .stat-value {
             font-family: 'JetBrains Mono', monospace;
             font-size: 2.2rem;
@@ -125,6 +137,7 @@
             color: var(--primary);
             display: block;
         }
+
         .stat-label {
             font-size: 0.8rem;
             text-transform: uppercase;
@@ -143,7 +156,9 @@
             transition: transform 0.3s ease, border-color 0.3s ease;
         }
 
-        .content-section:hover { border-color: var(--primary); }
+        .content-section:hover {
+            border-color: var(--primary);
+        }
 
         h2 {
             font-family: 'Outfit', sans-serif;
@@ -156,7 +171,10 @@
             color: #fff;
         }
 
-        h2 i { color: var(--primary); font-size: 1.8rem; }
+        h2 i {
+            color: var(--primary);
+            font-size: 1.8rem;
+        }
 
         p {
             font-size: 1.15rem;
@@ -165,7 +183,10 @@
             font-weight: 400;
         }
 
-        strong { color: #fff; font-weight: 600; }
+        strong {
+            color: #fff;
+            font-weight: 600;
+        }
 
         .math-card {
             background: #020617;
@@ -173,7 +194,8 @@
             border-radius: 20px;
             margin: 30px 0;
             border-left: 5px solid var(--primary);
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); overflow-x: auto;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+            overflow-x: auto;
         }
 
         .comparison-table {
@@ -197,8 +219,15 @@
             font-size: 1.1rem;
         }
 
-        .check { color: var(--accent); margin-right: 10px; }
-        .cross { color: #ef4444; margin-right: 10px; }
+        .check {
+            color: var(--accent);
+            margin-right: 10px;
+        }
+
+        .cross {
+            color: #ef4444;
+            margin-right: 10px;
+        }
 
         .note-box {
             background: rgba(16, 185, 129, 0.05);
@@ -217,19 +246,28 @@
         }
 
         .footer-nav {
-            display: flex; flex-direction: column;
-            align-items: center; margin-top: 100px; gap: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 100px;
+            gap: 20px;
         }
 
         .btn {
-            display: inline-flex; align-items: center; gap: 12px;
-            padding: 18px 36px; border-radius: 16px; font-weight: 700;
-            text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 36px;
+            border-radius: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-size: 1.1rem;
         }
 
         .btn-primary {
-            background: var(--primary); color: white;
+            background: var(--primary);
+            color: white;
             box-shadow: 0 10px 20px -10px var(--primary-glow);
         }
 
@@ -240,114 +278,148 @@
         }
 
         .back-link {
-            color: var(--text-dim); text-decoration: none; font-weight: 600;
-            display: flex; align-items: center; gap: 8px; transition: color 0.2s;
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
         }
 
-        .back-link:hover { color: var(--text); }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .back-link:hover {
+            color: var(--text);
         }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .highlight-text {
+            color: var(--primary);
+            font-weight: 700;
         }
-
-        .highlight-text { color: var(--primary); font-weight: 700; }
 
         code {
             font-family: 'JetBrains Mono', monospace;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             padding: 2px 6px;
             border-radius: 4px;
             color: var(--primary);
         }
     </style>
 </head>
+
 <body>
     <div class="scroll-progress"></div>
 
     <div class="container">
         <header>
-            <span class="badge">Phase 1.7 | Engine Architecture Architecture</span>
+            <span class="badge">Phase 1.7 | Engine Architecture</span>
             <h1>The Theory of <br>Isogeometric Analysis & ROM</h1>
-            <p class="subtitle">A full breakdown of the mathematical properties and physics logic behind the Phase 1.7 simulation engine.</p>
-            
+            <p class="subtitle">A full breakdown of the mathematical properties and physics logic behind the Phase 1.7
+                simulation engine.</p>
+
             <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-value">C<sup>p-k</sup></span>
+                    <span class="stat-label">Smooth Continuity</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">SVD</span>
+                    <span class="stat-label">Snapshot Core</span>
+                </div>
                 <div class="stat-item">
                     <span class="stat-value">NURBS</span>
                     <span class="stat-label">Basis Definition</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">Dual</span>
-                    <span class="stat-label">Physics Models</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">C<sup>p-k</sup></span>
-                    <span class="stat-label">Geometric Continuity</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">ROM</span>
-                    <span class="stat-label">Reduced Order Core</span>
+                    <span class="stat-value">m ≪ N</span>
+                    <span class="stat-label">Efficiency</span>
                 </div>
             </div>
         </header>
 
         <section class="content-section">
+            <h2><i class="fa-solid fa-scale-balanced"></i> Euler-Bernoulli Theory & Derivation</h2>
+            <p>
+                The beam behavior is governed by local equations relating moment $M$, shear $V$, and load $q$. In the
+                Phase 1.7 engine, we derive the <strong>Weak Form</strong> using the principle of virtual work.
+            </p>
+            <div class="math-card">
+                <strong>Equilibrium:</strong> $M_{,xx} + q = 0$ <br>
+                <strong>Constitutive:</strong> $M = -EI w_{,xx}$
+            </div>
+            <p>
+                To derive the weak form, we multiply by a virtual displacement $\delta w$ and integrate. Through
+                <strong>Integration by Parts (IPP)</strong>, derivatives are transferred:
+            </p>
+            <div class="math-card">
+                $$\int_0^L (M_{,xx} + q) \delta w \, dx = 0$$
+                $$\text{IPP1: } -\int_0^L M_{,x} \delta w_{,x} \, dx + [M_{,x} \delta w]_0^L + \int_0^L q \delta w \, dx
+                = 0$$
+                $$\text{IPP2: } \int_0^L M \delta w_{,xx} \, dx - [M \delta w_{,x}]_0^L + \int_0^L q \delta w \, dx =
+                0$$
+            </div>
+            <p>
+                With appropriate boundary conditions, the final weak form for flexural bending is:
+                $$\int_0^L EI w_{,xx} \delta w_{,xx} \, dx = \int_0^L q(x) \delta w \, dx$$
+            </p>
+        </section>
+
+        <section class="content-section">
             <h2><i class="fa-solid fa-square-root-variable"></i> Mathematics: Knot Vectors & Basis Functions</h2>
             <p>
-                In the Phase 1.7 engine, the geometry is defined using <strong>Non-Uniform Rational B-Splines (NURBS)</strong>. The domain is dictated by a <strong>Knot Vector</strong> ($U$), which divides the parametric space into elements.
-            </p>
-            <p>
-                The engine uses an <em>Open Uniform Knot Vector</em>. This means the ends of the knot vector are clamped with $p+1$ repeating values ($0$ at the start, $1$ at the end), forcing the curve to exactly interpolate the first and last control points.
-            </p>
-            <div class="math-card">
-                $$U = [\underbrace{0, \dots, 0}_{p+1}, u_1, \dots, u_m, \underbrace{1, \dots, 1}_{p+1}]$$
-            </div>
-            <p>
-                The basis functions are computed recursively using the <strong>Cox-de Boor formula</strong>. This recursive approach builds higher-degree functions out of simpler linear blocks, maintaining strict local support and partition of unity.
+                In the Phase 1.7 engine, the geometry is defined using <strong>Non-Uniform Rational B-Splines
+                    (NURBS)</strong>. The domain is dictated by a <strong>Knot Vector</strong> ($\Xi$), which divides
+                the parametric space into elements.
             </p>
             <div class="math-card">
-                $$N_{i,0}(\xi) = \begin{cases} 1 & \text{if } u_i \le \xi < u_{i+1} \\ 0 & \text{otherwise} \end{cases}$$ 
-                $$N_{i,p}(\xi) = \frac{\xi - u_i}{u_{i+p} - u_i} N_{i,p-1}(\xi) + \frac{u_{i+p+1} - \xi}{u_{i+p+1} - u_{i+1}} N_{i+1,p-1}(\xi)$$
+                <strong>Example Knot Vector:</strong> $\Xi = \{0, 0, 0, \xi_a, \xi_b, \xi_c, 1, 1, 1\}$
             </div>
             <p>
-                To handle precise geometries like exact circular arcs, the engine extends B-Splines with <strong>weights</strong> ($w_i$), creating rational functions: $R_{i,p}(\xi) = \frac{N_{i,p}(\xi) w_i}{\sum N_{j,p}(\xi) w_j}$.
+                The engine uses an <em>Open Uniform Knot Vector</em>. This means the ends are clamped with $p+1$
+                repeating values, forcing interpolation at the boundaries. The basis functions are computed via the
+                <strong>Cox-de Boor formula</strong>:
             </p>
+            <div class="math-card">
+                $$N_{i,0}(\xi) = \begin{cases} 1 & \text{if } u_i \le \xi < u_{i+1} \\ 0 & \text{otherwise}
+                    \end{cases}$$ $$N_{i,p}(\xi)=\frac{\xi - u_i}{u_{i+p} - u_i} N_{i,p-1}(\xi) + \frac{u_{i+p+1} -
+                    \xi}{u_{i+p+1} - u_{i+1}} N_{i+1,p-1}(\xi)$$ </div>
+                    <p>
+                        For precise geometric circularity, we use weights $w_i$: $R_{i,p}(\xi) = \frac{N_{i,p}(\xi)
+                        w_i}{\sum N_{j,p}(\xi) w_j}$.
+                    </p>
         </section>
 
         <section class="content-section">
-            <h2><i class="fa-solid fa-scale-balanced"></i> Variational Physics: Bending vs Axial Solvers</h2>
+            <h2><i class="fa-solid fa-vector-square"></i> Isoparametric Transformation & Jacobian</h2>
             <p>
-                The physics engine features a <em>Dual-Solver</em> architecture, computing the stiffness matrix $\mathbf{K}$ using the Principle of Virtual Work. Depending on the mode selected, the structural behavior requires different derivatives of the shape functions.
+                We map the physical domain $x$ to a parametric domain $\xi \in [0, 1]$. Because the Euler-Bernoulli weak
+                form requires second derivatives, the <strong>Jacobian</strong> ($J = x^h_{,\xi}$) plays a critical
+                role.
             </p>
-            <div class="note-box">
-                <h4><i class="fa-solid fa-ruler-horizontal"></i> Axial Stiffness (Truss / Bar)</h4>
-                <p>
-                    In axial mode, elements only resist stretching or compression along their length. The strain energy depends entirely on the first derivative (gradient) of the basis functions.
-                </p>
-                $$K_{ij}^{axial} = \int_{0}^{L} EA \frac{d R_i}{d\xi} \frac{d R_j}{d\xi} d\xi$$
-            </div>
-            
-            <div class="note-box">
-                <h4><i class="fa-solid fa-bezier-curve"></i> Flexural Bending (Euler-Bernoulli Beam)</h4>
-                <p>
-                    In bending mode, elements resist curvature changes caused by transverse forces. Thus, the strain energy is proportional to the second derivative (curvature) of the basis functions.
-                </p>
-                $$K_{ij}^{bending} = \int_{0}^{L} EI \frac{d^2 R_i}{d\xi^2} \frac{d^2 R_j}{d\xi^2} d\xi$$
+            <div class="math-card">
+                <strong>Chain Rule:</strong> $w_{,x} = \frac{1}{J} w^h_{,\xi} \quad ; \quad w_{,xx} = \frac{1}{J^2}
+                w^h_{,\xi\xi}$
             </div>
             <p>
-                The matrix $\mathbf{K}$ is assembled by performing numerical integration over the parametric domain $\xi \in [0, 1]$ using Gauss Quadrature samples. This assembly handles the seamless mapping between parametric and physical space without needing individual element matrices.
+                The resulting stiffness matrix $\mathbf{K}$ requires integration with the Jacobian to the third power:
             </p>
+            <div class="math-card">
+                $$K_{ij} = \int_0^1 EI \left( \frac{1}{J^2} B_i \right) \left( \frac{1}{J^2} B_j \right) J \, d\xi =
+                \int_0^1 EI \frac{B_i B_j}{J^3} \, d\xi$$
+            </div>
+            <div class="note-box">
+                <h4><i class="fa-solid fa-circle-exclamation"></i> The C¹ Necessity</h4>
+                <p>
+                    If degree $p=1$ (Linear), then $w^h_{,\xi\xi} = 0$. Flexural bending <strong>requires</strong> $p
+                    \ge 2$ to maintain non-zero curvature within the elements.
+                </p>
+            </div>
         </section>
 
         <section class="content-section">
-            <h2><i class="fa-solid fa-compress-arrows-alt"></i> Reduced Order Modeling (ROM) Detail</h2>
+            <h2><i class="fa-solid fa-compress-arrows-alt"></i> Reduced Order Modeling (ROM) & SVD</h2>
             <p>
-                For a <strong>Digital Twin</strong> to be effective, it must synchronize with reality in <strong>real-time</strong>. If a high-fidelity finite element solution takes seconds to compute per frame, it fails to keep up with streaming sensor data. Isogeometric Analysis (IGA) solves this natively through rapid mathematical compression via <strong>Galerkin Projection</strong>.
+                For real-time <strong>Digital Twin</strong> synchronization, the engine uses <strong>Galerkin
+                    Projection</strong> to reduce a high-fidelity model ($M_{DoF}$) to a tiny modal subspace ($N$).
             </p>
 
             <table class="comparison-table">
@@ -362,63 +434,105 @@
                     <tr>
                         <td><strong>Degrees of Freedom</strong></td>
                         <td>Matches Control Points (e.g., $100 \times 100$)</td>
-                        <td class="highlight-text">Set by Global Modes (e.g., $3 \times 3$)</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Solve Location</strong></td>
-                        <td>Solves directly at physical node locations</td>
-                        <td class="highlight-text">Solves in an abstract modal subspace</td>
+                        <td class="highlight-text">Global Modes (e.g., $3 \times 3$)</td>
                     </tr>
                     <tr>
                         <td><strong>Solve Speed</strong></td>
-                        <td>Requires heavy Gaussian Elimination ($O(n^3)$)</td>
-                        <td class="highlight-text"><span class="check"></span> Instantaneous (Microseconds)</td>
+                        <td>$O(n^3)$ Gaussian Elimination</td>
+                        <td class="highlight-text"><span class="check"></span> Microseconds</td>
                     </tr>
                     <tr>
-                        <td><strong>Geometric Output</strong></td>
-                        <td>Mathematically Exact ($u_i$)</td>
-                        <td class="highlight-text">Over 99% accuracy maintained ($\sum \Phi_m q_m$)</td>
+                        <td><strong>Accuracy</strong></td>
+                        <td>Mathematically Exact</td>
+                        <td class="highlight-text">>99% preserved</td>
                     </tr>
                 </tbody>
             </table>
-            
+
             <div class="note-box">
-                <h4><i class="fa-solid fa-wave-square"></i> 1. The Modal Basis ($\mathbf{\Phi}$)</h4>
+                <h4><i class="fa-solid fa-camera"></i> Snapshot Matrix & SVD</h4>
                 <p>
-                    Instead of solving for the displacement of hundreds of individual control points, we assume the beam's final deflection is a combination of smooth, global shapes called <em>modes</em>. We generate a transformation matrix $\mathbf{\Phi}$ by sampling sine waves corresponding to the boundary conditions.
+                    We collect solutions for various parameters $\mu$ into a snapshot matrix $\mathbb{W} =
+                    [\underline{W}_1, \dots, \underline{W}_p]$. <strong>Singular Value Decomposition (SVD)</strong>
+                    identifies the dominant modes:
                 </p>
+                $$\text{SVD}(\mathbb{W}) \to U \Sigma V^T$$
             </div>
 
             <div class="note-box">
-                <h4><i class="fa-solid fa-down-left-and-up-right-to-center"></i> 2. Galerkin Projection</h4>
+                <h4><i class="fa-solid fa-brain"></i> Non-linear Manifolds: Autoencoders</h4>
                 <p>
-                    Both the high-fidelity $[N \times N]$ Stiffness matrix $\mathbf{K}_{full}$ and the $[N \times 1]$ Force vector $\mathbf{F}_{full}$ are mathematically "squashed" down into the tiny $[m \times m]$ subspace defined by the modes.
+                    For non-linear behaviors, we replace linear modal combinations with an
+                    <strong>Encoder-Decoder</strong> structure.
                 </p>
-                $$\mathbf{K}_{red} = \mathbf{\Phi}^T \mathbf{K}_{full} \mathbf{\Phi}$$
-                $$\mathbf{F}_{red} = \mathbf{\Phi}^T \mathbf{F}_{full}$$
+                <div class="math-card">
+                    $\underline{W}(\mu) \approx \Gamma(\underline{q})$ <br>
+                    $\underline{q}$: Latent coefficients (compressed state).
+                </div>
             </div>
+        </section>
 
-            <div class="note-box">
-                <h4><i class="fa-solid fa-bolt"></i> 3. Solving the Reduced System</h4>
-                <p>
-                    The engine solves the tiny reduced system $\mathbf{K}_{red} \mathbf{q}_r = \mathbf{F}_{red}$. The resulting vector $\mathbf{q}_r$ contains the <em>modal amplitudes</em>—values that simply dictate "how much" of each sine wave is needed to balance the applied physical force.
-                </p>
+        <section class="content-section">
+            <h2><i class="fa-solid fa-location-crosshairs"></i> Force Positioning via Dirac Delta</h2>
+            <p>
+                IGA allows for precise loading at any continuous parametric coordinate $\xi \in [0, 1]$. Unlike
+                traditional FEM, we don't need a node at the load point.
+            </p>
+            <div class="math-card">
+                $$F_i = \int_{0}^{1} P \delta(\xi - \mu) R_i(\xi) J(\xi) \, d\xi = P R_i(\mu) J(\mu)$$
             </div>
-
-            <div class="note-box">
-                <h4><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 4. Fast Reconstruction</h4>
-                <p>
-                    Finally, the full high-fidelity physical shape is instantly reconstructed for rendering directly in the browser by multiplying the abstract modal amplitudes back through the sine waves:
-                </p>
-                $$\mathbf{u}_{full} = \mathbf{\Phi} \mathbf{q}_r$$
-            </div>
-            
-            <p style="margin-top: 25px;">
-                Classical FEM shapes are often jagged ($C^0$ discontinuous), meaning they "fight" against smooth global sine waves during reduction, causing extreme errors. Since IGA bases are inherently $C^{p-k}$ smooth, they make the perfect fit for modal projection, allowing extreme 99% compression with nearly zero loss.
+            <p>
+                By sampling the basis functions at the exact point of application $\mu$, the point load is distributed
+                smoothly across surrounding control points.
             </p>
         </section>
 
+        <section class="content-section">
+            <h2><i class="fa-solid fa-stopwatch"></i> Structural Dynamics & Time Integration</h2>
+            <p>
+                In addition to static equilibrium ($\mathbf{K}u=\mathbf{F}$), the Phase 1.7 engine supports dynamic structural responses. By introducing the <strong>Mass Matrix ($\mathbf{M}$)</strong> and <strong>Damping Matrix ($\mathbf{C}$)</strong>, we model the structure's behavior under time-varying forces and inertial effects.
+            </p>
+            <div class="math-card">
+                <strong>Equation of Motion:</strong> $\mathbf{M} \mathbf{\ddot{u}}(t) + \mathbf{C} \mathbf{\dot{u}}(t) + \mathbf{K} \mathbf{u}(t) = \mathbf{F}(t)$
+            </div>
+            <p>
+                The mass matrix $\mathbf{M}$ integrates the density ($\rho$) and cross-sectional area ($A$) using the identical Isogeometric mapping workflow. This preserves the "exact geometry" parameterization directly into the inertia computations:
+            </p>
+            <div class="math-card">
+                $$M_{ij} = \int_{0}^{1} \rho A \, R_i(\xi) R_j(\xi) J(\xi) \, d\xi$$
+            </div>
+            
+            <p>
+                For the damping matrix $\mathbf{C}$, the engine implements <strong>Rayleigh Damping</strong>, assuming the damping is proportional to a linear combination of the mass and stiffness matrices. This drastically simplifies the evaluation of energy dissipation within the structure:
+            </p>
+            <div class="math-card">
+                $$\mathbf{C} = \alpha \mathbf{M} + \beta \mathbf{K}$$
+                <small style="color: var(--text-dim); display: block; margin-top: 10px;">Where $\alpha$ (mass-proportional) targets low-frequency damping, and $\beta$ (stiffness-proportional) targets high-frequency damping.</small>
+            </div>
 
+            <div class="note-box">
+                <h4><i class="fa-solid fa-gears"></i> Time Integration: The Newmark-$\beta$ Method</h4>
+                <p>
+                    Evaluating the structural displacement over continuous time requires numerical time-stepping schemes. We employ the unconditionally stable, implicit <strong>Newmark-$\beta$ method</strong>, reformulating the dynamic equations into an equivalent static problem solved recursively at each time step $\Delta t$:
+                </p>
+                $$\hat{\mathbf{K}} \mathbf{u}_{t+\Delta t} = \hat{\mathbf{F}}_{t+\Delta t}$$
+                $$\hat{\mathbf{K}} = \mathbf{K} + \frac{1}{\beta \Delta t^2}\mathbf{M} + \frac{\gamma}{\beta \Delta t}\mathbf{C}$$
+                <p style="font-size: 0.95rem; margin-top: 15px; color: var(--text-dim);">
+                    While highly stable, factorizing the dense $\hat{\mathbf{K}}$ iteratively within a web browser executing Isogeometric Analysis is extremely taxing on hardware.
+                </p>
+            </div>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-wave-square"></i> Subspace Dynamics (The ROM Solution)</h4>
+                <p>
+                    Because $\mathbf{M}$ and $\mathbf{K}$ possess wide bandwidths in IGA, direct implicit algorithms scale poorly for real-time visualization. Instead, we project the massive dynamic equation down into a tiny Modal Subspace via <strong>Galerkin Projection</strong> using our learned basis matrix $\mathbf{V}$:
+                </p>
+                $$\mathbf{M}_{red} \mathbf{\ddot{q}}(t) + \mathbf{C}_{red} \mathbf{\dot{q}}(t) + \mathbf{K}_{red} \mathbf{q}(t) = \mathbf{F}_{red}(t)$$
+                <p style="font-size: 0.95rem; margin-top: 15px; color: var(--text-dim);">
+                    Here, the $N \times N$ matrices collapse to microscopic $m \times m$ dense matrices (where $m \ll N$). Time integration calculations now execute in microseconds, allowing instantaneous wave simulation and vibration tuning in a 60 FPS constraint.
+                </p>
+            </div>
+        </section>
 
         <div class="footer-nav">
             <a href="iga-sim-1.7/index.html" class="btn btn-primary">
@@ -430,28 +544,28 @@
         </div>
     </div>
 
-    <section class="content-section" style="max-width: 1000px; margin: 0 auto 60px auto;">
-        <h2><i class="fa-solid fa-location-crosshairs"></i> Force Positioning</h2>
-        <p>
-            Unlike traditional FEM where loads are often restricted to the discrete nodes between elements, IGA allows for precise loading at any continuous parametric coordinate $\xi \in [0, 1]$.
-        </p>
-        <div class="math-card">
-            $$F_i = \int_{0}^{1} R_{i,p}(\xi) \, \delta(\xi - \xi_{load}) P \, d\xi = R_{i,p}(\xi_{load}) P$$
-        </div>
-        <p>
-            By sampling the basis functions $R_{i,p}(\xi_{load})$ at the exact point of application, the force vector $\mathbf{F}$ correctly distributes the point load across the surrounding control points smoothly.
-        </p>
-    </section>
-
     <script>
-        window.addEventListener('scroll', () => {
-            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const scrolled = (winScroll / height) * 100;
-            document.querySelector(".scroll-progress").style.width = scrolled + "%";
-        });
-        
-        // Removed manual katex.render lines since auto-render script now handles everything
+        // Use window.onload to ensure body exists for KaTeX
+        window.onload = function () {
+            if (typeof renderMathInElement === 'function') {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            window.addEventListener('scroll', () => {
+                const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+                const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (winScroll / height) * 100;
+                const progress = document.querySelector(".scroll-progress");
+                if (progress) progress.style.width = scrolled + "%";
+            });
+        };
     </script>
 </body>
+
 </html>

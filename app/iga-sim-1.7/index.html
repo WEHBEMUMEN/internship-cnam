@@ -189,14 +189,14 @@
                     <div class="toggle-row">
                         <span>Compare with FEM</span>
                         <label class="switch">
-                            <input type="checkbox" id="toggle-fem">
+                            <input type="checkbox" id="toggle-fem" checked>
                             <span class="slider"></span>
                         </label>
                     </div>
 
 
 
-                    <div id="fem-settings-container" style="display: none;">
+                    <div id="fem-settings-container" style="display: block;">
                         <div class="control-group">
                             <label>FEM Elements: <span id="fem-elements-val">40</span></label>
                             <input type="range" id="input-fem-elements" min="1" max="100" value="40">
@@ -243,6 +243,7 @@
                 <div class="view-modes">
                     <button id="view-deflection" class="view-btn active">Deformation Shape</button>
                     <button id="view-basis" class="view-btn">IGA Basis Functions</button>
+                    <button id="view-error" class="view-btn">Error Analysis</button>
                 </div>
                 <div class="stats">
                     <div class="stat-item"><i class="fa-solid fa-bolt"></i> 60 FPS</div>
@@ -263,7 +264,7 @@
 
                 <div id="canvas-legend" class="canvas-legend" style="display: none;">
                     <div class="legend-item"><span class="legend-color" style="background: white;"></span> IGA Solution</div>
-                    <div class="legend-item" id="legend-fem" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dashed #10b981;"></span> FEM Solution</div>
+                    <div class="legend-item" id="legend-fem" style="display: flex;"><span class="legend-color" style="background: transparent; border-top: 2.5px dashed #10b981;"></span> FEM Solution</div>
                     <div class="legend-item" id="legend-analytical" style="display: none;"><span class="legend-color" style="background: transparent; border-top: 2.5px dotted #facc15;"></span> Euler-Bernoulli Beam (Exact)</div>
                 </div>
                 

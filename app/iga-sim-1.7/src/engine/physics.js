@@ -1,66 +1,145 @@
 /**
- * Phase 1.7+ Physics Engine (Clean & Robust)
- * Implements 1D IGA & FEM for Bending and Axial physics.
- * No external dependencies (mathjs removed for compatibility).
+ * Phase 1.7+ Physics Engine (Refined for Geometric Accuracy)
+ * Implements 1D IGA & FEM with variable Jacobian support.
+ * Aligns with Theory 1.7: Stiffness ~ 1/J^3 and Load ~ R*J.
+ * No external dependencies.
  */
 
 export class PhysicsEngine {
     constructor(nurbs) {
-        this.nurbs = nurbs;
-        this.E = 100.0; this.A = 1.0; this.I = 1.0; this.L = 1.0;
+        this.nurbs = nurbs; // Expects object with controlPoints, knots, degree
+        this.E = 100.0;
+        this.A = 1.0;
+        this.I = 1.0;
+        this.L = 1.0;
         this.physicsMode = 'bending';
     }
 
     get flexuralRigidity() { return this.E * this.I; }
     get axialRigidity() { return this.E * this.A; }
 
+    /**
+     * Calculates the Jacobian J = dx/dxi at a given parametric point.
+     * For a 2D curve, J is the magnitude of the tangent vector (stretching factor).
+     */
+    calculateJacobian(xi) {
+        // Evaluate first derivatives of all basis functions
+        const d1 = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
+        const pts = this.nurbs.controlPoints;
+        let dx = 0, dy = 0;
+
+        // Compute tangent vector components
+        for (let i = 0; i < pts.length; i++) {
+            dx += d1[i] * pts[i].x;
+            dy += d1[i] * pts[i].y;
+        }
+
+        // J is the Euclidean norm of the tangent
+        const J = Math.sqrt(dx * dx + dy * dy);
+        return Math.max(J, 1e-6); // Guard against division by zero
+    }
+
+    /**
+     * Assembles the Global Stiffness Matrix using Gauss Quadrature.
+     * Implements the 1/J^3 transformation for Euler-Bernoulli bending.
+     */
     assembleStiffness() {
         const numCP = this.nurbs.controlPoints.length;
         const K = Array.from({ length: numCP }, () => new Float64Array(numCP));
-        const samples = 100, dXi = 1.0 / samples;
+
+        // Use high-density sampling for integration to capture Jacobian variations
+        const samples = 150, dXi = 1.0 / samples;
 
         for (let s = 0; s <= samples; s++) {
-            const xi = s * dXi;
-            const w = (s === 0 || s === samples) ? 0.5 * dXi : dXi;
+            const xi = Math.min(s * dXi, 0.9999);
+            const weight = (s === 0 || s === samples) ? 0.5 * dXi : dXi;
+            const J = this.calculateJacobian(xi);
+
             if (this.physicsMode === 'bending') {
-                const d2 = this.nurbs.evaluateAllBasisDerivatives(xi, 2);
-                for (let i = 0; i < numCP; i++) for (let j = 0; j < numCP; j++) K[i][j] += d2[i] * d2[j] * this.flexuralRigidity * w;
+                // Curvature derivatives (Bi)
+                const B = this.nurbs.evaluateAllBasisDerivatives(xi, 2);
+
+                // Theory 1.7: Curvature transforms as (1/J^2). 
+                // Differential dx transforms as (J * dXi).
+                // Result: K = integral( EI * (B/J^2) * (B/J^2) * J ) dXi = integral( EI * B^2 / J^3 ) dXi
+                const stiffnessFactor = this.flexuralRigidity / (J * J * J);
+
+                for (let i = 0; i < numCP; i++) {
+                    for (let j = 0; j < numCP; j++) {
+                        K[i][j] += B[i] * B[j] * stiffnessFactor * weight;
+                    }
+                }
             } else {
-                const d1 = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
-                for (let i = 0; i < numCP; i++) for (let j = 0; j < numCP; j++) K[i][j] += d1[i] * d1[j] * this.axialRigidity * w;
+                // Axial strain derivatives (Bi)
+                const B = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
+
+                // Theory 1.7: Axial strain transforms as (1/J).
+                // Result: K = integral( EA * (B/J) * (B/J) * J ) dXi = integral( EA * B^2 / J ) dXi
+                const stiffnessFactor = this.axialRigidity / J;
+
+                for (let i = 0; i < numCP; i++) {
+                    for (let j = 0; j < numCP; j++) {
+                        K[i][j] += B[i] * B[j] * stiffnessFactor * weight;
+                    }
+                }
             }
         }
         return K;
     }
 
+    /**
+     * Assembles the Load Vector (F) for a point load.
+     * Implements the J-scaling required for consistent physical magnitude.
+     */
     assembleIGALoad(loadPos, loadMag) {
         const numCP = this.nurbs.controlPoints.length;
         const F = new Float64Array(numCP).fill(0);
-        const actualPos = this.physicsMode === 'axial' ? 1.0 : loadPos;
+
+        // For axial mode, we usually apply at the end (xi=1.0)
+        const actualPos = this.physicsMode === 'axial' ? 0.9999 : loadPos;
+
         const basis = this.nurbs.evaluateAllBasis(actualPos);
-        for (let i = 0; i < numCP; i++) F[i] = basis[i] * loadMag;
+        const J = this.calculateJacobian(actualPos);
+
+        // Theory 1.7: Point load sifting property F = P * R(xi) * J(xi)
+        // Scaling by J ensures the force work is invariant under parametric refinement
+        for (let i = 0; i < numCP; i++) {
+            F[i] = basis[i] * loadMag * J;
+        }
         return F;
     }
 
+    /**
+     * Constructs a modal transformation matrix (Phi).
+     * Acts as the basis for the Reduced Order Model.
+     */
     getModalBasis(modes, bcs) {
         const numCP = this.nurbs.controlPoints.length;
         const phi = Array.from({ length: numCP }, () => new Float64Array(modes));
+
+        // Simple heuristic for boundary conditions in the reduced space
         const isRightFixed = bcs.some(bc => bc.index >= numCP - 2);
+
         for (let m = 0; m < modes; m++) {
             for (let i = 0; i < numCP; i++) {
                 const xi = i / (numCP - 1);
+                // Sinusoidal shapes are an excellent general basis for beam modal analysis
                 phi[i][m] = isRightFixed ? Math.sin((m + 1) * Math.PI * xi) : Math.sin((m + 0.5) * Math.PI * xi);
             }
         }
         return phi;
     }
 
+    /**
+     * Reduced Order Model (ROM) Solver
+     * Projects the large stiffness matrix into a small modal subspace.
+     */
     solveROM(loadF, bcs, modes = 3) {
         const numCP = this.nurbs.controlPoints.length;
         const phi = this.getModalBasis(modes, bcs);
         const K = this.assembleStiffness();
-        
-        // Reduced Stiffness: Kr = phi' * K * phi
+
+        // 1. Reduced Stiffness: Kr = Phi^T * K * Phi (Galerkin Projection)
         const Kr = Array.from({ length: modes }, () => new Float64Array(modes));
         for (let i = 0; i < modes; i++) {
             for (let j = 0; j < modes; j++) {
@@ -74,7 +153,7 @@ export class PhysicsEngine {
             }
         }
 
-        // Reduced Force: Fr = phi' * F
+        // 2. Reduced Force: Fr = Phi^T * F
         const Fr = new Float64Array(modes);
         for (let i = 0; i < modes; i++) {
             let val = 0;
@@ -82,7 +161,10 @@ export class PhysicsEngine {
             Fr[i] = val;
         }
 
+        // 3. Solve for modal amplitudes (qr)
         const qr = this.gaussianElimination(Kr, Fr);
+
+        // 4. Reconstruct physical displacement: u = Phi * qr
         const u = new Float64Array(numCP).fill(0);
         for (let i = 0; i < numCP; i++) {
             for (let j = 0; j < modes; j++) u[i] += phi[i][j] * qr[j];
@@ -90,12 +172,17 @@ export class PhysicsEngine {
         return u;
     }
 
+    /**
+     * Full Static Solver
+     * Applies boundary conditions using penalty-style enforcement.
+     */
     solveStatics(loadF, bcs) {
         const numCP = this.nurbs.controlPoints.length;
         const K_orig = this.assembleStiffness();
         const K = Array.from({ length: numCP }, (_, i) => new Float64Array(K_orig[i]));
         const f = new Float64Array(loadF);
 
+        // Apply boundary conditions
         bcs.forEach(bc => {
             const idx = bc.index;
             if (idx < 0 || idx >= numCP) return;
@@ -105,17 +192,23 @@ export class PhysicsEngine {
                     K[idx][j] = 0; K[j][idx] = 0;
                 }
             }
-            K[idx][idx] = 1.0; f[idx] = bc.value;
+            K[idx][idx] = 1.0;
+            f[idx] = bc.value;
         });
+
         return this.gaussianElimination(K, f);
     }
 
+    /**
+     * Standard Gaussian Elimination with pivoting for matrix solving.
+     */
     gaussianElimination(A, b) {
         const n = b.length;
         for (let i = 0; i < n; i++) {
             let max = i;
             for (let j = i + 1; j < n; j++) if (Math.abs(A[j][i]) > Math.abs(A[max][i])) max = j;
-            [A[i], A[max]] = [A[max], A[i]]; [b[i], b[max]] = [b[max], b[i]];
+            [A[i], A[max]] = [A[max], A[i]];[b[i], b[max]] = [b[max], b[i]];
+
             if (Math.abs(A[i][i]) < 1e-20) A[i][i] = 1e-20;
             for (let j = i + 1; j < n; j++) {
                 const f = A[j][i] / A[i][i];
@@ -123,6 +216,7 @@ export class PhysicsEngine {
                 for (let k = i; k < n; k++) A[j][k] -= f * A[i][k];
             }
         }
+
         const x = new Float64Array(n);
         for (let i = n - 1; i >= 0; i--) {
             let s = 0;
@@ -131,7 +225,6 @@ export class PhysicsEngine {
         }
         return x;
     }
-
 
     runBenchmark(loadMag, numRuns = 20) {
         const numCP = this.nurbs.controlPoints.length;
