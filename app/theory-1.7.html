@@ -466,8 +466,32 @@
                     $$\mathbf{S} = \mathbf{U} \mathbf{\Sigma} \mathbf{W}^T$$
                 </div>
                 <p>
-                    By selecting the first $m$ columns of $\mathbf{U}$ (where the singular values $\sigma_i$ in $\mathbf{\Sigma}$ are largest), we define our reduced basis $\mathbf{V}$. This ensures that $99.99\%$ of the structural energy is captured with only a handful of variables.
+                    Each column of $\mathbf{U}$ represents a <em>characteristic shape</em> of the bridge. The diagonal values in $\mathbf{\Sigma}$ ($\sigma_1, \sigma_2, \dots$) represent the "importance" or energy of each shape.
                 </p>
+            </div>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-percent"></i> Singular Value Truncation & Energy ($\eta$)</h4>
+                <p>
+                    We decide how many modes ($m$) to keep by evaluating the <strong>Cumulative Energy Retention</strong> ($\eta$):
+                </p>
+                <div class="math-card">
+                    $$\eta(m) = \frac{\sum_{i=1}^m \sigma_i}{\sum_{i=1}^k \sigma_i} \geq 0.9999$$
+                </div>
+                <p>
+                    Mathematically, SVD is equivalent to find the eigenvectors of the <strong>Covariance Matrix</strong> $\mathbf{C} = \mathbf{S} \mathbf{S}^T$. By keeping only the modes above $\eta=99.99\%$, we ensure the reduced model is physically identical to the full model within floating-point tolerance.
+                </p>
+            </div>
+
+            <div class="note-box" style="border-left-color: #10b981;">
+                <h4><i class="fa-solid fa-file-contract"></i> Latent Space Projection</h4>
+                <p>
+                    In the Online phase, the physics equations are projected into the <strong>Latent Space</strong> of coefficients $\mathbf{q}$. The high-fidelity state $\mathbf{u}$ is never actually solved; we only update the tiny state vector $\mathbf{q}$ and reconstruct the visual mesh:
+                </p>
+                <div class="math-card">
+                    $\mathbf{q}_{t+1} = \mathbf{K}_{red}^{-1} \mathbf{F}_{red}$ <br>
+                    $\mathbf{u}_{mesh} = \mathbf{V} \cdot \mathbf{q}_{t+1}$
+                </div>
             </div>
 
             <div class="note-box">
@@ -562,6 +586,19 @@
             </div>
             <p>
                 Distributing points at these coordinates ensures that the physical space $x$ is a linear mapping of the parametric space $\xi$. In Phase 1.7, this is critical because the flexural stiffness depends on $1/J^3$. If $J$ fluctuates wildly (non-uniform mapping), the numerical integration requires exponential sampling to converge. Greville mapping stabilizes the solve.
+            </p>
+        </section>
+
+        <section class="content-section">
+            <h2><i class="fa-solid fa-scissors"></i> Strain & Stress: The B-Matrix Chain Rule</h2>
+            <p>
+                To calculate internal stresses, the engine must differentiate the displacement field $\mathbf{u}(\xi)$ with respect to physical space $x$. This requires the <strong>NURBS Basis Derivatives</strong> combined with the Jacobian inverse:
+            </p>
+            <div class="math-card">
+                $$\varepsilon = \frac{d\mathbf{u}}{dx} = \frac{d\mathbf{u}}{d\xi} \frac{d\xi}{dx} = \frac{1}{J} \sum_{i=1}^n R'_i(\xi) u_i$$
+            </div>
+            <p>
+                This defines the <strong>Strain-Displacement Matrix ($\mathbf{B}$)</strong>. In IGA, since the basis functions $R_i$ are $C^{p-1}$ continuous, the resulting strain and stress fields are high-order smooth, unlike the "staircase" stress jumps seen in linear FEM.
             </p>
         </section>
 
