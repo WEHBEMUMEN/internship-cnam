@@ -4,6 +4,9 @@ class CircleApp {
     constructor() {
         this.canvas = document.getElementById('sim-canvas');
         this.ctx = this.canvas.getContext('2d');
+        this.errorCanvas = document.getElementById('error-graph-canvas');
+        this.errorCtx = this.errorCanvas.getContext('2d');
+        this.errorCache = []; // Cache for hover
 
         // Initialize with standard circle
         this.original = createCircle(0, 0, 1);
@@ -26,6 +29,10 @@ class CircleApp {
     resize() {
         this.canvas.width = this.canvas.parentElement.clientWidth;
         this.canvas.height = this.canvas.parentElement.clientHeight;
+        
+        this.errorCanvas.width = this.errorCanvas.clientWidth;
+        this.errorCanvas.height = this.errorCanvas.clientHeight;
+        
         this.render();
     }
 
@@ -325,6 +332,75 @@ class CircleApp {
         }
     }
 
+    drawErrorGraph() {
+        const { degree, knots, points, weights } = this.current;
+        const steps = 250;
+        this.errorCache = [];
+        let maxErr = 0;
+
+        for (let i = 0; i <= steps; i++) {
+            const xi = i / steps;
+            const pt = Curve.evaluate(xi, degree, knots, points, weights);
+            const dist = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
+            const err = Math.abs(dist - 1.0);
+            this.errorCache.push({ xi, err });
+            if (err > maxErr) maxErr = err;
+        }
+
+        document.getElementById('max-error-val').textContent = maxErr.toExponential(4);
+
+        const ctx = this.errorCtx;
+        const w = this.errorCanvas.width;
+        const h = this.errorCanvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const padding = { top: 10, bottom: 25, left: 10, right: 10 };
+        const graphH = h - padding.top - padding.bottom;
+        const graphW = w - padding.left - padding.right;
+
+        // Axes
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // X
+        ctx.moveTo(padding.left, h - padding.bottom);
+        ctx.lineTo(w - padding.right, h - padding.bottom);
+        // Y
+        ctx.moveTo(padding.left, h - padding.bottom);
+        ctx.lineTo(padding.left, padding.top);
+        ctx.stroke();
+
+        // Labels
+        ctx.fillStyle = '#64748b';
+        ctx.font = '8px "JetBrains Mono"';
+        ctx.textAlign = 'left';
+        ctx.fillText('|e|', padding.left - 5, padding.top - 2);
+
+        // Plot
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        const graphScale = maxErr > 0 ? (graphH * 0.8) / maxErr : 1;
+        
+        for (let i = 0; i < this.errorCache.length; i++) {
+            const x = padding.left + (i / (this.errorCache.length - 1)) * graphW;
+            const y = h - padding.bottom - this.errorCache[i].err * graphScale;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Baseline (target)
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+        ctx.setLineDash([2, 5]);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, h - padding.bottom);
+        ctx.lineTo(w - padding.right, h - padding.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
     render() {
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -333,6 +409,7 @@ class CircleApp {
         this.drawCurve();
         this.drawControlPolygon();
         this.drawBasisFunctions();
+        this.drawErrorGraph();
     }
 
     setupEventListeners() {
@@ -368,8 +445,44 @@ class CircleApp {
             this.showKnots = e.target.checked;
             this.render();
         });
+
+        // Error Graph Interactive Tooltip
+        const tooltip = document.getElementById('error-tooltip');
+        this.errorCanvas.addEventListener('mousemove', (e) => {
+            const rect = this.errorCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            
+            const padding = { left: 10, right: 10 };
+            const graphW = this.errorCanvas.width - padding.left - padding.right;
+            
+            const xi = (mouseX - padding.left) / graphW;
+            if (xi >= 0 && xi <= 1.0) {
+                const idx = Math.round(xi * (this.errorCache.length - 1));
+                const entry = this.errorCache[idx];
+                if (entry) {
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${mouseX}px`;
+                    tooltip.style.top = `${e.clientY - rect.top}px`;
+                    tooltip.textContent = `|e|: ${entry.err.toExponential(4)}`;
+                }
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+        this.errorCanvas.addEventListener('mouseleave', () => tooltip.style.display = 'none');
     }
 }
 
 // Start
-window.addEventListener('DOMContentLoaded', () => new CircleApp());
+window.addEventListener('DOMContentLoaded', () => {
+    new CircleApp();
+    if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ]
+        });
+    }
+});

@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -187,6 +190,28 @@
                     <div class="legend-item"><span class="legend-color" style="background: #10b981;"></span> Control Point (w=1)</div>
                     <div class="legend-item"><span class="legend-color" style="background: #f59e0b;"></span> Weighted CP (w≠1)</div>
                     <div class="legend-item"><span class="legend-color" style="background: #ef4444;"></span> Knot Position</div>
+                </div>
+
+                <!-- Live Error Graph Overlay -->
+                <div id="live-error-container" class="live-error-overlay">
+                    <div class="error-header">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <span>Geometry Error</span>
+                            <span id="max-error-val" style="color: #ef4444; font-weight: 800; font-family: 'JetBrains Mono';">0.00e+0</span>
+                        </div>
+                        <div id="error-formula" style="margin-top: 5px; font-size: 0.9rem; color: #94a3b8;">
+                            \(\varepsilon(\xi) = |\|\mathbf{C}(\xi)\|_2 - 1|\)
+                        </div>
+                    </div>
+                    <div style="position: relative; width: 100%; height: 120px;">
+                        <canvas id="error-graph-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                        <div id="error-tooltip" style="position: absolute; display: none; background: #ef4444; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-family: 'JetBrains Mono'; pointer-events: none; transform: translate(-50%, -120%); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); z-index: 1000;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-dim); margin-top: 8px;">
+                        <span>\(\xi = 0\)</span>
+                        <span>Parametric Space (\(\xi\))</span>
+                        <span>\(\xi = 1\)</span>
+                    </div>
                 </div>
             </div>
         </main>

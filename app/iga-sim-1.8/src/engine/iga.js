@@ -179,23 +179,43 @@ export function hRefine(degree, knots, points, weights) {
  */
 export function pRefine(degree, knots, points, weights) {
     const newP = degree + 1;
-    const M = 200; // sampling density
-
-    // Sample current curve in homogeneous coordinates
+    const M = 100; // sampling density PER SEGMENT
     const samplesW = [];
-    for (let i = 0; i <= M; i++) {
-        const xi = i / M;
-        const N = BasisFunctions.evaluateAll(points.length, degree, xi, knots);
-        let wx = 0, wy = 0, w = 0;
-        for (let j = 0; j < points.length; j++) {
-            const Pwj = points[j];
-            const wj = weights[j];
-            wx += N[j] * Pwj.x * wj;
-            wy += N[j] * Pwj.y * wj;
-            w  += N[j] * wj;
+    
+    // Find unique knot spans to sample segments accurately
+    const uniqueKnotSpans = [];
+    for (let i = 0; i < knots.length - 1; i++) {
+        if (knots[i + 1] - knots[i] > 1e-10) {
+            uniqueKnotSpans.push({ t0: knots[i], t1: knots[i+1] });
         }
-        samplesW.push({ wx, wy, w });
     }
+
+    // Sample each segment independently to capture C0 junctions perfectly
+    uniqueKnotSpans.forEach(span => {
+        for (let i = 0; i < M; i++) {
+            const xi = span.t0 + (i / M) * (span.t1 - span.t0);
+            const N = BasisFunctions.evaluateAll(points.length, degree, xi, knots);
+            let wx = 0, wy = 0, w = 0;
+            for (let j = 0; j < points.length; j++) {
+                const Pwj = points[j];
+                const wj = weights[j];
+                wx += N[j] * Pwj.x * wj;
+                wy += N[j] * Pwj.y * wj;
+                w  += N[j] * wj;
+            }
+            samplesW.push({ wx, wy, w, xi });
+        }
+    });
+    // Add exact final point
+    const xiLast = 1.0;
+    const NLast = BasisFunctions.evaluateAll(points.length, degree, xiLast, knots);
+    let lwx = 0, lwy = 0, lw = 0;
+    for (let i = 0; i < points.length; i++) {
+        lwx += NLast[i] * points[i].x * weights[i];
+        lwy += NLast[i] * points[i].y * weights[i];
+        lw  += NLast[i] * weights[i];
+    }
+    samplesW.push({ wx: lwx, wy: lwy, w: lw, xi: 1.0 });
 
     // Build new knot vector for elevated degree
     const uniqueKnots = [];
@@ -220,8 +240,8 @@ export function pRefine(degree, knots, points, weights) {
 
     // Least-squares fit: A * Pw_new = samplesW
     const A = [];
-    for (let i = 0; i <= M; i++) {
-        const xi = i / M;
+    for (let k = 0; k < samplesW.length; k++) {
+        const xi = samplesW[k].xi;
         A.push(BasisFunctions.evaluateAll(newN, newP, xi, newKnotsArr));
     }
 
@@ -234,11 +254,11 @@ export function pRefine(degree, knots, points, weights) {
     for (let i = 0; i < newN; i++) {
         for (let j = 0; j < newN; j++) {
             let s = 0;
-            for (let k = 0; k <= M; k++) s += A[k][i] * A[k][j];
+            for (let k = 0; k < samplesW.length; k++) s += A[k][i] * A[k][j];
             ATA[i][j] = s;
         }
         let sx = 0, sy = 0, sw = 0;
-        for (let k = 0; k <= M; k++) {
+        for (let k = 0; k < samplesW.length; k++) {
             sx += A[k][i] * samplesW[k].wx;
             sy += A[k][i] * samplesW[k].wy;
             sw += A[k][i] * samplesW[k].w;
