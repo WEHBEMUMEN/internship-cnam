@@ -59,16 +59,23 @@
                         <i class="fa-solid fa-arrow-up-right-dots"></i>
                         <span>p-Refinement</span>
                     </div>
-                    <div class="refine-controls">
-                        <div class="control-row">
-                            <label class="control-label">
-                                <span>Elevate Degree by</span>
-                                <span id="val-p-elevate">+1</span>
-                            </label>
-                            <input type="range" id="slider-p-elevate" min="1" max="3" value="1">
+                        <div class="refine-controls">
+                            <div class="control-row">
+                                <label class="control-label">
+                                    <span>Elevate Degree by</span>
+                                    <span id="val-p-elevate">+1</span>
+                                </label>
+                                <input type="range" id="slider-p-elevate" min="1" max="3" value="1">
+                            </div>
+                            <div class="toggle-row" style="margin-top: 5px;">
+                                <span style="font-size: 0.75rem;">Increase Continuity (C)</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-p-smooth">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </div>
+                            <button id="btn-p-apply" class="apply-btn p-apply">Apply Degree Elevation</button>
                         </div>
-                        <button id="btn-p-apply" class="apply-btn p-apply">Apply Degree Elevation</button>
-                    </div>
                 </div>
 
                 <!-- h-Refine Panel -->

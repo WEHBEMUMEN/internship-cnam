@@ -57,11 +57,12 @@ class CircleApp {
         switch (type) {
             case 'p': {
                 const elevateBy = parseInt(document.getElementById('slider-p-elevate').value);
+                const smooth = document.getElementById('toggle-p-smooth').checked;
                 result = { degree, knots, points, weights };
                 for (let i = 0; i < elevateBy; i++) {
-                    result = pRefine(result.degree, result.knots, result.points, result.weights);
+                    result = pRefine(result.degree, result.knots, result.points, result.weights, smooth);
                 }
-                this.refinementHistory.push(`P+${elevateBy}`);
+                this.refinementHistory.push(`P+${elevateBy}${smooth ? '(C↑)' : ''}`);
                 break;
             }
             case 'h': {

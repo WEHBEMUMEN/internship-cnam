@@ -177,7 +177,7 @@ export function hRefine(degree, knots, points, weights) {
  * p-refinement (degree elevation)
  * Uses least-squares fitting in homogeneous coordinates to exactly preserve rational geometry.
  */
-export function pRefine(degree, knots, points, weights) {
+export function pRefine(degree, knots, points, weights, increaseContinuity = false) {
     const newP = degree + 1;
     const M = 100; // sampling density PER SEGMENT
     const samplesW = [];
@@ -229,13 +229,13 @@ export function pRefine(degree, knots, points, weights) {
         }
     }
 
-    // Elevate degree while maintaining continuity:
-    // Keep interior knot multiplicity constant; only endpoint multiplicity grows.
+    // Elevate: endpoint mult increases, interior depends on increaseContinuity
     const newKnotsArr = [];
     for (let i = 0; i < uniqueKnots.length; i++) {
-        const newMult = (i === 0 || i === uniqueKnots.length - 1) 
+        const isEndpoint = (i === 0 || i === uniqueKnots.length - 1);
+        const newMult = isEndpoint 
             ? newP + 1 
-            : multiplicities[i];
+            : (increaseContinuity ? multiplicities[i] : multiplicities[i] + 1);
         for (let j = 0; j < newMult; j++) newKnotsArr.push(uniqueKnots[i]);
     }
 
