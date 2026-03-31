@@ -229,10 +229,13 @@ export function pRefine(degree, knots, points, weights) {
         }
     }
 
-    // Elevate: each multiplicity increases by 1, capped at newP+1 for endpoints
+    // Elevate degree while maintaining continuity:
+    // Keep interior knot multiplicity constant; only endpoint multiplicity grows.
     const newKnotsArr = [];
     for (let i = 0; i < uniqueKnots.length; i++) {
-        const newMult = Math.min(multiplicities[i] + 1, newP + 1);
+        const newMult = (i === 0 || i === uniqueKnots.length - 1) 
+            ? newP + 1 
+            : multiplicities[i];
         for (let j = 0; j < newMult; j++) newKnotsArr.push(uniqueKnots[i]);
     }
 
