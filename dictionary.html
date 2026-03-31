@@ -134,7 +134,7 @@
               <div class="card reveal reveal-up">
                 <span class="badge" style="font-size: 0.7rem; margin-bottom: 10px;">${data.category}</span>
                 <h3>${data.title}</h3>
-                <p>${data.body.replace(/\*\*/g, '').substring(0, 180)}...</p>
+                <p>${data.body.replace(/\$\$.*?\$\$/g, '').replace(/\$.*?\$/g, '').replace(/\*\*/g, '').substring(0, 180)}...</p>
                 <a href="term.html?id=${term.id}" class="card-link">Read more <i class="fa-solid fa-arrow-right"></i></a>
               </div>
             `;

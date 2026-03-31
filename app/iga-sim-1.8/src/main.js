@@ -68,12 +68,7 @@ class CircleApp {
             }
             case 'k': {
                 const param = parseInt(document.getElementById('slider-k-param').value);
-                // k-refinement: elevate by param, then refine once
-                result = { degree, knots, points, weights };
-                for (let i = 0; i < param; i++) {
-                    result = pRefine(result.degree, result.knots, result.points, result.weights);
-                }
-                result = hRefine(result.degree, result.knots, result.points, result.weights);
+                result = kRefine(degree, knots, points, weights, param);
                 this.refinementHistory.push(`K(+${param},h)`);
                 break;
             }
@@ -128,7 +123,8 @@ class CircleApp {
         }
         container.innerHTML = this.refinementHistory.map((type, i) => {
             const colors = { P: '#a78bfa', H: '#34d399', K: '#f59e0b' };
-            return `<span class="history-badge" style="background: ${colors[type]}20; color: ${colors[type]}; border: 1px solid ${colors[type]}40;">${i + 1}. ${type}-refine</span>`;
+            const c = colors[type[0]];
+            return `<span class="history-badge" style="background: ${c}20; color: ${c}; border: 1px solid ${c}40;">${i + 1}. ${type}-refine</span>`;
         }).join('');
     }
 

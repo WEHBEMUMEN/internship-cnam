@@ -8,26 +8,34 @@ export class BasisFunctions {
     /**
      * Cox-de Boor recursion: evaluate N_{i,p}(xi)
      */
-    static evaluate(i, p, xi, U) {
+    static evaluate(i, p, xi, U, memo = null) {
         if (p === 0) {
             if (xi >= U[i] && xi < U[i + 1]) return 1.0;
             if (xi === 1.0 && U[i + 1] === 1.0 && U[i] < 1.0) return 1.0;
             return 0.0;
         }
 
+        const isRootCall = memo === null;
+        if (isRootCall) memo = new Map();
+
+        const key = `${i}_${p}`;
+        if (memo.has(key)) return memo.get(key);
+
         let val = 0;
         const d1 = U[i + p] - U[i];
-        if (d1 > 0) val += ((xi - U[i]) / d1) * this.evaluate(i, p - 1, xi, U);
+        if (d1 > 0) val += ((xi - U[i]) / d1) * this.evaluate(i, p - 1, xi, U, memo);
 
         const d2 = U[i + p + 1] - U[i + 1];
-        if (d2 > 0) val += ((U[i + p + 1] - xi) / d2) * this.evaluate(i + 1, p - 1, xi, U);
+        if (d2 > 0) val += ((U[i + p + 1] - xi) / d2) * this.evaluate(i + 1, p - 1, xi, U, memo);
 
+        memo.set(key, val);
         return val;
     }
 
     static evaluateAll(n, p, xi, U) {
         const results = new Array(n).fill(0);
-        for (let i = 0; i < n; i++) results[i] = this.evaluate(i, p, xi, U);
+        const memo = new Map();
+        for (let i = 0; i < n; i++) results[i] = this.evaluate(i, p, xi, U, memo);
         return results;
     }
 }
@@ -167,22 +175,29 @@ export function hRefine(degree, knots, points, weights) {
 
 /**
  * p-refinement (degree elevation)
- * Uses least-squares fitting to refit the curve at the new degree.
- * This preserves the geometric shape by sampling and refitting.
+ * Uses least-squares fitting in homogeneous coordinates to exactly preserve rational geometry.
  */
 export function pRefine(degree, knots, points, weights) {
     const newP = degree + 1;
     const M = 200; // sampling density
 
-    // Sample current curve
-    const samples = [];
+    // Sample current curve in homogeneous coordinates
+    const samplesW = [];
     for (let i = 0; i <= M; i++) {
         const xi = i / M;
-        samples.push(Curve.evaluate(xi, degree, knots, points, weights));
+        const N = BasisFunctions.evaluateAll(points.length, degree, xi, knots);
+        let wx = 0, wy = 0, w = 0;
+        for (let j = 0; j < points.length; j++) {
+            const Pwj = points[j];
+            const wj = weights[j];
+            wx += N[j] * Pwj.x * wj;
+            wy += N[j] * Pwj.y * wj;
+            w  += N[j] * wj;
+        }
+        samplesW.push({ wx, wy, w });
     }
 
     // Build new knot vector for elevated degree
-    // Increase multiplicity of each unique knot by 1
     const uniqueKnots = [];
     const multiplicities = [];
     for (let i = 0; i < knots.length; i++) {
@@ -202,19 +217,19 @@ export function pRefine(degree, knots, points, weights) {
     }
 
     const newN = newKnotsArr.length - newP - 1;
-    const newWeights = new Array(newN).fill(1.0);
 
-    // Least-squares fit: A * P_new = samples
+    // Least-squares fit: A * Pw_new = samplesW
     const A = [];
     for (let i = 0; i <= M; i++) {
         const xi = i / M;
-        A.push(NURBS.evaluateAll(newN, newP, xi, newKnotsArr, newWeights));
+        A.push(BasisFunctions.evaluateAll(newN, newP, xi, newKnotsArr));
     }
 
     // ATA and ATB
     const ATA = Array.from({ length: newN }, () => new Array(newN).fill(0));
     const ATBx = new Array(newN).fill(0);
     const ATBy = new Array(newN).fill(0);
+    const ATBw = new Array(newN).fill(0);
 
     for (let i = 0; i < newN; i++) {
         for (let j = 0; j < newN; j++) {
@@ -222,13 +237,15 @@ export function pRefine(degree, knots, points, weights) {
             for (let k = 0; k <= M; k++) s += A[k][i] * A[k][j];
             ATA[i][j] = s;
         }
-        let sx = 0, sy = 0;
+        let sx = 0, sy = 0, sw = 0;
         for (let k = 0; k <= M; k++) {
-            sx += A[k][i] * samples[k].x;
-            sy += A[k][i] * samples[k].y;
+            sx += A[k][i] * samplesW[k].wx;
+            sy += A[k][i] * samplesW[k].wy;
+            sw += A[k][i] * samplesW[k].w;
         }
         ATBx[i] = sx;
         ATBy[i] = sy;
+        ATBw[i] = sw;
     }
 
     const solveGauss = (matA, matB) => {
@@ -259,16 +276,24 @@ export function pRefine(degree, knots, points, weights) {
         return x;
     };
 
-    const newX = solveGauss(ATA, ATBx);
-    const newY = solveGauss(ATA, ATBy);
+    const newWx = solveGauss(ATA, ATBx);
+    const newWy = solveGauss(ATA, ATBy);
+    const newW  = solveGauss(ATA, ATBw);
 
     const newPoints = [];
-    for (let i = 0; i < newN; i++) newPoints.push({ x: newX[i], y: newY[i] });
+    const newWeights = [];
+    for (let i = 0; i < newN; i++) {
+        const wi = newW[i];
+        newWeights.push(wi);
+        newPoints.push({ x: newWx[i] / wi, y: newWy[i] / wi });
+    }
 
     // Pin endpoints
-    if (newPoints.length > 0 && samples.length > 0) {
-        newPoints[0] = { x: samples[0].x, y: samples[0].y };
-        newPoints[newN - 1] = { x: samples[M].x, y: samples[M].y };
+    if (newPoints.length > 0 && points.length > 0) {
+        newPoints[0] = { x: points[0].x, y: points[0].y };
+        newWeights[0] = weights[0];
+        newPoints[newN - 1] = { x: points[points.length - 1].x, y: points[points.length - 1].y };
+        newWeights[newN - 1] = weights[weights.length - 1];
     }
 
     return { degree: newP, knots: newKnotsArr, points: newPoints, weights: newWeights };
@@ -279,9 +304,10 @@ export function pRefine(degree, knots, points, weights) {
  * This yields higher continuity than h-then-p because knot insertion
  * after degree elevation preserves C^{p_new - 1} inter-element continuity.
  */
-export function kRefine(degree, knots, points, weights) {
-    // Step 1: p-refine
-    const elevated = pRefine(degree, knots, points, weights);
-    // Step 2: h-refine the elevated curve
-    return hRefine(elevated.degree, elevated.knots, elevated.points, elevated.weights);
+export function kRefine(degree, knots, points, weights, elevations = 1) {
+    let result = { degree, knots, points, weights };
+    for (let i = 0; i < elevations; i++) {
+        result = pRefine(result.degree, result.knots, result.points, result.weights);
+    }
+    return hRefine(result.degree, result.knots, result.points, result.weights);
 }
