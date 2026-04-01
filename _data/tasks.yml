@@ -171,7 +171,7 @@ tasks:
     status: To Do
     priority: High
     deadline: 2026-08-17
-    description: Write the full technical report covering methodology, results, benchmarks, and pedagogical application. Follow LMSSC report template.
+    description: Write the full technical report covering methodology, results, benchmarks, and pedagogical application. Follow EPN04 report template.
 
   - title: Develop Pedagogical Tutorials
     status: To Do

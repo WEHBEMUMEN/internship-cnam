@@ -1,0 +1,9 @@
+{
+  "title": "EPN04",
+  "category": "Department",
+  "body": "The 'Équipement pour la Performance et le Numerique' (EPN04) is a department/unit at Cnam (Paris) dedicated to advancing engineering performance through numerical methods and advanced simulation techniques. Its research focuses on multi-physics coupling, structural mechanics, and the Digital Twin methodology explored in this project.",
+  "related": [
+    { "slug": "Cnam" },
+    { "slug": "Digital Twin" }
+  ]
+}

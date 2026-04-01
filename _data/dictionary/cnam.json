@@ -1,8 +1,8 @@
 {
   "title": "Cnam",
   "category": "Lab",
-  "body": "The Conservatoire National des Arts et Métiers (Cnam) is a prestigious French public higher education institution and 'grand établissement' dedicated to professional training, research, and the dissemination of scientific and technical culture. It hosts the LMSSC laboratory where this research internship is conducted.",
+  "body": "The Conservatoire National des Arts et Métiers (Cnam) is a prestigious French public higher education institution and 'grand établissement' dedicated to professional training, research, and the dissemination of scientific and technical culture. It hosts the EPN04 department where this research internship is conducted.",
   "related": [
-    { "slug": "LMSSC" }
+    { "slug": "EPN04" }
   ]
 }
