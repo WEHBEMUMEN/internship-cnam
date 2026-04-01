@@ -72,22 +72,33 @@ tasks:
     deadline: 2026-03-26
     description: "Build interactive interface with time/parameter sliders and a live plot for the 1D simulation."
 
-  # ── IN PROGRESS ───────────────────────────────────────────────────────────
+  - title: "Phase 1.8: Circle Geometry & Refinement"
+    status: Done
+    priority: High
+    deadline: 2026-03-31
+    description: "Exact NURBS circle representation with interactive p, h, and k-refinement labs."
+
+  - title: "Phase 1.NL: Nonlinear 1D IGA & ROM"
+    status: Done
+    priority: High
+    deadline: 2026-04-01
+    description: "Full Newton-Raphson nonlinear solver for 1D structures with Real-Time NL-ROM projection."
+
   - title: "Phase 2A.1: 2D NURBS Surface Mapping"
-    status: In Progress
+    status: Done
     priority: High
     deadline: 2026-04-10
     description: Implement bivariate NURBS mapping $x(\xi, \eta)$ for 2D surface patches.
   
   - title: "Phase 2A.2: Compute Jacobians & Basis Derivatives"
-    status: To Do
+    status: Done
     priority: High
     deadline: 2026-04-14
     description: Develop routines for physical space derivatives of 2D basis functions.
 
-  # ── TO DO (Phase 2B — Full Order Model) ───────────────────────────────────
+  # ── IN PROGRESS ───────────────────────────────────────────────────────────
   - title: "Phase 2B.1: Assemble 2D Stiffness Matrix (K)"
-    status: To Do
+    status: In Progress
     priority: High
     deadline: 2026-04-21
     description: Assemble global stiffness matrix for a 2D cantilever plate or shell.
