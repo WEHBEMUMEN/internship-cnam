@@ -61,14 +61,13 @@ Use this document to track weekly goals, daily tasks, and notes from meetings wi
 **Primary Goal:** Complete literature review of primary papers + lock in software stack decision.
 
 ### 📋 Task Tracker
-- [ ] Finish reading Hoareau et al. 2025 with full annotations in `reference_catalog.md`.
-- [ ] Finish reading Cottrell et al. 2009 (focus chapters on IGA for structural mechanics).
-- [ ] Start reading Farhat et al. 2015 (ECSW — hyper-reduction foundations).
-- [ ] Decide on IGA solver: test Nutils installation locally.
-- [ ] Install pyMOR and run a simple POD example.
-- [ ] Write `docs/architecture.md` with the chosen software stack.
-- [ ] Write `docs/parameter_space.md` (based on Q1–Q2 answers from supervisor).
-- [ ] Update `_data/tasks.yml` with all Phase 2 sub-tasks.
+  - [x] Finish reading Hoareau et al. 2025 (nonlinear foundations).
+  - [x] Write `docs/architecture.md` with the chosen software stack.
+  - [x] Write `docs/parameter_space.md`.
+  - [x] Update `_data/tasks.yml` with all Phase 2 sub-tasks.
+  - [x] **Milestone:** Global Branding Transition (WEHBEMUMEN/LMSSC → WEHBE Mumen/EPN04).
+  - [x] **Milestone:** Completed Phase 1.8 (Circle) & Phase 1.NL (Nonlinear IGA/ROM 1D).
+  - [x] **Milestone:** Phase 2.0 2D NURBS Surface Mapping & Verification Lab.
 
 ### 🤝 Supervisor Meeting Notes
 **Date:** *(Fill in)*
@@ -77,6 +76,26 @@ Use this document to track weekly goals, daily tasks, and notes from meetings wi
 *(Fill in during meeting)*
 
 **Action items for Week 3:**
+- [ ] *(Fill in after meeting)*
+
+---
+
+## 📅 Week 3: April 6 – April 12, 2026
+**Primary Goal:** Transition to 2D Physics (Stiffness Assembly) and Snapshot Database Generation.
+
+### 📋 Task Tracker
+- [ ] Assemble 2D Stiffness Matrix (K) for the cantilever plate in `phase-2-core`.
+- [ ] Implement 2D Newton-Raphson solver for geometric nonlinearity.
+- [ ] Develop Python script for Latin Hypercube Sampling (LHS) of the parameter space.
+- [ ] Generate initial 50+ snapshots for the 2D benchmark.
+
+### 🤝 Supervisor Meeting Notes
+**Date:** *(Fill in)*
+
+**Notes:**
+*(Fill in during meeting)*
+
+**Action items for Week 4:**
 - [ ] *(Fill in after meeting)*
 
 ---
