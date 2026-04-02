@@ -453,6 +453,121 @@
             </p>
         </section>
 
+        <!-- Section 10: Parametrized Domains -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-shapes"></i> Parametrized Domains & Master Reference</h2>
+            <p>
+                When extending Non-Linear IGA beyond 1D beams to 2D continuous structures (like a parametrized "dogbone" tensile specimen), we face a new problem: the geometry boundaries themselves move as parameters change.
+            </p>
+            
+            <div class="note-box" style="border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.05);">
+                <h4><i class="fa-solid fa-expand"></i> The Moving Boundary Challenge</h4>
+                <p>
+                    If the parameter $\mu_1$ controls the "neck radius" of the dogbone, then changing $\mu_1$ physically alters the domain $\Omega(\mu)$. This means the mesh nodes change position for every new parameter value, making standard ROM techniques (which require a fixed nodal frame of reference) fail completely.
+                </p>
+            </div>
+
+            <div class="note-box-green">
+                <h4><i class="fa-solid fa-map-location-dot"></i> The IGA Master Domain Solution</h4>
+                <p>
+                    IGA solves this elegantly. Instead of formulating the problem on the moving physical domain $\Omega(\mu)$, we pull everything back to a fixed <strong>Master Reference Domain</strong> $\hat{\Omega}$ (the parametric space $\xi_1, \xi_2$).
+                </p>
+                <div class="math-card" style="margin-top: 15px; margin-bottom: 15px; padding: 20px;">
+                    $$\mathbf{x}(\xi, \mu) = \sum_{i=1}^n R_i(\xi) \mathbf{P}_i(\mu)$$
+                </div>
+                <p style="font-size: 0.95rem; color: var(--text-dim);">
+                    The control points $\mathbf{P}_i$ become functions of the parameters $\mu$, but the integration domain $\hat{\Omega}$ remains perfectly static!
+                </p>
+            </div>
+
+            <p>
+                This requires us to carefully track the <strong>Deformation Gradient/Jacobian ($\mathbf{J}$)</strong>. Because the mapping from $\hat{\Omega}$ to physical space now depends on $\mu$, the stiffness matrix generation must incorporate the parameter-dependent Jacobian at every integration point. While this makes offline assembly more complex, it guarantees an exact geometric representation of parameterized shapes without ever needing to remesh.
+            </p>
+
+            <!-- Dogbone Domain Mapping SVG -->
+            <div style="background: #020617; border-radius: 20px; padding: 30px; margin: 30px 0; border: 1px solid var(--border);">
+                <h4 style="color: var(--primary); margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-vector-square"></i> Visual: Master Domain → Physical Dogbone Mapping</h4>
+                <svg viewBox="0 0 800 320" style="width: 100%; max-width: 750px; margin: 0 auto; display: block;">
+                    <!-- Master Domain (unit square) -->
+                    <text x="130" y="22" fill="#3b82f6" font-size="15" font-weight="800" text-anchor="middle" font-family="Outfit, sans-serif">Master Domain Ω̂</text>
+                    <rect x="30" y="35" width="200" height="200" rx="4" fill="rgba(59,130,246,0.06)" stroke="#3b82f6" stroke-width="2.5"/>
+                    <!-- Grid lines -->
+                    <line x1="80" y1="35" x2="80" y2="235" stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+                    <line x1="130" y1="35" x2="130" y2="235" stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+                    <line x1="180" y1="35" x2="180" y2="235" stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+                    <line x1="30" y1="85" x2="230" y2="85" stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+                    <line x1="30" y1="135" x2="230" y2="135" stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+                    <line x1="30" y1="185" x2="230" y2="185" stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+                    <!-- Control points -->
+                    <circle cx="30" cy="35" r="4" fill="#3b82f6"/>
+                    <circle cx="80" cy="35" r="4" fill="#3b82f6"/>
+                    <circle cx="130" cy="35" r="4" fill="#3b82f6"/>
+                    <circle cx="180" cy="35" r="4" fill="#3b82f6"/>
+                    <circle cx="230" cy="35" r="4" fill="#3b82f6"/>
+                    <circle cx="30" cy="85" r="4" fill="#3b82f6"/>
+                    <circle cx="230" cy="85" r="4" fill="#3b82f6"/>
+                    <circle cx="30" cy="135" r="4" fill="#3b82f6"/>
+                    <circle cx="230" cy="135" r="4" fill="#3b82f6"/>
+                    <circle cx="30" cy="185" r="4" fill="#3b82f6"/>
+                    <circle cx="230" cy="185" r="4" fill="#3b82f6"/>
+                    <circle cx="30" cy="235" r="4" fill="#3b82f6"/>
+                    <circle cx="80" cy="235" r="4" fill="#3b82f6"/>
+                    <circle cx="130" cy="235" r="4" fill="#3b82f6"/>
+                    <circle cx="180" cy="235" r="4" fill="#3b82f6"/>
+                    <circle cx="230" cy="235" r="4" fill="#3b82f6"/>
+                    <!-- Axis labels -->
+                    <text x="130" y="260" fill="#94a3b8" font-size="12" text-anchor="middle" font-family="JetBrains Mono">ξ₁</text>
+                    <text x="15" y="140" fill="#94a3b8" font-size="12" text-anchor="middle" font-family="JetBrains Mono">ξ₂</text>
+
+                    <!-- Arrow -->
+                    <path d="M 260 135 C 310 80, 370 80, 420 135" stroke="#f59e0b" stroke-width="3" fill="none" marker-end="url(#arrowMap)">
+                        <animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.5s" repeatCount="indefinite"/>
+                    </path>
+                    <text x="340" y="75" fill="#f59e0b" font-size="13" font-weight="800" text-anchor="middle" font-family="Outfit, sans-serif">IGA Map</text>
+                    <text x="340" y="95" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="Inter, sans-serif">x(ξ, μ)</text>
+                    <defs><marker id="arrowMap" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/></marker></defs>
+
+                    <!-- Physical Dogbone Domain -->
+                    <text x="600" y="22" fill="#f43f5e" font-size="15" font-weight="800" text-anchor="middle" font-family="Outfit, sans-serif">Physical Domain Ω(μ)</text>
+                    <!-- Dogbone shape -->
+                    <path d="M 450 55 L 530 55 Q 570 55 570 75 Q 570 95 540 105 L 530 110 Q 520 115 520 135 Q 520 155 530 160 L 540 165 Q 570 175 570 195 Q 570 215 530 215 L 450 215 Q 430 215 430 195 Q 430 175 460 165 L 470 160 Q 480 155 480 135 Q 480 115 470 110 L 460 105 Q 430 95 430 75 Q 430 55 450 55 Z"
+                          fill="rgba(244,63,94,0.08)" stroke="#f43f5e" stroke-width="2.5"/>
+                    <!-- Internal grid (deformed) -->
+                    <path d="M 465 55 Q 465 135 465 215" stroke="rgba(244,63,94,0.15)" stroke-width="1" fill="none"/>
+                    <path d="M 500 55 Q 500 135 500 215" stroke="rgba(244,63,94,0.15)" stroke-width="1" fill="none"/>
+                    <path d="M 535 55 Q 535 135 535 215" stroke="rgba(244,63,94,0.15)" stroke-width="1" fill="none"/>
+                    <path d="M 430 85 Q 500 85 570 85" stroke="rgba(244,63,94,0.15)" stroke-width="1" fill="none"/>
+                    <path d="M 475 135 Q 500 135 525 135" stroke="rgba(244,63,94,0.15)" stroke-width="1" fill="none"/>
+                    <path d="M 430 185 Q 500 185 570 185" stroke="rgba(244,63,94,0.15)" stroke-width="1" fill="none"/>
+                    <!-- Neck annotation -->
+                    <line x1="480" y1="135" x2="520" y2="135" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>
+                    <text x="500" y="148" fill="#f59e0b" font-size="10" text-anchor="middle" font-family="JetBrains Mono">μ₁ (neck)</text>
+                    <!-- Dimension arrows for mu parameter -->
+                    <line x1="480" y1="120" x2="480" y2="150" stroke="#f59e0b" stroke-width="1">
+                        <animate attributeName="x1" values="478;482;478" dur="2s" repeatCount="indefinite"/>
+                        <animate attributeName="x2" values="478;482;478" dur="2s" repeatCount="indefinite"/>
+                    </line>
+                    <line x1="520" y1="120" x2="520" y2="150" stroke="#f59e0b" stroke-width="1">
+                        <animate attributeName="x1" values="522;518;522" dur="2s" repeatCount="indefinite"/>
+                        <animate attributeName="x2" values="522;518;522" dur="2s" repeatCount="indefinite"/>
+                    </line>
+                    <!-- Stress arrows -->
+                    <line x1="415" y1="135" x2="395" y2="135" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowRed)"/>
+                    <line x1="585" y1="135" x2="605" y2="135" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowRed)"/>
+                    <text x="385" y="125" fill="#ef4444" font-size="9" text-anchor="end" font-family="Inter, sans-serif">Tension</text>
+                    <text x="615" y="125" fill="#ef4444" font-size="9" text-anchor="start" font-family="Inter, sans-serif">Tension</text>
+                    <defs><marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/></marker></defs>
+
+                    <!-- Bottom labels -->
+                    <rect x="180" y="275" width="440" height="35" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+                    <text x="400" y="298" fill="#e2e8f0" font-size="13" text-anchor="middle" font-family="Inter, sans-serif">
+                        <tspan fill="#3b82f6" font-weight="700">Fixed integration</tspan> on Ω̂  →  
+                        <tspan fill="#f43f5e" font-weight="700">Deformed geometry</tspan> via P<tspan baseline-shift="sub" font-size="9">i</tspan>(μ)
+                    </text>
+                </svg>
+            </div>
+        </section>
+
         <div class="footer-nav">
             <a href="iga-sim-nl/index.html" class="btn btn-primary">
                 <i class="fa-solid fa-flask"></i> Launch NL Benchmark
