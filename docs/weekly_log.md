@@ -66,6 +66,7 @@ Use this document to track weekly goals, daily tasks, and notes from meetings wi
   - [x] Write `docs/parameter_space.md`.
   - [x] Update `_data/tasks.yml` with all Phase 2 sub-tasks.
   - [x] **Milestone:** Updated Project Branding (WEHBE Mumen & EPN04).
+  - [x] **Milestone:** Phase 1.7 Engine-Theory Alignment (Gauss Quadrature, Hyper-reduction, Newmark-beta Dynamics).
   - [x] **Milestone:** Completed Phase 1.8 (Circle) & Phase 1.NL (Nonlinear IGA/ROM 1D).
   - [x] **Milestone:** Phase 2.0 2D NURBS Surface Mapping & Verification Lab.
 

@@ -40,51 +40,236 @@ export class PhysicsEngine {
     }
 
     /**
-     * Assembles the Global Stiffness Matrix using Gauss Quadrature.
+     * Assembles the Global Stiffness Matrix using Gauss-Legendre Quadrature.
+     * Evaluates integrals exactly knot-span by knot-span.
      * Implements the 1/J^3 transformation for Euler-Bernoulli bending.
      */
     assembleStiffness() {
         const numCP = this.nurbs.controlPoints.length;
         const K = Array.from({ length: numCP }, () => new Float64Array(numCP));
 
-        // Use high-density sampling for integration to capture Jacobian variations
-        const samples = 150, dXi = 1.0 / samples;
+        // Gauss-Legendre points and weights for [-1, 1]
+        const gaussData = {
+            1: { pts: [0], w: [2] },
+            2: { pts: [-0.577350269, 0.577350269], w: [1, 1] },
+            3: { pts: [-0.774596669, 0, 0.774596669], w: [0.555555556, 0.888888889, 0.555555556] },
+            4: { pts: [-0.861136312, -0.339981044, 0.339981044, 0.861136312], w: [0.347854845, 0.652145155, 0.652145155, 0.347854845] },
+            5: { pts: [-0.906179846, -0.538469310, 0, 0.538469310, 0.906179846], w: [0.236926885, 0.478628670, 0.568888889, 0.478628670, 0.236926885] },
+            6: { pts: [-0.932469514,-0.661209386,-0.238619186,0.238619186,0.661209386,0.932469514], w: [0.171324492,0.360761573,0.467913935,0.467913935,0.360761573,0.171324492]}
+        };
 
-        for (let s = 0; s <= samples; s++) {
-            const xi = Math.min(s * dXi, 0.9999);
-            const weight = (s === 0 || s === samples) ? 0.5 * dXi : dXi;
-            const J = this.calculateJacobian(xi);
+        const p = this.nurbs.degree;
+        const knots = this.nurbs.knots;
+        // Exact integration requires p+1 points
+        const ng = Math.min(p + 1, 6); 
+        const gPts = gaussData[ng].pts;
+        const gW = gaussData[ng].w;
 
-            if (this.physicsMode === 'bending') {
-                // Curvature derivatives (Bi)
-                const B = this.nurbs.evaluateAllBasisDerivatives(xi, 2);
+        // Iterate over non-empty knot spans
+        for (let span = 0; span < knots.length - 1; span++) {
+            const xiK = knots[span];
+            const xiK1 = knots[span + 1];
+            if (xiK1 - xiK < 1e-10) continue; // Skip zero-length knot spans
 
-                // Theory 1.7: Curvature transforms as (1/J^2). 
-                // Differential dx transforms as (J * dXi).
-                // Result: K = integral( EI * (B/J^2) * (B/J^2) * J ) dXi = integral( EI * B^2 / J^3 ) dXi
-                const stiffnessFactor = this.flexuralRigidity / (J * J * J);
+            // Map standard [-1, 1] to arbitrary [xiK, xiK1]
+            const mapScale = (xiK1 - xiK) / 2.0;
+            const mapOffset = (xiK1 + xiK) / 2.0;
 
-                for (let i = 0; i < numCP; i++) {
-                    for (let j = 0; j < numCP; j++) {
-                        K[i][j] += B[i] * B[j] * stiffnessFactor * weight;
+            for (let g = 0; g < ng; g++) {
+                const xi = gPts[g] * mapScale + mapOffset;
+                const weight = gW[g] * mapScale; // scaled by domain mapping derivative
+                const J = this.calculateJacobian(xi);
+
+                if (this.physicsMode === 'bending') {
+                    const B = this.nurbs.evaluateAllBasisDerivatives(xi, 2);
+                    const stiffnessFactor = this.flexuralRigidity / (J * J * J);
+
+                    for (let i = 0; i < numCP; i++) {
+                        for (let j = 0; j < numCP; j++) {
+                            K[i][j] += B[i] * B[j] * stiffnessFactor * weight;
+                        }
                     }
-                }
-            } else {
-                // Axial strain derivatives (Bi)
-                const B = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
+                } else {
+                    // Axial mode
+                    const B = this.nurbs.evaluateAllBasisDerivatives(xi, 1);
+                    const stiffnessFactor = this.axialRigidity / J;
 
-                // Theory 1.7: Axial strain transforms as (1/J).
-                // Result: K = integral( EA * (B/J) * (B/J) * J ) dXi = integral( EA * B^2 / J ) dXi
-                const stiffnessFactor = this.axialRigidity / J;
-
-                for (let i = 0; i < numCP; i++) {
-                    for (let j = 0; j < numCP; j++) {
-                        K[i][j] += B[i] * B[j] * stiffnessFactor * weight;
+                    for (let i = 0; i < numCP; i++) {
+                        for (let j = 0; j < numCP; j++) {
+                            K[i][j] += B[i] * B[j] * stiffnessFactor * weight;
+                        }
                     }
                 }
             }
         }
         return K;
+    }
+
+    /**
+     * Assembles the Consistent Mass Matrix using Gauss-Legendre Quadrature.
+     * M_ij = integral( rho * A * N_i * N_j * J ) dXi
+     */
+    assembleMass() {
+        const numCP = this.nurbs.controlPoints.length;
+        const M = Array.from({ length: numCP }, () => new Float64Array(numCP));
+
+        // Using same Gauss data as stiffness
+        const gaussData = {
+            1: { pts: [0], w: [2] },
+            2: { pts: [-0.577350269, 0.577350269], w: [1, 1] },
+            3: { pts: [-0.774596669, 0, 0.774596669], w: [0.555555556, 0.888888889, 0.555555556] },
+            4: { pts: [-0.861136312, -0.339981044, 0.339981044, 0.861136312], w: [0.347854845, 0.652145155, 0.652145155, 0.347854845] },
+            5: { pts: [-0.906179846, -0.538469310, 0, 0.538469310, 0.906179846], w: [0.236926885, 0.478628670, 0.568888889, 0.478628670, 0.236926885] },
+            6: { pts: [-0.932469514,-0.661209386,-0.238619186,0.238619186,0.661209386,0.932469514], w: [0.171324492,0.360761573,0.467913935,0.467913935,0.360761573,0.171324492]}
+        };
+
+        const p = this.nurbs.degree;
+        const knots = this.nurbs.knots;
+        const ng = Math.min(p + 1, 6);
+        const gPts = gaussData[ng].pts;
+        const gW = gaussData[ng].w;
+        const rhoA = 50.0; // Increased artificial mass for slower, visual browser oscillations
+
+        for (let span = 0; span < knots.length - 1; span++) {
+            const xiK = knots[span];
+            const xiK1 = knots[span + 1];
+            if (xiK1 - xiK < 1e-10) continue;
+
+            const mapScale = (xiK1 - xiK) / 2.0;
+            const mapOffset = (xiK1 + xiK) / 2.0;
+
+            for (let g = 0; g < ng; g++) {
+                const xi = gPts[g] * mapScale + mapOffset;
+                const weight = gW[g] * mapScale;
+                const J = this.calculateJacobian(xi);
+                const R = this.nurbs.evaluateAllBasis(xi);
+
+                for (let i = 0; i < numCP; i++) {
+                    for (let j = 0; j < numCP; j++) {
+                        M[i][j] += R[i] * R[j] * rhoA * J * weight;
+                    }
+                }
+            }
+        }
+        return M;
+    }
+
+    resetDynamics() {
+        const numCP = this.nurbs.controlPoints.length;
+        this.u_t = new Float64Array(numCP).fill(0);
+        this.v_t = new Float64Array(numCP).fill(0);
+        this.a_t = new Float64Array(numCP).fill(0);
+        this.K_dyn = null;
+        this.M_dyn = null;
+        this.dynBCsLength = -1;
+    }
+
+    /**
+     * Solves structural dynamics via Newmark-beta method.
+     * Integrates generalized equation of motion: M*a + C*v + K*u = F
+     */
+    solveDynamicsNewmark(loadF, bcs, dt, useDamping) {
+        const numCP = this.nurbs.controlPoints.length;
+
+        // Init states if missing or changed topology
+        if (!this.u_t || this.u_t.length !== numCP || this.dynBCsLength !== bcs.length || !this.K_dyn) {
+            this.resetDynamics();
+            this.K_dyn = this.assembleStiffness();
+            this.M_dyn = this.assembleMass();
+            this.dynBCsLength = bcs.length;
+
+            // Apply penalty BCs to K and M
+            bcs.forEach(bc => {
+                const idx = bc.index;
+                if (idx < 0 || idx >= numCP) return;
+                for (let j = 0; j < numCP; j++) {
+                    this.K_dyn[idx][j] = 0; this.K_dyn[j][idx] = 0;
+                    this.M_dyn[idx][j] = 0; this.M_dyn[j][idx] = 0;
+                }
+                this.K_dyn[idx][idx] = 1.0;
+                this.M_dyn[idx][idx] = 1.0; 
+            });
+        }
+
+        // Apply BCs to the current load vector
+        const F_t = new Float64Array(loadF);
+        bcs.forEach(bc => {
+            const idx = bc.index;
+            if (idx >= 0 && idx < numCP) F_t[idx] = bc.value; 
+        });
+
+        // Newmark params (Average Acceleration Method)
+        const beta = 0.25;
+        const gamma = 0.5;
+
+        // Rayleigh Damping matrix C = alpha*M + betaR*K
+        const alpha = useDamping ? 0.2 : 0;
+        const betaR = useDamping ? 0.002 : 0;
+
+        const a0 = 1.0 / (beta * dt * dt);
+        const a1 = gamma / (beta * dt);
+        const a2 = 1.0 / (beta * dt);
+        const a3 = 1.0 / (2 * beta) - 1.0;
+        const a4 = gamma / beta - 1.0;
+        const a5 = (dt / 2.0) * (gamma / beta - 2.0);
+
+        const K_hat = Array.from({ length: numCP }, () => new Float64Array(numCP));
+        const F_hat = new Float64Array(numCP);
+
+        for (let i = 0; i < numCP; i++) {
+            let sumM_u = 0, sumM_v = 0, sumM_a = 0;
+            let sumC_u = 0, sumC_v = 0, sumC_a = 0;
+
+            for (let j = 0; j < numCP; j++) {
+                const M_ij = this.M_dyn[i][j];
+                const K_ij = this.K_dyn[i][j];
+                const C_ij = alpha * M_ij + betaR * K_ij;
+
+                K_hat[i][j] = K_ij + a0 * M_ij + a1 * C_ij;
+
+                sumM_u += M_ij * this.u_t[j];
+                sumM_v += M_ij * this.v_t[j];
+                sumM_a += M_ij * this.a_t[j];
+
+                sumC_u += C_ij * this.u_t[j];
+                sumC_v += C_ij * this.v_t[j];
+                sumC_a += C_ij * this.a_t[j];
+            }
+
+            F_hat[i] = F_t[i] 
+                + M_ij_term(a0, a2, a3, sumM_u, sumM_v, sumM_a) 
+                + C_ij_term(a1, a4, a5, sumC_u, sumC_v, sumC_a);
+        }
+
+        // Helper closures for cleaner addition
+        function M_ij_term(a_0, a_2, a_3, s_u, s_v, s_a) { return a_0 * s_u + a_2 * s_v + a_3 * s_a; }
+        function C_ij_term(a_1, a_4, a_5, s_u, s_v, s_a) { return a_1 * s_u + a_4 * s_v + a_5 * s_a; }
+
+        bcs.forEach(bc => {
+            const idx = bc.index;
+            if (idx < 0 || idx >= numCP) return;
+            for (let j = 0; j < numCP; j++) {
+                if (j !== idx) {
+                    F_hat[j] -= K_hat[j][idx] * bc.value;
+                    K_hat[idx][j] = 0; K_hat[j][idx] = 0;
+                }
+            }
+            K_hat[idx][idx] = 1.0;
+            F_hat[idx] = bc.value;
+        });
+
+        const u_next = this.gaussianElimination(K_hat, F_hat);
+
+        for (let i = 0; i < numCP; i++) {
+            const a_next = a0 * (u_next[i] - this.u_t[i]) - a2 * this.v_t[i] - a3 * this.a_t[i];
+            const v_next = this.v_t[i] + dt * ((1 - gamma) * this.a_t[i] + gamma * a_next);
+
+            this.a_t[i] = a_next;
+            this.v_t[i] = v_next;
+            this.u_t[i] = u_next[i];
+        }
+
+        return new Float64Array(u_next);
     }
 
     /**
@@ -153,11 +338,25 @@ export class PhysicsEngine {
             }
         }
 
-        // 2. Reduced Force: Fr = Phi^T * F
+        // 2. Reduced Force: Fr = Phi^T * F (Hyper-reduction Selective Extraction)
+        // Extract only the rows of Phi corresponding to the local support of the load
         const Fr = new Float64Array(modes);
+        
+        // Find active degrees of freedom (non-zero load entries)
+        const activeIndices = [];
+        for (let j = 0; j < numCP; j++) {
+            if (Math.abs(loadF[j]) > 1e-10) {
+                activeIndices.push(j);
+            }
+        }
+
+        // Fast extraction inner product 
         for (let i = 0; i < modes; i++) {
             let val = 0;
-            for (let j = 0; j < numCP; j++) val += phi[j][i] * loadF[j];
+            for (let k = 0; k < activeIndices.length; k++) {
+                const j = activeIndices[k];
+                val += phi[j][i] * loadF[j];
+            }
             Fr[i] = val;
         }
 

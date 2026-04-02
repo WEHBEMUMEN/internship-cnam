@@ -22,7 +22,9 @@ class MechanicsApp {
         this.time = 0;
         this.animSpeed = 1.0;
         this.isDamping = true;
-        this.dynamicAmplitude = 1.0;
+        this.impulseTimeLeft = 0;
+        this.impulseMag = 300;
+        this.impulsePos = 0.5;
 
         this.deflection = null;
         this.femDeflection = null;
@@ -109,6 +111,8 @@ class MechanicsApp {
         }
 
         const loadF = this.physics.assembleIGALoad(this.loadPos, this.loadMag);
+        this.igaBCs = igaBCs;
+        this.loadF = loadF;
         this.deflection = this.physics.solveStatics(loadF, igaBCs);
         
         // Solve ROM version
@@ -215,11 +219,35 @@ class MechanicsApp {
         document.getElementById('mode-dynamics').addEventListener('click', (e) => {
             this.isStatics = false;
             this.time = 0;
-            this.dynamicAmplitude = 1.0;
+            this.impulseTimeLeft = 0;
+
+            // Zero out static load to completely isolate the impulse behavior
+            this.loadMag = 0;
+            const magInput = document.getElementById('input-load-mag');
+            if (magInput) magInput.value = 0;
+            const magVal = document.getElementById('load-mag-val');
+            if (magVal) magVal.textContent = "0";
+
+            this.physics.resetDynamics(); // Reset newmark state
             e.target.classList.add('active');
             document.getElementById('mode-statics').classList.remove('active');
             document.getElementById('dynamics-settings').style.display = 'block';
             this.updatePhysics();
+        });
+
+        document.getElementById('input-impulse-pos')?.addEventListener('input', (e) => {
+            this.impulsePos = parseFloat(e.target.value);
+            document.getElementById('impulse-pos-val').textContent = e.target.value;
+        });
+
+        document.getElementById('input-impulse-mag')?.addEventListener('input', (e) => {
+            this.impulseMag = parseFloat(e.target.value);
+            document.getElementById('impulse-mag-val').textContent = e.target.value;
+        });
+
+        document.getElementById('btn-impulse')?.addEventListener('click', () => {
+            // Apply a force kick for exactly 0.1s
+            this.impulseTimeLeft = 0.1;
         });
 
         document.getElementById('btn-reset').addEventListener('click', () => location.reload());
@@ -263,11 +291,14 @@ class MechanicsApp {
         this.canvas.height = this.canvas.parentElement.clientHeight;
     }
 
-    drawLoadVector(renderedScale) {
-        const currentLoadPos = this.physicsMode === 'axial' ? 1.0 : this.loadPos;
+    drawLoadVector(renderedScale, customPos = null, customMag = null) {
+        const pos = customPos !== null ? customPos : this.loadPos;
+        const mag = customMag !== null ? customMag : this.loadMag;
+        
+        const currentLoadPos = this.physicsMode === 'axial' ? 1.0 : pos;
         const pt = this.plot.worldToScreen(currentLoadPos, 0.5);
         // Reduced the multiplier so the red arrow isn't giant
-        const length = (this.loadMag / 5.0) * this.plot.camera.zoom; 
+        const length = (mag / 5.0) * this.plot.camera.zoom; 
         
         this.ctx.strokeStyle = '#ef4444';
         this.ctx.lineWidth = 3;
@@ -307,17 +338,34 @@ class MechanicsApp {
         } else if (isBasisView) {
             this.plot.drawBasis(this.nurbs);
         } else {
-            let dynamicScale = 1.0;
-            if (!this.isStatics) {
-                this.time += 0.05 * this.animSpeed;
-                dynamicScale = Math.sin(this.time) * (this.isDamping ? (this.dynamicAmplitude *= 0.99) : 1.0);
+            let renderedScale = this.visualScale * 0.005;
+            let currentDeflection = this.deflection;
+
+            if (!this.isStatics && this.loadF && this.igaBCs) {
+                // Newmark-beta Physics integration 
+                // Using a fine dt = 0.01 for accurate time-stepping
+                const dt = 0.01 * this.animSpeed;
+                this.time += dt;
+
+                // Base constant load (step load)
+                let F_t = new Float64Array(this.loadF.length);
+                for(let i = 0; i < this.loadF.length; i++) F_t[i] = this.loadF[i];
+
+                // Add impulse kick if currently active
+                if (this.impulseTimeLeft > 0) {
+                    this.impulseTimeLeft -= dt;
+                    const impulseForce = this.physics.assembleIGALoad(this.impulsePos, this.impulseMag);
+                    for(let i = 0; i < F_t.length; i++) {
+                        F_t[i] += impulseForce[i];
+                    }
+                }
+
+                currentDeflection = this.physics.solveDynamicsNewmark(F_t, this.igaBCs, dt, this.isDamping);
             }
 
-            const renderedScale = this.visualScale * 0.005 * dynamicScale;
-
-            if (this.deflection) {
+            if (currentDeflection) {
                 const shiftedROM = this.nurbs.controlPoints.map((cp, i) => {
-                    const disp = this.romDeflection ? this.romDeflection[i] : 0;
+                    const disp = this.romDeflection && this.isStatics ? this.romDeflection[i] : currentDeflection[i];
                     if (this.physicsMode === 'axial') return { x: cp.x + (disp * renderedScale), y: 0.5, w: cp.w };
                     return { x: cp.x, y: 0.5 - (disp * renderedScale), w: cp.w };
                 });
@@ -325,8 +373,8 @@ class MechanicsApp {
                 this.plot.drawCurve(romCurve, 'rgba(59, 130, 246, 0.4)');
 
                 const shiftedCPs = this.nurbs.controlPoints.map((cp, i) => {
-                    if (this.physicsMode === 'axial') return { x: cp.x + (this.deflection[i] * renderedScale), y: 0.5, w: cp.w };
-                    return { x: cp.x, y: 0.5 - (this.deflection[i] * renderedScale), w: cp.w };
+                    if (this.physicsMode === 'axial') return { x: cp.x + (currentDeflection[i] * renderedScale), y: 0.5, w: cp.w };
+                    return { x: cp.x, y: 0.5 - (currentDeflection[i] * renderedScale), w: cp.w };
                 });
                 const tempNurbs = new NURBSEngine(this.nurbs.degree, this.nurbs.knots, shiftedCPs);
                 this.plot.drawCurve(tempNurbs, '#f8fafc');
@@ -336,7 +384,11 @@ class MechanicsApp {
                 }
             }
 
-            this.drawLoadVector(renderedScale);
+            if (this.impulseTimeLeft > 0) {
+                this.drawLoadVector(renderedScale, this.impulsePos, this.impulseMag);
+            } else if (this.loadMag !== 0) {
+                this.drawLoadVector(renderedScale);
+            }
         }
 
         this.plot.drawCrosshair();

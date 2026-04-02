@@ -136,8 +136,14 @@
                         </label>
                     </div>
 
-                    <button id="btn-impulse" class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 0.8rem;">
-                        <i class="fa-solid fa-hand-pointer"></i> Re-Trigger Impulse
+                    <label style="margin-top: 15px; display: block; font-size: 0.85rem; color: var(--text-dim);">Impulse Position: <span id="impulse-pos-val">0.5</span></label>
+                    <input type="range" id="input-impulse-pos" min="0.1" max="0.9" step="0.05" value="0.5" style="margin-bottom: 5px;">
+
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-dim);">Impulse Intensity: <span id="impulse-mag-val">300</span></label>
+                    <input type="range" id="input-impulse-mag" min="-1500" max="1500" step="50" value="300" style="margin-bottom: 15px;">
+
+                    <button id="btn-impulse" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;">
+                        <i class="fa-solid fa-hand-pointer"></i> Trigger Impulse
                     </button>
                 </div>
 
