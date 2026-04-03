@@ -277,17 +277,34 @@
         </h3>
         
         <div class="grid">
-          <!-- Active 2D Expansion -->
-          <div class="card reveal reveal-up">
+          <!-- Phase 2.1: Surface Mapping -->
+          <div class="card reveal reveal-up" style="border-top: 4px solid #3b82f6; background: linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, rgba(15, 23, 42, 0) 100%);">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-layer-group" style="font-size: 2rem; color: #3b82f6;"></i>
-                <span class="badge" style="font-size: 0.7rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);">Phase 2.1</span>
+                <span class="badge" style="font-size: 0.7rem; background: #3b82f6; color: #fff; border: none;">ACTIVE</span>
             </div>
-            <h3>2D Geometry Core</h3>
-            <p>NURBS surface mapping via tensor-product basis functions. Foundation for 2D/3D structural physics.</p>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                <span class="badge" style="font-size: 0.6rem; padding: 2px 8px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);">PHASE 2.1</span>
+                <span class="badge" style="font-size: 0.6rem; padding: 2px 8px; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">COMPLETE</span>
+            </div>
+            <h3>2.1 Surface Mapping Lab</h3>
+            <p>Bivariate NURBS mapping via tensor-product basis functions. Interactive 3D surface exploration with real-time Jacobian distortion tracking.</p>
             <div class="app-actions">
-              <a href="phase-2-core/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #3b82f6;">Launch Simulation <i class="fa-solid fa-rocket" style="margin-left: 8px;"></i></a>
+              <a href="iga-sim-2.1/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #3b82f6;">Launch 2.1 Lab <i class="fa-solid fa-cube" style="margin-left: 8px;"></i></a>
               <a href="theory-2.1.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+
+          <!-- Phase 2.2: Surface Refinement (Upcoming) -->
+          <div class="card reveal reveal-up" style="opacity: 0.6; filter: grayscale(1);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-arrows-up-down-left-right" style="font-size: 2rem; color: #94a3b8;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);">Phase 2.2</span>
+            </div>
+            <h3>Surface Refinement (h/p)</h3>
+            <p>Implementing 2D knot insertion and degree elevation for optimal surface resolution and error convergence.</p>
+            <div class="app-actions">
+                <button class="btn btn-outline btn-center" style="width: 100%; cursor: not-allowed;" disabled>Researching <i class="fa-solid fa-flask" style="margin-left: 8px;"></i></button>
             </div>
           </div>
         </div>
