@@ -1,8 +1,10 @@
 
-// Verification Lab 2.1 | Surface Mapping Foundations
-// Phase 2.1 | Computational Core
+// Verification Lab 2.2 | p-Refinement (Degree Elevation)
+// Phase 2.2 | Computational Core
 
 const engine = new NURBS2D();
+
+// Start with a simple sheet
 let patch = NURBSPresets.generateSheet();
 
 // --- Three.js Setup ---
@@ -178,6 +180,13 @@ transformControls.addEventListener('objectChange', () => {
         updateGrid();
     }
 });
+
+// Operations
+document.getElementById('refine-p').onclick = () => {
+    engine.elevateDegree(patch, 'U');
+    engine.elevateDegree(patch, 'V');
+    fullRebuild();
+};
 
 document.getElementById('reset-surface').onclick = () => {
     patch = NURBSPresets.generateSheet();

@@ -1,6 +1,6 @@
 
-// Verification Lab 2.1 | Surface Mapping Foundations
-// Phase 2.1 | Computational Core
+// Verification Lab 2.3 | h-Refinement (Knot Insertion)
+// Phase 2.3 | Computational Core
 
 const engine = new NURBS2D();
 let patch = NURBSPresets.generateSheet();
@@ -68,7 +68,7 @@ function createSurface() {
             
             const detJ = engine.getJacobianDeterminant(patch, u, v);
             const val = Math.min(Math.max(detJ / 100, 0.0), 1.0);
-            colors.push(0.1, 0.4, 0.2 + 0.8 * val); 
+            colors.push(0.1, 0.5, 0.2 + 0.8 * val); 
         }
     }
 
@@ -89,14 +89,14 @@ function createSurface() {
     geometry.computeVertexNormals();
 
     const material = new THREE.MeshStandardMaterial({
-        vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.85
+        vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.8
     });
     
     surfaceMesh = new THREE.Mesh(geometry, material);
     scene.add(surfaceMesh);
 
     if (document.getElementById('show-wireframe').checked) {
-        wireframeOverlay = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.2 }));
+        wireframeOverlay = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.2 }));
         scene.add(wireframeOverlay);
     }
 }
@@ -108,8 +108,8 @@ function updateGrid() {
     const m = patch.controlPoints[0].length;
 
     if (pointMeshes.length === 0) {
-        const sphereGeom = new THREE.SphereGeometry(0.5, 12, 12);
-        const sphereMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+        const sphereGeom = new THREE.SphereGeometry(0.4, 12, 12);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0x10b981 }); // Greenish for h-refine
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < m; j++) {
                 const sp = new THREE.Mesh(sphereGeom, sphereMat.clone());
@@ -160,11 +160,11 @@ function onPointerDown(event) {
     if (intersects.length > 0) {
         const s = intersects[0].object;
         transformControls.attach(s);
-        pointMeshes.forEach(p => p.material.color.set(0x3b82f6)); 
+        pointMeshes.forEach(p => p.material.color.set(0x10b981)); 
         s.material.color.set(0xffffff); 
     } else if (!transformControls.dragging) {
         transformControls.detach();
-        pointMeshes.forEach(p => p.material.color.set(0x3b82f6));
+        pointMeshes.forEach(p => p.material.color.set(0x10b981));
     }
 }
 
@@ -178,6 +178,13 @@ transformControls.addEventListener('objectChange', () => {
         updateGrid();
     }
 });
+
+// Operations
+document.getElementById('refine-h').onclick = () => {
+    engine.insertKnotU(patch, 0.5);
+    engine.insertKnotV(patch, 0.5);
+    fullRebuild();
+};
 
 document.getElementById('reset-surface').onclick = () => {
     patch = NURBSPresets.generateSheet();

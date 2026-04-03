@@ -1,15 +1,15 @@
 
-// Verification Lab 2.1 | Surface Mapping Foundations
-// Phase 2.1 | Computational Core
+// Verification Lab 2.4 | k-Refinement & Exact Primitives
+// Phase 2.4 | Computational Core
 
 const engine = new NURBS2D();
-let patch = NURBSPresets.generateSheet();
+let patch = NURBSPresets.generateSphere(); // Default to sphere for 2.4
 
 // --- Three.js Setup ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020617);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-camera.position.set(40, 40, 60);
+camera.position.set(40, 40, 40);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -21,7 +21,7 @@ scene.add(transformControls);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 const dLight = new THREE.DirectionalLight(0xffffff, 0.8);
-dLight.position.set(20, 100, 20);
+dLight.position.set(50, 100, 50);
 scene.add(dLight);
 scene.add(new THREE.GridHelper(100, 20, 0x334155, 0x1e293b));
 
@@ -68,7 +68,7 @@ function createSurface() {
             
             const detJ = engine.getJacobianDeterminant(patch, u, v);
             const val = Math.min(Math.max(detJ / 100, 0.0), 1.0);
-            colors.push(0.1, 0.4, 0.2 + 0.8 * val); 
+            colors.push(0.4 * val + 0.1, 0.2, 0.8 * val + 0.2); // Purple theme
         }
     }
 
@@ -89,14 +89,14 @@ function createSurface() {
     geometry.computeVertexNormals();
 
     const material = new THREE.MeshStandardMaterial({
-        vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.85
+        vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.8
     });
     
     surfaceMesh = new THREE.Mesh(geometry, material);
     scene.add(surfaceMesh);
 
     if (document.getElementById('show-wireframe').checked) {
-        wireframeOverlay = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.2 }));
+        wireframeOverlay = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.2 }));
         scene.add(wireframeOverlay);
     }
 }
@@ -108,8 +108,8 @@ function updateGrid() {
     const m = patch.controlPoints[0].length;
 
     if (pointMeshes.length === 0) {
-        const sphereGeom = new THREE.SphereGeometry(0.5, 12, 12);
-        const sphereMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+        const sphereGeom = new THREE.SphereGeometry(0.4, 12, 12);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6 });
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < m; j++) {
                 const sp = new THREE.Mesh(sphereGeom, sphereMat.clone());
@@ -160,11 +160,11 @@ function onPointerDown(event) {
     if (intersects.length > 0) {
         const s = intersects[0].object;
         transformControls.attach(s);
-        pointMeshes.forEach(p => p.material.color.set(0x3b82f6)); 
+        pointMeshes.forEach(p => p.material.color.set(0x8b5cf6)); 
         s.material.color.set(0xffffff); 
     } else if (!transformControls.dragging) {
         transformControls.detach();
-        pointMeshes.forEach(p => p.material.color.set(0x3b82f6));
+        pointMeshes.forEach(p => p.material.color.set(0x8b5cf6));
     }
 }
 
@@ -179,8 +179,18 @@ transformControls.addEventListener('objectChange', () => {
     }
 });
 
+// Operations
+document.getElementById('load-sphere').onclick = () => {
+    patch = NURBSPresets.generateSphere();
+    fullRebuild();
+};
+document.getElementById('refine-k').onclick = () => {
+    engine.kRefine(patch, 0.5, 0.5);
+    fullRebuild();
+};
+
 document.getElementById('reset-surface').onclick = () => {
-    patch = NURBSPresets.generateSheet();
+    patch = NURBSPresets.generateSphere();
     fullRebuild();
 };
 

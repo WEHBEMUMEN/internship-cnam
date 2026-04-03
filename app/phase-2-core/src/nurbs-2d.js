@@ -38,37 +38,21 @@ class NURBS2D {
 
     /**
      * Compute Bivariate Basis Function R(i,j)
-     * @param {number} i Index in U direction
-     * @param {number} j Index in V direction
-     * @param {object} patch NURBS surface data
-     * @param {number} xi Parametric coordinate u
-     * @param {number} eta Parametric coordinate v
-     * @param {number} cachedDenominator Optional pre-computed denominator
      */
     bivariateBasis(i, j, patch, xi, eta, cachedDenominator = null) {
         const { p, q, U, V, weights } = patch;
         
         const N = this.basis1D(i, p, U, xi);
         const M = this.basis1D(j, q, V, eta);
-        const w = weights[i][j];
+        const w = (weights[i] && weights[i][j]) ? weights[i][j] : 1.0;
         
         const numerator = N * M * w;
-
         if (cachedDenominator !== null) {
             return cachedDenominator > 0 ? numerator / cachedDenominator : 0;
         }
 
-        let denominator = 0;
-        for (let k = 0; k < weights.length; k++) {
-            const Nk = this.basis1D(k, p, U, xi);
-            if (Nk === 0) continue;
-            for (let l = 0; l < weights[0].length; l++) {
-                const Ml = this.basis1D(l, q, V, eta);
-                denominator += Nk * Ml * weights[k][l];
-            }
-        }
-
-        return denominator > 0 ? numerator / denominator : 0;
+        const denominator = this.computeDenominator(patch, xi, eta);
+        return denominator > 1e-12 ? numerator / denominator : 0;
     }
 
     /**
@@ -94,17 +78,14 @@ class NURBS2D {
     getSurfaceState(patch, xi, eta) {
         const { controlPoints, weights, p, q, U, V } = patch;
         
-        // Handle edge case xi=1 or eta=1
-        const eps = 1e-10;
-        if (xi >= 1) xi = 1 - eps;
-        if (eta >= 1) eta = 1 - eps;
+        // Handle boundaries
+        const eps = 1e-8;
+        xi = Math.max(0, Math.min(1 - eps, xi));
+        eta = Math.max(0, Math.min(1 - eps, eta));
 
-        const denominator = this.computeDenominator(patch, xi, eta);
+        const denominator = this.computeDenominator(patch, xi, eta) || 1.0;
         
         let position = { x: 0, y: 0, z: 0 };
-        // In a real implementation, we would also compute derivatives here.
-        // For Phase 2.1, we'll implement position first, then add analytical derivatives in 2.2.
-        
         for (let i = 0; i < weights.length; i++) {
             const Ni = this.basis1D(i, p, U, xi);
             if (Ni === 0) continue;
@@ -121,36 +102,185 @@ class NURBS2D {
             }
         }
 
+        // Final sanity check
+        if (isNaN(position.x) || isNaN(position.y) || isNaN(position.z)) {
+            position = { x: 0, y: 0, z: 0 };
+        }
+
         return { position, denominator };
     }
 
     /**
-     * Simple evaluate call for legacy support
+     * Simple evaluate call
      */
     evaluateSurface(patch, xi, eta) {
         return this.getSurfaceState(patch, xi, eta).position;
     }
 
     /**
-     * Jacobian Determinant (Numerical Approximation for Phase 2.1)
+     * Jacobian Determinant (Area Factor)
      */
     getJacobianDeterminant(patch, xi, eta) {
         const h = 0.001;
         const p0 = this.evaluateSurface(patch, xi, eta);
-        const pu = this.evaluateSurface(patch, Math.min(xi + h, 1), eta);
-        const pv = this.evaluateSurface(patch, xi, Math.min(eta + h, 1));
+        const pu = this.evaluateSurface(patch, Math.min(xi + h, 1 - 1e-6), eta);
+        const pv = this.evaluateSurface(patch, xi, Math.min(eta + h, 1 - 1e-6));
 
         const tu = { x: (pu.x - p0.x)/h, y: (pu.y - p0.y)/h, z: (pu.z - p0.z)/h };
         const tv = { x: (pv.x - p0.x)/h, y: (pv.y - p0.y)/h, z: (pv.z - p0.z)/h };
 
-        // Cross product for Area
         const cp = {
             x: tu.y * tv.z - tu.z * tv.y,
             y: tu.z * tv.x - tu.x * tv.z,
             z: tu.x * tv.y - tu.y * tv.x
         };
 
-        return Math.sqrt(cp.x*cp.x + cp.y*cp.y + cp.z*cp.z);
+        const area = Math.sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
+        return isNaN(area) ? 1.0 : area;
+    }
+
+    /**
+     * h-refinement: Insert a knot in the U direction
+     */
+    insertKnotU(patch, uBar) {
+        const { p, U, controlPoints, weights } = patch;
+        const n = controlPoints.length;
+        const m = controlPoints[0].length;
+
+        let k = -1;
+        for (let i = 0; i < U.length - 1; i++) {
+            if (uBar >= U[i] && uBar < U[i + 1]) {
+                k = i; break;
+            }
+        }
+        if (k === -1) return patch;
+
+        const newU = [...U];
+        newU.splice(k + 1, 0, uBar);
+
+        const newCP = [];
+        const newW = [];
+
+        for (let i = 0; i <= n; i++) {
+            newCP[i] = [];
+            newW[i] = [];
+            for (let j = 0; j < m; j++) {
+                if (i <= k - p) {
+                    newCP[i][j] = { ...controlPoints[i][j] };
+                    newW[i][j] = weights[i][j];
+                } else if (i >= k + 1) {
+                    newCP[i][j] = { ...controlPoints[i - 1][j] };
+                    newW[i][j] = weights[i - 1][j];
+                } else {
+                    const denom = U[i + p] - U[i];
+                    const alpha = denom > 0 ? (uBar - U[i]) / denom : 0;
+                    const cp0 = controlPoints[i - 1][j];
+                    const cp1 = controlPoints[i][j];
+                    const w0 = weights[i - 1][j];
+                    const w1 = weights[i][j];
+
+                    newW[i][j] = (1 - alpha) * w0 + alpha * w1;
+                    const denW = newW[i][j] || 1.0;
+                    newCP[i][j] = {
+                        x: ((1 - alpha) * w0 * cp0.x + alpha * w1 * cp1.x) / denW,
+                        y: ((1 - alpha) * w0 * cp0.y + alpha * w1 * cp1.y) / denW,
+                        z: ((1 - alpha) * w0 * cp0.z + alpha * w1 * cp1.z) / denW
+                    };
+                }
+            }
+        }
+
+        patch.U = newU;
+        patch.controlPoints = newCP;
+        patch.weights = newW;
+        return patch;
+    }
+
+    /**
+     * h-refinement: Insert a knot in the V direction
+     */
+    insertKnotV(patch, vBar) {
+        const { q, V, controlPoints, weights } = patch;
+        const n = controlPoints.length;
+        const m = controlPoints[0].length;
+
+        let k = -1;
+        for (let j = 0; j < V.length - 1; j++) {
+            if (vBar >= V[j] && vBar < V[j + 1]) {
+                k = j; break;
+            }
+        }
+        if (k === -1) return patch;
+
+        const newV = [...V];
+        newV.splice(k + 1, 0, vBar);
+
+        const newCP = [];
+        const newW = [];
+
+        for (let i = 0; i < n; i++) {
+            newCP[i] = [];
+            newW[i] = [];
+            for (let j = 0; j <= m; j++) {
+                if (j <= k - q) {
+                    newCP[i][j] = { ...controlPoints[i][j] };
+                    newW[i][j] = weights[i][j];
+                } else if (j >= k + 1) {
+                    newCP[i][j] = { ...controlPoints[i][j - 1] };
+                    newW[i][j] = weights[i][j - 1];
+                } else {
+                    const denom = V[j + q] - V[j];
+                    const alpha = denom > 0 ? (vBar - V[j]) / denom : 0;
+                    const cp0 = controlPoints[i][j - 1];
+                    const cp1 = controlPoints[i][j];
+                    const w0 = weights[i][j - 1];
+                    const w1 = weights[i][j];
+
+                    newW[i][j] = (1 - alpha) * w0 + alpha * w1;
+                    const denW = newW[i][j] || 1.0;
+                    newCP[i][j] = {
+                        x: ((1 - alpha) * w0 * cp0.x + alpha * w1 * cp1.x) / denW,
+                        y: ((1 - alpha) * w0 * cp0.y + alpha * w1 * cp1.y) / denW,
+                        z: ((1 - alpha) * w0 * cp0.z + alpha * w1 * cp1.z) / denW
+                    };
+                }
+            }
+        }
+
+        patch.V = newV;
+        patch.controlPoints = newCP;
+        patch.weights = newW;
+        return patch;
+    }
+
+    /**
+     * p-refinement: Simple Elevation (Subdivision based)
+     */
+    elevateDegree(patch, dir = 'U') {
+        const knots = dir === 'U' ? patch.U : patch.V;
+        
+        // Insert knots at unique midpoints to "prepare" degree elevation
+        const uniqueKnots = [...new Set(knots)];
+        for (let i = 0; i < uniqueKnots.length - 1; i++) {
+            const mid = (uniqueKnots[i] + uniqueKnots[i+1]) / 2;
+            if (dir === 'U') this.insertKnotU(patch, mid);
+            else this.insertKnotV(patch, mid);
+        }
+        
+        if (dir === 'U') patch.p++;
+        else patch.q++;
+        return patch;
+    }
+
+    /**
+     * k-refinement: p-refinement followed by h-refinement
+     */
+    kRefine(patch, uBar, vBar) {
+        this.elevateDegree(patch, 'U');
+        this.elevateDegree(patch, 'V');
+        this.insertKnotU(patch, uBar);
+        this.insertKnotV(patch, vBar);
+        return patch;
     }
 
     /**

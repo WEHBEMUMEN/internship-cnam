@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verification Lab 2.1 | Surface Mapping</title>
+    <title>Verification Lab 2.3 | h-Refinement</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -19,8 +19,13 @@
         }
         .control-group { margin-bottom: 20px; }
         .control-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 12px; display: block; }
-        .slider { width: 100%; height: 4px; background: #334155; border-radius: 2px; appearance: none; outline: none; }
-        .slider::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; background: #3b82f6; border-radius: 50%; cursor: pointer; }
+        .btn-refine { 
+            width: 100%; padding: 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .btn-refine:hover { background: rgba(16, 185, 129, 0.25); transform: translateY(-1px); }
     </style>
 </head>
 <body>
@@ -28,54 +33,44 @@
 
     <div id="ui-panel">
         <h1 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <span class="text-blue-500">2.1</span> Surface Mapping Lab
+            <span class="text-green-500">2.3</span> h-Refinement Lab
         </h1>
         
         <div class="control-group">
-            <span class="control-label">Visualization Settings</span>
-            <input type="range" id="resolution-slider" class="slider" min="5" max="80" value="40">
-            <div class="flex justify-between text-[10px] text-slate-500 mt-2">
-                <span>Low Res</span>
-                <span>High Res</span>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <div class="flex flex-col gap-3">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="show-grid" checked>
-                    <span class="text-sm">Show Control Lattice</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="show-wireframe" checked>
-                    <span class="text-sm">Show Wireframe Overlay</span>
-                </label>
-            </div>
+            <span class="control-label">h-Refinement Operation</span>
+            <button id="refine-h" class="btn-refine">
+                <i class="fa-solid fa-plus"></i> Insert Knot (Subdivide)
+            </button>
+            <p class="text-[10px] text-slate-500 mt-2 italic">Observation: Inserting knots adds physical control points while keeping the polynomial degree constant.</p>
         </div>
 
         <div class="control-group pt-4 border-t border-slate-700">
-            <span class="control-label">Verification Actions</span>
-            <button id="reset-surface" class="w-full py-2 px-4 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/40 rounded-lg text-xs font-bold transition-all text-blue-400 flex items-center justify-center gap-2">
+            <span class="control-label">Visualization Settings</span>
+            <div class="flex flex-col gap-3 mt-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="show-grid" checked>
+                    <span class="text-xs">Show Control Lattice</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="show-wireframe" checked>
+                    <span class="text-xs">Show Wireframe Overlay</span>
+                </label>
+            </div>
+            <input type="range" id="resolution-slider" class="slider w-full mt-4" min="5" max="100" value="40">
+            <button id="reset-surface" class="w-full mt-4 py-2 px-4 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 rounded-lg text-xs font-bold transition-all text-emerald-400 flex items-center justify-center gap-2">
                 <i class="fa-solid fa-rotate-left"></i> Reset Mapping
             </button>
         </div>
 
         <div class="control-group pt-4 border-t border-slate-700">
-            <span class="control-label">Current Configuration</span>
-            <div class="bg-black/40 rounded p-3 text-[11px] font-mono text-blue-300">
+            <div class="bg-black/40 rounded p-3 text-[11px] font-mono text-emerald-300">
                 <div id="state-degree">Degree: p=2, q=2</div>
                 <div id="state-points">Points: 4 x 4 (16)</div>
             </div>
         </div>
-
-        <div class="mt-4 pt-6 border-t border-slate-800">
-            <p class="text-[10px] text-slate-500 leading-relaxed">
-                <strong>Goal:</strong> Manipulate the 16 control points in 3D to understand bivariate $(\xi, \eta)$ mapping.
-            </p>
-        </div>
         
-        <a href="../theory-2.1.html" class="mt-6 block text-center py-2 px-4 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors text-white no-underline">
-            <i class="fa-solid fa-arrow-left mr-2"></i> Back to Theory
+        <a href="../theory-2.3.html" class="mt-6 block text-center py-2 px-4 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors text-white no-underline">
+            <i class="fa-solid fa-arrow-left mr-2"></i> h-Theory
         </a>
         <a href="../index.html" class="mt-2 block text-center py-2 px-4 border border-slate-700 hover:bg-slate-800 rounded-lg text-sm transition-colors text-slate-400 no-underline">
             <i class="fa-solid fa-house mr-2"></i> Simulation Hub
