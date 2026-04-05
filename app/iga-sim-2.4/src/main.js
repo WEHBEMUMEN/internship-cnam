@@ -3,7 +3,8 @@
 // Phase 2.4 | Computational Core
 
 const engine = new NURBS2D();
-let patch = NURBSPresets.generateSphere(); // Default to sphere for 2.4
+let currentMode = 'plane';
+let patch = NURBSPresets.generateSheet(); // Default to plane for 2.4
 
 // --- Three.js Setup ---
 const scene = new THREE.Scene();
@@ -182,7 +183,13 @@ transformControls.addEventListener('objectChange', () => {
 });
 
 // Operations
+document.getElementById('load-plane').onclick = () => {
+    currentMode = 'plane';
+    patch = NURBSPresets.generateSheet();
+    fullRebuild();
+};
 document.getElementById('load-sphere').onclick = () => {
+    currentMode = 'sphere';
     patch = NURBSPresets.generateSphere();
     fullRebuild();
 };
@@ -192,7 +199,7 @@ document.getElementById('refine-k').onclick = () => {
 };
 
 document.getElementById('reset-surface').onclick = () => {
-    patch = NURBSPresets.generateSphere();
+    patch = currentMode === 'sphere' ? NURBSPresets.generateSphere() : NURBSPresets.generateSheet();
     fullRebuild();
 };
 
