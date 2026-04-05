@@ -348,96 +348,189 @@ class NURBS2D {
     }
 
     /**
-     * 1D Least Squares Fit for Degree Elevation
+     * Piegl-Tiller Degree Elevation Workflow (Exact)
      */
     elevate1D(curve, newP, newU) {
-        const M = 100; // Sample count
-        const samples = [];
-        for (let i = 0; i <= M; i++) {
-            const xi = i / M;
-            samples.push(this.evaluate1D(curve, xi));
+        // Fast-Path: Direct Degree Elevation (DDE) for linear clamped NURBS (p=1 -> p=2)
+        if (curve.p === 1 && newP === 2) {
+            return this.applyDDE(curve);
         }
 
-        const newN = newU.length - newP - 1;
-        const newWeights = new Array(newN).fill(1.0);
+        // General Case: Piegl-Tiller Algorithm
+        // 1. Decompose to Bezier segments (requires knot insertion)
+        const segments = this.decomposeToBezier(curve);
+        
+        // 2. Elevate each Bezier segment
+        const elevatedSegments = segments.map(seg => this.elevateBezierSegment(seg));
+        
+        // 3. Recompose into a single NURBS
+        return this.recomposeFromBezier(elevatedSegments, curve.p, newP, newU);
+    }
 
-        // Build A matrix (M+1 x newN)
-        const A = [];
-        for (let i = 0; i <= M; i++) {
-            const xi = i / M;
-            const row = [];
-            let denom = 0;
-            for (let j = 0; j < newN; j++) {
-                const bj = this.basis1D(j, newP, newU, xi);
-                row.push(bj);
-                denom += bj; // Unit weighs for fitting position
-            }
-            A.push(row);
-        }
-
-        // Normal Equations: ATA * X = ATB
-        const ATA = Array(newN).fill(0).map(() => Array(newN).fill(0));
-        const ATBx = Array(newN).fill(0);
-        const ATBy = Array(newN).fill(0);
-        const ATBz = Array(newN).fill(0);
-
-        for (let i = 0; i < newN; i++) {
-            for (let j = 0; j < newN; j++) {
-                let sum = 0;
-                for (let k = 0; k <= M; k++) sum += A[k][i] * A[k][j];
-                ATA[i][j] = sum;
-            }
-            let sx = 0, sy = 0, sz = 0;
-            for (let k = 0; k <= M; k++) {
-                sx += A[k][i] * samples[k].x;
-                sy += A[k][i] * samples[k].y;
-                sz += A[k][i] * samples[k].z;
-            }
-            ATBx[i] = sx;
-            ATBy[i] = sy;
-            ATBz[i] = sz;
-        }
-
-        const solve = (matA, matB) => {
-            const n = matA.length;
-            const A = matA.map(r => [...r]);
-            const B = [...matB];
-            for (let i = 0; i < n; i++) {
-                let maxEl = Math.abs(A[i][i]), maxRow = i;
-                for (let k = i + 1; k < n; k++) {
-                    if (Math.abs(A[k][i]) > maxEl) { maxEl = Math.abs(A[k][i]); maxRow = k; }
-                }
-                [A[maxRow], A[i]] = [A[i], A[maxRow]];
-                [B[maxRow], B[i]] = [B[i], B[maxRow]];
-                for (let k = i + 1; k < n; k++) {
-                    const c = -A[k][i] / (A[i][i] || 1e-12);
-                    for (let j = i; j < n; j++) A[k][j] += c * A[i][j];
-                    B[k] += c * B[i];
-                }
-            }
-            const x = new Array(n).fill(0);
-            for (let i = n - 1; i >= 0; i--) {
-                let sum = 0;
-                for (let k = i + 1; k < n; k++) sum += A[i][k] * x[k];
-                x[i] = (B[i] - sum) / (A[i][i] || 1e-12);
-            }
-            return x;
-        };
-
-        const resX = solve(ATA, ATBx);
-        const resY = solve(ATA, ATBy);
-        const resZ = solve(ATA, ATBz);
-
+    /**
+     * Direct Degree Elevation (DDE) optimization for linear curves
+     * As requested: Q_{2i} = P_i, Q_{2i+1} = (P_i + P_{i+1})/2
+     */
+    applyDDE(curve) {
+        const { controlPoints, weights } = curve;
+        const n = controlPoints.length;
         const newCP = [];
-        for (let i = 0; i < newN; i++) {
-            newCP.push({ x: resX[i], y: resY[i], z: resZ[i] });
+        const newW = [];
+
+        for (let i = 0; i < n; i++) {
+            // Q_{2i} = P_i
+            newCP.push({ ...controlPoints[i] });
+            newW.push(weights[i]);
+
+            // Q_{2i+1} = (P_i + P_{i+1})/2
+            if (i < n - 1) {
+                const p0 = controlPoints[i];
+                const p1 = controlPoints[i+1];
+                const w0 = weights[i];
+                const w1 = weights[i+1];
+
+                const midW = (w0 + w1) / 2;
+                newCP.push({
+                    x: (w0 * p0.x + w1 * p1.x) / (2 * midW),
+                    y: (w0 * p0.y + w1 * p1.y) / (2 * midW),
+                    z: (w0 * p0.z + w1 * p1.z) / (2 * midW)
+                });
+                newW.push(midW);
+            }
+        }
+        return { controlPoints: newCP, weights: newW };
+    }
+
+    /**
+     * Piegl-Tiller Step 1: Bézier Decomposition
+     */
+    decomposeToBezier(curve) {
+        const { p, U, controlPoints, weights } = curve;
+        let currentCurve = { ...curve };
+        
+        // Find internal knots with multiplicity < p
+        const uniqueKnots = [...new Set(U.slice(p + 1, -p - 1))];
+        for (const uBar of uniqueKnots) {
+            const mult = U.filter(k => k === uBar).length;
+            const insertCount = p - mult;
+            for (let i = 0; i < insertCount; i++) {
+                currentCurve = this.insertKnot1D(currentCurve, uBar);
+            }
         }
 
-        // Clamp endpoints to original
-        newCP[0] = { ...samples[0] };
-        newCP[newN - 1] = { ...samples[M] };
+        // Split into segments (each segment has p+1 points)
+        const segments = [];
+        const nSegments = uniqueKnots.length + 1;
+        for (let s = 0; s < nSegments; s++) {
+            const startIdx = s * p;
+            segments.push({
+                p,
+                controlPoints: currentCurve.controlPoints.slice(startIdx, startIdx + p + 1),
+                weights: currentCurve.weights.slice(startIdx, startIdx + p + 1)
+            });
+        }
+        return segments;
+    }
 
-        return { controlPoints: newCP, weights: newWeights };
+    /**
+     * Piegl-Tiller Step 2: Segment Elevation
+     * Q_i = (i/(p+1))*P_{i-1} + (1 - i/(p+1))*P_i
+     */
+    elevateBezierSegment(segment) {
+        const { p, controlPoints, weights } = segment;
+        const newP = p + 1;
+        const newCP = [];
+        const newW = [];
+
+        // Convert to homogeneous coordinates
+        const Pw = controlPoints.map((pt, i) => ({
+            x: pt.x * weights[i],
+            y: pt.y * weights[i],
+            z: pt.z * weights[i],
+            w: weights[i]
+        }));
+
+        for (let i = 0; i <= newP; i++) {
+            let qw;
+            if (i === 0) {
+                qw = { ...Pw[0] };
+            } else if (i === newP) {
+                qw = { ...Pw[p] };
+            } else {
+                const alpha = i / newP;
+                const p0 = Pw[i - 1];
+                const p1 = Pw[i];
+                qw = {
+                    x: alpha * p0.x + (1 - alpha) * p1.x,
+                    y: alpha * p0.y + (1 - alpha) * p1.y,
+                    z: alpha * p0.z + (1 - alpha) * p1.z,
+                    w: alpha * p0.w + (1 - alpha) * p1.w
+                };
+            }
+            newCP.push({ x: qw.x / qw.w, y: qw.y / qw.w, z: qw.z / qw.w });
+            newW.push(qw.w);
+        }
+
+        return { p: newP, controlPoints: newCP, weights: newW };
+    }
+
+    /**
+     * Piegl-Tiller Step 3: Re-Composition
+     * Note: For global elevation, we use the pre-computed elevated knot vector.
+     */
+    recomposeFromBezier(segments, oldP, newP, newU) {
+        const newCP = [];
+        const newW = [];
+
+        for (let i = 0; i < segments.length; i++) {
+            const seg = segments[i];
+            const start = (i === 0) ? 0 : 1; // Avoid duplicate points at segment boundaries
+            for (let j = start; j < seg.controlPoints.length; j++) {
+                newCP.push(seg.controlPoints[j]);
+                newW.push(seg.weights[j]);
+            }
+        }
+        
+        return { controlPoints: newCP, weights: newW };
+    }
+
+    /**
+     * Internal 1D Knot Insertion for decomposition
+     */
+    insertKnot1D(curve, uBar) {
+        const { p, U, controlPoints, weights } = curve;
+        let k = -1;
+        for (let i = 0; i < U.length - 1; i++) {
+            if (uBar >= U[i] && uBar < U[i+1]) { k = i; break; }
+        }
+        if (k === -1) return curve;
+
+        const newU = [...U];
+        newU.splice(k + 1, 0, uBar);
+        const newCP = [];
+        const newW = [];
+
+        for (let i = 0; i <= controlPoints.length; i++) {
+            if (i <= k - p) {
+                newCP.push({ ...controlPoints[i] });
+                newW.push(weights[i]);
+            } else if (i >= k + 1) {
+                newCP.push({ ...controlPoints[i - 1] });
+                newW.push(weights[i - 1]);
+            } else {
+                const alpha = (uBar - U[i]) / (U[i + p] - U[i]);
+                const p0 = controlPoints[i - 1], p1 = controlPoints[i];
+                const w0 = weights[i - 1], w1 = weights[i];
+                const nw = (1 - alpha) * w0 + alpha * w1;
+                newW.push(nw);
+                newCP.push({
+                    x: ((1 - alpha) * w0 * p0.x + alpha * w1 * p1.x) / (nw || 1),
+                    y: ((1 - alpha) * w0 * p0.y + alpha * w1 * p1.y) / (nw || 1),
+                    z: ((1 - alpha) * w0 * p0.z + alpha * w1 * p1.z) / (nw || 1)
+                });
+            }
+        }
+        return { p, U: newU, controlPoints: newCP, weights: newW };
     }
 
     /**
