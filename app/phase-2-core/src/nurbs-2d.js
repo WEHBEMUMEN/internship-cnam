@@ -276,57 +276,199 @@ class NURBS2D {
     }
 
     /**
-     * p-refinement: Geometrically Invariant Degree Elevation
+     * p-refinement: Geometrically Invariant Degree Elevation (Tensor Product)
      */
     elevateDegreeInvariant(patch) {
-        // Increment degrees
-        const oldP = patch.p;
-        const oldQ = patch.q;
-        const oldU = [...patch.U];
-        const oldV = [...patch.V];
-        const oldCP = patch.controlPoints;
-        const oldW = patch.weights;
+        // Step 1: Elevate U degree
+        this.elevateDirection(patch, 'U');
+        
+        // Step 2: Elevate V degree
+        this.elevateDirection(patch, 'V');
+        
+        return patch;
+    }
 
-        patch.p++;
-        patch.q++;
-        patch.U = this.elevateKnotVector(patch.U);
-        patch.V = this.elevateKnotVector(patch.V);
+    /**
+     * Elevate degree in one parametric direction (tensor-product)
+     */
+    elevateDirection(patch, dir = 'U') {
+        const oldP = dir === 'U' ? patch.p : patch.q;
+        const newP = oldP + 1;
+        const oldKnotVector = dir === 'U' ? patch.U : patch.V;
+        const newKnotVector = this.elevateKnotVector(oldKnotVector);
+        
+        const n = patch.controlPoints.length;
+        const m = patch.controlPoints[0].length;
+        
+        if (dir === 'U') {
+            const nextN = newKnotVector.length - newP - 1;
+            const newCP = Array(nextN).fill(0).map(() => Array(m).fill(null));
+            const newW = Array(nextN).fill(0).map(() => Array(m).fill(1));
 
-        const nx = patch.U.length - patch.p - 1;
-        const ny = patch.V.length - patch.q - 1;
-
-        // Fit new control points to old surface
-        const newCP = [];
-        const newW = [];
-
-        for (let i = 0; i < nx; i++) {
-            newCP[i] = [];
-            newW[i] = [];
-            const xi = (patch.U[i + 1] + patch.U[i + patch.p]) / 2; // Greville Abscissa
-            for (let j = 0; j < ny; j++) {
-                const eta = (patch.V[j + 1] + patch.V[j + patch.q]) / 2;
-                const state = this.getSurfaceState({ p: oldP, q: oldQ, U: oldU, V: oldV, controlPoints: oldCP, weights: oldW }, xi, eta);
-                newCP[i][j] = state.position;
-                newW[i][j] = state.denominator; // Simplified rational fit
+            // Elevate each column of control points in the U direction
+            for (let j = 0; j < m; j++) {
+                const columnCP = [];
+                const columnW = [];
+                for (let i = 0; i < n; i++) {
+                    columnCP.push(patch.controlPoints[i][j]);
+                    columnW.push(patch.weights[i][j]);
+                }
+                
+                const elevated = this.elevate1D({ p: oldP, U: oldKnotVector, controlPoints: columnCP, weights: columnW }, newP, newKnotVector);
+                for (let i = 0; i < nextN; i++) {
+                    newCP[i][j] = elevated.controlPoints[i];
+                    newW[i][j] = elevated.weights[i];
+                }
             }
+            patch.p = newP;
+            patch.U = newKnotVector;
+            patch.controlPoints = newCP;
+            patch.weights = newW;
+        } else {
+            const nextM = newKnotVector.length - newP - 1;
+            const newCP = Array(n).fill(0).map(() => Array(nextM).fill(null));
+            const newW = Array(n).fill(0).map(() => Array(nextM).fill(1));
+
+            // Elevate each row of control points in the V direction
+            for (let i = 0; i < n; i++) {
+                const rowCP = patch.controlPoints[i];
+                const rowW = patch.weights[i];
+                
+                const elevated = this.elevate1D({ p: oldP, U: oldKnotVector, controlPoints: rowCP, weights: rowW }, newP, newKnotVector);
+                for (let j = 0; j < nextM; j++) {
+                    newCP[i][j] = elevated.controlPoints[j];
+                    newW[i][j] = elevated.weights[j];
+                }
+            }
+            patch.q = newP;
+            patch.V = newKnotVector;
+            patch.controlPoints = newCP;
+            patch.weights = newW;
+        }
+    }
+
+    /**
+     * 1D Least Squares Fit for Degree Elevation
+     */
+    elevate1D(curve, newP, newU) {
+        const M = 100; // Sample count
+        const samples = [];
+        for (let i = 0; i <= M; i++) {
+            const xi = i / M;
+            samples.push(this.evaluate1D(curve, xi));
         }
 
-        patch.controlPoints = newCP;
-        patch.weights = newW;
-        return patch;
+        const newN = newU.length - newP - 1;
+        const newWeights = new Array(newN).fill(1.0);
+
+        // Build A matrix (M+1 x newN)
+        const A = [];
+        for (let i = 0; i <= M; i++) {
+            const xi = i / M;
+            const row = [];
+            let denom = 0;
+            for (let j = 0; j < newN; j++) {
+                const bj = this.basis1D(j, newP, newU, xi);
+                row.push(bj);
+                denom += bj; // Unit weighs for fitting position
+            }
+            A.push(row);
+        }
+
+        // Normal Equations: ATA * X = ATB
+        const ATA = Array(newN).fill(0).map(() => Array(newN).fill(0));
+        const ATBx = Array(newN).fill(0);
+        const ATBy = Array(newN).fill(0);
+        const ATBz = Array(newN).fill(0);
+
+        for (let i = 0; i < newN; i++) {
+            for (let j = 0; j < newN; j++) {
+                let sum = 0;
+                for (let k = 0; k <= M; k++) sum += A[k][i] * A[k][j];
+                ATA[i][j] = sum;
+            }
+            let sx = 0, sy = 0, sz = 0;
+            for (let k = 0; k <= M; k++) {
+                sx += A[k][i] * samples[k].x;
+                sy += A[k][i] * samples[k].y;
+                sz += A[k][i] * samples[k].z;
+            }
+            ATBx[i] = sx;
+            ATBy[i] = sy;
+            ATBz[i] = sz;
+        }
+
+        const solve = (matA, matB) => {
+            const n = matA.length;
+            const A = matA.map(r => [...r]);
+            const B = [...matB];
+            for (let i = 0; i < n; i++) {
+                let maxEl = Math.abs(A[i][i]), maxRow = i;
+                for (let k = i + 1; k < n; k++) {
+                    if (Math.abs(A[k][i]) > maxEl) { maxEl = Math.abs(A[k][i]); maxRow = k; }
+                }
+                [A[maxRow], A[i]] = [A[i], A[maxRow]];
+                [B[maxRow], B[i]] = [B[i], B[maxRow]];
+                for (let k = i + 1; k < n; k++) {
+                    const c = -A[k][i] / (A[i][i] || 1e-12);
+                    for (let j = i; j < n; j++) A[k][j] += c * A[i][j];
+                    B[k] += c * B[i];
+                }
+            }
+            const x = new Array(n).fill(0);
+            for (let i = n - 1; i >= 0; i--) {
+                let sum = 0;
+                for (let k = i + 1; k < n; k++) sum += A[i][k] * x[k];
+                x[i] = (B[i] - sum) / (A[i][i] || 1e-12);
+            }
+            return x;
+        };
+
+        const resX = solve(ATA, ATBx);
+        const resY = solve(ATA, ATBy);
+        const resZ = solve(ATA, ATBz);
+
+        const newCP = [];
+        for (let i = 0; i < newN; i++) {
+            newCP.push({ x: resX[i], y: resY[i], z: resZ[i] });
+        }
+
+        // Clamp endpoints to original
+        newCP[0] = { ...samples[0] };
+        newCP[newN - 1] = { ...samples[M] };
+
+        return { controlPoints: newCP, weights: newWeights };
+    }
+
+    /**
+     * Evaluate 1D NURBS Curve
+     */
+    evaluate1D(curve, xi) {
+        const { p, U, controlPoints, weights } = curve;
+        let denom = 0;
+        for (let i = 0; i < controlPoints.length; i++) {
+            denom += this.basis1D(i, p, U, xi) * weights[i];
+        }
+        if (denom === 0) denom = 1;
+
+        let pos = { x: 0, y: 0, z: 0 };
+        for (let i = 0; i < controlPoints.length; i++) {
+            const R = (this.basis1D(i, p, U, xi) * weights[i]) / denom;
+            pos.x += R * controlPoints[i].x;
+            pos.y += R * controlPoints[i].y;
+            pos.z += R * controlPoints[i].z;
+        }
+        return pos;
     }
 
     elevateKnotVector(U) {
         const unique = [...new Set(U)];
         const newU = [];
         unique.forEach(u => {
-            // Increase multiplicity at endpoints
-            if (u === 0 || u === 1) {
-                const count = U.filter(k => k === u).length;
-                for (let i = 0; i <= count; i++) newU.push(u);
-            } else {
-                newU.push(u);
-            }
+            // Increase multiplicity everywhere to maintain continuity order if desired, 
+            // but standard p-refinement increases knot vector multiplicity by 1 at internal knots
+            const count = U.filter(k => k === u).length;
+            for (let i = 0; i < count + 1; i++) newU.push(u);
         });
         return newU.sort((a,b) => a-b);
     }

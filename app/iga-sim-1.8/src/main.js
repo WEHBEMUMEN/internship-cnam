@@ -403,6 +403,7 @@ class CircleApp {
     }
 
     render() {
+        if (window.perfMonitor) window.perfMonitor.startMeasure();
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -411,6 +412,7 @@ class CircleApp {
         this.drawControlPolygon();
         this.drawBasisFunctions();
         this.drawErrorGraph();
+        if (window.perfMonitor) window.perfMonitor.endMeasure();
     }
 
     setupEventListeners() {
