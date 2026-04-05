@@ -181,29 +181,285 @@ class IGA2DSolver {
         const nPoints = nU * nV;
         for (let a = 0; a < nPoints; a++) {
             for (let b = 0; b < nPoints; b++) {
-                // Ke_ab = Ba' * D * Bb
                 const Ba = B[a];
                 const Bb = B[b];
-
-                for (let i = 0; i < 2; i++) { // DOF a
-                    for (let j = 0; j < 2; j++) { // DOF b
-                        
+                for (let i = 0; i < 2; i++) {
+                    for (let j = 0; j < 2; j++) {
                         let kab = 0;
-                        // Manual matrix multiplication: row_i(Ba') * D * col_j(Bb)
-                        // Equivalent to: Column_i(Ba) * D * Column_j(Bb)
-                        
-                        // D is 3x3, Ba is 3x2, Bb is 3x2
                         for (let r = 0; r < 3; r++) {
                             for (let c = 0; c < 3; c++) {
                                 kab += Ba[r][i] * D[r][c] * Bb[c][j];
                             }
                         }
-                        
                         K[a * 2 + i][b * 2 + j] += kab * factor;
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Nonlinear Analysis Methods (Phase 2B.2)
+     */
+
+    /**
+     * Compute Internal Force Vector F_int(u)
+     * F_int = Integral( B_NL' * S ) dOmega
+     */
+    calculateInternalForce(patch, u_disp) {
+        const { p, q, U, V, weights, controlPoints } = patch;
+        const nBasisU = controlPoints.length;
+        const nBasisV = controlPoints[0].length;
+        const nDofs = nBasisU * nBasisV * 2;
+        const F_int = new Float64Array(nDofs).fill(0);
+
+        const uniqueU = [...new Set(U)];
+        const uniqueV = [...new Set(V)];
+        const gRule = GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
+
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            if (uMax - uMin < 1e-10) continue;
+            for (let j = 0; j < uniqueV.length - 1; j++) {
+                const vMin = uniqueV[j], vMax = uniqueV[j+1];
+                if (vMax - vMin < 1e-10) continue;
+
+                for (let gu = 0; gu < gRule.points.length; gu++) {
+                    const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
+                    const wu = gRule.weights[gu] * (uMax - uMin) / 2;
+                    for (let gv = 0; gv < gRule.points.length; gv++) {
+                        const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
+                        const wv = gRule.weights[gv] * (vMax - vMin) / 2;
+
+                        const detJ = this.engine.getJacobianDeterminant(patch, u, v);
+                        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                        const B_param = this.getBParametric(patch, u, v, deriv); // Basis physical grads [dR/dx, dR/dy]
+                        
+                        // 1. Calculate Displacement Gradients grad_u = [du/dx, du/dy; dv/dx, dv/dy]
+                        let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                            const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                            dudx += dRdx * u_disp[k * 2];
+                            dudy += dRdy * u_disp[k * 2];
+                            dvdx += dRdx * u_disp[k * 2 + 1];
+                            dvdy += dRdy * u_disp[k * 2 + 1];
+                        }
+
+                        // 2. Green-Lagrange Strain Vector E = [Exx, Eyy, 2Exy]
+                        // E = 1/2 (F'F - I)
+                        const Exx = dudx + 0.5 * (dudx*dudx + dvdx*dvdx);
+                        const Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
+                        const Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy); // 2Exy
+                        
+                        // 3. 2nd Piola-Kirchhoff Stress S = D * E
+                        const D = this.getPlaneStressD();
+                        const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
+                        const Syy = D[1][0]*Exx + D[1][1]*Eyy;
+                        const Sxy = D[2][2]*Exy2;
+
+                        // 4. Nonlinear B-Matrix (B_NL)
+                        // B_NL = B_L + B_u(u)
+                        const factor = detJ * wu * wv * this.thickness;
+
+                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                            const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                            
+                            // Virtual strains for DOF k
+                            // eps_xx = (1 + dudx)*dRdx * du_k + (dvdx)*dRdx * dv_k
+                            const bexx_u = (1 + dudx) * dRdx;
+                            const bexx_v = (dvdx) * dRdx;
+                            const beyy_u = (dudy) * dRdy;
+                            const beyy_v = (1 + dvdy) * dRdy;
+                            const bexy_u = (1 + dudx)*dRdy + dudy*dRdx;
+                            const bexy_v = (1 + dvdy)*dRdx + dvdx*dRdy;
+
+                            F_int[k * 2] += (bexx_u * Sxx + beyy_u * Syy + bexy_u * Sxy) * factor;
+                            F_int[k * 2 + 1] += (bexx_v * Sxx + beyy_v * Syy + bexy_v * Sxy) * factor;
+                        }
+                    }
+                }
+            }
+        }
+        return F_int;
+    }
+
+    /**
+     * Compute Tangent Stiffness Matrix Kt(u)
+     * Kt = K_mat + K_geo
+     */
+    calculateTangentStiffness(patch, u_disp) {
+        const { p, q, U, V, weights, controlPoints } = patch;
+        const nBasisU = controlPoints.length;
+        const nBasisV = controlPoints[0].length;
+        const nDofs = nBasisU * nBasisV * 2;
+        const Kt = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
+
+        const uniqueU = [...new Set(U)];
+        const uniqueV = [...new Set(V)];
+        const gRule = GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
+
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            if (uMax - uMin < 1e-10) continue;
+            for (let j = 0; j < uniqueV.length - 1; j++) {
+                const vMin = uniqueV[j], vMax = uniqueV[j+1];
+                if (vMax - vMin < 1e-10) continue;
+
+                for (let gu = 0; gu < gRule.points.length; gu++) {
+                    const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
+                    const wu = gRule.weights[gu] * (uMax - uMin) / 2;
+                    for (let gv = 0; gv < gRule.points.length; gv++) {
+                        const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
+                        const wv = gRule.weights[gv] * (vMax - vMin) / 2;
+
+                        const detJ = this.engine.getJacobianDeterminant(patch, u, v);
+                        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                        const B_param = this.getBParametric(patch, u, v, deriv);
+
+                        let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                            dudx += B_param[k][0] * u_disp[k * 2];
+                            dudy += B_param[k][1] * u_disp[k * 2];
+                            dvdx += B_param[k][0] * u_disp[k * 2 + 1];
+                            dvdy += B_param[k][1] * u_disp[k * 2 + 1];
+                        }
+
+                        // 1. Assemble Material Tangent Stiffness K_mat
+                        const B_NL = [];
+                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                            const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                            B_NL.push([
+                                [(1 + dudx) * dRdx, (dvdx) * dRdx],
+                                [(dudy) * dRdy, (1 + dvdy) * dRdy],
+                                [(1 + dudx) * dRdy + dudy * dRdx, (1 + dvdy) * dRdx + dvdx * dRdy]
+                            ]);
+                        }
+
+                        const D = this.getPlaneStressD();
+                        const factor = detJ * wu * wv * this.thickness;
+                        this.accumulateContribution(Kt, B_NL, D, factor, nBasisU, nBasisV);
+
+                        // 2. Assemble Geometric Stiffness K_geo (Initial Stress)
+                        // K_geo = Integral( G' * [S I] * G )
+                        const Exx = dudx + 0.5 * (dudx*dudx + dvdx*dvdx);
+                        const Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
+                        const Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy);
+                        const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
+                        const Syy = D[1][0]*Exx + D[1][1]*Eyy;
+                        const Sxy = D[2][2]*Exy2;
+
+                        for (let a = 0; a < nBasisU * nBasisV; a++) {
+                            for (let b = 0; b < nBasisU * nBasisV; b++) {
+                                const dRdx_a = B_param[a][0], dRdy_a = B_param[a][1];
+                                const dRdx_b = B_param[b][0], dRdy_b = B_param[b][1];
+                                
+                                // k_geo_ab = (dRdx_a*Sxx*dRdx_b + dRdy_a*Syy*dRdy_b + dRdx_a*Sxy*dRdy_b + dRdy_a*Sxy*dRdx_b) * I
+                                const k_geo = (dRdx_a * Sxx * dRdx_b + dRdy_a * Syy * dRdy_b + 
+                                               dRdx_a * Sxy * dRdy_b + dRdy_a * Sxy * dRdx_b) * factor;
+                                
+                                Kt[a * 2][b * 2] += k_geo;
+                                Kt[a * 2 + 1][b * 2 + 1] += k_geo;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Kt;
+    }
+
+    /**
+     * B Matrix parametric help (physical derivatives)
+     */
+    getBParametric(patch, u, v, deriv) {
+        const { p, q, U, V, weights, controlPoints } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const J = [[deriv.dU.x, deriv.dV.x], [deriv.dU.y, deriv.dV.y]];
+        const detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+        const J_inv = [[J[1][1]/detJ_2D, -J[0][1]/detJ_2D], [-J[1][0]/detJ_2D, J[0][0]/detJ_2D]];
+        const W = deriv.W, Wu = deriv.Wu, Wv = deriv.Wv;
+        const grads = [];
+        for (let i = 0; i < nU; i++) {
+            const Ni = this.engine.basis1D(i, p, U, u), dNi = this.engine.basis1DDeriv(i, p, U, u);
+            for (let j = 0; j < nV; j++) {
+                const Mj = this.engine.basis1D(j, q, V, v), dMj = this.engine.basis1DDeriv(j, q, V, v);
+                const w = weights[i][j];
+                const dRdu = ((dNi * Mj * w) * W - (Ni * Mj * w) * Wu) / (W * W);
+                const dRdv = ((Ni * dMj * w) * W - (Ni * Mj * w) * Wv) / (W * W);
+                grads.push([J_inv[0][0] * dRdu + J_inv[0][1] * dRdv, J_inv[1][0] * dRdu + J_inv[1][1] * dRdv]);
+            }
+        }
+        return grads;
+    }
+
+    /**
+     * Nonlinear Solver: Newton-Raphson
+     * Options: { iterations, tolerance, incrementalSteps }
+     */
+    solveNonlinear(patch, bcs, loads, options = {}) {
+        const { iterations = 10, tolerance = 1e-6, steps = 1 } = options;
+        const nDofs = patch.controlPoints.length * patch.controlPoints[0].length * 2;
+        let u = new Float64Array(nDofs).fill(0);
+        const residualHistory = [];
+
+        // External Force Vector (F_ext)
+        const F_ext_total = new Float64Array(nDofs).fill(0);
+        loads.forEach(load => {
+            const idx = (load.i * patch.controlPoints[0].length + load.j) * 2;
+            F_ext_total[idx] += load.fx;
+            F_ext_total[idx + 1] += load.fy;
+        });
+
+        // Fixed DOFs mapping
+        const fixedDofs = new Map();
+        bcs.forEach(bc => {
+            const baseIdx = (bc.i * patch.controlPoints[0].length + bc.j) * 2;
+            if (bc.axis === 'x' || bc.axis === 'both') fixedDofs.set(baseIdx, bc.value);
+            if (bc.axis === 'y' || bc.axis === 'both') fixedDofs.set(baseIdx + 1, bc.value);
+        });
+
+        // Incremental Load Stepping
+        for (let s = 1; s <= steps; s++) {
+            const F_ext = F_ext_total.map(f => f * (s / steps));
+
+            for (let iter = 0; iter < iterations; iter++) {
+                const F_int = this.calculateInternalForce(patch, u);
+                const R = F_ext.map((f, i) => f - F_int[i]);
+
+                // Norm Calculation
+                let resNorm = 0;
+                fixedDofs.forEach((_, idx) => R[idx] = 0); // Zero out residual at BCs for norm
+                R.forEach(ri => resNorm += ri * ri);
+                const norm = Math.sqrt(resNorm);
+                residualHistory.push(norm);
+
+                if (norm < tolerance && iter > 0) break;
+
+                const Kt = this.calculateTangentStiffness(patch, u);
+
+                // Apply BCs to Kt and R
+                const nFree = nDofs - fixedDofs.size;
+                const freeIndices = [];
+                for (let i = 0; i < nDofs; i++) if (!fixedDofs.has(i)) freeIndices.push(i);
+
+                const Kt_red = Array.from({ length: nFree }, () => new Float64Array(nFree));
+                const R_red = new Float64Array(nFree);
+
+                for (let i = 0; i < nFree; i++) {
+                    const row = freeIndices[i];
+                    R_red[i] = R[row];
+                    for (let j = 0; j < nFree; j++) {
+                        Kt_red[i][j] = Kt[row][freeIndices[j]];
+                    }
+                }
+
+                const du_red = this.gaussianElimination(Kt_red, R_red);
+                for (let i = 0; i < nFree; i++) u[freeIndices[i]] += du_red[i];
+            }
+        }
+
+        return { u, residualHistory };
     }
 
     /**
