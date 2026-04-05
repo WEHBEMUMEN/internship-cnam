@@ -47,46 +47,48 @@ class NURBSPresets {
         
         // Open (clamped) knot vectors: First and last knots repeated p+1 times
         const U = [0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1]; // Full revolution (4 arcs)
-        const V = [0, 0, 0, 0.5, 1, 1, 1]; // Semi-circle (2 arcs)
+        const V = [0, 0, 0, 0.5, 0.5, 1, 1, 1]; // Semi-circle (2 arcs)
         
         const n = 9; // Rows
-        const m = 3; // Cols
-        
-        const controlPoints = [];
-        const weights = [];
+        const m = 5; // Cols
         
         const radius = 15;
+
+        // V-direction Generatrix (Semi-circle in XZ plane)
+        const X_gen = [0, radius, radius, radius, 0];
+        const Z_gen = [radius, radius, 0, -radius, -radius];
+        const V_weights = [1, w, 1, w, 1];
+
+        // U-direction Revolution (Circle in XY plane)
+        const u_pts = [
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 },
+            { x: -1, y: 1 },
+            { x: -1, y: 0 },
+            { x: -1, y: -1 },
+            { x: 0, y: -1 },
+            { x: 1, y: -1 },
+            { x: 1, y: 0 }
+        ];
+        const U_weights = [1, w, 1, w, 1, w, 1, w, 1];
+
+        const controlPoints = [];
+        const weights = [];
         
         for (let i = 0; i < n; i++) {
             controlPoints[i] = [];
             weights[i] = [];
             
-            // Angle in U (Full circle, 360 deg)
-            const phi = (i * Math.PI) / 4; 
-            const weightU = (i % 2 === 1) ? w : 1;
-            
             for (let j = 0; j < m; j++) {
-                // Angle in V (Semi circle, 180 deg)
-                const theta = (j * Math.PI) / 2;
-                const weightV = (j % 2 === 1) ? w : 1;
-                
-                // Sphere parametric eq:
-                // x = R * cos(phi) * sin(theta)
-                // y = R * sin(phi) * sin(theta)
-                // z = R * cos(theta)
-                
-                // Adjusting for the NURBS "Pull" of the middle points
-                let R_eff = radius;
-                if (i % 2 === 1) R_eff /= weightU;
-                if (j === 1) R_eff /= weightV;
-
+                // Tensor product construction natively produces the correct spherical bounding box
                 controlPoints[i][j] = {
-                    x: R_eff * Math.cos(phi) * Math.sin(theta),
-                    y: R_eff * Math.sin(phi) * Math.sin(theta),
-                    z: R_eff * Math.cos(theta)
+                    x: X_gen[j] * u_pts[i].x,
+                    y: X_gen[j] * u_pts[i].y,
+                    z: Z_gen[j]
                 };
                 
-                weights[i][j] = weightU * weightV;
+                weights[i][j] = U_weights[i] * V_weights[j];
             }
         }
 
