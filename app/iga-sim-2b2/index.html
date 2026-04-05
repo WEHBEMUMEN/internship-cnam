@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Lab 2B.2 | Nonlinear Newton-Raphson</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; width: 340px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 20px;
+            z-index: 10; pointer-events: auto;
+            max-height: calc(100vh - 40px); overflow-y: auto;
+        }
+        .control-group { margin-bottom: 20px; }
+        .control-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 12px; display: block; }
+        .btn-action { 
+            width: 100%; padding: 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); color: #fb7185;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .btn-action:hover { background: rgba(244, 63, 94, 0.25); transform: translateY(-1px); }
+        .chart-container { background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .badge-nl { background: #f43f5e; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="ui-panel">
+        <h1 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <span class="text-rose-500">2B.2</span> Nonlinear Lab
+            <span class="badge-nl">NEWTON-RAPHSON</span>
+        </h1>
+        
+        <div class="control-group">
+            <span class="control-label">Simulation Paradigm</span>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="mode-linear" class="py-2 px-3 rounded-lg border border-slate-700 text-xs font-bold hover:bg-slate-800 transition-colors">LINEAR</button>
+                <button id="mode-nonlinear" class="py-2 px-3 rounded-lg border border-rose-500 bg-rose-500/10 text-rose-400 text-xs font-bold transition-colors">NONLINEAR</button>
+            </div>
+        </div>
+
+        <div class="control-group pt-4 border-t border-slate-700">
+            <div class="flex justify-between items-center mb-2">
+                <span class="control-label mb-0">Total Load Factor</span>
+                <span id="load-val" class="text-xs font-mono text-rose-400">5000 N</span>
+            </div>
+            <input type="range" id="load-slider" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer" min="0" max="10000" value="5000">
+            <p class="text-[10px] text-slate-500 mt-2 italic">Notice how linear models stretch to impossible lengths at high loads.</p>
+        </div>
+
+        <button id="solve-btn" class="btn-action mt-4">
+            <i class="fa-solid fa-bolt"></i> Run Analysis
+        </button>
+
+        <div class="chart-container">
+            <span class="control-label">Residual Convergence</span>
+            <canvas id="residual-chart" height="180"></canvas>
+            <div id="conv-stat" class="text-[10px] text-center mt-2 text-slate-400">Status: Idle</div>
+        </div>
+        
+        <div class="mt-6 flex flex-col gap-2">
+            <a href="../theory-2b2.html" class="block text-center py-2 px-4 bg-rose-600/20 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-bold no-underline transition-all hover:bg-rose-600/40">
+                <i class="fa-solid fa-graduation-cap mr-2"></i> Nonlinear Theory
+            </a>
+            <a href="../index.html" class="block text-center py-2 px-4 border border-slate-700 hover:bg-slate-800 rounded-lg text-sm transition-colors text-slate-400 no-underline">
+                <i class="fa-solid fa-house mr-2"></i> Simulation Hub
+            </a>
+        </div>
+    </div>
+
+    <script src="../shared/performance.js"></script>
+    <script src="../phase-2-core/src/nurbs-2d.js"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>
