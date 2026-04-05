@@ -181,8 +181,7 @@ transformControls.addEventListener('objectChange', () => {
 
 // Operations
 document.getElementById('refine-h').onclick = () => {
-    engine.insertKnotU(patch, 0.5);
-    engine.insertKnotV(patch, 0.5);
+    engine.subdivideGlobal(patch);
     fullRebuild();
 };
 

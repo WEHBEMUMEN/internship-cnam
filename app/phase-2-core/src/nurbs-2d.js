@@ -254,22 +254,88 @@ class NURBS2D {
     }
 
     /**
+     * Global Midpoint Subdivision
+     */
+    subdivideGlobal(patch) {
+        const uniqueU = [...new Set(patch.U)];
+        const insertU = [];
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            insertU.push((uniqueU[i] + uniqueU[i + 1]) / 2);
+        }
+        
+        const uniqueV = [...new Set(patch.V)];
+        const insertV = [];
+        for (let i = 0; i < uniqueV.length - 1; i++) {
+            insertV.push((uniqueV[i] + uniqueV[i + 1]) / 2);
+        }
+
+        // Insert knots
+        insertU.reverse().forEach(u => this.insertKnotU(patch, u));
+        insertV.reverse().forEach(v => this.insertKnotV(patch, v));
+        return patch;
+    }
+
+    /**
+     * p-refinement: Geometrically Invariant Degree Elevation
+     */
+    elevateDegreeInvariant(patch) {
+        // Increment degrees
+        const oldP = patch.p;
+        const oldQ = patch.q;
+        const oldU = [...patch.U];
+        const oldV = [...patch.V];
+        const oldCP = patch.controlPoints;
+        const oldW = patch.weights;
+
+        patch.p++;
+        patch.q++;
+        patch.U = this.elevateKnotVector(patch.U);
+        patch.V = this.elevateKnotVector(patch.V);
+
+        const nx = patch.U.length - patch.p - 1;
+        const ny = patch.V.length - patch.q - 1;
+
+        // Fit new control points to old surface
+        const newCP = [];
+        const newW = [];
+
+        for (let i = 0; i < nx; i++) {
+            newCP[i] = [];
+            newW[i] = [];
+            const xi = (patch.U[i + 1] + patch.U[i + patch.p]) / 2; // Greville Abscissa
+            for (let j = 0; j < ny; j++) {
+                const eta = (patch.V[j + 1] + patch.V[j + patch.q]) / 2;
+                const state = this.getSurfaceState({ p: oldP, q: oldQ, U: oldU, V: oldV, controlPoints: oldCP, weights: oldW }, xi, eta);
+                newCP[i][j] = state.position;
+                newW[i][j] = state.denominator; // Simplified rational fit
+            }
+        }
+
+        patch.controlPoints = newCP;
+        patch.weights = newW;
+        return patch;
+    }
+
+    elevateKnotVector(U) {
+        const unique = [...new Set(U)];
+        const newU = [];
+        unique.forEach(u => {
+            // Increase multiplicity at endpoints
+            if (u === 0 || u === 1) {
+                const count = U.filter(k => k === u).length;
+                for (let i = 0; i <= count; i++) newU.push(u);
+            } else {
+                newU.push(u);
+            }
+        });
+        return newU.sort((a,b) => a-b);
+    }
+
+    /**
      * p-refinement: Simple Elevation (Subdivision based)
      */
     elevateDegree(patch, dir = 'U') {
-        const knots = dir === 'U' ? patch.U : patch.V;
-        
-        // Insert knots at unique midpoints to "prepare" degree elevation
-        const uniqueKnots = [...new Set(knots)];
-        for (let i = 0; i < uniqueKnots.length - 1; i++) {
-            const mid = (uniqueKnots[i] + uniqueKnots[i+1]) / 2;
-            if (dir === 'U') this.insertKnotU(patch, mid);
-            else this.insertKnotV(patch, mid);
-        }
-        
-        if (dir === 'U') patch.p++;
-        else patch.q++;
-        return patch;
+        return this.elevateDegreeInvariant(patch);
     }
 
     /**
