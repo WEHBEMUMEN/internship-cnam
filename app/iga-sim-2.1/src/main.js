@@ -49,6 +49,7 @@ function fullRebuild() {
 }
 
 function createSurface() {
+    if (window.perfMonitor) window.perfMonitor.startMeasure();
     if (surfaceMesh) scene.remove(surfaceMesh);
     if (wireframeOverlay) scene.remove(wireframeOverlay);
     isoparmaGroup.clear();
@@ -96,9 +97,10 @@ function createSurface() {
     scene.add(surfaceMesh);
 
     if (document.getElementById('show-wireframe').checked) {
-        wireframeOverlay = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.2 }));
+        wireframeOverlay = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.2 }));
         scene.add(wireframeOverlay);
     }
+    if (window.perfMonitor) window.perfMonitor.endMeasure();
 }
 
 function updateGrid() {

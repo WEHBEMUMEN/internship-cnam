@@ -352,6 +352,7 @@ class MechanicsApp {
     }
 
     animate() {
+        if (window.perfMonitor) window.perfMonitor.startMeasure();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.plot.drawGrid();
         
@@ -402,6 +403,7 @@ class MechanicsApp {
         }
 
         this.plot.drawCrosshair();
+        if (window.perfMonitor) window.perfMonitor.endMeasure();
         requestAnimationFrame(() => this.animate());
     }
 

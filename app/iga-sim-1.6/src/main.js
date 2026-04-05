@@ -296,6 +296,7 @@ traditional Classical FEM approaches.`;
     }
 
     animate() {
+        if (window.perfMonitor) window.perfMonitor.startMeasure();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.plot.drawGrid();
         
@@ -365,6 +366,7 @@ traditional Classical FEM approaches.`;
         }
 
         this.plot.drawCrosshair();
+        if (window.perfMonitor) window.perfMonitor.endMeasure();
         requestAnimationFrame(() => this.animate());
     }
 }

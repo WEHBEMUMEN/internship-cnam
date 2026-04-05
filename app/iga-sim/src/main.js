@@ -352,6 +352,7 @@ class App {
     }
 
     render() {
+        if (window.perfMonitor) window.perfMonitor.startMeasure();
         const t0 = performance.now();
         this.plot.clear();
         this.plot.drawGrid();
@@ -369,6 +370,7 @@ class App {
         if (cpuEl) cpuEl.textContent = this.evalTime.toFixed(3);
         const ptsEl = document.getElementById('pts-count');
         if (ptsEl) ptsEl.textContent = this.resolution;
+        if (window.perfMonitor) window.perfMonitor.endMeasure();
     }
 }
 

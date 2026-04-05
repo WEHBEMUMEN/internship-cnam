@@ -276,57 +276,292 @@ class NURBS2D {
     }
 
     /**
-     * p-refinement: Geometrically Invariant Degree Elevation
+     * p-refinement: Geometrically Invariant Degree Elevation (Tensor Product)
      */
     elevateDegreeInvariant(patch) {
-        // Increment degrees
-        const oldP = patch.p;
-        const oldQ = patch.q;
-        const oldU = [...patch.U];
-        const oldV = [...patch.V];
-        const oldCP = patch.controlPoints;
-        const oldW = patch.weights;
+        // Step 1: Elevate U degree
+        this.elevateDirection(patch, 'U');
+        
+        // Step 2: Elevate V degree
+        this.elevateDirection(patch, 'V');
+        
+        return patch;
+    }
 
-        patch.p++;
-        patch.q++;
-        patch.U = this.elevateKnotVector(patch.U);
-        patch.V = this.elevateKnotVector(patch.V);
+    /**
+     * Elevate degree in one parametric direction (tensor-product)
+     */
+    elevateDirection(patch, dir = 'U') {
+        const oldP = dir === 'U' ? patch.p : patch.q;
+        const newP = oldP + 1;
+        const oldKnotVector = dir === 'U' ? patch.U : patch.V;
+        const newKnotVector = this.elevateKnotVector(oldKnotVector);
+        
+        const n = patch.controlPoints.length;
+        const m = patch.controlPoints[0].length;
+        
+        if (dir === 'U') {
+            const nextN = newKnotVector.length - newP - 1;
+            const newCP = Array(nextN).fill(0).map(() => Array(m).fill(null));
+            const newW = Array(nextN).fill(0).map(() => Array(m).fill(1));
 
-        const nx = patch.U.length - patch.p - 1;
-        const ny = patch.V.length - patch.q - 1;
+            // Elevate each column of control points in the U direction
+            for (let j = 0; j < m; j++) {
+                const columnCP = [];
+                const columnW = [];
+                for (let i = 0; i < n; i++) {
+                    columnCP.push(patch.controlPoints[i][j]);
+                    columnW.push(patch.weights[i][j]);
+                }
+                
+                const elevated = this.elevate1D({ p: oldP, U: oldKnotVector, controlPoints: columnCP, weights: columnW }, newP, newKnotVector);
+                for (let i = 0; i < nextN; i++) {
+                    newCP[i][j] = elevated.controlPoints[i];
+                    newW[i][j] = elevated.weights[i];
+                }
+            }
+            patch.p = newP;
+            patch.U = newKnotVector;
+            patch.controlPoints = newCP;
+            patch.weights = newW;
+        } else {
+            const nextM = newKnotVector.length - newP - 1;
+            const newCP = Array(n).fill(0).map(() => Array(nextM).fill(null));
+            const newW = Array(n).fill(0).map(() => Array(nextM).fill(1));
 
-        // Fit new control points to old surface
+            // Elevate each row of control points in the V direction
+            for (let i = 0; i < n; i++) {
+                const rowCP = patch.controlPoints[i];
+                const rowW = patch.weights[i];
+                
+                const elevated = this.elevate1D({ p: oldP, U: oldKnotVector, controlPoints: rowCP, weights: rowW }, newP, newKnotVector);
+                for (let j = 0; j < nextM; j++) {
+                    newCP[i][j] = elevated.controlPoints[j];
+                    newW[i][j] = elevated.weights[j];
+                }
+            }
+            patch.q = newP;
+            patch.V = newKnotVector;
+            patch.controlPoints = newCP;
+            patch.weights = newW;
+        }
+    }
+
+    /**
+     * Piegl-Tiller Degree Elevation Workflow (Exact)
+     */
+    elevate1D(curve, newP, newU) {
+        // Fast-Path: Direct Degree Elevation (DDE) for linear clamped NURBS (p=1 -> p=2)
+        if (curve.p === 1 && newP === 2) {
+            return this.applyDDE(curve);
+        }
+
+        // General Case: Piegl-Tiller Algorithm
+        // 1. Decompose to Bezier segments (requires knot insertion)
+        const segments = this.decomposeToBezier(curve);
+        
+        // 2. Elevate each Bezier segment
+        const elevatedSegments = segments.map(seg => this.elevateBezierSegment(seg));
+        
+        // 3. Recompose into a single NURBS
+        return this.recomposeFromBezier(elevatedSegments, curve.p, newP, newU);
+    }
+
+    /**
+     * Direct Degree Elevation (DDE) optimization for linear curves
+     * As requested: Q_{2i} = P_i, Q_{2i+1} = (P_i + P_{i+1})/2
+     */
+    applyDDE(curve) {
+        const { controlPoints, weights } = curve;
+        const n = controlPoints.length;
         const newCP = [];
         const newW = [];
 
-        for (let i = 0; i < nx; i++) {
-            newCP[i] = [];
-            newW[i] = [];
-            const xi = (patch.U[i + 1] + patch.U[i + patch.p]) / 2; // Greville Abscissa
-            for (let j = 0; j < ny; j++) {
-                const eta = (patch.V[j + 1] + patch.V[j + patch.q]) / 2;
-                const state = this.getSurfaceState({ p: oldP, q: oldQ, U: oldU, V: oldV, controlPoints: oldCP, weights: oldW }, xi, eta);
-                newCP[i][j] = state.position;
-                newW[i][j] = state.denominator; // Simplified rational fit
+        for (let i = 0; i < n; i++) {
+            // Q_{2i} = P_i
+            newCP.push({ ...controlPoints[i] });
+            newW.push(weights[i]);
+
+            // Q_{2i+1} = (P_i + P_{i+1})/2
+            if (i < n - 1) {
+                const p0 = controlPoints[i];
+                const p1 = controlPoints[i+1];
+                const w0 = weights[i];
+                const w1 = weights[i+1];
+
+                const midW = (w0 + w1) / 2;
+                newCP.push({
+                    x: (w0 * p0.x + w1 * p1.x) / (2 * midW),
+                    y: (w0 * p0.y + w1 * p1.y) / (2 * midW),
+                    z: (w0 * p0.z + w1 * p1.z) / (2 * midW)
+                });
+                newW.push(midW);
+            }
+        }
+        return { controlPoints: newCP, weights: newW };
+    }
+
+    /**
+     * Piegl-Tiller Step 1: Bézier Decomposition
+     */
+    decomposeToBezier(curve) {
+        const { p, U, controlPoints, weights } = curve;
+        let currentCurve = { ...curve };
+        
+        // Find internal knots with multiplicity < p
+        const uniqueKnots = [...new Set(U.slice(p + 1, -p - 1))];
+        for (const uBar of uniqueKnots) {
+            const mult = U.filter(k => k === uBar).length;
+            const insertCount = p - mult;
+            for (let i = 0; i < insertCount; i++) {
+                currentCurve = this.insertKnot1D(currentCurve, uBar);
             }
         }
 
-        patch.controlPoints = newCP;
-        patch.weights = newW;
-        return patch;
+        // Split into segments (each segment has p+1 points)
+        const segments = [];
+        const nSegments = uniqueKnots.length + 1;
+        for (let s = 0; s < nSegments; s++) {
+            const startIdx = s * p;
+            segments.push({
+                p,
+                controlPoints: currentCurve.controlPoints.slice(startIdx, startIdx + p + 1),
+                weights: currentCurve.weights.slice(startIdx, startIdx + p + 1)
+            });
+        }
+        return segments;
+    }
+
+    /**
+     * Piegl-Tiller Step 2: Segment Elevation
+     * Q_i = (i/(p+1))*P_{i-1} + (1 - i/(p+1))*P_i
+     */
+    elevateBezierSegment(segment) {
+        const { p, controlPoints, weights } = segment;
+        const newP = p + 1;
+        const newCP = [];
+        const newW = [];
+
+        // Convert to homogeneous coordinates
+        const Pw = controlPoints.map((pt, i) => ({
+            x: pt.x * weights[i],
+            y: pt.y * weights[i],
+            z: pt.z * weights[i],
+            w: weights[i]
+        }));
+
+        for (let i = 0; i <= newP; i++) {
+            let qw;
+            if (i === 0) {
+                qw = { ...Pw[0] };
+            } else if (i === newP) {
+                qw = { ...Pw[p] };
+            } else {
+                const alpha = i / newP;
+                const p0 = Pw[i - 1];
+                const p1 = Pw[i];
+                qw = {
+                    x: alpha * p0.x + (1 - alpha) * p1.x,
+                    y: alpha * p0.y + (1 - alpha) * p1.y,
+                    z: alpha * p0.z + (1 - alpha) * p1.z,
+                    w: alpha * p0.w + (1 - alpha) * p1.w
+                };
+            }
+            newCP.push({ x: qw.x / qw.w, y: qw.y / qw.w, z: qw.z / qw.w });
+            newW.push(qw.w);
+        }
+
+        return { p: newP, controlPoints: newCP, weights: newW };
+    }
+
+    /**
+     * Piegl-Tiller Step 3: Re-Composition
+     * Note: For global elevation, we use the pre-computed elevated knot vector.
+     */
+    recomposeFromBezier(segments, oldP, newP, newU) {
+        const newCP = [];
+        const newW = [];
+
+        for (let i = 0; i < segments.length; i++) {
+            const seg = segments[i];
+            const start = (i === 0) ? 0 : 1; // Avoid duplicate points at segment boundaries
+            for (let j = start; j < seg.controlPoints.length; j++) {
+                newCP.push(seg.controlPoints[j]);
+                newW.push(seg.weights[j]);
+            }
+        }
+        
+        return { controlPoints: newCP, weights: newW };
+    }
+
+    /**
+     * Internal 1D Knot Insertion for decomposition
+     */
+    insertKnot1D(curve, uBar) {
+        const { p, U, controlPoints, weights } = curve;
+        let k = -1;
+        for (let i = 0; i < U.length - 1; i++) {
+            if (uBar >= U[i] && uBar < U[i+1]) { k = i; break; }
+        }
+        if (k === -1) return curve;
+
+        const newU = [...U];
+        newU.splice(k + 1, 0, uBar);
+        const newCP = [];
+        const newW = [];
+
+        for (let i = 0; i <= controlPoints.length; i++) {
+            if (i <= k - p) {
+                newCP.push({ ...controlPoints[i] });
+                newW.push(weights[i]);
+            } else if (i >= k + 1) {
+                newCP.push({ ...controlPoints[i - 1] });
+                newW.push(weights[i - 1]);
+            } else {
+                const alpha = (uBar - U[i]) / (U[i + p] - U[i]);
+                const p0 = controlPoints[i - 1], p1 = controlPoints[i];
+                const w0 = weights[i - 1], w1 = weights[i];
+                const nw = (1 - alpha) * w0 + alpha * w1;
+                newW.push(nw);
+                newCP.push({
+                    x: ((1 - alpha) * w0 * p0.x + alpha * w1 * p1.x) / (nw || 1),
+                    y: ((1 - alpha) * w0 * p0.y + alpha * w1 * p1.y) / (nw || 1),
+                    z: ((1 - alpha) * w0 * p0.z + alpha * w1 * p1.z) / (nw || 1)
+                });
+            }
+        }
+        return { p, U: newU, controlPoints: newCP, weights: newW };
+    }
+
+    /**
+     * Evaluate 1D NURBS Curve
+     */
+    evaluate1D(curve, xi) {
+        const { p, U, controlPoints, weights } = curve;
+        let denom = 0;
+        for (let i = 0; i < controlPoints.length; i++) {
+            denom += this.basis1D(i, p, U, xi) * weights[i];
+        }
+        if (denom === 0) denom = 1;
+
+        let pos = { x: 0, y: 0, z: 0 };
+        for (let i = 0; i < controlPoints.length; i++) {
+            const R = (this.basis1D(i, p, U, xi) * weights[i]) / denom;
+            pos.x += R * controlPoints[i].x;
+            pos.y += R * controlPoints[i].y;
+            pos.z += R * controlPoints[i].z;
+        }
+        return pos;
     }
 
     elevateKnotVector(U) {
         const unique = [...new Set(U)];
         const newU = [];
         unique.forEach(u => {
-            // Increase multiplicity at endpoints
-            if (u === 0 || u === 1) {
-                const count = U.filter(k => k === u).length;
-                for (let i = 0; i <= count; i++) newU.push(u);
-            } else {
-                newU.push(u);
-            }
+            // Increase multiplicity everywhere to maintain continuity order if desired, 
+            // but standard p-refinement increases knot vector multiplicity by 1 at internal knots
+            const count = U.filter(k => k === u).length;
+            for (let i = 0; i < count + 1; i++) newU.push(u);
         });
         return newU.sort((a,b) => a-b);
     }

@@ -307,12 +307,14 @@ class App {
     }
 
     render() {
+        if (window.perfMonitor) window.perfMonitor.startMeasure();
         this.plot.clear(); this.plot.drawGrid();
         if (this.mode === 'basis') this.plot.drawBasisFunctions(this.n, this.p, this.knotVector.values, BasisFunctions);
         else {
             this.plot.drawControlPolygon(this.points, this.draggingPoint);
             this.plot.drawCurve(this.p, this.knotVector.values, this.points, this.weights, Curve);
         }
+        if (window.perfMonitor) window.perfMonitor.endMeasure();
     }
 }
 
