@@ -33,19 +33,21 @@ class NURBSPresets {
     }
 
     /**
-     * Exact NURBS Sphere
-     * Constructed by revolving a semi-circle.
+     * Exact NURBS Sphere - Single-Patch Surface of Revolution
+     * Constructed by revolving a semi-circular NURBS curve (degree p=2) around a central axis.
+     * Note: This method generates "poles" (singularities) at the top and bottom.
      */
     static generateSphere() {
-        const p = 2; // Quadratic
+        const p = 2; // Quadratic, minimum required for circular exactness
         const q = 2;
         
-        // Exact Circle/Revolve logic requires specific weights: 1, 1/sqrt(2), 1
-        const w = 1 / Math.sqrt(2);
+        // Exact Circle/Revolve logic requires rational weights.
+        // For a 90-degree circular arc (degree 2), weights must be: { 1, sqrt(2)/2, 1 }
+        const w = Math.sqrt(2) / 2;
         
-        // Knot vectors for full revolution (0 to 1)
-        const U = [0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1];
-        const V = [0, 0, 0, 0.5, 1, 1, 1];
+        // Open (clamped) knot vectors: First and last knots repeated p+1 times
+        const U = [0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1]; // Full revolution (4 arcs)
+        const V = [0, 0, 0, 0.5, 1, 1, 1]; // Semi-circle (2 arcs)
         
         const n = 9; // Rows
         const m = 3; // Cols
