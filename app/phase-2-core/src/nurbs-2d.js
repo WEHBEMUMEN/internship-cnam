@@ -37,6 +37,27 @@ class NURBS2D {
     }
 
     /**
+     * Compute first derivative of 1D basis function N'(i,p)
+     */
+    basis1DDeriv(i, p, U, xi) {
+        if (p === 0) return 0.0;
+
+        let denom1 = U[i + p] - U[i];
+        let term1 = 0;
+        if (denom1 > 0) {
+            term1 = (p / denom1) * this.basis1D(i, p - 1, U, xi);
+        }
+
+        let denom2 = U[i + p + 1] - U[i + 1];
+        let term2 = 0;
+        if (denom2 > 0) {
+            term2 = (p / denom2) * this.basis1D(i + 1, p - 1, U, xi);
+        }
+
+        return term1 - term2;
+    }
+
+    /**
      * Compute Bivariate Basis Function R(i,j)
      */
     bivariateBasis(i, j, patch, xi, eta, cachedDenominator = null) {
@@ -118,25 +139,101 @@ class NURBS2D {
     }
 
     /**
-     * Jacobian Determinant (Area Factor)
+     * Analytical Surface Derivatives (Quotient Rule)
+     * Returns { pos: {x,y,z}, dU: {x,y,z}, dV: {x,y,z}, W, dWu, dWv }
+     */
+    getSurfaceDerivatives(patch, xi, eta) {
+        const { controlPoints, weights, p, q, U, V } = patch;
+        
+        let A = { x: 0, y: 0, z: 0 };
+        let Au = { x: 0, y: 0, z: 0 };
+        let Av = { x: 0, y: 0, z: 0 };
+        let W = 0;
+        let Wu = 0;
+        let Wv = 0;
+
+        for (let i = 0; i < weights.length; i++) {
+            const Ni = this.basis1D(i, p, U, xi);
+            const dNi = this.basis1DDeriv(i, p, U, xi);
+            if (Ni === 0 && dNi === 0) continue;
+
+            for (let j = 0; j < weights[0].length; j++) {
+                const Mj = this.basis1D(j, q, V, eta);
+                const dMj = this.basis1DDeriv(j, q, V, eta);
+                if (Mj === 0 && dMj === 0) continue;
+
+                const w = weights[i][j];
+                const cp = controlPoints[i][j];
+
+                // Numerator sum
+                const basis = Ni * Mj * w;
+                const basisU = dNi * Mj * w;
+                const basisV = Ni * dMj * w;
+
+                A.x += basis * cp.x; A.y += basis * cp.y; A.z += basis * cp.z;
+                Au.x += basisU * cp.x; Au.y += basisU * cp.y; Au.z += basisU * cp.z;
+                Av.x += basisV * cp.x; Av.y += basisV * cp.y; Av.z += basisV * cp.z;
+
+                // Denominator sum
+                W += basis;
+                Wu += basisU;
+                Wv += basisV;
+            }
+        }
+
+        if (W < 1e-12) W = 1e-12;
+
+        const pos = { x: A.x / W, y: A.y / W, z: A.z / W };
+        
+        // Exact Quotient Rule: dS/du = (Au*W - A*Wu) / W^2 = (Au - S*Wu) / W
+        const dU = {
+            x: (Au.x - pos.x * Wu) / W,
+            y: (Au.y - pos.y * Wu) / W,
+            z: (Au.z - pos.z * Wu) / W
+        };
+
+        const dV = {
+            x: (Av.x - pos.x * Wv) / W,
+            y: (Av.y - pos.y * Wv) / W,
+            z: (Av.z - pos.z * Wv) / W
+        };
+
+        return { pos, dU, dV, W, Wu, Wv };
+    }
+
+    /**
+     * Jacobian Determinant (Exact Analytical Cross Product)
      */
     getJacobianDeterminant(patch, xi, eta) {
-        const h = 0.001;
-        const p0 = this.evaluateSurface(patch, xi, eta);
-        const pu = this.evaluateSurface(patch, Math.min(xi + h, 1 - 1e-6), eta);
-        const pv = this.evaluateSurface(patch, xi, Math.min(eta + h, 1 - 1e-6));
+        const deriv = this.getSurfaceDerivatives(patch, xi, eta);
+        const tu = deriv.dU;
+        const tv = deriv.dV;
 
-        const tu = { x: (pu.x - p0.x)/h, y: (pu.y - p0.y)/h, z: (pu.z - p0.z)/h };
-        const tv = { x: (pv.x - p0.x)/h, y: (pv.y - p0.y)/h, z: (pv.z - p0.z)/h };
+        // Cross Product (Norm of Normal Vector)
+        const nx = tu.y * tv.z - tu.z * tv.y;
+        const ny = tu.z * tv.x - tu.x * tv.z;
+        const nz = tu.x * tv.y - tu.y * tv.x;
 
-        const cp = {
+        const area = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        return isNaN(area) ? 0.0 : area;
+    }
+
+    /**
+     * Get Local Surface Normal (Unit Vector)
+     */
+    getSurfaceNormal(patch, xi, eta) {
+        const deriv = this.getSurfaceDerivatives(patch, xi, eta);
+        const tu = deriv.dU;
+        const tv = deriv.dV;
+
+        const n = {
             x: tu.y * tv.z - tu.z * tv.y,
             y: tu.z * tv.x - tu.x * tv.z,
             z: tu.x * tv.y - tu.y * tv.x
         };
 
-        const area = Math.sqrt(cp.x * cp.x + cp.y * cp.y + cp.z * cp.z);
-        return isNaN(area) ? 1.0 : area;
+        const mag = Math.sqrt(n.x * n.x + n.y * n.y + n.z * n.z) || 1.0;
+        return { x: n.x / mag, y: n.y / mag, z: n.z / mag };
     }
 
     /**
