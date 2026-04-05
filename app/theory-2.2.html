@@ -35,13 +35,33 @@
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">1. What is p-Refinement?</h2>
-            <p>In classical FEM, "p-refinement" means increasing the order of the polynomial shape functions in an element. In NURBS, it means elevating the degree ($p$ or $q$) while ensuring the geometry remains <strong>exactly</strong> invariant.</p>
-            <p>When you elevate the degree, the knot vector multiplicity increases at the endpoints, and new control points are interpolated between the old ones.</p>
+            <p>The p-refinement strategy focuses on increasing the polynomial degree of the basis functions, thereby enhancing the order of approximation. This is particularly effective for problems where the solution is expected to be smooth, as it leverages the spectral accuracy inherent in higher-order polynomials.</p>
+            <p class="mt-4">Unlike classical FEM where shape functions are arbitrarily enriched, degree elevation in NURBS mathematically guarantees that the geometrical shape is maintained <strong>exactly</strong> invariant.</p>
         </section>
 
         <section class="content-section">
-            <h2 class="text-2xl font-bold mb-4">2. The Continuity Advantage</h2>
-            <p>A NURBS basis of degree $p$ is $C^{p-1}$ continuous. Elevating the degree automatically increases the mathematical "smoothness" of the entire patch, making it ideal for high-precision mechanics (like shell theory).</p>
+            <h2 class="text-2xl font-bold mb-4">2. The Piegl-Tiller Algorithm</h2>
+            <p>The standard robust approach for elevating the degree of a NURBS entity, as detailed by Piegl and Tiller, follows a sequential three-step process designed to perfectly maintain the geometric and parametric identity of the model:</p>
+            <ul class="space-y-4 mt-6 text-slate-300">
+                <li><strong class="text-blue-400">1. Bézier Decomposition:</strong> The NURBS curve or surface is decomposed into constituent rational Bézier segments. This is achieved by inserting knots at every internal location until their multiplicity equals the current degree $p$.</li>
+                <li><strong class="text-blue-400">2. Segment Elevation:</strong> Each Bézier segment is elevated from degree $p$ to $p+1$. For a Bézier segment with control points $\mathbf{P}_i$, the new points $\mathbf{Q}_i$ are recursively calculated via homogeneous affine combinations:
+                    <div class="math-card text-center my-3">
+                        $$\mathbf{Q}_i = \frac{i}{p+1} \mathbf{P}_{i-1} + \left(1 - \frac{i}{p+1}\right) \mathbf{P}_i$$
+                    </div>
+                </li>
+                <li><strong class="text-blue-400">3. Re-Composition:</strong> The elevated Bézier segments are merged back into a continuous NURBS structure. This involves removing unnecessary knots at the segment interfaces to restore the original continuity level.</li>
+            </ul>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">3. Direct Degree Elevation (DDE) Fast-Paths</h2>
+            <p>In a two-dimensional context, degree elevation must be performed for both the $\xi$ and $\eta$ tensor directions. This is computationally demanding, as each row and column of the control net must undergo the full decomposition and re-composition process.</p>
+            <p class="mt-4">To improve computational performance, <strong>Direct Degree Elevation (DDE)</strong> algorithms naturally avoid the expensive topological knot insertion and removal steps. DDE methods utilize direct arithmetic updates to the control points, which can be up to 50% faster.</p>
+            <p class="mt-4">For the specific linear clamped NURBS case ($p=1$), DDE maps the control points through a simple averaging geometric scheme that gracefully expands the net:</p>
+            <div class="math-card text-center my-4">
+                $$\mathbf{Q}_{2i} = \mathbf{P}_i, \quad \mathbf{Q}_{2i+1} = \frac{\mathbf{P}_i + \mathbf{P}_{i+1}}{2}$$
+            </div>
+            <p class="mt-4">This algorithmic efficiency is critical in adaptive $k$-refinement cycles where thousands of patches might be elevated synchronously.</p>
         </section>
 
         <section class="content-section text-center">
