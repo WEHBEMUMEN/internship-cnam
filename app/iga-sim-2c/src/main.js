@@ -7,9 +7,18 @@ const engine = new NURBS2D();
 const solver = new IGA2DSolver(engine);
 
 let patch = NURBSPresets.generateSheet();
+// Ensure exact 2D Flat Plate
+for(let i=0; i<patch.controlPoints.length; i++) {
+    for(let j=0; j<patch.controlPoints[0].length; j++) {
+        patch.controlPoints[i][j].z = 0;
+    }
+}
+
 let chart;
 let snapshots = [];
 let parameters = [];
+let forceArrow;
+let boundaryVisuals = [];
 let isGenerating = false;
 
 // --- Three.js ---
@@ -92,6 +101,74 @@ function updateSurface(u_disp) {
     geometry.computeVertexNormals();
     surfaceMesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide }));
     scene.add(surfaceMesh);
+
+    // Add explicit wireframe to ensure visibility
+    const wireframeOverlay = new THREE.LineSegments(
+        new THREE.WireframeGeometry(geometry),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })
+    );
+    scene.add(wireframeOverlay);
+    
+    refreshVisuals(); // Initialize indicators
+}
+
+function refreshVisuals() {
+    if (!patch || !patch.controlPoints) return;
+    const boundEdge = document.getElementById('bound-edge').value;
+    const forceU = parseInt(document.getElementById('force-u').value) || 0;
+    const forceV = parseInt(document.getElementById('force-v').value) || 0;
+    const forceDir = document.getElementById('force-dir').value;
+    
+    const nU = patch.controlPoints.length;
+    const nV = patch.controlPoints[0].length;
+    
+    boundaryVisuals.forEach(mesh => scene.remove(mesh));
+    boundaryVisuals = [];
+    
+    let bcs = [];
+    if (boundEdge === 'left') {
+        for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j });
+    } else if (boundEdge === 'right') {
+        for (let j = 0; j < nV; j++) bcs.push({ i: nU - 1, j: j });
+    } else if (boundEdge === 'bottom') {
+        for (let i = 0; i < nU; i++) bcs.push({ i: i, j: 0 });
+    } else if (boundEdge === 'top') {
+        for (let i = 0; i < nU; i++) bcs.push({ i: i, j: nV - 1 });
+    }
+
+    const geo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9 }); 
+    
+    bcs.forEach(bc => {
+        const cp = patch.controlPoints[bc.i][bc.j];
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(cp.x, cp.y, cp.z);
+        scene.add(mesh);
+        boundaryVisuals.push(mesh);
+    });
+    
+    const isHoriz = (forceDir === 'horizontal');
+    const dirVector = isHoriz ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, -1, 0);
+
+    if (!forceArrow) {
+        forceArrow = new THREE.ArrowHelper(dirVector, new THREE.Vector3(0,0,0), 5, 0x0ea5e9, 1.5, 1);
+        scene.add(forceArrow);
+    } else {
+        forceArrow.setDirection(dirVector);
+    }
+    
+    const cl_U = Math.min(Math.max(forceU, 0), nU - 1);
+    const cl_V = Math.min(Math.max(forceV, 0), nV - 1);
+    const cp = patch.controlPoints[cl_U][cl_V];
+    
+    const length = 4;
+    forceArrow.setLength(length, 1.0, 0.8);
+    
+    if (isHoriz) {
+        forceArrow.position.set(cp.x - length, cp.y, cp.z);
+    } else {
+        forceArrow.position.set(cp.x, cp.y + length, cp.z);
+    }
 }
 
 function interpolateDisplacement(u_arr, u, v, denom) {
@@ -135,18 +212,48 @@ async function startBatch() {
     
     log(`LHS Map built. Starting solver cascade...`);
 
+    log(`LHS Map built. Starting solver cascade...`);
+
     const nU = patch.controlPoints.length, nV = patch.controlPoints[0].length;
     const bcs = [];
-    for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
+    const boundEdge = document.getElementById('bound-edge').value;
+    if (boundEdge === 'left') {
+        for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
+    } else if (boundEdge === 'right') {
+        for (let j = 0; j < nV; j++) bcs.push({ i: nU - 1, j: j, axis: 'both', value: 0 });
+    } else if (boundEdge === 'bottom') {
+        for (let i = 0; i < nU; i++) bcs.push({ i: i, j: 0, axis: 'both', value: 0 });
+    } else if (boundEdge === 'top') {
+        for (let i = 0; i < nU; i++) bcs.push({ i: i, j: nV - 1, axis: 'both', value: 0 });
+    }
+
+    const forceU = Math.min(Math.max(parseInt(document.getElementById('force-u').value) || 0, 0), nU - 1);
+    const forceV = Math.min(Math.max(parseInt(document.getElementById('force-v').value) || 0, 0), nV - 1);
+    const forceDir = document.getElementById('force-dir').value;
 
     for (let i = 0; i < nSamples; i++) {
         const mu = samples[i];
         solver.E = mu.E * 1000; // MPa
-        const loads = [{ i: nU - 1, j: Math.floor(nV / 2), fx: 0, fy: -mu.Load }];
+        
+        let fx = 0, fy = 0;
+        if (forceDir === 'horizontal') fx = mu.Load;
+        else fy = -mu.Load;
+        
+        const loads = [{ i: forceU, j: forceV, fx: fx, fy: fy }];
         
         // Asynchronous batch run to allow UI updates
         const result = await runSolve(patch, bcs, loads);
         
+        let hasNaN = false;
+        if(result && result.u) {
+            for(let k=0; k<result.u.length; k++) if(isNaN(result.u[k])) hasNaN = true;
+        }
+
+        if(hasNaN) {
+            log(`[ERROR] Sample ${i+1} diverged! Skipping...`);
+            continue;
+        }
+
         snapshots.push(Array.from(result.u));
         parameters.push(mu);
         
@@ -184,11 +291,45 @@ function log(msg) {
 }
 
 function setupUI() {
+    document.getElementById('start-btn').onclick = startBatch;
+    document.getElementById('download-btn').onclick = downloadData;
+    
     document.getElementById('n-slider').oninput = (e) => {
         document.getElementById('n-val').textContent = e.target.value;
     };
-    document.getElementById('start-btn').onclick = startBatch;
-    document.getElementById('download-btn').onclick = downloadData;
+
+    const uiIds = ['bound-edge', 'force-u', 'force-v', 'force-dir'];
+    uiIds.forEach(id => {
+        document.getElementById(id).addEventListener('change', refreshVisuals);
+        document.getElementById(id).addEventListener('input', refreshVisuals);
+    });
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+        if (isGenerating) return; // Lock UI during batch solving
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        if (surfaceMesh) {
+            const intersects = raycaster.intersectObject(surfaceMesh);
+            if (intersects.length > 0) {
+                const a = intersects[0].face.a;
+                const res = 40;
+                const i_grid = Math.floor(a / (res+1));
+                const j_grid = a % (res+1);
+                const nU = patch.controlPoints.length, nV = patch.controlPoints[0].length;
+                const bestU = Math.min(Math.max(Math.round((i_grid / res) * (nU - 1)), 0), nU - 1);
+                const bestV = Math.min(Math.max(Math.round((j_grid / res) * (nV - 1)), 0), nV - 1);
+                
+                document.getElementById('force-u').value = bestU;
+                document.getElementById('force-v').value = bestV;
+                refreshVisuals();
+            }
+        }
+    });
 }
 
 function downloadData() {

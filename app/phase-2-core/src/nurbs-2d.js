@@ -661,6 +661,13 @@ class NURBS2D {
     }
 }
 
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { NURBS2D };
+} else {
+    window.NURBS2D = NURBS2D;
+}
+
+
 // Export for use in browser
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = NURBS2D;
