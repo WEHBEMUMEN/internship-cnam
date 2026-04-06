@@ -96,4 +96,8 @@ class NURBSPresets {
     }
 }
 
-window.NURBSPresets = NURBSPresets;
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NURBSPresets;
+} else {
+    window.NURBSPresets = NURBSPresets;
+}

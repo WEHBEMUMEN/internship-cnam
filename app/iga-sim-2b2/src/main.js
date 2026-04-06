@@ -7,6 +7,13 @@ const engine = new NURBS2D();
 const solver = new IGA2DSolver(engine);
 
 let patch = NURBSPresets.generateSheet(); // 10x10 Quadratic Plate
+// Ensure exact 2D Flat Plate
+for(let i=0; i<patch.controlPoints.length; i++) {
+    for(let j=0; j<patch.controlPoints[0].length; j++) {
+        patch.controlPoints[i][j].z = 0;
+    }
+}
+
 let analysisData = {
     u: null,
     residuals: [],
@@ -14,6 +21,18 @@ let analysisData = {
     load: 5000
 };
 
+let targetState = {
+    mode: 'nonlinear',
+    load: 5000,
+    forceU: 3,
+    forceV: 1,
+    forceDir: 'vertical',
+    boundEdge: 'left'
+};
+let activeState = { mode: '', load: -1, forceU: -1, forceV: -1, forceDir: '', boundEdge: '' };
+let isSolving = false;
+let forceArrow;
+let boundaryVisuals = [];
 let chart;
 
 // --- Three.js ---
@@ -128,6 +147,13 @@ function updateSurface() {
     const material = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide });
     surfaceMesh = new THREE.Mesh(geometry, material);
     scene.add(surfaceMesh);
+
+    // Add explicit wireframe to ensure visibility
+    wireframeOverlay = new THREE.LineSegments(
+        new THREE.WireframeGeometry(geometry),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })
+    );
+    scene.add(wireframeOverlay);
 }
 
 function interpolateDisplacement(u, v, denom) {
@@ -162,41 +188,135 @@ function getHeatmapColor(t) {
     return { r: 0.1 + t * 0.9, g: 0.1 + t * 0.2, b: 0.4 - t * 0.3 };
 }
 
-async function runAnalysis() {
-    const btn = document.getElementById('solve-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Converging...';
-    
-    document.getElementById('conv-stat').textContent = "Status: Executing Assembly...";
+function updateForceArrow(uIndex, vIndex, load, dirString) {
+    const isHoriz = (dirString === 'horizontal');
+    const dirVector = isHoriz ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, -1, 0);
 
-    // Setup BCs & Loads
+    if (!forceArrow) {
+        forceArrow = new THREE.ArrowHelper(dirVector, new THREE.Vector3(0,0,0), 5, 0xef4444, 1.5, 1);
+        scene.add(forceArrow);
+    } else {
+        forceArrow.setDirection(dirVector);
+    }
+    
+    const cp = patch.controlPoints[Math.min(uIndex, patch.controlPoints.length - 1)][Math.min(vIndex, patch.controlPoints[0].length - 1)];
+    let px = cp.x, py = cp.y, pz = cp.z;
+    if (analysisData.u) {
+        const idx = (uIndex * patch.controlPoints[0].length + vIndex) * 2;
+        px += analysisData.u[idx];
+        py += analysisData.u[idx + 1];
+    }
+    
+    const length = 2 + (load / 2000);
+    forceArrow.setLength(length, 1.0, 0.8);
+    
+    if (isHoriz) {
+        // Arrow points to the RIGHT (1, 0, 0). So origin is to the LEFT.
+        forceArrow.position.set(px - length, py, pz);
+    } else {
+        // Arrow points DOWN (0, -1, 0). So origin is ABOVE.
+        forceArrow.position.set(px, py + length, pz);
+    }
+}
+
+function updateBoundaryVisuals(boundEdge) {
+    boundaryVisuals.forEach(mesh => scene.remove(mesh));
+    boundaryVisuals = [];
+    
     const nU = patch.controlPoints.length;
     const nV = patch.controlPoints[0].length;
-    const bcs = [];
-    for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 }); // Cantilever
+    let bcs = [];
+    if (boundEdge === 'left') {
+        for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j });
+    } else if (boundEdge === 'right') {
+        for (let j = 0; j < nV; j++) bcs.push({ i: nU - 1, j: j });
+    } else if (boundEdge === 'bottom') {
+        for (let i = 0; i < nU; i++) bcs.push({ i: i, j: 0 });
+    } else if (boundEdge === 'top') {
+        for (let i = 0; i < nU; i++) bcs.push({ i: i, j: nV - 1 });
+    }
+
+    const geo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 }); // Blue-500
     
-    const loadVal = parseFloat(document.getElementById('load-slider').value);
-    const loads = [{ i: nU - 1, j: Math.floor(nV / 2), fx: 0, fy: -loadVal }];
-
-    setTimeout(() => {
-        const t0 = performance.now();
-        if (analysisData.mode === 'linear') {
-            analysisData.u = solver.solve(patch, bcs, loads);
-            analysisData.residuals = [1.0, 1e-15];
-        } else {
-            const result = solver.solveNonlinear(patch, bcs, loads, { steps: 2, iterations: 10 });
-            analysisData.u = result.u;
-            analysisData.residuals = result.residualHistory;
+    bcs.forEach(bc => {
+        const cp = patch.controlPoints[bc.i][bc.j];
+        const mesh = new THREE.Mesh(geo, mat);
+        let px = cp.x, py = cp.y, pz = cp.z;
+        if (analysisData.u) {
+            const idx = (bc.i * nV + bc.j) * 2;
+            px += analysisData.u[idx];
+            py += analysisData.u[idx + 1];
         }
-        const t1 = performance.now();
+        mesh.position.set(px, py, pz);
+        scene.add(mesh);
+        boundaryVisuals.push(mesh);
+    });
+}
 
-        updateChart();
-        updateSurface();
-        
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Run Analysis';
-        document.getElementById('conv-stat').textContent = `Success: Solved in ${ (t1 - t0).toFixed(1) }ms`;
-    }, 50);
+async function solverLoop() {
+    if (!isSolving) {
+        if (targetState.load !== activeState.load || targetState.forceU !== activeState.forceU || targetState.forceV !== activeState.forceV || targetState.mode !== activeState.mode || targetState.forceDir !== activeState.forceDir || targetState.boundEdge !== activeState.boundEdge) {
+            isSolving = true;
+            const stateToSolve = { ...targetState };
+            
+            // Yield to browser UI thread
+            await new Promise(resolve => setTimeout(resolve, 5));
+            
+            const t0 = performance.now();
+            document.getElementById('conv-stat').textContent = "Status: Executing Assembly...";
+            
+            const nU = patch.controlPoints.length;
+            const nV = patch.controlPoints[0].length;
+            const bcs = [];
+            if (stateToSolve.boundEdge === 'left') {
+                for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
+            } else if (stateToSolve.boundEdge === 'right') {
+                for (let j = 0; j < nV; j++) bcs.push({ i: nU - 1, j: j, axis: 'both', value: 0 });
+            } else if (stateToSolve.boundEdge === 'bottom') {
+                for (let i = 0; i < nU; i++) bcs.push({ i: i, j: 0, axis: 'both', value: 0 });
+            } else if (stateToSolve.boundEdge === 'top') {
+                for (let i = 0; i < nU; i++) bcs.push({ i: i, j: nV - 1, axis: 'both', value: 0 });
+            }
+            
+            let fx = 0, fy = 0;
+            if (stateToSolve.forceDir === 'horizontal') fx = stateToSolve.load;
+            else fy = -stateToSolve.load;
+
+            const loads = [{ i: stateToSolve.forceU, j: stateToSolve.forceV, fx: fx, fy: fy }];
+
+            try {
+                if (stateToSolve.mode === 'linear') {
+                    analysisData.u = solver.solve(patch, bcs, loads);
+                    analysisData.residuals = [1.0, 1e-15];
+                } else {
+                    const result = solver.solveNonlinear(patch, bcs, loads, { steps: 2, iterations: 10 });
+                    analysisData.u = result.u;
+                    analysisData.residuals = result.residualHistory;
+                }
+                
+                let hasNaN = false;
+                if(analysisData.u) {
+                    for(let i=0; i<analysisData.u.length; i++) if(isNaN(analysisData.u[i])) hasNaN = true;
+                }
+                if(hasNaN) console.error("Solver produced NaN displacements!");
+                
+                const t1 = performance.now();
+                updateChart();
+                updateSurface();
+                updateForceArrow(stateToSolve.forceU, stateToSolve.forceV, stateToSolve.load, stateToSolve.forceDir);
+                updateBoundaryVisuals(stateToSolve.boundEdge);
+                
+                document.getElementById('conv-stat').textContent = `Success: Solved in ${ (t1 - t0).toFixed(1) }ms`;
+                activeState = { ...stateToSolve };
+            } catch (err) {
+                console.error("Solver exception:", err);
+                document.getElementById('conv-stat').textContent = `Error: ${err.message}`;
+            }
+            isSolving = false;
+        }
+    }
+    requestAnimationFrame(solverLoop);
 }
 
 function updateChart() {
@@ -206,23 +326,74 @@ function updateChart() {
 }
 
 function setupUI() {
-    document.getElementById('solve-btn').onclick = runAnalysis;
+    const forceUInput = document.getElementById('force-u');
+    const forceVInput = document.getElementById('force-v');
+    const forceDirInput = document.getElementById('force-dir');
+    const boundEdgeInput = document.getElementById('bound-edge');
+
+    forceUInput.oninput = (e) => targetState.forceU = parseInt(e.target.value) || 0;
+    forceVInput.oninput = (e) => targetState.forceV = parseInt(e.target.value) || 0;
+    forceDirInput.onchange = (e) => targetState.forceDir = e.target.value;
+    boundEdgeInput.onchange = (e) => targetState.boundEdge = e.target.value;
+
+    document.getElementById('solve-btn').onclick = () => { /* Now Realtime, button config optional */ };
+    document.getElementById('solve-btn').style.display = 'none'; // Hide since it's realtime now
     
     document.getElementById('mode-linear').onclick = () => {
-        analysisData.mode = 'linear';
+        targetState.mode = 'linear';
         document.getElementById('mode-linear').className = "py-2 px-3 rounded-lg border border-blue-500 bg-blue-500/10 text-blue-400 text-xs font-bold transition-colors";
         document.getElementById('mode-nonlinear').className = "py-2 px-3 rounded-lg border border-slate-700 text-xs font-bold hover:bg-slate-800 transition-colors";
     };
     
     document.getElementById('mode-nonlinear').onclick = () => {
-        analysisData.mode = 'nonlinear';
+        targetState.mode = 'nonlinear';
         document.getElementById('mode-nonlinear').className = "py-2 px-3 rounded-lg border border-rose-500 bg-rose-500/10 text-rose-400 text-xs font-bold transition-colors";
         document.getElementById('mode-linear').className = "py-2 px-3 rounded-lg border border-slate-700 text-xs font-bold hover:bg-slate-800 transition-colors";
     };
 
     document.getElementById('load-slider').oninput = (e) => {
         document.getElementById('load-val').textContent = `${e.target.value} N`;
+        targetState.load = parseFloat(e.target.value);
     };
+
+    // --- Raycasting Interaction ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        if (surfaceMesh) {
+            const intersects = raycaster.intersectObject(surfaceMesh);
+            if (intersects.length > 0) {
+                const a = intersects[0].face.a;
+                const res = 40;
+                
+                // Map vertex index to parameter geometry
+                const i_grid = Math.floor(a / (res+1));
+                const j_grid = a % (res+1);
+                
+                const u_param = i_grid / res;
+                const v_param = j_grid / res;
+                
+                const nU = patch.controlPoints.length;
+                const nV = patch.controlPoints[0].length;
+                
+                const bestU = Math.min(Math.max(Math.round(u_param * (nU - 1)), 0), nU - 1);
+                const bestV = Math.min(Math.max(Math.round(v_param * (nV - 1)), 0), nV - 1);
+                
+                forceUInput.value = bestU;
+                forceVInput.value = bestV;
+                targetState.forceU = bestU;
+                targetState.forceV = bestV;
+            }
+        }
+    });
+
+    solverLoop(); // Start Async Polling
 }
 
 function animate() {
