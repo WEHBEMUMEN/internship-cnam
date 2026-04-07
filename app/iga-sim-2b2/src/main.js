@@ -61,6 +61,8 @@ let visibilityState = {
 function init() {
     setupUI();
     updateSurface();
+    updateBoundaryVisuals();
+    updateForceArrows();
     animate();
 }
 
