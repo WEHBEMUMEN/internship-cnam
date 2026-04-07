@@ -473,6 +473,60 @@ class IGA2DSolver {
      * Solve Linear System: K * d = f
      * Applies Dirichlet BCs (constrained DOFs) and Neumann BCs (load vector)
      */
+    /**
+     * Calculate physically accurate nodal loads via 1D Gaussian Integration
+     * Fi = Integral( Ni(u) * T * det(J_1D) du )
+     */
+    calculateNodalTraction(patch, loadValue, edge = 'right') {
+        const { p, q, U, V, controlPoints } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const nDofs = nU * nV * 2;
+        const forces = new Float64Array(nDofs);
+        
+        // Integration setup
+        const gPoints = [
+            -0.7745966692414833, 0.0, 0.7745966692414833
+        ];
+        const gWeights = [
+            0.5555555555555556, 0.8888888888888888, 0.5555555555555556
+        ];
+
+        let uMin, uMax, vMin, vMax;
+        const uniqueU = [...new Set(U)];
+        const uniqueV = [...new Set(V)];
+
+        if (edge === 'right') {
+            // Right edge is v=1.0, u ranges from 0 to 1
+            const v = 1.0;
+            for (let i = 0; i < uniqueU.length - 1; i++) {
+                uMin = uniqueU[i]; uMax = uniqueU[i+1];
+                if (uMax - uMin < 1e-9) continue;
+
+                for (let gu = 0; gu < gPoints.length; gu++) {
+                    const u = ((uMax - uMin) * gPoints[gu] + (uMax + uMin)) / 2;
+                    const wt = gWeights[gu] * (uMax - uMin) / 2;
+
+                    const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                    // 1D Jacobian along the u-direction (Right Edge) is the norm of dS/du
+                    const detJ = Math.sqrt(deriv.dU.x**2 + deriv.dU.y**2 + deriv.dU.z**2);
+                    
+                    // Apply to all basis functions active in this span
+                    for (let a = 0; a < nU; a++) {
+                        const Na = this.engine.basis1D(a, p, U, u);
+                        const Ma = this.engine.basis1D(nV-1, q, V, v); // v=1.0
+                        const R = Na * Ma; // Weights assumed 1.0 for simplicity here or handled in engine
+                        
+                        // Traction is in X direction (fx)
+                        const idx = (a * nV + (nV - 1)) * 2;
+                        forces[idx] += R * loadValue * detJ * wt;
+                    }
+                }
+            }
+        }
+        return forces;
+    }
+
     solve(patch, bcs, loads) {
         const nU = patch.controlPoints.length;
         const nV = patch.controlPoints[0].length;

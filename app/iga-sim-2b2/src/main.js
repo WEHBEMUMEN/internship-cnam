@@ -273,22 +273,31 @@ function updateForceArrows() {
     forceVisuals = [];
     if (!visibilityState.force || targetState.load === 0) return;
 
-    const samples = 15;
-    
-    // Sample along the outer boundary (v=1)
-    for (let i = 0; i <= samples; i++) {
-        const u = i / samples;
-        const v = 1.0;
-        const state = engine.getSurfaceState(patch, u, v);
-        const cp = state.position;
-
-        // RIGHT boundary (x = L)
-        if (Math.abs(cp.x - L) < 0.1) {
-            const dir = new THREE.Vector3(1, 0, 0);
-            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
-            scene.add(arrow);
-            forceVisuals.push(arrow);
+    // Use spatial sampling for uniform visualization (Linear steps in Y physical space)
+    const nArrows = 8;
+    for (let i = 0; i <= nArrows; i++) {
+        const yTarget = (i / nArrows) * L;
+        
+        // Find u corresponding to yTarget along v=1.0 via binary search or simple dense map
+        let bestU = 0;
+        let minDist = Infinity;
+        const resolution = 200;
+        for (let j = 0; j <= resolution; j++) {
+            const uTry = j / resolution;
+            const pos = engine.evaluateSurface(patch, uTry, 1.0);
+            const dist = Math.abs(pos.y - yTarget);
+            if (Math.abs(pos.x - L) < 0.2 && dist < minDist) {
+                minDist = dist;
+                bestU = uTry;
+            }
         }
+
+        const state = engine.getSurfaceState(patch, bestU, 1.0);
+        const cp = state.position;
+        const dir = new THREE.Vector3(1, 0, 0);
+        const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
+        scene.add(arrow);
+        forceVisuals.push(arrow);
     }
 }
 
@@ -323,25 +332,19 @@ async function solverLoop() {
             for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
         }
         
+        // NEW: Physically accurate 1D Gaussian Integration for boundary traction
+        const integratedForces = solver.calculateNodalTraction(patch, targetState.load, 'right');
         const loads = [];
-        // Apply traction only to the Right edge (x=L)
-        for(let i=0; i<nU; i++) {
-            for(let j=0; j<nV; j++) {
-                const cp = patch.controlPoints[i][j];
-                if (!cp) continue;
-
-                const isRightEdge = Math.abs(cp.x - L) < 0.1;
+        for (let i = 0; i < integratedForces.length; i++) {
+            if (integratedForces[i] !== 0) {
+                // Map flat index back to {i, j, axis} if needed, or update solver to take raw vector
+                const dofId = i % 2;
+                const nodeIdx = Math.floor(i / 2);
+                const a = Math.floor(nodeIdx / nV);
+                const b = nodeIdx % nV;
                 
-                if (isRightEdge) {
-                    // Check if it's a corner (symmetry axis intersection)
-                    const isXAxis = Math.abs(cp.y) < 0.1;
-                    
-                    // Boundary nodes (end of edges) get half weight for uniform traction
-                    const isEndNode = isXAxis;
-                    const weight = isEndNode ? 0.5 : 1.0;
-
-                    loads.push({ i: i, j: j, fx: targetState.load * weight, fy: 0 });
-                }
+                if (dofId === 0) loads.push({ i: a, j: b, fx: integratedForces[i], fy: 0 });
+                else            loads.push({ i: a, j: b, fx: 0, fy: integratedForces[i] });
             }
         }
 

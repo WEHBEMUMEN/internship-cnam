@@ -92,6 +92,19 @@
             </div>
         </section>
 
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">5. Boundary Traction Integration</h2>
+            <p>In classical FEM, nodal loads are often applied using simple "tributary areas." In Isogeometric Analysis (IGA), where meshes are frequently non-uniform or higher-order, we must use <b>Boundary Integration</b> to ensure a perfectly uniform traction distribution.</p>
+            
+            <div class="math-card">
+                $$\mathbf{f}_i^{\text{ext}} = \int_{\Gamma_N} R_i(\xi) \mathbf{T}(\xi) \det(\mathbf{J}_{1D}) d\xi$$
+            </div>
+            
+            <p class="text-slate-400 text-sm mt-4">
+                By integrating the traction $\mathbf{T}$ over the basis functions $R_i$, the solver automatically "weights" the nodal forces based on the physical size of the elements. This prevents "force clustering" in refined areas and ensures the total applied load matches the theoretical requirement exactly.
+            </p>
+        </section>
+
         <section class="content-section text-center">
             <h2 class="text-2xl font-bold mb-4">Launch Nonlinear Lab</h2>
             <p class="mb-8 text-slate-400">Experience quadratic convergence and large-scale bending in our interactive 2D benchmark.</p>
