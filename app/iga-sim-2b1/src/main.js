@@ -32,8 +32,13 @@ let surfaceMesh, wireframeOverlay;
 let latticeGroup = new THREE.Group();
 scene.add(latticeGroup);
 
+let helpersGroup = new THREE.Group();
+scene.add(helpersGroup);
+
 function fullRebuild() {
+    updateLoadingState();
     createMesh();
+    drawBoundaryAndLoad();
     updateUI();
 }
 
@@ -136,29 +141,80 @@ function getHeatmapColor(t) {
     };
 }
 
+let currentBCs = [];
+let currentLoads = [];
+
+function updateLoadingState() {
+    const loadValue = parseFloat(document.getElementById('load-slider').value);
+    const nU = patch.controlPoints.length;
+    const nV = patch.controlPoints[0].length;
+    
+    currentBCs = [];
+    for (let j = 0; j < nV; j++) {
+        currentBCs.push({ i: 0, j: j, axis: 'both', value: 0 });
+    }
+    
+    currentLoads = [{ i: nU - 1, j: Math.floor(nV / 2), fx: 0, fy: -loadValue }];
+}
+
+function drawBoundaryAndLoad() {
+    if (helpersGroup) scene.remove(helpersGroup);
+    helpersGroup = new THREE.Group();
+    
+    // Draw BCs (Red Cones pointing at Clamped Edge)
+    currentBCs.forEach(bc => {
+        const cp = patch.controlPoints[bc.i][bc.j];
+        const z = cp.z !== undefined ? cp.z : 0;
+        
+        const geo = new THREE.ConeGeometry(0.3, 0.8, 8);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+        const mesh = new THREE.Mesh(geo, mat);
+        
+        // Point towards the right (into the plate)
+        mesh.rotation.z = -Math.PI / 2;
+        mesh.position.set(cp.x - 0.4, cp.y, z);
+        helpersGroup.add(mesh);
+    });
+
+    // Draw Loads (Orange Arrow)
+    currentLoads.forEach(load => {
+        const cp = patch.controlPoints[load.i][load.j];
+        const z = cp.z !== undefined ? cp.z : 0;
+        
+        const dir = new THREE.Vector3(load.fx, load.fy, 0).normalize();
+        const origin = new THREE.Vector3(cp.x, cp.y, z);
+        
+        // Visual length scales slightly with load
+        const loadMag = Math.sqrt(load.fx*load.fx + load.fy*load.fy);
+        const length = Math.max(2.0, Math.min(loadMag / 20, 6.0)); 
+        
+        // Position arrow so it points AT the control point
+        origin.sub(dir.clone().multiplyScalar(length));
+        
+        const hex = 0xf59e0b; // Amber
+        const arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex, 1.0, 0.5);
+        if (arrowHelper.line && arrowHelper.line.material) {
+            arrowHelper.line.material.linewidth = 3;
+        }
+        helpersGroup.add(arrowHelper);
+    });
+    
+    scene.add(helpersGroup);
+}
+
 async function runAnalysis() {
     if (window.perfMonitor) window.perfMonitor.startMeasure();
+    
+    updateLoadingState();
+    drawBoundaryAndLoad();
     
     // Set Solver state from UI
     solver.E = parseFloat(document.getElementById('e-slider').value) * 1000; // to MPa
     solver.nu = parseFloat(document.getElementById('nu-slider').value) / 100.0;
-    const loadValue = parseFloat(document.getElementById('load-slider').value);
-
-    const nU = patch.controlPoints.length;
-    const nV = patch.controlPoints[0].length;
-    
-    // 1. Setup BCs (Clamped Left Edge)
-    const bcs = [];
-    for (let j = 0; j < nV; j++) {
-        bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
-    }
-
-    // 2. Setup Loading (Point load at center-right)
-    const loads = [{ i: nU - 1, j: Math.floor(nV / 2), fx: 0, fy: -loadValue }];
 
     // 3. Solve
     console.log("Starting 2D Stiffness Assembly...");
-    displacements = solver.solve(patch, bcs, loads);
+    displacements = solver.solve(patch, currentBCs, currentLoads);
     console.log("Solution complete.");
 
     // 4. Calculate Max Displacement for Scaling
@@ -172,6 +228,7 @@ async function runAnalysis() {
 
     // 5. Compare with Beam Theory (Simple Cantilever Beam L=10, H=10, Elasticity)
     // d_max = (P * L^3) / (3 * E * I)
+    const loadValue = parseFloat(document.getElementById('load-slider').value);
     const L = 10.0;
     const H = 10.0;
     const I = (H * H * H) / 12; // Per unit width, but our plate is H wide...
@@ -198,6 +255,8 @@ document.getElementById('nu-slider').oninput = (e) => {
 };
 document.getElementById('load-slider').oninput = (e) => {
     document.getElementById('load-val').textContent = e.target.value;
+    updateLoadingState();
+    drawBoundaryAndLoad();
 };
 
 window.addEventListener('resize', () => {
