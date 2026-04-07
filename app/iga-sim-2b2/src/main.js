@@ -273,10 +273,16 @@ function updateForceArrows() {
     forceVisuals = [];
     if (!visibilityState.force || targetState.load === 0) return;
 
-    // Use spatial sampling for uniform visualization (Linear steps in Y physical space)
+    // Dynamically detect the actual physical extent of the boundary
+    const posStart = engine.evaluateSurface(patch, 0.0, 1.0);
+    const posEnd = engine.evaluateSurface(patch, 0.5, 1.0); // u=0.5 is the top corner
+    const yMin = Math.min(posStart.y, posEnd.y);
+    const yMax = Math.max(posStart.y, posEnd.y);
+
+    // Use spatial sampling for uniform visualization (Linear steps in actual physical space)
     const nArrows = 8;
     for (let i = 0; i <= nArrows; i++) {
-        const yTarget = (i / nArrows) * L;
+        const yTarget = yMin + (i / nArrows) * (yMax - yMin);
         
         // Find u corresponding to yTarget along v=1.0 via binary search or simple dense map
         let bestU = 0;

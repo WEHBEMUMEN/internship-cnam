@@ -105,6 +105,48 @@
             </p>
         </section>
 
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">6. Evolution of Force Assembly</h2>
+            <p>Our journey to a physically rigorous traction load involved three distinct stages of refinement:</p>
+            
+            <div class="space-y-4 mt-6 uppercase text-[10px] font-bold tracking-widest text-slate-500">
+                <div class="p-4 bg-slate-900 rounded-xl border-l-4 border-slate-600">
+                    <span class="text-slate-300 block mb-1">Stage 1: Simple Nodal Loads</span>
+                    <p class="font-normal text-slate-500 normal-case italic">Applying equal forces to each node. Inaccurate for non-uniform meshes; causes "force clustering" in dense regions.</p>
+                </div>
+                <div class="p-4 bg-slate-900 rounded-xl border-l-4 border-amber-600">
+                    <span class="text-amber-400 block mb-1">Stage 2: Geometric Manual Weighting</span>
+                    <p class="font-normal text-slate-500 normal-case italic">Manually halving the force at the corners. Better, but failed to account for NURBS parameter non-uniformity and degenerate corner locking.</p>
+                </div>
+                <div class="p-4 bg-slate-900 rounded-xl border-l-4 border-emerald-600">
+                    <span class="text-emerald-400 block mb-1">Stage 3: Integrated Boundary Assembly (Current)</span>
+                    <p class="font-normal text-slate-500 normal-case italic">Using Gaussian quadrature to integrate traction over shape functions. Mathematically exact for any mesh density.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">7. Numerical Algorithm (Appendix 4.C)</h2>
+            <p>To implement the integrated traction load, we follow standard element-assembly logic:</p>
+            
+            <div class="math-card py-6">
+                <pre class="text-[11px] font-mono leading-relaxed text-indigo-300 bg-black/40 p-4 rounded-lg">
+FOR each boundary element e DO
+   FOR each quadrature point i DO
+      Evaluate Basis Functions (Na)
+      Calculate Jacobian Modifier (Jmod = J * gw[i])
+      
+      FOR each local basis function aa DO
+         f_local[aa] += load * Na * Jmod
+      END FOR
+   END FOR
+   Assemble f_local into Global Force Vector f_ext
+END FOR</pre>
+            </div>
+            
+            <p class="text-xs text-slate-400 mt-4 italic">Note: The top-right corner nudge ensures $\det(\mathbf{J}) > 0$, preventing matrix singularity while keeping the assembly topologically exact.</p>
+        </section>
+
         <section class="content-section text-center">
             <h2 class="text-2xl font-bold mb-4">Launch Nonlinear Lab</h2>
             <p class="mb-8 text-slate-400">Experience quadratic convergence and large-scale bending in our interactive 2D benchmark.</p>
