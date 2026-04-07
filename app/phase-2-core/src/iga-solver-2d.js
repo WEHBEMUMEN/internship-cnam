@@ -483,45 +483,73 @@ class IGA2DSolver {
      * Calculates the global force vector by integrating traction over each boundary element.
      */
     calculateNodalTraction(patch, loadValue, edge = 'right') {
-        const { p, q, U, V, controlPoints } = patch;
+        const { p, q, U, V, controlPoints, weights } = patch;
         const nU = controlPoints.length;
         const nV = controlPoints[0].length;
         const forces = new Float64Array(nU * nV * 2);
         
-        // Quadrature Setup (Rule: p+1)
+        // Quadrature Setup (3-point Gauss rule)
         const gPoints = [-0.7745966692414833, 0.0, 0.7745966692414833];
         const gWeights = [0.5555555555555556, 0.8888888888888888, 0.5555555555555556];
 
         const uniqueU = [...new Set(U)];
-        const uniqueV = [...new Set(V)];
 
         if (edge === 'right') {
-            const v = 1.0;
-            // Loop through boundary elements in the U direction (Algorithm 4)
+            const vParam = 1.0 - 1e-6; // Slightly inside to avoid degenerate corner
+            
+            // Loop through boundary elements in the U direction
             for (let e = 0; e < uniqueU.length - 1; e++) {
                 const uMin = uniqueU[e]; 
                 const uMax = uniqueU[e+1];
                 if (uMax - uMin < 1e-9) continue;
 
-                // Loop through quadrature points (Algorithm 4 Continued)
                 for (let qu = 0; qu < gPoints.length; qu++) {
                     const u = ((uMax - uMin) * gPoints[qu] + (uMax + uMin)) / 2;
                     const gw = gWeights[qu] * (uMax - uMin) / 2;
 
-                    const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
-                    // Surface Jacobian Modifier: Jmod = J_1D * weight
-                    const detJ = Math.sqrt(deriv.dU.x**2 + deriv.dU.y**2 + deriv.dU.z**2);
-                    const Jmod = detJ * gw;
+                    const deriv = this.engine.getSurfaceDerivatives(patch, u, vParam);
+                    
+                    // 1D boundary Jacobian = |dS/du|
+                    const tangent = deriv.dU;
+                    const detJ_1D = Math.sqrt(tangent.x**2 + tangent.y**2);
+                    if (detJ_1D < 1e-12) continue;
 
-                    // Build_F_local (Algorithm 6): Accumulate into nodal positions
+                    // Physical position at this Gauss point
+                    const pos = deriv.pos;
+
+                    // --- EXACT KIRSCH TRACTION (Algorithm 3 compatible) ---
+                    // Compute exact analytical stress at this boundary point
+                    const R_hole = 1.0; // Hole radius
+                    const sigma = this.getExactStress(pos.x, pos.y, R_hole, loadValue);
+
+                    // Outward normal: n = (ty, -tx) / |t| for CCW traversal
+                    const nx = tangent.y / detJ_1D;
+                    const ny = -tangent.x / detJ_1D;
+
+                    // Traction vector: t = sigma * n
+                    const tx = sigma.sxx * nx + sigma.sxy * ny;
+                    const ty = sigma.sxy * nx + sigma.syy * ny;
+
+                    // --- NURBS Rational Basis (Fixed: include weights + denominator) ---
+                    // Compute 1D denominator on boundary v=vParam
+                    let W_1D = 0;
                     for (let a = 0; a < nU; a++) {
                         const Na = this.engine.basis1D(a, p, U, u);
-                        const Ma = this.engine.basis1D(nV-1, q, V, v);
-                        if (Na === 0 || Ma === 0) continue;
+                        W_1D += Na * weights[a][nV-1];
+                    }
+                    if (W_1D < 1e-12) W_1D = 1e-12;
 
-                        const R = Na * Ma;
-                        const idx = (a * nV + (nV - 1)) * 2; // Global Mapping (LM Array equivalent)
-                        forces[idx] += loadValue * R * Jmod;
+                    // Accumulate into nodal forces using NURBS rational basis
+                    for (let a = 0; a < nU; a++) {
+                        const Na = this.engine.basis1D(a, p, U, u);
+                        if (Na === 0) continue;
+                        
+                        // Rational NURBS basis on the boundary
+                        const Ra = (Na * weights[a][nV-1]) / W_1D;
+                        
+                        const idx = (a * nV + (nV - 1)) * 2;
+                        forces[idx]     += Ra * tx * detJ_1D * gw;
+                        forces[idx + 1] += Ra * ty * detJ_1D * gw;
                     }
                 }
             }
