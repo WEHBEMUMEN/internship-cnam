@@ -706,8 +706,8 @@ class IGA2DSolver {
                     for (let gv = 0; gv < gauss.points.length; gv++) {
                         const u = ((u1 - u0) * gauss.points[gu] + (u1 + u0)) / 2;
                         const v = ((v1 - v0) * gauss.points[gv] + (v1 + v0)) / 2;
-                        const J = this.engine.getJacobian(patch, u, v);
-                        const detJ = Math.abs(J[0][0]*J[1][1] - J[0][1]*J[1][0]);
+                        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                        const detJ = Math.abs(deriv.dU.x * deriv.dV.y - deriv.dV.x * deriv.dU.y);
                         const Jmod = detJ * gauss.weights[gu] * gauss.weights[gv] * (u1-u0)*(v1-v0)/4;
 
                         const sN = this.getNumericalStress(patch, u_disp, u, v, E, nu);
