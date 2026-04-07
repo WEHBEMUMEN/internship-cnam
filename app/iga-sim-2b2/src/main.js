@@ -230,13 +230,11 @@ function updateForceArrows() {
     // Outer radial boundary (j=nV-1)
     for (let i = 0; i < nU; i++) {
         const cp = patch.controlPoints[i][nV - 1];
-        // Only show arrows on the RIGHT boundary (T_x)
-        if (Math.abs(cp.x - L) < 1e-3) {
-            const dir = new THREE.Vector3(1, 0, 0);
-            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
-            scene.add(arrow);
-            forceVisuals.push(arrow);
-        }
+        // All points on the outer boundary receive traction in this setup
+        const dir = new THREE.Vector3(1, 0, 0);
+        const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
+        scene.add(arrow);
+        forceVisuals.push(arrow);
     }
 }
 
@@ -248,26 +246,21 @@ async function solverLoop() {
         const nU = patch.controlPoints.length;
         const nV = patch.controlPoints[0].length;
         
-        const bcs = [];
-        // Angular edge i=0 is bottom (y=0) -> Fix Y
-        for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
-        // Angular edge i=nU-1 is left (x=0) -> Fix X
-        for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
-        
         const loads = [];
-        // Apply traction only to the Right edge
-        // In our Hughes mapping, the Right edge is Radial j=nV-1 for Angular i from 0 to 1
+        // Apply traction to the entire radial outer edge (j=nV-1)
         for(let i=0; i<nU; i++) {
-            const cp = patch.controlPoints[i][nV-1];
-            // Only load points on the right-hand boundary (x = L)
-            if (Math.abs(cp.x - L) < 1e-3) {
-                let scale = 1.0;
-                // For a 4x3 grid, we have i=0,1,2,3 for angular. 
-                // j=2 is outer. i=0 is bottom right. i=1 is mid right.
-                if (i === 1) scale = 2.0; // Interior node on right edge takes double nodal load
-                
-                loads.push({ i: i, j: nV-1, fx: targetState.load * scale, fy: 0 });
-            }
+            // Nodal force distributed to the outer boundary
+            // For a coarse mesh, we use simple nodal loads. 
+            // The edge has length approx L. 
+            let scale = 1.0;
+            if (i === 0 || i === nU - 1) scale = 0.5; // Half force at corners/ends for nodal distribution
+            
+            loads.push({ 
+                i: i, 
+                j: nV-1, 
+                fx: targetState.load * scale, 
+                fy: 0 
+            });
         }
 
         try {
