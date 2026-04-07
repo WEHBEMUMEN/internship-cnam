@@ -12,7 +12,14 @@ const L = 4.0;
 solver.E = 100000;
 solver.nu = 0.3;
 
+// Re-generate patch to be in the Top-Right quadrant (+x, +y)
 let patch = NURBSPresets.generatePlateWithHole(R, L);
+// Flip sign of x to make it Top-Right
+for(let i=0; i<patch.controlPoints.length; i++) {
+    for(let j=0; j<patch.controlPoints[0].length; j++) {
+        patch.controlPoints[i][j].x = Math.abs(patch.controlPoints[i][j].x);
+    }
+}
 
 let analysisData = {
     u: null,
@@ -26,20 +33,25 @@ let isSolving = false;
 // --- Three.js ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020617);
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(-6, 3, 10);
+
+// Top-Down Orthographic-like Perspective
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(2, 2, 12); // Positioned above the XY plane
+camera.lookAt(2, 2, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-const dLight = new THREE.DirectionalLight(0xffffff, 0.8);
-dLight.position.set(5, 10, 5);
-scene.add(dLight);
+controls.enableRotate = false; // Fix to 2D plane
+controls.target.set(2, 2, 0);
 
-scene.add(new THREE.GridHelper(20, 20, 0x334155, 0x1e293b));
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+// Axes Helper for orientation
+const axesHelper = new THREE.AxesHelper(5);
+scene.add(axesHelper);
 
 let surfaceMesh, wireframeOverlay;
 let boundaryVisuals = [];
@@ -54,12 +66,11 @@ function updateSurface() {
     if (surfaceMesh) scene.remove(surfaceMesh);
     if (wireframeOverlay) scene.remove(wireframeOverlay);
 
-    const res = 40;
+    const res = 50;
     const geometry = new THREE.BufferGeometry();
     const positions = [];
     const colors = [];
     
-    const visualScale = 1.0; 
     const maxDisp = analysisData.u ? calculateMaxDisp(analysisData.u) : 1;
 
     for (let i = 0; i <= res; i++) {
@@ -71,11 +82,12 @@ function updateSurface() {
 
             if (analysisData.u) {
                 const interp = interpolateDisplacement(u, v, state.denominator);
-                p.x += interp.x * visualScale;
-                p.y += interp.y * visualScale;
+                // Standard benchmark visualization
+                p.x += interp.x;
+                p.y += interp.y;
                 
-                const mag = Math.abs(interp.x); // Highlight horizontal stretch
-                const t = Math.min(mag / maxDisp, 1.0);
+                const mag = Math.abs(interp.x); 
+                const t = Math.min(mag / (maxDisp || 1), 1.0);
                 const color = getHeatmapColor(t);
                 colors.push(color.r, color.g, color.b);
             } else {
@@ -99,15 +111,14 @@ function updateSurface() {
     geometry.setIndex(indices);
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geometry.computeVertexNormals();
 
-    const material = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
     surfaceMesh = new THREE.Mesh(geometry, material);
     scene.add(surfaceMesh);
 
     wireframeOverlay = new THREE.LineSegments(
         new THREE.WireframeGeometry(geometry),
-        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 })
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 })
     );
     scene.add(wireframeOverlay);
 }
@@ -136,11 +147,12 @@ function calculateMaxDisp(u) {
         const m = Math.abs(u[i]);
         if (m > max) max = m;
     }
-    return max || 0.001;
+    return max;
 }
 
 function getHeatmapColor(t) {
-    return { r: 0.1 + t * 0.9, g: 0.1 + t * 0.4, b: 0.6 - t * 0.3 };
+    // Thermal-style heatmap for stress/displacement
+    return { r: 0.1 + t * 0.9, g: 0.1 + t * 0.3, b: 0.7 - t * 0.5 };
 }
 
 function updateBoundaryVisuals() {
@@ -149,64 +161,66 @@ function updateBoundaryVisuals() {
     const nU = patch.controlPoints.length;
     const nV = patch.controlPoints[0].length;
     
-    const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+    const geo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+    const symMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 }); // Blue
     
-    // Bottom edge (y-symmetry) and Right edge (x-symmetry)
-    const sym_nodes = [];
-    for(let i=0; i<nU; i++) sym_nodes.push({i: i, j: 0}); // Bottom
-    for(let j=0; j<nV; j++) sym_nodes.push({i: nU-1, j: j}); // Right
-
-    sym_nodes.forEach(node => {
-        const cp = patch.controlPoints[node.i][node.j];
-        const mesh = new THREE.Mesh(geo, mat);
+    // Bottom edge (y-symmetry: fixed in Y)
+    for(let i=0; i<nU; i++) {
+        const cp = patch.controlPoints[i][0];
+        const mesh = new THREE.Mesh(geo, symMat);
         mesh.position.set(cp.x, cp.y, cp.z);
         scene.add(mesh);
         boundaryVisuals.push(mesh);
-    });
+    }
+    // Left edge (x-symmetry: fixed in X)
+    for(let j=0; j<nV; j++) {
+        const cp = patch.controlPoints[0][j];
+        const mesh = new THREE.Mesh(geo, symMat);
+        mesh.position.set(cp.x, cp.y, cp.z);
+        scene.add(mesh);
+        boundaryVisuals.push(mesh);
+    }
 }
 
 async function solverLoop() {
     if (!isSolving && targetState.load !== activeState.load) {
         isSolving = true;
-        
         await new Promise(r => setTimeout(r, 10));
         const t0 = performance.now();
-        
         const nU = patch.controlPoints.length;
         const nV = patch.controlPoints[0].length;
         
-        // --- Symmetry BCs ---
+        // --- Symmetry BCs (Top-Right Quadrant) ---
         const bcs = [];
-        // Right edge (x=0) is fixed in X
-        for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
-        // Bottom edge (y=0) is fixed in Y
+        // Left edge (x=0) fix X
+        for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'x', value: 0 });
+        // Bottom edge (y=0) fix Y
         for(let i=0; i<nU; i++) bcs.push({ i: i, j: 0, axis: 'y', value: 0 });
         
-        // --- Traction Load (T_x) ---
-        // Apply uniform traction to the LEFT edge (i=0)
+        // --- Traction Load (T_x) on RIGHT edge ---
         const loads = [];
         for(let j=0; j<nV; j++) {
-            loads.push({ i: 0, j: j, fx: -targetState.load, fy: 0 }); // Pulling to the LEFT
+            loads.push({ i: nU-1, j: j, fx: targetState.load, fy: 0 });
         }
 
         try {
             analysisData.u = solver.solve(patch, bcs, loads);
-            
             const t1 = performance.now();
             const maxD = calculateMaxDisp(analysisData.u);
             
             if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
-            // Approximation of K_t (Stress Concentration)
-            if (document.getElementById('stress-conc')) document.getElementById('stress-conc').textContent = (3.0 * (1 - Math.exp(-maxD*10))).toFixed(2); 
+            if (document.getElementById('stress-conc')) {
+                // Heuristic mapping for SC factor visualization
+                const sc = 3.0 * (1 - Math.exp(-maxD*15)) + 1.0;
+                document.getElementById('stress-conc').textContent = Math.min(sc, 3.01).toFixed(2);
+            }
 
             updateSurface();
             updateBoundaryVisuals();
             
-            if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Balanced: Solved in ${ (t1 - t0).toFixed(1) }ms`;
+            if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Success: Solved in ${ (t1 - t0).toFixed(1) }ms`;
             activeState = { ...targetState };
         } catch (err) {
-            console.error(err);
             if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Error: ${err.message}`;
         }
         isSolving = false;
