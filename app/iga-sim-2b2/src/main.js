@@ -249,18 +249,21 @@ async function solverLoop() {
         const nU = patch.controlPoints.length;
         const nV = patch.controlPoints[0].length;
         
-        const bcs = [];
-        // Angular edge i=0 is bottom (y=0) -> Fix Y
-        for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
-        // Angular edge i=nU-1 is left (x=0) -> Fix X
-        for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
-        
         const loads = [];
-        // We apply traction to the radial outer edge (j=nV-1) where it acts as a "square" boundary
+        // Apply traction to the entire radial outer edge (j=nV-1)
         for(let i=0; i<nU; i++) {
-            const cp = patch.controlPoints[i][nV-1];
-            if (cp.x > 3.9) loads.push({ i: i, j: nV-1, fx: targetState.load, fy: 0 });
-            if (cp.y > 3.9) loads.push({ i: i, j: nV-1, fx: targetState.load, fy: 0 }); 
+            // Nodal force distributed to the outer boundary
+            // For a coarse mesh, we use simple nodal loads. 
+            // The edge has length approx L. 
+            let scale = 1.0;
+            if (i === 0 || i === nU - 1) scale = 0.5; // Half force at corners/ends for nodal distribution
+            
+            loads.push({ 
+                i: i, 
+                j: nV-1, 
+                fx: targetState.load * scale, 
+                fy: 0 
+            });
         }
 
         try {
