@@ -113,46 +113,35 @@ class NURBSPresets {
         const V = [0, 0, 0, 1, 1, 1];      // Radial
         
         // --- 2. Control Net (4x3 Grid) ---
-        // Rows (i) correspond to angular direction (U)
-        // Columns (j) correspond to radial direction (V)
-        const controlPoints = [
-            // Angular position 0 deg (x-axis)
-            [ {x: R, y: 0, z: 0}, {x: (R+L)/2, y: 0, z: 0}, {x: L, y: 0, z: 0} ], 
-            // Angular position 22.5 deg
-            [ {x: R, y: R*Math.tan(Math.PI/8), z: 0}, {x: L, y: L*Math.tan(Math.PI/8), z: 0}, {x: L, y: L/2, z: 0} ],
-            // Angular position 67.5 deg
-            [ {x: R*Math.tan(Math.PI/8), y: R, z: 0}, {x: L*Math.tan(Math.PI/8), y: L, z: 0}, {x: L/2, y: L, z: 0} ],
-            // Angular position 90 deg (y-axis)
-            [ {x: 0, y: R, z: 0}, {x: 0, y: (R+L)/2, z: 0}, {x: 0, y: L, z: 0} ]
-        ];
+        // We define the grid to map a square domain [0, L]x[0, L] to the quarter-plate
+        // Inner circle (r=R) at v=0 (j=0)
+        // Outer square (x=L or y=L) at v=1 (j=2)
+        
+        // Point i=0 (0 deg)
+        controlPoints[0][0] = { x: R, y: 0, z: 0 };
+        controlPoints[0][1] = { x: (R+L)/2, y: 0, z: 0 };
+        controlPoints[0][2] = { x: L, y: 0, z: 0 };
 
-        // --- 3. Degenerate Corner (Upper-Left Sharp Corner) ---
-        // Coalesce the angular-mid points to the corner (0, L)
-        // This is a specific benchmark design for C1-continuity
+        // Point i=1 (22.5 deg)
+        controlPoints[1][0] = { x: R, y: R*Math.tan(Math.PI/8), z: 0 };
+        controlPoints[1][1] = { x: (R+L)/2, y: (R+L)/2*Math.tan(Math.PI/8), z: 0 };
+        controlPoints[1][2] = { x: L, y: L*Math.tan(Math.PI/8), z: 0 };
+
+        // Point i=2 (67.5 deg)
+        controlPoints[2][0] = { x: R*Math.tan(Math.PI/8), y: R, z: 0 };
+        controlPoints[2][1] = { x: (R+L)/2*Math.tan(Math.PI/8), y: (R+L)/2, z: 0 };
+        controlPoints[2][2] = { x: L*Math.tan(Math.PI/8), y: L, z: 0 };
+
+        // Point i=3 (90 deg)
+        controlPoints[3][0] = { x: 0, y: R, z: 0 };
+        controlPoints[3][1] = { x: 0, y: (R+L)/2, z: 0 };
+        controlPoints[3][2] = { x: 0, y: L, z: 0 };
+
+        // --- 3. The "Hughes Sharp Corner" Correction ---
+        // To get a sharp corner at (L, L) for a quadratic patch, 
+        // the intermediate angular points at the outer radius MUST coalesce.
         controlPoints[1][2] = { x: L, y: L, z: 0 };
         controlPoints[2][2] = { x: L, y: L, z: 0 };
-        controlPoints[3][2] = { x: 0, y: L, z: 0 };
-        controlPoints[0][2] = { x: L, y: 0, z: 0 };
-
-        // Final refinement of mapping to exactly match Hughes' construction
-        // Inner circle (radius R)
-        controlPoints[0][0] = { x: R, y: 0, z: 0 };
-        controlPoints[1][0] = { x: R, y: R*Math.tan(Math.PI/8), z: 0 };
-        controlPoints[2][0] = { x: R*Math.tan(Math.PI/8), y: R, z: 0 };
-        controlPoints[3][0] = { x: 0, y: R, z: 0 };
-
-        // Outer square (degenerate corner L, L)
-        controlPoints[0][2] = { x: L, y: 0, z: 0 };
-        controlPoints[1][2] = { x: L, y: L, z: 0 }; // Repetition starts here
-        controlPoints[2][2] = { x: L, y: L, z: 0 }; // Repetition
-        controlPoints[3][2] = { x: 0, y: L, z: 0 };
-
-        // Mid points
-        const midR = (R + L) / 2;
-        controlPoints[0][1] = { x: midR, y: 0, z: 0 };
-        controlPoints[1][1] = { x: L, y: midR*Math.tan(Math.PI/8), z: 0 };
-        controlPoints[2][1] = { x: midR*Math.tan(Math.PI/8), y: L, z: 0 };
-        controlPoints[3][1] = { x: 0, y: midR, z: 0 };
 
         const weights = [
             [ 1, 1, 1 ],
