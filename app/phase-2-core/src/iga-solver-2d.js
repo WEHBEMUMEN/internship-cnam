@@ -133,13 +133,12 @@ class IGA2DSolver {
             [deriv.dU.x, deriv.dV.x],
             [deriv.dU.y, deriv.dV.y]
         ];
-        const detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+        let detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
         
-        // Safety: Handle singularity at degenerate corner
+        // Safety: Handle singularity at degenerate corner by using a stable regularizer
+        // rather than zeroing the B-matrix, which would cause numerical 'locking' or zero-displacement.
         if (Math.abs(detJ_2D) < 1e-12) {
-            const B_zero = [];
-            for (let k = 0; k < nU * nV; k++) B_zero.push([[0,0],[0,0],[0,0]]);
-            return B_zero;
+            detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
         }
 
         const J_inv = [
@@ -546,8 +545,18 @@ class IGA2DSolver {
         for (let i = 0; i < n; i++) {
             let max = i;
             for (let j = i + 1; j < n; j++) if (Math.abs(A[j][i]) > Math.abs(A[max][i])) max = j;
+            
             [A[i], A[max]] = [A[max], A[i]]; [b[i], b[max]] = [b[max], b[i]];
-            if (Math.abs(A[i][i]) < 1e-20) A[i][i] = 1e-20;
+            
+            // Robust Singularity Handling: 
+            // If the pivot is effectively zero, it means this DOF is unconstrained/unloaded.
+            // We set it to stay fixed (0 displacement) to avoid Inf/NaN overflows.
+            if (Math.abs(A[i][i]) < 1e-15) {
+                A[i][i] = 1.0; 
+                b[i] = 0;
+                for (let k = i+1; k < n; k++) A[i][k] = 0;
+            }
+
             for (let j = i + 1; j < n; j++) {
                 const f = A[j][i] / A[i][i];
                 b[j] -= f * b[i];

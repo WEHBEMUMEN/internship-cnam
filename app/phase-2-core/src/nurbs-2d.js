@@ -18,7 +18,9 @@ class NURBS2D {
      */
     basis1D(i, p, U, xi) {
         if (p === 0) {
-            return (U[i] <= xi && xi < U[i + 1]) ? 1.0 : 0.0;
+            // Handle right boundary exactly for the last knot span
+            const isRightBoundary = (xi === 1.0 && U[i + 1] === 1.0);
+            return (U[i] <= xi && (xi < U[i + 1] || isRightBoundary)) ? 1.0 : 0.0;
         }
 
         let denom1 = U[i + p] - U[i];
@@ -214,8 +216,13 @@ class NURBS2D {
         const ny = tu.z * tv.x - tu.x * tv.z;
         const nz = tu.x * tv.y - tu.y * tv.x;
 
-        const area = Math.sqrt(nx * nx + ny * ny + nz * nz);
-        return isNaN(area) ? 0.0 : area;
+        let area = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        
+        // Safety: If area is zero at degenerate corner, use a stable floor 
+        // to maintain matrix stability rather than zeroing out stiffness.
+        if (isNaN(area) || area < 1e-12) area = 1e-12;
+        
+        return area;
     }
 
     /**

@@ -282,9 +282,17 @@ function updateForceArrows() {
         const state = engine.getSurfaceState(patch, u, v);
         const cp = state.position;
 
-        // Only show arrows on the RIGHT boundary (x = L)
+        // RIGHT boundary (x = L)
         if (Math.abs(cp.x - L) < 1e-3) {
             const dir = new THREE.Vector3(1, 0, 0);
+            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
+            scene.add(arrow);
+            forceVisuals.push(arrow);
+        }
+        
+        // TOP boundary (y = L)
+        if (Math.abs(cp.y - L) < 1e-3) {
+            const dir = new THREE.Vector3(0, 1, 0);
             const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
             scene.add(arrow);
             forceVisuals.push(arrow);
@@ -324,14 +332,27 @@ async function solverLoop() {
         }
         
         const loads = [];
-        // Apply traction to the Right edge (v=1, where x=L)
+        // Apply traction to the Right edge (x=L) and Top edge (y=L)
         for(let i=0; i<nU; i++) {
-            const cp = patch.controlPoints[i][nV-1];
-            if (cp && Math.abs(cp.x - L) < 1e-3) {
-                 // The ends of the loaded edge get half the tributary area
-                const isEndNode = (i === 0 || Math.abs(cp.y - L) < 1e-3);
-                const weight = isEndNode ? 0.5 : 1.0;
-                loads.push({ i: i, j: nV-1, fx: targetState.load * weight, fy: 0 });
+            for(let j=0; j<nV; j++) {
+                const cp = patch.controlPoints[i][j];
+                if (!cp) continue;
+
+                const isRightEdge = Math.abs(cp.x - L) < 1e-3;
+                const isTopEdge = Math.abs(cp.y - L) < 1e-3;
+                
+                if (isRightEdge || isTopEdge) {
+                    // Check if it's a corner (symmetry axis intersection)
+                    const isXAxis = Math.abs(cp.y) < 1e-3;
+                    const isYAxis = Math.abs(cp.x) < 1e-3;
+                    
+                    // Boundary nodes (end of edges) get half weight for uniform traction
+                    const isEndNode = isXAxis || isYAxis;
+                    const weight = isEndNode ? 0.5 : 1.0;
+
+                    if (isRightEdge) loads.push({ i: i, j: j, fx: targetState.load * weight, fy: 0 });
+                    if (isTopEdge)   loads.push({ i: i, j: j, fx: 0, fy: targetState.load * weight });
+                }
             }
         }
 
