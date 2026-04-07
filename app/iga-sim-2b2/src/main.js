@@ -109,6 +109,13 @@ let viewMode = 'displacement'; // 'displacement' or 'stress'
 
 window.setViewMode = (m) => {
     viewMode = m;
+    
+    // Update UI Legend labels
+    const modeTitle = document.getElementById('legend-mode-title');
+    const modeSub = document.getElementById('legend-mode-sub');
+    if (modeTitle) modeTitle.innerText = m === 'displacement' ? 'Displacement' : 'Stress';
+    if (modeSub) modeSub.innerText = m === 'displacement' ? 'X-Magnitude' : 'von Mises (MPa)';
+
     updateSurface();
 };
 
@@ -153,7 +160,7 @@ function updateSurface() {
                 
                 let val = 0;
                 if (mode === 'displacement') {
-                    val = Math.sqrt(interp.x**2 + interp.y**2);
+                    val = Math.abs(interp.x); // REVERT: Only X-displacement
                 } else {
                     const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
                     val = s.vonMises;
@@ -217,14 +224,52 @@ function calculateMaxDisp(u) {
     if (!u) return 1;
     let max = 0;
     for (let i = 0; i < u.length; i += 2) {
-        const m = Math.abs(u[i]);
+        const m = Math.abs(u[i]); // X-displacement magnitude as it was before
         if (m > max) max = m;
     }
     return max;
 }
 
+function calculateMaxStress(u_disp) {
+    if (!u_disp) return 1;
+    let max = 0;
+    const res = 12; // Lower res for faster UI sync
+    for (let i = 0; i <= res; i++) {
+        for (let j = 0; j <= res; j++) {
+            // Sample slightly away from edges to avoid singular boundary points
+            const u = 0.001 + (i/res) * 0.998;
+            const v = 0.001 + (j/res) * 0.998;
+            const s = solver.getNumericalStress(patch, u_disp, u, v, targetState.E, targetState.nu);
+            if (s.vonMises > max) max = s.vonMises;
+        }
+    }
+    return max || 1;
+}
+
 function getHeatmapColor(t) {
-    return { r: 0.1 + t * 0.9, g: 0.1 + t * 0.3, b: 0.7 - t * 0.5 };
+    // Standard Jet/Rainbow scale matching the UI legend: Blue -> Cyan -> Green -> Yellow -> Orange -> Red
+    const stops = [
+        { t: 0.0, r: 0.23, g: 0.51, b: 0.96 }, // #3b82f6 (Blue)
+        { t: 0.2, r: 0.02, g: 0.71, b: 0.83 }, // #06b6d4 (Cyan)
+        { t: 0.4, r: 0.06, g: 0.73, b: 0.51 }, // #10b981 (Green)
+        { t: 0.6, r: 0.98, g: 0.80, b: 0.08 }, // #facc15 (Yellow)
+        { t: 0.8, r: 0.98, g: 0.45, b: 0.09 }, // #f97316 (Orange)
+        { t: 1.0, r: 0.94, g: 0.27, b: 0.27 }  // #ef4444 (Red)
+    ];
+    
+    for (let i = 0; i < stops.length - 1; i++) {
+        const s1 = stops[i];
+        const s2 = stops[i+1];
+        if (t >= s1.t && t <= s2.t) {
+            const factor = (t - s1.t) / (s2.t - s1.t);
+            return {
+                r: s1.r + factor * (s2.r - s1.r),
+                g: s1.g + factor * (s2.g - s1.g),
+                b: s1.b + factor * (s2.b - s1.b)
+            };
+        }
+    }
+    return stops[stops.length-1];
 }
 
 function createBCMarker(type = 'x') {
@@ -382,36 +427,46 @@ async function solverLoop() {
         }
 
         try {
+            // THE ACTUAL SOLVE CALL
             analysisData.u = solver.solve(patch, bcs, loads);
             const t1 = performance.now();
             
-            // L2-Norm Stress Error Analysis (Plate with Hole Benchmark)
-            const R_hole = 1.0; 
-            const l2Error = solver.calculateRelativeL2Error(patch, analysisData.u, targetState.E, targetState.nu, targetState.load, R_hole);
-            const hMax = calculateHMax(patch);
+            // EXCLUSIVE CALCULATION & UI UPDATE
+            if (viewMode === 'displacement') {
+                const maxD = calculateMaxDisp(analysisData.u);
+                if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
+                if (document.getElementById('max-stress')) document.getElementById('max-stress').textContent = `---`;
+                if (document.getElementById('l2-error')) document.getElementById('l2-error').textContent = `---`;
+                if (document.getElementById('legend-val-max')) document.getElementById('legend-val-max').innerText = `${maxD.toFixed(3)} mm`;
+                if (document.getElementById('legend-val-min')) document.getElementById('legend-val-min').innerText = `0.000 mm`;
+            } else {
+                // Stress analysis + Benchmark error
+                const maxS = calculateMaxStress(analysisData.u);
+                const R_hole = 1.0; 
+                const l2Error = solver.calculateRelativeL2Error(patch, analysisData.u, targetState.E, targetState.nu, targetState.load, R_hole);
 
-            const maxD = calculateMaxDisp(analysisData.u);
-            const maxS = calculateMaxStress(analysisData.u);
-            
-            if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
-            if (document.getElementById('max-stress')) document.getElementById('max-stress').textContent = `${maxS.toFixed(2)} MPa`;
-            if (document.getElementById('l2-error')) document.getElementById('l2-error').textContent = `${(l2Error * 100).toFixed(3)}%`;
-            
-            // Update Heatmap Legend
-            const mode = viewMode;
-            const legendVal = document.getElementById('legend-val-max');
-            if (legendVal) legendVal.innerText = mode === 'displacement' ? `${maxD.toFixed(3)} mm` : `${maxS.toFixed(1)} MPa`;
+                if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `---`;
+                if (document.getElementById('max-stress')) document.getElementById('max-stress').textContent = `${maxS.toFixed(2)} MPa`;
+                if (document.getElementById('l2-error')) document.getElementById('l2-error').textContent = `${(l2Error * 100).toFixed(3)}%`;
+                if (document.getElementById('legend-val-max')) document.getElementById('legend-val-max').innerText = `${maxS.toFixed(1)} MPa`;
+                if (document.getElementById('legend-val-min')) document.getElementById('legend-val-min').innerText = `0.0 MPa`;
+                
+                if (document.getElementById('conv-stat')) {
+                    document.getElementById('conv-stat').textContent = `Stress Benchmarked: L2 Err = ${(l2Error*100).toFixed(4)}% | ${(t1 - t0).toFixed(1)}ms`;
+                }
+            }
 
             updateSurface();
             updateBoundaryVisuals();
             updateControlPoints();
             updateForceArrows();
             
-            if (document.getElementById('conv-stat')) {
-                document.getElementById('conv-stat').textContent = `Success: L2 Err = ${(l2Error*100).toFixed(4)}% | Solved in ${(t1 - t0).toFixed(1)}ms`;
+            if (viewMode === 'displacement' && document.getElementById('conv-stat')) {
+                document.getElementById('conv-stat').textContent = `Displacement Computed: Solved in ${(performance.now() - t0).toFixed(1)}ms`;
             }
             activeState = JSON.parse(JSON.stringify(targetState));
-        } catch (err) {
+        }
+ catch (err) {
             if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Error: ${err.message}`;
         }
         isSolving = false;
