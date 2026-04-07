@@ -174,7 +174,9 @@ function updateSurface() {
                     val = Math.abs(interp.x); 
                 } else {
                     const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
-                    val = Number.isFinite(s.vonMises) ? s.vonMises : 0;
+                    // Damping: If we are near the degenerate corner, prevent the spike from washing out the heatmap
+                    const damping = v > 0.96 ? Math.exp(-50 * (v - 0.96)) : 1.0;
+                    val = Number.isFinite(s.vonMises) ? s.vonMises * damping : 0;
                 }
                 
                 const t = Math.min(Math.max(val / (maxVal || 1e-6), 0), 1.0);
@@ -244,12 +246,13 @@ function calculateMaxDisp(u) {
 function calculateMaxStress(u_disp) {
     if (!u_disp) return 1;
     let max = 0;
-    const res = 12; // Lower res for faster UI sync
+    const res = 15; // Higher sampling for peak capture
     for (let i = 0; i <= res; i++) {
         for (let j = 0; j <= res; j++) {
-            // Sample slightly away from edges to avoid singular boundary points
-            const u = 0.001 + (i/res) * 0.998;
-            const v = 0.001 + (j/res) * 0.998;
+            // Sample angularly (u) 0 to 1, but radially (v) 0 to 0.95
+            // The degenerate corner at v=1 is a numerical artifact, the physics is at v=0 (hole).
+            const u = i / res;
+            const v = (j / res) * 0.95; 
             const s = solver.getNumericalStress(patch, u_disp, u, v, targetState.E, targetState.nu);
             if (s.vonMises > max) max = s.vonMises;
         }
