@@ -283,7 +283,7 @@ function updateForceArrows() {
         const cp = state.position;
 
         // RIGHT boundary (x = L)
-        if (Math.abs(cp.x - L) < 1e-3) {
+        if (Math.abs(cp.x - L) < 0.1) {
             const dir = new THREE.Vector3(1, 0, 0);
             const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
             scene.add(arrow);
@@ -330,11 +330,11 @@ async function solverLoop() {
                 const cp = patch.controlPoints[i][j];
                 if (!cp) continue;
 
-                const isRightEdge = Math.abs(cp.x - L) < 1e-3;
+                const isRightEdge = Math.abs(cp.x - L) < 0.1;
                 
                 if (isRightEdge) {
                     // Check if it's a corner (symmetry axis intersection)
-                    const isXAxis = Math.abs(cp.y) < 1e-3;
+                    const isXAxis = Math.abs(cp.y) < 0.1;
                     
                     // Boundary nodes (end of edges) get half weight for uniform traction
                     const isEndNode = isXAxis;
@@ -356,6 +356,10 @@ async function solverLoop() {
             const maxD = calculateMaxDisp(analysisData.u);
             if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
             
+            // Update Heatmap Legend
+            const legendVal = document.getElementById('legend-val-max');
+            if (legendVal) legendVal.innerText = maxD.toFixed(3) + ' mm';
+
             updateSurface();
             updateBoundaryVisuals();
             updateControlPoints();
