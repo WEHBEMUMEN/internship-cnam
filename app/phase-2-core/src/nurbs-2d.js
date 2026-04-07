@@ -452,80 +452,129 @@ class NURBS2D {
     }
 
     /**
-     * 1D Degree Reduction via Bézier Segment Inversion
+     * 1D Degree Reduction via Least Squares Fitting
+     * More robust than inward inversion for arbitrary control point layouts.
      */
     reduce1D(curve, targetP) {
         const { controlPoints, weights, U, V, p, q } = curve;
         const currentP = p || q;
         const currentU = U || V;
         
-        // Step 1: Extract Bezier segments (knot spans)
-        // For simplicity in this lab, we assume clamped knots and reduce 
-        // by inverting the elevation formula P_i = (i*Q_i + (p-i)*Q_{i-1})/p
-        
-        const n = controlPoints.length;
-        const newN = n - 1;
-        const newCP = [];
-        const newW = [];
+        // 1. Generate target knot vector (remove one internal knot or maintain clamped)
+        const newU = this.reduceKnotVector(currentU);
+        const newN = newU.length - targetP - 1;
 
-        // Convert to homogeneous 4D space
-        const P4D = controlPoints.map((cp, i) => ({
-            x: cp.x * weights[i],
-            y: cp.y * weights[i],
-            z: cp.z * weights[i],
-            w: weights[i]
-        }));
-
-        const Q4D = new Array(newN);
-        
-        // Inward reduction logic: solve for Q from P
-        // Q_0 = P_0
-        // Q_{n-1} = P_n
-        Q4D[0] = { ...P4D[0] };
-        Q4D[newN - 1] = { ...P4D[n - 1] };
-
-        for (let i = 1; i < (newN / 2); i++) {
-            // From Left: Q_i = (currentP * P_i - i * Q_{i-1}) / (currentP - i)
-            const leftScale = currentP / (currentP - i);
-            const leftPrevScale = i / (currentP - i);
-            Q4D[i] = {
-                x: leftScale * P4D[i].x - leftPrevScale * Q4D[i-1].x,
-                y: leftScale * P4D[i].y - leftPrevScale * Q4D[i-1].y,
-                z: leftScale * P4D[i].z - leftPrevScale * Q4D[i-1].z,
-                w: leftScale * P4D[i].w - leftPrevScale * Q4D[i-1].w
-            };
-
-            // From Right: Q_{newN-1-i} = (currentP * P_{n-1-i} - i * Q_{newN-i}) / (currentP - i)
-            const rightIdx = n - 1 - i;
-            const targetIdx = newN - 1 - i;
-            Q4D[targetIdx] = {
-                x: leftScale * P4D[rightIdx].x - leftPrevScale * Q4D[targetIdx+1].x,
-                y: leftScale * P4D[rightIdx].y - leftPrevScale * Q4D[targetIdx+1].y,
-                z: leftScale * P4D[rightIdx].z - leftPrevScale * Q4D[targetIdx+1].z,
-                w: leftScale * P4D[rightIdx].w - leftPrevScale * Q4D[targetIdx+1].w
-            };
+        // 2. Sample the original curve at high resolution
+        const M = Math.max(100, newN * 4);
+        const samples = [];
+        for (let i = 0; i <= M; i++) {
+            const xi = i / M;
+            let pos = { x: 0, y: 0, z: 0, w: 0 };
+            for (let j = 0; j < controlPoints.length; j++) {
+                const N = this.basis1D(j, currentP, currentU, xi);
+                const w = weights[j];
+                pos.x += N * controlPoints[j].x * w;
+                pos.y += N * controlPoints[j].y * w;
+                pos.z += N * controlPoints[j].z * w;
+                pos.w += N * w;
+            }
+            samples.push(pos);
         }
 
-        // Handle middle point if odd
-        if (newN % 2 !== 0) {
-            const mid = Math.floor(newN / 2);
-            // Average the left and right estimations for the middle
-            const leftEst = (currentP * P4D[mid].x - mid * Q4D[mid-1].x) / (currentP - mid);
-            // ... truncated for brevity, implementing basic average
+        // 3. Solve LSQ System: A^T * A * Q = A^T * B
+        const A = [];
+        for (let i = 0; i <= M; i++) {
+            const xi = i / M;
+            const row = [];
+            for (let j = 0; j < newN; j++) {
+                row.push(this.basis1D(j, targetP, newU, xi));
+            }
+            A.push(row);
         }
 
-        // Back to 3D
+        const ATA = Array(newN).fill(0).map(() => Array(newN).fill(0));
+        const ATBx = Array(newN).fill(0);
+        const ATBy = Array(newN).fill(0);
+        const ATBz = Array(newN).fill(0);
+        const ATBw = Array(newN).fill(0);
+
         for (let i = 0; i < newN; i++) {
-            const w = Q4D[i].w || 1;
-            newW.push(w);
-            newCP.push({ x: Q4D[i].x / w, y: Q4D[i].y / w, z: Q4D[i].z / w });
+            for (let j = 0; j < newN; j++) {
+                let sum = 0;
+                for (let k = 0; k <= M; k++) sum += A[k][i] * A[k][j];
+                ATA[i][j] = sum;
+            }
+            let sx = 0, sy = 0, sz = 0, sw = 0;
+            for (let k = 0; k <= M; k++) {
+                sx += A[k][i] * samples[k].x;
+                sy += A[k][i] * samples[k].y;
+                sz += A[k][i] * samples[k].z;
+                sw += A[k][i] * samples[k].w;
+            }
+            ATBx[i] = sx; ATBy[i] = sy; ATBz[i] = sz; ATBw[i] = sw;
         }
 
-        // Step 3: Remove knots (simple decrement for this clamped case)
-        const newU = [...currentU];
-        newU.pop(); // Remove one knot to match degree reduction
-        
-        return { controlPoints: newCP, weights: newW, U: newU };
+        const solve = (matA, matB) => {
+            const n = matA.length;
+            const mat = matA.map(r => [...r]);
+            const B = [...matB];
+            for (let i = 0; i < n; i++) {
+                let maxEl = Math.abs(mat[i][i]), maxRow = i;
+                for (let k = i + 1; k < n; k++) {
+                    if (Math.abs(mat[k][i]) > maxEl) { maxEl = Math.abs(mat[k][i]); maxRow = k; }
+                }
+                [mat[maxRow], mat[i]] = [mat[i], mat[maxRow]];
+                [B[maxRow], B[i]] = [B[i], B[maxRow]];
+                for (let k = i + 1; k < n; k++) {
+                    const c = -mat[k][i] / (mat[i][i] || 1e-12);
+                    for (let j = i; j < n; j++) mat[k][j] += c * mat[i][j];
+                    B[k] += c * B[i];
+                }
+            }
+            const x = new Array(n).fill(0);
+            for (let i = n - 1; i >= 0; i--) {
+                let sum = 0;
+                for (let k = i + 1; k < n; k++) sum += mat[i][k] * x[k];
+                x[i] = (B[i] - sum) / (mat[i][i] || 1e-12);
+            }
+            return x;
+        };
+
+        const resX = solve(ATA, ATBx);
+        const resY = solve(ATA, ATBy);
+        const resZ = solve(ATA, ATBz);
+        const resW = solve(ATA, ATBw);
+
+        const newCP = [];
+        const newWeights = [];
+        for (let i = 0; i < newN; i++) {
+            const w = resW[i] || 1.0;
+            newWeights.push(w);
+            newCP.push({ x: resX[i] / w, y: resY[i] / w, z: resZ[i] / w });
+        }
+
+        // Force endpoints for C0 continuity
+        newCP[0] = { ...controlPoints[0] };
+        newWeights[0] = weights[0];
+        newCP[newN - 1] = { ...controlPoints[controlPoints.length - 1] };
+        newWeights[newN - 1] = weights[weights.length - 1];
+
+        return { controlPoints: newCP, weights: newWeights, U: newU };
+    }
+
+    /**
+     * Reduce knot vector multiplicity for degree reduction
+     */
+    reduceKnotVector(U) {
+        const unique = [...new Set(U)];
+        const newU = [];
+        unique.forEach(u => {
+            const count = U.filter(k => k === u).length;
+            // Standard reduction: decrement multiplicity if > 1
+            const newCount = count > 1 ? count - 1 : 1;
+            for (let i = 0; i < newCount; i++) newU.push(u);
+        });
+        return newU.sort((a,b) => a-b);
     }
 
     /**
