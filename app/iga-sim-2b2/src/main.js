@@ -149,30 +149,55 @@ function getHeatmapColor(t) {
     return { r: 0.1 + t * 0.9, g: 0.1 + t * 0.3, b: 0.7 - t * 0.5 };
 }
 
+function createBCMarker(type = 'x') {
+    const group = new THREE.Group();
+    
+    // Triangle (Support body)
+    const triGeo = new THREE.ConeGeometry(0.12, 0.2, 3);
+    const triMat = new THREE.MeshBasicMaterial({ color: 0x334155 }); // Slate-700
+    const triangle = new THREE.Mesh(triGeo, triMat);
+    
+    // Roller (Circle/Disk)
+    const rollGeo = new THREE.CircleGeometry(0.04, 16);
+    const rollMat = new THREE.MeshBasicMaterial({ color: 0x64748b });
+    const roller = new THREE.Mesh(rollGeo, rollMat);
+    
+    if (type === 'y') { // Fixed in Y (Bottom edge)
+        triangle.rotation.x = 0;
+        triangle.position.y = -0.15;
+        roller.position.y = -0.28;
+    } else { // Fixed in X (Left edge)
+        triangle.rotation.z = Math.PI / 2;
+        triangle.position.x = -0.15;
+        roller.position.x = -0.28;
+    }
+    
+    group.add(triangle);
+    group.add(roller);
+    return group;
+}
+
 function updateBoundaryVisuals() {
-    boundaryVisuals.forEach(mesh => scene.remove(mesh));
+    boundaryVisuals.forEach(obj => scene.remove(obj));
     boundaryVisuals = [];
     const nU = patch.controlPoints.length;
     const nV = patch.controlPoints[0].length;
     
-    const geo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
-    const symMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 }); // Blue
-    
     // Bottom edge (y-symmetry: fixed in Y)
     for(let i=0; i<nU; i++) {
         const cp = patch.controlPoints[i][0];
-        const mesh = new THREE.Mesh(geo, symMat);
-        mesh.position.set(cp.x, cp.y, cp.z);
-        scene.add(mesh);
-        boundaryVisuals.push(mesh);
+        const marker = createBCMarker('y');
+        marker.position.set(cp.x, cp.y, cp.z);
+        scene.add(marker);
+        boundaryVisuals.push(marker);
     }
     // Left edge (x-symmetry: fixed in X)
     for(let j=0; j<nV; j++) {
         const cp = patch.controlPoints[0][j];
-        const mesh = new THREE.Mesh(geo, symMat);
-        mesh.position.set(cp.x, cp.y, cp.z);
-        scene.add(mesh);
-        boundaryVisuals.push(mesh);
+        const marker = createBCMarker('x');
+        marker.position.set(cp.x, cp.y, cp.z);
+        scene.add(marker);
+        boundaryVisuals.push(marker);
     }
 }
 
