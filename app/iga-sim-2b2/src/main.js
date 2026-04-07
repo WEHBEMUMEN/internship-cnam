@@ -13,16 +13,69 @@ solver.E = 100000;
 solver.nu = 0.3;
 
 // The preset now generates the correct Top-Right quadrant directly
-let patch = NURBSPresets.generatePlateWithHole(R, L);
+let basePatch = NURBSPresets.generatePlateWithHole(R, L);
+let patch = { ...basePatch };
 
 let analysisData = {
     u: null,
     load: 100
 };
 
-let targetState = { load: 100 };
-let activeState = { load: -1 };
+let targetState = { 
+    load: 100,
+    h: 0,
+    p: 2,
+    k: false
+};
+let activeState = { load: -1, h: -1, p: -1, k: false };
 let isSolving = false;
+
+function updateStatusLabels() {
+    const nU = patch.controlPoints.length;
+    const nV = patch.controlPoints[0].length;
+    if (document.getElementById('status-degree')) document.getElementById('status-degree').textContent = `p=${patch.p}, q=${patch.q}`;
+    if (document.getElementById('status-spans')) document.getElementById('status-spans').textContent = `${patch.U.length - 2 * patch.p - 1} x ${patch.V.length - 2 * patch.q - 1}`;
+    if (document.getElementById('status-points')) document.getElementById('status-points').textContent = `${nU} x ${nV}`;
+    
+    // Show warning if complexity is high
+    const warning = document.getElementById('refinement-warning');
+    if (warning) {
+        warning.classList.toggle('hidden', targetState.h < 3 && targetState.p < 4);
+    }
+}
+
+function applyRefinements() {
+    // Reset to Base
+    patch = JSON.parse(JSON.stringify(basePatch));
+    
+    // p-refinement
+    if (targetState.p > 2) {
+        const delta = targetState.p - 2;
+        patch = engine.elevateDirection(patch, 0, delta);
+        patch = engine.elevateDirection(patch, 1, delta);
+    }
+    
+    // h-refinement
+    if (targetState.h > 0) {
+        for(let i=0; i<targetState.h; i++) {
+            patch = engine.subdivideGlobal(patch);
+        }
+    }
+    
+    updateStatusLabels();
+    updateSurface();
+    updateBoundaryVisuals();
+    updateControlPoints();
+    updateForceArrows();
+}
+
+function init() {
+    setupUI();
+    updateSurface();
+    updateBoundaryVisuals();
+    updateForceArrows();
+    animate();
+}
 
 // --- Three.js ---
 const scene = new THREE.Scene();
@@ -246,23 +299,42 @@ function updateForceArrows() {
 }
 
 async function solverLoop() {
-    if (!isSolving && targetState.load !== activeState.load) {
+    const stateChanged = targetState.load !== activeState.load || 
+                         targetState.h !== activeState.h || 
+                         targetState.p !== activeState.p ||
+                         targetState.k !== activeState.k;
+
+    if (!isSolving && stateChanged) {
         isSolving = true;
+        
+        // If topology changed, re-apply refinements
+        if (targetState.h !== activeState.h || targetState.p !== activeState.p || targetState.k !== activeState.k) {
+            applyRefinements();
+        }
+
         await new Promise(r => setTimeout(r, 10));
         const t0 = performance.now();
         const nU = patch.controlPoints.length;
+        const nV = patch.controlPoints[0].length;
+
+        const bcs = [];
+        // Angular edge i=0 is bottom (y=0) -> Fix Y
+        if (patch.controlPoints[0]) {
+            for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
+        }
+        // Angular edge i=nU-1 is left (x=0) -> Fix X
+        if (patch.controlPoints[nU-1]) {
+            for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
+        }
+        
         const loads = [];
         // Apply traction only to the Right edge (x = L)
         for(let i=0; i<nU; i++) {
             const cp = patch.controlPoints[i][nV-1];
-            // Only load points on the right-hand boundary (x = L)
-            if (Math.abs(cp.x - L) < 1e-3) {
-                let scale = 1.0;
-                // For a 4x3 grid: i=0(bottom), 1&2(interior), 3(top)
-                // We use weight 2 for interior nodes for uniform nodal distribution
-                if (i === 1 || i === 2) scale = 2.0; 
-                
-                loads.push({ i: i, j: nV-1, fx: targetState.load * scale, fy: 0 });
+            if (cp && Math.abs(cp.x - L) < 1e-3) {
+                // For uniform traction, internal nodes get 1.0 weight and ends get 0.5
+                const weight = (i === 0 || i === nU-1) ? 0.5 : 1.0;
+                loads.push({ i: i, j: nV-1, fx: targetState.load * weight, fy: 0 });
             }
         }
 
@@ -271,16 +343,13 @@ async function solverLoop() {
             const t1 = performance.now();
             const maxD = calculateMaxDisp(analysisData.u);
             if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
-            if (document.getElementById('stress-conc')) {
-                const sc = 3.0 * (1 - Math.exp(-maxD*15)) + 1.0;
-                document.getElementById('stress-conc').textContent = Math.min(sc, 3.01).toFixed(2);
-            }
+            
             updateSurface();
             updateBoundaryVisuals();
             updateControlPoints();
             updateForceArrows();
             if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Success: Solved in ${ (t1 - t0).toFixed(1) }ms`;
-            activeState = { ...targetState };
+            activeState = JSON.parse(JSON.stringify(targetState));
         } catch (err) {
             if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Error: ${err.message}`;
         }
@@ -290,11 +359,44 @@ async function solverLoop() {
 }
 
 function setupUI() {
+    // Load Slider
     document.getElementById('load-slider').oninput = (e) => {
         const val = parseFloat(e.target.value);
-        document.getElementById('load-val').textContent = `${val} N/mm`;
+        if (document.getElementById('load-val')) document.getElementById('load-val').textContent = `${val} N/mm`;
         targetState.load = val;
     };
+
+    // Refinement Sliders
+    if (document.getElementById('h-slider')) {
+        document.getElementById('h-slider').oninput = (e) => {
+            targetState.h = parseInt(e.target.value);
+        };
+    }
+    if (document.getElementById('p-slider')) {
+        document.getElementById('p-slider').oninput = (e) => {
+            targetState.p = parseInt(e.target.value);
+        };
+    }
+
+    // Reset Button
+    if (document.getElementById('reset-ref')) {
+        document.getElementById('reset-ref').onclick = () => {
+            targetState.h = 0;
+            targetState.p = 2;
+            if (document.getElementById('h-slider')) document.getElementById('h-slider').value = 0;
+            if (document.getElementById('p-slider')) document.getElementById('p-slider').value = 2;
+        };
+    }
+
+    // K-Refinement Shortcut
+    if (document.getElementById('apply-k')) {
+        document.getElementById('apply-k').onclick = () => {
+            targetState.p = Math.min(targetState.p + 1, 5);
+            targetState.h = Math.min(targetState.h + 1, 4);
+            if (document.getElementById('p-slider')) document.getElementById('p-slider').value = targetState.p;
+            if (document.getElementById('h-slider')) document.getElementById('h-slider').value = targetState.h;
+        };
+    }
     
     document.getElementById('toggle-cp').onchange = (e) => {
         visibilityState.cp = e.target.checked;
@@ -309,6 +411,7 @@ function setupUI() {
         updateForceArrows();
     };
 
+    updateStatusLabels();
     solverLoop();
 }
 
