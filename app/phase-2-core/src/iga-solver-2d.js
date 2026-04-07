@@ -142,9 +142,8 @@ class IGA2DSolver {
         
         // Safety: Handle singularity at degenerate corner by using a stable regularizer
         // rather than zeroing the B-matrix, which would cause numerical 'locking' or zero-displacement.
-        // Using 1e-4 for stress recovery ensures trash values at singular points don't wash out physical results.
-        if (Math.abs(detJ_2D) < 1e-4) {
-            detJ_2D = (detJ_2D >= 0) ? 1e-4 : -1e-4;
+        if (Math.abs(detJ_2D) < 1e-12) {
+            detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
         }
 
         const J_inv = [
