@@ -226,19 +226,19 @@ async function runAnalysis() {
 
     document.getElementById('max-disp').textContent = `${maxDisplacement.toFixed(4)} mm`;
 
-    // 5. Compare with Beam Theory (Simple Cantilever Beam L=10, H=10, Elasticity)
-    // d_max = (P * L^3) / (3 * E * I)
+    // 5. Calculate Strain Energy (U = 1/2 * P * d)
+    // Since this is a 2D plane stress sheet with a 1:1 aspect ratio (L=10, H=10),
+    // 1D Euler-Bernoulli beam theory is invalid (shear deformation dominates). 
+    // Instead, we measure the total strain energy.
     const loadValue = parseFloat(document.getElementById('load-slider').value);
-    const L = 10.0;
-    const H = 10.0;
-    const I = (H * H * H) / 12; // Per unit width, but our plate is H wide...
-    // Actually, I_plate = (width * thickness^3)/12. 
-    // In our 2D Plane stress, 'thickness' is solver.thickness (1.0).
-    const I_beam = (H * 1.0 * 1.0 * 1.0) / 12; 
-    const analytical = (loadValue * Math.pow(L, 3)) / (3 * solver.E * I_beam);
     
-    const error = Math.abs((maxDisplacement - analytical) / analytical) * 100;
-    document.getElementById('error-theory').textContent = `${error.toFixed(2)}%`;
+    // Find displacement at the load point
+    const loadNodeIdx = (currentLoads[0].i * patch.controlPoints[0].length + currentLoads[0].j) * 2;
+    const loadDispY = displacements[loadNodeIdx + 1];
+    
+    // U = 0.5 * F * delta (Wait, load is downwards, so displacement is negative, F is negative)
+    const strainEnergy = 0.5 * (-loadValue) * loadDispY;
+    document.getElementById('strain-energy').textContent = `${strainEnergy.toFixed(4)} N·mm`;
 
     createMesh();
     if (window.perfMonitor) window.perfMonitor.endMeasure();
