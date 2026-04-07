@@ -189,13 +189,24 @@ const sliderQ = document.getElementById('slider-q');
 const valP = document.getElementById('val-p');
 const valQ = document.getElementById('val-q');
 
+// Store the base geometry so we can always rebuild from scratch
+let basePatch = JSON.parse(JSON.stringify(patch));
+
 function updateDegrees() {
-    const p = parseInt(sliderP.value);
-    const q = parseInt(sliderQ.value);
-    valP.textContent = p;
-    valQ.textContent = q;
+    const targetP = parseInt(sliderP.value);
+    const targetQ = parseInt(sliderQ.value);
+    valP.textContent = targetP;
+    valQ.textContent = targetQ;
     
-    engine.setDegree(patch, p, q);
+    // Always start from the base geometry and elevate to target
+    // This avoids lossy degree reduction entirely
+    patch = JSON.parse(JSON.stringify(basePatch));
+    
+    // Elevate p direction to target
+    while (patch.p < targetP) engine.elevateDirection(patch, 'U');
+    // Elevate q direction to target
+    while (patch.q < targetQ) engine.elevateDirection(patch, 'V');
+    
     fullRebuild();
 }
 
@@ -203,7 +214,8 @@ sliderP.oninput = updateDegrees;
 sliderQ.oninput = updateDegrees;
 
 document.getElementById('reset-surface').onclick = () => {
-    patch = NURBSPresets.generateSheet();
+    basePatch = JSON.parse(JSON.stringify(NURBSPresets.generateSheet()));
+    patch = JSON.parse(JSON.stringify(basePatch));
     sliderP.value = patch.p;
     sliderQ.value = patch.q;
     valP.textContent = patch.p;
