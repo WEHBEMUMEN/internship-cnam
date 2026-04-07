@@ -112,6 +112,26 @@
         </div>
 
         <div class="control-group pt-4 border-t border-slate-700">
+            <span class="control-label text-blue-400">Material Properties</span>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-slate-400">Young's Modulus (E)</span>
+                        <span id="e-val" class="text-xs font-mono text-blue-400">10^5</span>
+                    </div>
+                    <input type="range" id="e-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" min="1000" max="500000" step="1000" value="100000">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-slate-400">Poisson's Ratio (ν)</span>
+                        <span id="nu-val" class="text-xs font-mono text-emerald-400">0.30</span>
+                    </div>
+                    <input type="range" id="nu-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500" min="0" max="0.49" step="0.01" value="0.30">
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group pt-4 border-t border-slate-700">
             <span class="control-label text-blue-400">Traction Load (T_x)</span>
             <div class="flex justify-between items-center mb-2">
                 <span id="load-val" class="text-xs font-mono text-blue-400">100 N/mm</span>
