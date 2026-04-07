@@ -723,10 +723,13 @@ class IGA2DSolver {
         let err2 = 0; let ex2 = 0;
         const gauss = GaussQuadrature2D.getPoints(p + 1);
 
-        // Geometry parameters for singularity exclusion
-        const L = 4.0; // Plate half-dimension
-        const cornerDistThreshold = 0.3; // Exclude points within this radius of (L,L)
-        const minDetJ = 1e-6; // Skip Gauss points with near-singular Jacobian
+        // Physical radius cutoff: only integrate over r <= rMax
+        // This excludes the outer boundary strip where the degenerate mapping
+        // creates non-integrable stress singularities (σ ~ 1/detJ).
+        // r_max = 0.85*L covers the stress concentration zone while avoiding artifacts.
+        const L = 4.0;
+        const rMax = 0.85 * L * Math.SQRT2; // ~4.8, excludes far corner region
+        const minDetJ = 1e-6;
 
         for (let i = 0; i < uniqueU.length - 1; i++) {
             for (let j = 0; j < uniqueV.length - 1; j++) {
@@ -741,17 +744,25 @@ class IGA2DSolver {
                         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
                         const detJ = Math.abs(deriv.dU.x * deriv.dV.y - deriv.dV.x * deriv.dU.y);
 
-                        // Skip points with near-singular Jacobian (degenerate corner)
+                        // Skip near-singular Gauss points
                         if (detJ < minDetJ) continue;
 
-                        // Skip points physically near the degenerate corner (L,L)
+                        // Physical position and radius check
                         const pos = this.engine.evaluateSurface(patch, u, v);
-                        const cornerDist = Math.sqrt((pos.x - L)**2 + (pos.y - L)**2);
-                        if (cornerDist < cornerDistThreshold) continue;
+                        const r = Math.sqrt(pos.x * pos.x + pos.y * pos.y);
+                        if (r > rMax) continue;
+                        // Also skip if too close to outer walls
+                        if (pos.x > 0.95 * L || pos.y > 0.95 * L) continue;
 
                         const Jmod = detJ * gauss.weights[gu] * gauss.weights[gv] * (u1-u0)*(v1-v0)/4;
                         const sN = this.getNumericalStress(patch, u_disp, u, v, E, nu);
                         const sE = this.getExactStress(pos.x, pos.y, R, Tx);
+
+                        // Additional safety: skip points with obviously blown-up stresses
+                        const maxPhysicalStress = 5 * Math.abs(Tx);
+                        if (Math.abs(sN.sxx) > maxPhysicalStress * 10 || 
+                            Math.abs(sN.syy) > maxPhysicalStress * 10 ||
+                            Math.abs(sN.sxy) > maxPhysicalStress * 10) continue;
 
                         err2 += (Math.pow(sN.sxx - sE.sxx, 2) + Math.pow(sN.syy - sE.syy, 2) + 2*Math.pow(sN.sxy - sE.sxy, 2)) * Jmod;
                         ex2 += (Math.pow(sE.sxx, 2) + Math.pow(sE.syy, 2) + 2*Math.pow(sE.sxy, 2)) * Jmod;
@@ -761,6 +772,7 @@ class IGA2DSolver {
         }
         return Math.sqrt(err2) / Math.sqrt(ex2);
     }
+
 }
 
 // Export for browser

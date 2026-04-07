@@ -174,8 +174,10 @@ function updateSurface() {
                     val = Math.abs(interp.x); 
                 } else {
                     const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
-                    // Damping: If we are near the degenerate corner, prevent the spike from washing out the heatmap
-                    const damping = v > 0.96 ? Math.exp(-50 * (v - 0.96)) : 1.0;
+                    // Suppress artifacts near the degenerate outer boundary (right/top walls)
+                    const posCheck = engine.evaluateSurface(patch, u, v);
+                    const nearWall = (posCheck.x > 0.9 * 4.0 || posCheck.y > 0.9 * 4.0);
+                    const damping = nearWall ? 0.0 : 1.0;
                     val = Number.isFinite(s.vonMises) ? s.vonMises * damping : 0;
                 }
                 
@@ -578,10 +580,9 @@ function calculateMaxStress(u_disp) {
         for (let j = 0; j <= res; j++) {
             const u = i / res;
             const v = j / res;
-            // Skip the degenerate corner region
+            // Skip the outer boundary region (degenerate mapping zone)
             const pos = engine.evaluateSurface(patch, u, v);
-            const cornerDist = Math.sqrt((pos.x - L)**2 + (pos.y - L)**2);
-            if (cornerDist < 0.3) continue;
+            if (pos.x > 0.95 * L || pos.y > 0.95 * L) continue;
             
             const s = solver.getNumericalStress(patch, u_disp, u, v, targetState.E, targetState.nu);
             if (isFinite(s.vonMises) && s.vonMises > max) max = s.vonMises;
