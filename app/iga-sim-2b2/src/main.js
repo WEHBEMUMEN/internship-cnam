@@ -25,9 +25,11 @@ let targetState = {
     load: 100,
     h: 0,
     p: 2,
-    k: false
+    k: false,
+    E: 100000,
+    nu: 0.30
 };
-let activeState = { load: -1, h: -1, p: -1, k: false };
+let activeState = { load: -1, h: -1, p: -1, k: false, E: -1, nu: -1 };
 let isSolving = false;
 
 function updateStatusLabels() {
@@ -294,10 +296,16 @@ async function solverLoop() {
     const stateChanged = targetState.load !== activeState.load || 
                          targetState.h !== activeState.h || 
                          targetState.p !== activeState.p ||
-                         targetState.k !== activeState.k;
+                         targetState.k !== activeState.k ||
+                         targetState.E !== activeState.E ||
+                         targetState.nu !== activeState.nu;
 
     if (!isSolving && stateChanged) {
         isSolving = true;
+
+        // Sync Material Properties to Solver
+        solver.E = targetState.E;
+        solver.nu = targetState.nu;
         
         // If topology changed, re-apply refinements
         if (targetState.h !== activeState.h || targetState.p !== activeState.p || targetState.k !== activeState.k) {
@@ -357,6 +365,22 @@ function setupUI() {
         if (document.getElementById('load-val')) document.getElementById('load-val').textContent = `${val} N/mm`;
         targetState.load = val;
     };
+
+    // Material Sliders
+    if (document.getElementById('e-slider')) {
+        document.getElementById('e-slider').oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            if (document.getElementById('e-val')) document.getElementById('e-val').textContent = val >= 10000 ? `${(val / 1000).toFixed(0)}k` : val;
+            targetState.E = val;
+        };
+    }
+    if (document.getElementById('nu-slider')) {
+        document.getElementById('nu-slider').oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            if (document.getElementById('nu-val')) document.getElementById('nu-val').textContent = val.toFixed(2);
+            targetState.nu = val;
+        };
+    }
 
     // Refinement Sliders
     if (document.getElementById('h-slider')) {
