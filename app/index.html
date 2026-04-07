@@ -8,43 +8,40 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <link rel="stylesheet" href="../index.css">
   <style>
-        /* Tabs System */
+            /* Tabs System */
     .tabs-nav {
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 16px;
       margin-bottom: 60px;
-      padding: 10px;
-      background: rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(12px);
+      padding: 8px;
+      background: var(--bg-secondary);
       border-radius: 50px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
       width: fit-content;
       margin-left: auto;
       margin-right: auto;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
     .tab-link {
-      padding: 14px 34px;
+      padding: 12px 28px;
       border-radius: 40px;
       font-weight: 700;
       font-size: 0.95rem;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      color: #94a3b8;
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
       gap: 12px;
       background: transparent;
     }
-    .tab-link:hover { color: #f8fafc; background: rgba(255, 255, 255, 0.08); }
+    .tab-link:hover { color: var(--text-primary); background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
     .tab-link.active {
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.8) 0%, rgba(29, 78, 216, 0.8) 100%);
+      background: var(--accent);
       color: white;
-      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
-      border: 1px solid rgba(59, 130, 246, 0.5);
+      box-shadow: 0 8px 16px var(--accent-glow);
     }
-    .tab-pane { display: none; animation: fadeIn 0.5s ease; }
+    .tab-pane { display: none; animation: fadeIn 0.4s ease; }
     .tab-pane.active { display: block; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -57,44 +54,53 @@
       padding-bottom: 100px;
     }
     .flow-section {
-      background: rgba(15, 23, 42, 0.5);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-      border-radius: 32px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 24px;
       padding: 40px;
       position: relative;
+      box-shadow: var(--card-shadow);
     }
     .flow-grid {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 20px;
+      justify-content: center; /* Center to allow wrapping gracefully */
+      align-items: stretch;
+      gap: 16px;
       margin-top: 30px;
       flex-wrap: wrap;
     }
     .flow-step {
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 20px;
-      width: 200px;
+      padding: 24px 20px;
+      width: 220px;
       text-align: center;
       position: relative;
-      transition: all 0.3s;
+      transition: var(--transition);
       cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
     .flow-step:hover {
       border-color: var(--accent);
       transform: translateY(-5px);
-      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+      box-shadow: var(--card-hover-shadow);
+      background: #ffffff;
     }
-    .flow-step i { font-size: 1.5rem; margin-bottom: 10px; color: var(--accent); }
-    .flow-step h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 5px; color: #f8fafc; }
-    .flow-step p { font-size: 0.75rem; color: #94a3b8; line-height: 1.4; }
+    .flow-step i { font-size: 1.8rem; margin-bottom: 16px; color: var(--accent); }
+    .flow-step h4 { font-size: 0.95rem; font-weight: 800; margin-bottom: 8px; color: var(--text-primary); }
+    .flow-step p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin: 0; }
     
     .flow-arrow {
-      color: rgba(59, 130, 246, 0.4);
-      font-size: 1.2rem;
+      color: #94a3b8;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
     }
+
+
 
     .modal {
       display: none;
@@ -488,8 +494,8 @@
           <div class="flow-container container">
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(96, 165, 250, 0.1); color: #60a5fa;">PHASE 1.0</span>
-              <h3 style="margin-top: 10px;">1D Core (Performance) Pipeline</h3>
+              <span class="badge" style="background: rgba(96, 165, 250, 0.1); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3);">PHASE 1.0</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">1D Core (Performance) Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.0/index.html'">
@@ -519,8 +525,8 @@
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">PHASE 1.1</span>
-              <h3 style="margin-top: 10px;">1D Core Essentials Pipeline</h3>
+              <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">PHASE 1.1</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">1D Core Essentials Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.1/index.html'">
@@ -550,497 +556,539 @@
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: #2563eb;">PHASE 1.2</span>
-              <h3 style="margin-top: 10px;">Degree Elevation Pipeline</h3>
+              <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.3);">PHASE 1.2</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Degree Elevation Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.2/index.html'">
                   <i class="fa-solid fa-arrow-up-9-1"></i>
-                  <h4>Parameterization</h4>
-                  <p>Extract high density point array</p>
+                  <h4>Parameter Space</h4>
+                  <p>Extract extreme density point array</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.2/index.html'">
                   <i class="fa-solid fa-chart-line"></i>
-                  <h4>Least Squares</h4>
-                  <p>Matrix projection to fit shape</p>
+                  <h4>Least Squares Matrix</h4>
+                  <p>Assemble LHS projection matrices</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.2/index.html'">
                   <i class="fa-solid fa-arrow-up-right-dots"></i>
                   <h4>Elevate Form</h4>
-                  <p>Increase polynomial (p = p+1)</p>
+                  <p>Algebraically increase polynomial (p = p+1)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.2/index.html'">
                   <i class="fa-solid fa-check"></i>
                   <h4>Geometry Lock</h4>
-                  <p>Exact visual shape maintained</p>
+                  <p>Calculate exact visual shape match</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(29, 78, 216, 0.1); color: #1d4ed8;">PHASE 1.3</span>
-              <h3 style="margin-top: 10px;">Knot Insertion (h-refinement) Pipeline</h3>
+              <span class="badge" style="background: rgba(29, 78, 216, 0.1); color: #1d4ed8; border: 1px solid rgba(29, 78, 216, 0.3);">PHASE 1.3</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Knot Insertion (h-refinement) Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.3/index.html'">
                   <i class="fa-solid fa-scissors"></i>
                   <h4>Parametric Split</h4>
-                  <p>Inject new knot x_bar</p>
+                  <p>Inject new knot x_bar inside current domain</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.3/index.html'">
                   <i class="fa-solid fa-percentage"></i>
                   <h4>Alpha Interpolation</h4>
-                  <p>Compute alpha blending ratios</p>
+                  <p>Compute Boehm's algorithm alpha blending ratios</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.3/index.html'">
                   <i class="fa-solid fa-plus"></i>
                   <h4>Spawn Nodes</h4>
-                  <p>Insert new Control Points mathematically</p>
+                  <p>Calculate position for new localized Control Points</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.3/index.html'">
                   <i class="fa-solid fa-boxes-stacked"></i>
-                  <h4>Density Localized</h4>
-                  <p>Local refinement without deformation</p>
+                  <h4>Shape Preserved</h4>
+                  <p>Complete density localization without deformation</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">PHASE 1.4</span>
-              <h3 style="margin-top: 10px;">Vector Calculus (Tangents) Pipeline</h3>
+              <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">PHASE 1.4</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Vector Calculus (Tangents) Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.4/index.html'">
                   <i class="fa-solid fa-calculator"></i>
                   <h4>Basis Derivative</h4>
-                  <p>Compute N'_{i,p}(u)</p>
+                  <p>Analytically compute N'_{i,p}(u)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.4/index.html'">
                   <i class="fa-solid fa-divide"></i>
                   <h4>Quotient Rule</h4>
-                  <p>Scale non-rational by rational weight deriv</p>
+                  <p>Scale non-rational terms by rational weight derivatives</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.4/index.html'">
                   <i class="fa-solid fa-chart-line"></i>
-                  <h4>Analytical Vector</h4>
-                  <p>Formulate C'(u) exact map</p>
+                  <h4>Tangent Array</h4>
+                  <p>Formulate C'(u) exact parametric bounds</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.4/index.html'">
                   <i class="fa-solid fa-location-crosshairs"></i>
-                  <h4>Tangent Eval</h4>
-                  <p>Render velocity/tangent vectors true scale</p>
+                  <h4>Evaluate Geometry</h4>
+                  <p>Render continuous velocity vectors at exact true scale</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(124, 58, 237, 0.1); color: #7c3aed;">PHASE 1.5</span>
-              <h3 style="margin-top: 10px;">k-refinement Optimization Pipeline</h3>
+              <span class="badge" style="background: rgba(124, 58, 237, 0.1); color: #7c3aed; border: 1px solid rgba(124, 58, 237, 0.3);">PHASE 1.5</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">k-refinement Optimization Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.5/index.html'">
                   <i class="fa-solid fa-layer-group"></i>
                   <h4>Elevate First</h4>
-                  <p>Apply Degree Elevation globally</p>
+                  <p>Apply Degree Elevation globally across parameter space</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.5/index.html'">
                   <i class="fa-solid fa-scissors"></i>
                   <h4>Insert Layer</h4>
-                  <p>Apply Knot Insertion subsequently</p>
+                  <p>Apply Knot Insertion subsequently maintaining structure</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.5/index.html'">
                   <i class="fa-solid fa-infinity"></i>
-                  <h4>C^(p-1) Matrix</h4>
-                  <p>Achieve Hyper-Smooth transitions</p>
+                  <h4>C^(p-1) Formulation</h4>
+                  <p>Compute mathematically guaranteed Hyper-Smooth transitions</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.5/index.html'">
                   <i class="fa-solid fa-cube"></i>
                   <h4>Continuous Body</h4>
-                  <p>Ready for rigorous mathematical physics</p>
+                  <p>Finalize curve ready for rigorous mathematical physics integration</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">PHASE 1.6</span>
-              <h3 style="margin-top: 10px;">Structural Mechanics Pipeline</h3>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">PHASE 1.6</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Structural Mechanics Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.6/index.html'">
                   <i class="fa-solid fa-cube"></i>
-                  <h4>Geometric Model</h4>
-                  <p>Establish 1D physical element</p>
+                  <h4>Parametric Setup</h4>
+                  <p>Establish 1D finite physical elements</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.6/index.html'">
                   <i class="fa-solid fa-wrench"></i>
-                  <h4>Material Params</h4>
-                  <p>Apply E (Modulus) and I (Inertia)</p>
+                  <h4>Material Setup</h4>
+                  <p>Apply Young's Modulus (E) and Area (A) properties</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-1.6/index.html'">
+                  <i class="fa-solid fa-border-none"></i>
+                  <h4>Global Assembly</h4>
+                  <p>Assemble elemental matrices into global stiffness K</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.6/index.html'">
                   <i class="fa-solid fa-scale-balanced"></i>
                   <h4>Virtual Work</h4>
-                  <p>Equilibrate internal & external loads</p>
+                  <p>Equilibrate internal states & external force boundary conditions</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.6/index.html'">
                   <i class="fa-solid fa-bridge"></i>
                   <h4>Deflection</h4>
-                  <p>Solve statically stable displaced shape</p>
+                  <p>Solve statically stable (K*u=F) displaced shape</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(5, 150, 105, 0.1); color: #059669;">PHASE 1.7</span>
-              <h3 style="margin-top: 10px;">ROM Benchmark Pipeline</h3>
+              <span class="badge" style="background: rgba(5, 150, 105, 0.1); color: #059669; border: 1px solid rgba(5, 150, 105, 0.3);">PHASE 1.7</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">ROM Benchmark Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-gauge-high"></i>
-                  <h4>FOM Simulation</h4>
-                  <p>Run high density reference sim</p>
+                  <h4>High-Fid Sim</h4>
+                  <p>Run extremely dense reference 1D finite-element setup</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-database"></i>
-                  <h4>Vector Snapshots</h4>
-                  <p>Store deflection data array</p>
+                  <h4>Snapshots</h4>
+                  <p>Formulate matrix S from parametric load points</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-compress"></i>
-                  <h4>POD Synthesis</h4>
-                  <p>Extract fundamental eigen-modes</p>
+                  <h4>POD/SVD Core</h4>
+                  <p>Extract primary energetic eigen-modes (Reduced Basis Φ)</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                  <h4>Galerkin Project</h4>
+                  <p>Project Full K into severely Reduced K (Φ^T * K * Φ)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-bolt"></i>
-                  <h4>Reduced Solve</h4>
-                  <p>Compare ultra-fast ROM vs FOM speeds</p>
+                  <h4>Comparison</h4>
+                  <p>Calculate execution time savings (FOM vs ROM speeds)</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">PHASE 1.8</span>
-              <h3 style="margin-top: 10px;">Circle Refinement Pipeline</h3>
+              <span class="badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3);">PHASE 1.8</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Circle Refinement Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.8/index.html'">
                   <i class="fa-solid fa-circle-notch"></i>
                   <h4>Perfect Arc</h4>
-                  <p>Initiate 9-point Rational Circle</p>
+                  <p>Initiate 9-point Rational Quadratic Circle geometry</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.8/index.html'">
                   <i class="fa-solid fa-weight-hanging"></i>
                   <h4>Circular Weights</h4>
-                  <p>Sqrt(2)/2 exact corner weights</p>
+                  <p>Inject exact 1.0 and Sqrt(2)/2 geometric weights</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.8/index.html'">
-                  <i class="fa-solid fa-layer-group"></i>
-                  <h4>Circular K-refn</h4>
-                  <p>Maintain circle while splitting mesh</p>
+                  <i class="fa-solid fa-infinity"></i>
+                  <h4>K-refine Target</h4>
+                  <p>Mathematically execute K-refine sequence seamlessly</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.8/index.html'">
                   <i class="fa-solid fa-shapes"></i>
-                  <h4>Isogeometric Map</h4>
-                  <p>Flawless physical domain boundaries</p>
+                  <h4>Isogeometric Hub</h4>
+                  <p>Extract perfectly smooth continuous boundary definitions</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e;">PHASE NL App</span>
-              <h3 style="margin-top: 10px;">Non-Linear Simulation Pipeline</h3>
+              <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);">PHASE NL App</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Non-Linear Mechanics Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-nl/index.html'">
                   <i class="fa-solid fa-arrow-trend-up"></i>
                   <h4>Geometric Defo</h4>
-                  <p>Large strain physical rotation detection</p>
+                  <p>Large strain physical deformation tracking</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-nl/index.html'">
                   <i class="fa-solid fa-arrows-spin"></i>
+                  <h4>Incremental Phase</h4>
+                  <p>Partition external loads into incremental step domains</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-nl/index.html'">
+                  <i class="fa-solid fa-rotate-right"></i>
                   <h4>Newton-Raphson</h4>
-                  <p>Iterative incremental force loops</p>
+                  <p>Compute continuous iterative correction force loops</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-nl/index.html'">
                   <i class="fa-solid fa-clock-rotate-left"></i>
                   <h4>Residual Check</h4>
-                  <p>Check tolerance vector error < 1e-6</p>
+                  <p>Check convergence explicitly against tolerance vectors < 1e-6</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-nl/index.html'">
                   <i class="fa-solid fa-link"></i>
-                  <h4>NL Solution</h4>
-                  <p>True non-linear beam profile drawn</p>
+                  <h4>NL Extraction</h4>
+                  <p>Finalize Non-Linear geometric true structural state profiles</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">PHASE 2.1</span>
-              <h3 style="margin-top: 10px;">Foundations & Bivariate Map Pipeline</h3>
+              <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">PHASE 2.1</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Foundations & Bivariate Map Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.1/index.html'">
                   <i class="fa-solid fa-border-all"></i>
                   <h4>Tensor Product</h4>
-                  <p>N_i(u) * M_j(v) bi-directional array</p>
+                  <p>N_i(u) * M_j(v) bidirectional array formulation</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.1/index.html'">
                   <i class="fa-solid fa-network-wired"></i>
-                  <h4>2D Lattice</h4>
-                  <p>Grid of (n*m) Control Points</p>
+                  <h4>Control Lattice</h4>
+                  <p>Instantiate dense grid of (n*m) Physical Control Points</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.1/index.html'">
                   <i class="fa-solid fa-draw-polygon"></i>
                   <h4>Surface Render</h4>
-                  <p>Map bi-variate parameters to 3D Cartesian</p>
+                  <p>Map bi-variate structural parameters directly to 3D Cartesian bounds</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.1/index.html'">
                   <i class="fa-solid fa-cube"></i>
-                  <h4>Volumetric View</h4>
-                  <p>Drag nodes for dynamic shell stretch</p>
+                  <h4>Volumetric Check</h4>
+                  <p>Drag interaction logic mapped to bi-cubic geometry stretches</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(96, 165, 250, 0.1); color: #60a5fa;">PHASE 2.2</span>
-              <h3 style="margin-top: 10px;">p-Refinement Lab Pipeline</h3>
+              <span class="badge" style="background: rgba(96, 165, 250, 0.1); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3);">PHASE 2.2</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">p-Refinement Lab Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.2/index.html'">
                   <i class="fa-solid fa-arrow-up-right-dots"></i>
-                  <h4>Bi-Degree Inc.</h4>
-                  <p>Elevate p and q separately</p>
+                  <h4>Bi-Degree Raise</h4>
+                  <p>Mathematically elevate degree variables p and q separately</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.2/index.html'">
                   <i class="fa-solid fa-layer-group"></i>
                   <h4>Tensor Expan</h4>
-                  <p>Expand CP matrix without cutting domain</p>
+                  <p>Algebraically multiply and expand dense Control Point matrices</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.2/index.html'">
                   <i class="fa-solid fa-wave-square"></i>
                   <h4>Smooth Normals</h4>
-                  <p>Surface curvature becomes highly differentiable</p>
+                  <p>Surface curvature mathematically aligns continuously (C^k)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.2/index.html'">
                   <i class="fa-solid fa-check-double"></i>
-                  <h4>High-Order Plane</h4>
-                  <p>Substantially improved differential precision</p>
+                  <h4>Polynomial Jump</h4>
+                  <p>Provide explicitly superior order differential calculus surfaces</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">PHASE 2.3</span>
-              <h3 style="margin-top: 10px;">h-Refinement Lab Pipeline</h3>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">PHASE 2.3</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">h-Refinement Lab Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.3/index.html'">
                   <i class="fa-solid fa-plus"></i>
-                  <h4>Row/Col Insert</h4>
-                  <p>Insert a knot row or knot column</p>
+                  <h4>Grid Target</h4>
+                  <p>User targets explicit span for refinement parameters</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.3/index.html'">
                   <i class="fa-solid fa-scissors"></i>
                   <h4>Tensor Split</h4>
-                  <p>Locally fracture specific spans natively</p>
+                  <p>Execute localized Boehm's algorithm fracture logic across row/column domains</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.3/index.html'">
                   <i class="fa-solid fa-compress"></i>
                   <h4>Local Density</h4>
-                  <p>Increase physics resolution only where required</p>
+                  <p>Spawn exact new physical lattice lines wrapping geometry tightly</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.3/index.html'">
                   <i class="fa-solid fa-expand"></i>
                   <h4>Mesh Zoom</h4>
-                  <p>Isolate stress zones visually</p>
+                  <p>Increase spatial mesh depth while holding geometric form strictly</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">PHASE 2.4</span>
-              <h3 style="margin-top: 10px;">k-Refinement & Sphere Pipeline</h3>
+              <span class="badge" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">PHASE 2.4</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">k-Refinement & Sphere Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.4/index.html'">
                   <i class="fa-solid fa-globe"></i>
-                  <h4>Spherical Data</h4>
-                  <p>Input exact sphere poles/weights</p>
+                  <h4>Analytic Base</h4>
+                  <p>Hardcode exactly standard 3D spherical analytical positions and parameters</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-2.4/index.html'">
+                  <i class="fa-solid fa-weight-hanging"></i>
+                  <h4>Pole Constraints</h4>
+                  <p>Fix geometric pole collapse singularities accurately using Nurbs weight modifiers</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.4/index.html'">
                   <i class="fa-solid fa-layer-group"></i>
                   <h4>Hyper-Subdiv</h4>
-                  <p>K-refinement on a 3D enclosed surface</p>
+                  <p>Process combined K-refinement loop on 3D wrapped mapping surface</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.4/index.html'">
                   <i class="fa-solid fa-infinity"></i>
                   <h4>Tensor C^(p-1)</h4>
-                  <p>Hyper-smooth bounding transitions</p>
-                </div>
-                <i class="fa-solid fa-arrow-right flow-arrow"></i>
-                <div class="flow-step" onclick="window.location.href='iga-sim-2.4/index.html'">
-                  <i class="fa-solid fa-circle-check"></i>
-                  <h4>Analytical Globe</h4>
-                  <p>CAD exact spherical representation</p>
+                  <p>Output mathematically guaranteed seamless bounding transitions physically</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">PHASE 2.5</span>
-              <h3 style="margin-top: 10px;">Jacobian & Metric Pipeline</h3>
+              <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">PHASE 2.5</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Jacobian & Metric Space Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.5/index.html'">
+                  <i class="fa-solid fa-square-root-variable"></i>
+                  <h4>Parametric Shift</h4>
+                  <p>Define bi-variate derivative operators natively</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-2.5/index.html'">
                   <i class="fa-solid fa-calculator"></i>
-                  <h4>Param Gradients</h4>
-                  <p>Compute dx/du, dx/dv, dy/du, etc.</p>
+                  <h4>Gradients</h4>
+                  <p>Compute exact spatial derivatives (dx/du, dx/dv, dy/du, dy/dv)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.5/index.html'">
                   <i class="fa-solid fa-table"></i>
-                  <h4>Jacobian Matrix</h4>
-                  <p>Assemble tangential transformation map J</p>
+                  <h4>Jacobian Assembly</h4>
+                  <p>Format [2x2] Tangential transformation array mapping space natively</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2.5/index.html'">
                   <i class="fa-solid fa-magnifying-glass"></i>
                   <h4>Determinant |J|</h4>
-                  <p>Scale parameter space area to physical area</p>
-                </div>
-                <i class="fa-solid fa-arrow-right flow-arrow"></i>
-                <div class="flow-step" onclick="window.location.href='iga-sim-2.5/index.html'">
-                  <i class="fa-solid fa-map"></i>
-                  <h4>Area Mapping</h4>
-                  <p>Integration domains unlocked</p>
+                  <p>Scale parametric integration boundary size explicitly to true target area</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">PHASE 2B.1</span>
-              <h3 style="margin-top: 10px;">Stiffness Assembly Pipeline</h3>
+              <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">PHASE 2B.1</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Stiffness Assembly Architecture Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2B.1/index.html'">
                   <i class="fa-solid fa-crosshairs"></i>
-                  <h4>Gauss Points</h4>
-                  <p>Map bi-variate weights & coords</p>
-                </div>
-                <i class="fa-solid fa-arrow-right flow-arrow"></i>
-                <div class="flow-step" onclick="window.location.href='iga-sim-2B.1/index.html'">
-                  <i class="fa-solid fa-table-cells"></i>
-                  <h4>Local Matrix</h4>
-                  <p>Integrate element stiffness k^e</p>
+                  <h4>Quadrature</h4>
+                  <p>Initialize 2D Parametric bounds Gauss Points and standard Weights</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2B.1/index.html'">
                   <i class="fa-solid fa-puzzle-piece"></i>
-                  <h4>Global Assemble</h4>
-                  <p>Summing local bounds into Global K</p>
+                  <h4>B-Splines Call</h4>
+                  <p>Evaluate recursive Bi-variate analytical Shape Functions iteratively</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-2B.1/index.html'">
+                  <i class="fa-solid fa-map"></i>
+                  <h4>Strain Mapping</h4>
+                  <p>Execute Jacobian |J| mapping to generate the B-Matrix (Strain-Displacement)</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-2B.1/index.html'">
+                  <i class="fa-solid fa-table-cells"></i>
+                  <h4>Local Stiffness</h4>
+                  <p>Integrate completely element stiffness explicitly: k_e = ∫ B^T * D * B * |J|</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-2B.1/index.html'">
+                  <i class="fa-solid fa-border-none"></i>
+                  <h4>Global Assembly</h4>
+                  <p>Systematically scatter elemental matrices into Global Sparse System bounds [K]</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2B.1/index.html'">
                   <i class="fa-solid fa-check-double"></i>
-                  <h4>Linear Solve</h4>
-                  <p>Simulate Displacements (u = K\F)</p>
+                  <h4>Linear Elasticity</h4>
+                  <p>Apply explicit Boundary Conditions mathematically and execute core solver (u = K\F)</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e;">PHASE 2B.2</span>
-              <h3 style="margin-top: 10px;">Nonlinear NR Pipeline</h3>
+              <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);">PHASE 2B.2</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Nonlinear Structural NR Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2B.2/index.html'">
                   <i class="fa-solid fa-arrow-trend-up"></i>
-                  <h4>Large Defo</h4>
-                  <p>Strain depends on displaced coordinates</p>
+                  <h4>Kinematics</h4>
+                  <p>Update Strain formulations mathematically accounting for Large Displacements natively</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2B.2/index.html'">
                   <i class="fa-solid fa-layer-group"></i>
-                  <h4>Tangent Stiffness</h4>
-                  <p>K_T = K_linear + K_geometric</p>
+                  <h4>Geometric Matrix</h4>
+                  <p>Process explicit extraction of Non-Linear Geometric Stiffness array elements K_G</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-2B.2/index.html'">
+                  <i class="fa-solid fa-plus-minus"></i>
+                  <h4>Tangent K_T</h4>
+                  <p>Assemble entirely algorithmic Tangent Stiffness formulation (K_T = K_0 + K_G)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2B.2/index.html'">
                   <i class="fa-solid fa-arrows-spin"></i>
-                  <h4>NR Iteration</h4>
-                  <p>Update u_new = u_old + inv(K_T)*Residual</p>
+                  <h4>NR Loop</h4>
+                  <p>Update mathematical state (u_new = u_old + inv(K_T)*Residual_Force_Limits)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2B.2/index.html'">
                   <i class="fa-solid fa-bolt"></i>
-                  <h4>Convergence</h4>
-                  <p>Non-linear equilibrium achieved</p>
+                  <h4>Equilibrium</h4>
+                  <p>Achieve true Non-linear structural convergence precisely tracking large shape deformation</p>
                 </div>
               </div>
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9;">PHASE 2C</span>
-              <h3 style="margin-top: 10px;">Snapshot Gen Pipeline</h3>
+              <span class="badge" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3);">PHASE 2C</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Snapshot Generation (ROM Prep) Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='iga-sim-2c/index.html'">
                   <i class="fa-solid fa-vials"></i>
-                  <h4>LHS Sampling</h4>
-                  <p>LHS algorithm generating mu_i vector</p>
+                  <h4>LHS Script</h4>
+                  <p>Execute true Latin Hypercube Sampling algorithm mathematically generating Parameter domains (mu)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2c/index.html'">
                   <i class="fa-solid fa-server"></i>
-                  <h4>Parameter Feed</h4>
-                  <p>Solver iterates through all sample domains</p>
+                  <h4>Parameter Stream</h4>
+                  <p>Push High-Fidelity 2D Structural Non-linear Solver through completely independent array loop steps</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2c/index.html'">
                   <i class="fa-solid fa-database"></i>
-                  <h4>FOM Matrix</h4>
-                  <p>Stack resultant u_vectors into Snapshot Matrix</p>
+                  <h4>FOM Concatenation</h4>
+                  <p>Stack resultant Displaced node vectors cleanly into massive Snapshot Matrix (S) memory bank</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='iga-sim-2c/index.html'">
+                  <i class="fa-solid fa-compress"></i>
+                  <h4>Eigen Reduction</h4>
+                  <p>Apply SVD internally extracting heavily dominant physical modes natively reducing dimension scale</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-2c/index.html'">
                   <i class="fa-solid fa-download"></i>
-                  <h4>Json/Npy Export</h4>
-                  <p>Export offline data for True-ROM compression</p>
+                  <h4>Offline Target</h4>
+                  <p>Export pure Json/Npy structural offline architecture parameters completing ROM offline timeline</p>
                 </div>
               </div>
             </div>
