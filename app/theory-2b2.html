@@ -68,6 +68,30 @@
             </ul>
         </section>
 
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">4. Numerical Stability & Jacobian Locking</h2>
+            <p>A common issue in Isogeometric Analysis (IGA) occurs at corners where multiple control points are coincident (degenerate mapping). While this ensures a sharp geometric corner, it creates a <b>Singular Jacobian</b>.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-6">
+                <div class="p-6 bg-slate-900/50 rounded-xl border border-rose-500/20">
+                    <h3 class="text-rose-400 font-bold mb-2">The Old Method (Singular)</h3>
+                    <p class="text-sm text-slate-400">Placing multiple control points at the exact same coordinate $(L, L)$ causes the area element to vanish:</p>
+                    <div class="math-card py-2 text-sm">
+                        $$\det(\mathbf{J}) \to 0 \implies \mathbf{K} \propto \frac{1}{\det(\mathbf{J})} \to \infty$$
+                    </div>
+                    <p class="text-sm text-slate-400">Result: <b>Stiffness Locking</b>. The boundary nodes appear "blue" (fixed) because their stiffness is numerically infinite.</p>
+                </div>
+                <div class="p-6 bg-slate-900/50 rounded-xl border border-emerald-500/20">
+                    <h3 class="text-emerald-400 font-bold mb-2">The New Solution (Nudged)</h3>
+                    <p class="text-sm text-slate-400">We apply a tiny <b>Micro-Nudge</b> ($0.01\,\text{mm}$) to the redundant points. This restores a valid mapping while maintaining visual accuracy:</p>
+                    <div class="math-card py-2 text-sm">
+                        $$\det(\mathbf{J}) > \epsilon \implies \mathbf{K} < \text{Tol}$$
+                    </div>
+                    <p class="text-sm text-slate-400">Result: <b>Physical Movement</b>. The boundary is now flexible and correctly responds to traction loads.</p>
+                </div>
+            </div>
+        </section>
+
         <section class="content-section text-center">
             <h2 class="text-2xl font-bold mb-4">Launch Nonlinear Lab</h2>
             <p class="mb-8 text-slate-400">Experience quadratic convergence and large-scale bending in our interactive 2D benchmark.</p>

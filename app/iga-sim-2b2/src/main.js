@@ -289,14 +289,6 @@ function updateForceArrows() {
             scene.add(arrow);
             forceVisuals.push(arrow);
         }
-        
-        // TOP boundary (y = L)
-        if (Math.abs(cp.y - L) < 1e-3) {
-            const dir = new THREE.Vector3(0, 1, 0);
-            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
-            scene.add(arrow);
-            forceVisuals.push(arrow);
-        }
     }
 }
 
@@ -332,26 +324,23 @@ async function solverLoop() {
         }
         
         const loads = [];
-        // Apply traction to the Right edge (x=L) and Top edge (y=L)
+        // Apply traction only to the Right edge (x=L)
         for(let i=0; i<nU; i++) {
             for(let j=0; j<nV; j++) {
                 const cp = patch.controlPoints[i][j];
                 if (!cp) continue;
 
                 const isRightEdge = Math.abs(cp.x - L) < 1e-3;
-                const isTopEdge = Math.abs(cp.y - L) < 1e-3;
                 
-                if (isRightEdge || isTopEdge) {
+                if (isRightEdge) {
                     // Check if it's a corner (symmetry axis intersection)
                     const isXAxis = Math.abs(cp.y) < 1e-3;
-                    const isYAxis = Math.abs(cp.x) < 1e-3;
                     
                     // Boundary nodes (end of edges) get half weight for uniform traction
-                    const isEndNode = isXAxis || isYAxis;
+                    const isEndNode = isXAxis;
                     const weight = isEndNode ? 0.5 : 1.0;
 
-                    if (isRightEdge) loads.push({ i: i, j: j, fx: targetState.load * weight, fy: 0 });
-                    if (isTopEdge)   loads.push({ i: i, j: j, fx: 0, fy: targetState.load * weight });
+                    loads.push({ i: i, j: j, fx: targetState.load * weight, fy: 0 });
                 }
             }
         }
