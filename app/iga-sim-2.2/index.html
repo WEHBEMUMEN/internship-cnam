@@ -37,11 +37,26 @@
         </h1>
         
         <div class="control-group">
-            <span class="control-label">p-Refinement Operation</span>
-            <button id="refine-p" class="btn-refine">
-                <i class="fa-solid fa-arrow-up"></i> Elevate Degree (p, q)
-            </button>
-            <p class="text-[10px] text-slate-500 mt-2 italic">Observation: Increasing degree keeps the number of knots the same but creates more internal control points.</p>
+            <span class="control-label text-blue-400">Degree Control (p, q)</span>
+            <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-300">Degree p (U)</span>
+                        <span id="val-p" class="text-xs font-mono text-blue-400 bg-blue-500/10 px-2 rounded">2</span>
+                    </div>
+                    <input type="range" id="slider-p" min="1" max="8" value="2" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-300">Degree q (V)</span>
+                        <span id="val-q" class="text-xs font-mono text-blue-400 bg-blue-500/10 px-2 rounded">2</span>
+                    </div>
+                    <input type="range" id="slider-q" min="1" max="8" value="2" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                </div>
+            </div>
+            <p class="text-[9px] text-slate-500 mt-3 italic leading-relaxed">
+                <span class="text-blue-500/80 font-bold">INFO:</span> Elevation is exact. Reduction uses Bézier segment inversion to approximate shape.
+            </p>
         </div>
 
         <div class="control-group pt-4 border-t border-slate-700">

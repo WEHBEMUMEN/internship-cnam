@@ -184,14 +184,30 @@ transformControls.addEventListener('objectChange', () => {
 });
 
 // Operations
-document.getElementById('refine-p').onclick = () => {
-    engine.elevateDegree(patch, 'U');
-    engine.elevateDegree(patch, 'V');
+const sliderP = document.getElementById('slider-p');
+const sliderQ = document.getElementById('slider-q');
+const valP = document.getElementById('val-p');
+const valQ = document.getElementById('val-q');
+
+function updateDegrees() {
+    const p = parseInt(sliderP.value);
+    const q = parseInt(sliderQ.value);
+    valP.textContent = p;
+    valQ.textContent = q;
+    
+    engine.setDegree(patch, p, q);
     fullRebuild();
-};
+}
+
+sliderP.oninput = updateDegrees;
+sliderQ.oninput = updateDegrees;
 
 document.getElementById('reset-surface').onclick = () => {
     patch = NURBSPresets.generateSheet();
+    sliderP.value = patch.p;
+    sliderQ.value = patch.q;
+    valP.textContent = patch.p;
+    valQ.textContent = patch.q;
     fullRebuild();
 };
 
