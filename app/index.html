@@ -6,6 +6,8 @@
   <title>Simulation Hub | Digital Twin & ROM</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
   <link rel="stylesheet" href="../index.css">
   <style>
             /* Tabs System */
@@ -501,7 +503,7 @@
                 <div class="flow-step" onclick="window.location.href='iga-sim/index.html'">
                   <i class="fa-solid fa-ruler"></i>
                   <h4>Define Parametric Domain</h4>
-                  <p>Set bounds ξ ∈ [0, 1] and choose uniform step Δξ = 1/N</p>
+                  <p>Set bounds $\xi \in [0, 1]$ and choose uniform step $\Delta \xi = 1/N$</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim/index.html'">
@@ -513,7 +515,7 @@
                 <div class="flow-step" onclick="window.location.href='iga-sim/index.html'">
                   <i class="fa-solid fa-microchip"></i>
                   <h4>Cox-de Boor Loop</h4>
-                  <p>Recursively evaluate N_{i,p}(ξ) at each sample point</p>
+                  <p>Recursively evaluate $N_{i,p}(\xi)$ at each sample point</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim/index.html'">
@@ -525,7 +527,7 @@
                 <div class="flow-step" onclick="window.location.href='iga-sim/index.html'">
                   <i class="fa-solid fa-wave-square"></i>
                   <h4>Curve Construction</h4>
-                  <p>Accumulate Σ R_{i,p}(ξ) · P_i for each sample</p>
+                  <p>Accumulate $\Sigma R_{i,p}(\xi) \cdot P_i$ for each sample</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim/index.html'">
@@ -856,7 +858,7 @@
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-sliders"></i>
                   <h4>Parameter Space μ</h4>
-                  <p>Define load range [F_min, F_max] and sample n_s values uniformly</p>
+                  <p>Define load range $[F_{min}, F_{max}]$ and sample $n_s$ values uniformly</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
@@ -868,31 +870,31 @@
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-database"></i>
                   <h4>Snapshot Matrix S</h4>
-                  <p>Stack S = [u_1 | u_2 | ... | u_n] as columns</p>
+                  <p>Stack $S = [u_1 | u_2 | ... | u_n]$ as columns</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-compress"></i>
                   <h4>SVD Decomposition</h4>
-                  <p>Compute S = U·Σ·V^T; extract dominant left singular vectors</p>
+                  <p>Compute $S = U \cdot \Sigma \cdot V^T$; extract dominant left singular vectors</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-layer-group"></i>
                   <h4>Reduced Basis Φ</h4>
-                  <p>Keep first r columns of U where Σ_r/Σ_total > 99.9%</p>
+                  <p>Keep first $r$ columns of $U$ where $\Sigma_r / \Sigma_{total} > 99.9\%$</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-arrow-right-arrow-left"></i>
                   <h4>Galerkin Projection</h4>
-                  <p>Form K_r = Φ^T·K·Φ and f_r = Φ^T·f (size r×r)</p>
+                  <p>Form $K_r = \Phi^T \cdot K \cdot \Phi$ and $f_r = \Phi^T \cdot f$ (size $r \times r$)</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
                   <i class="fa-solid fa-bolt"></i>
                   <h4>Online ROM Solve</h4>
-                  <p>Solve tiny K_r·α = f_r, then reconstruct u ≈ Φ·α</p>
+                  <p>Solve tiny $K_r \cdot \alpha = f_r$, then reconstruct $u \approx \Phi \cdot \alpha$</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='iga-sim-1.7/index.html'">
