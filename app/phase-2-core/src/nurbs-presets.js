@@ -94,6 +94,51 @@ class NURBSPresets {
 
         return { p, q, U, V, controlPoints, weights };
     }
+
+    /**
+     * Exact NURBS Quadrant for Infinite Plate with Hole Benchmark
+     * R: Hole radius, L: Plate dimension
+     */
+    static generatePlateWithHole(R = 1.0, L = 4.0) {
+        const p = 2, q = 2;
+        const w = 1 / Math.sqrt(2); // Weight for 45-degree quadratic circular arc
+        
+        // Knot vectors for a single quadratic patch
+        const U = [0, 0, 0, 1, 1, 1];
+        const V = [0, 0, 0, 1, 1, 1];
+        
+        // 3x3 Control Point Grid for a Quadratic Quadrant
+        // We use a standard construction for a circular-to-square mapping
+        const controlPoints = [
+            [ {x: -R, y: 0, z: 0}, {x: -R, y: R, z: 0}, {x: 0, y: R, z: 0} ],    // Interior (Circular Hole)
+            [ {x: -L, y: 0, z: 0}, {x: -L, y: L, z: 0}, {x: 0, y: L, z: 0} ],    // Mid (Approximate)
+            [ {x: -L, y: 0, z: 0}, {x: -L, y: L, z: 0}, {x: 0, y: L, z: 0} ]     // Exterior (Square)
+        ];
+        
+        // Refining the control points for exact 1/4 hole
+        // Inner circle points (r=R)
+        controlPoints[0][0] = { x: -R, y: 0, z: 0 };
+        controlPoints[0][1] = { x: -R, y: R, z: 0 };
+        controlPoints[0][2] = { x: 0, y: R, z: 0 };
+        
+        // Mid points (transitional)
+        controlPoints[1][0] = { x: -(R+L)/2, y: 0, z: 0 };
+        controlPoints[1][1] = { x: -(R+L)/2, y: (R+L)/2, z: 0 };
+        controlPoints[1][2] = { x: 0, y: (R+L)/2, z: 0 };
+        
+        // Outer square points (r=L)
+        controlPoints[2][0] = { x: -L, y: 0, z: 0 };
+        controlPoints[2][1] = { x: -L, y: L, z: 0 };
+        controlPoints[2][2] = { x: 0, y: L, z: 0 };
+        
+        const weights = [
+            [ 1, w, 1 ],
+            [ 1, w, 1 ],
+            [ 1, w, 1 ]
+        ];
+
+        return { p, q, U, V, controlPoints, weights };
+    }
 }
 
 if (typeof module !== 'undefined' && module.exports) {
