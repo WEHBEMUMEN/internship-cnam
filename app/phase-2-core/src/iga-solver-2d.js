@@ -123,6 +123,11 @@ class IGA2DSolver {
      * Maps control point [ux, uy] to [eps_x, eps_y, gamma_xy]
      */
     getBMatrix(patch, u, v, deriv) {
+        // If derivatives aren't provided, calculate them internally
+        if (!deriv) {
+            deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+        }
+        
         const { p, q, U, V, weights, controlPoints } = patch;
         const nU = controlPoints.length;
         const nV = controlPoints[0].length;
