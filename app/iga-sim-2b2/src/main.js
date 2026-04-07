@@ -49,6 +49,14 @@ scene.add(axesHelper);
 
 let surfaceMesh, wireframeOverlay;
 let boundaryVisuals = [];
+let controlPointVisuals = [];
+let forceVisuals = [];
+
+let visibilityState = {
+    cp: false,
+    bc: true,
+    force: true
+};
 
 function init() {
     setupUI();
@@ -76,7 +84,6 @@ function updateSurface() {
 
             if (analysisData.u) {
                 const interp = interpolateDisplacement(u, v, state.denominator);
-                // Standard benchmark visualization
                 p.x += interp.x;
                 p.y += interp.y;
                 
@@ -136,6 +143,7 @@ function interpolateDisplacement(u, v, denom) {
 }
 
 function calculateMaxDisp(u) {
+    if (!u) return 1;
     let max = 0;
     for (let i = 0; i < u.length; i += 2) {
         const m = Math.abs(u[i]);
@@ -145,59 +153,91 @@ function calculateMaxDisp(u) {
 }
 
 function getHeatmapColor(t) {
-    // Thermal-style heatmap for stress/displacement
     return { r: 0.1 + t * 0.9, g: 0.1 + t * 0.3, b: 0.7 - t * 0.5 };
 }
 
 function createBCMarker(type = 'x') {
     const group = new THREE.Group();
-    
-    // Triangle (Support body)
     const triGeo = new THREE.ConeGeometry(0.12, 0.2, 3);
-    const triMat = new THREE.MeshBasicMaterial({ color: 0x334155 }); // Slate-700
+    const triMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
     const triangle = new THREE.Mesh(triGeo, triMat);
-    
-    // Roller (Circle/Disk)
     const rollGeo = new THREE.CircleGeometry(0.04, 16);
     const rollMat = new THREE.MeshBasicMaterial({ color: 0x64748b });
     const roller = new THREE.Mesh(rollGeo, rollMat);
-    
-    if (type === 'y') { // Fixed in Y (Bottom edge)
-        triangle.rotation.x = 0;
+    if (type === 'y') {
         triangle.position.y = -0.15;
         roller.position.y = -0.28;
-    } else { // Fixed in X (Left edge)
+    } else {
         triangle.rotation.z = Math.PI / 2;
         triangle.position.x = -0.15;
         roller.position.x = -0.28;
     }
-    
-    group.add(triangle);
-    group.add(roller);
+    group.add(triangle); group.add(roller);
     return group;
 }
 
 function updateBoundaryVisuals() {
     boundaryVisuals.forEach(obj => scene.remove(obj));
     boundaryVisuals = [];
-    const nU = patch.controlPoints.length;
-    const nV = patch.controlPoints[0].length;
+    if (!visibilityState.bc) return;
+
+    const nU = patch.controlPoints.length; // Rows (Angular)
+    const nV = patch.controlPoints[0].length; // Cols (Radial)
     
-    // Bottom edge (y-symmetry: fixed in Y)
-    for(let i=0; i<nU; i++) {
-        const cp = patch.controlPoints[i][0];
+    // Bottom edge (Angular i=0 is x-axis) -> Fix Y
+    for(let j=0; j<nV; j++) {
+        const cp = patch.controlPoints[0][j];
         const marker = createBCMarker('y');
         marker.position.set(cp.x, cp.y, cp.z);
         scene.add(marker);
         boundaryVisuals.push(marker);
     }
-    // Left edge (x-symmetry: fixed in X)
+    // Left edge (Angular i=nU-1 is y-axis) -> Fix X
     for(let j=0; j<nV; j++) {
-        const cp = patch.controlPoints[0][j];
+        const cp = patch.controlPoints[nU-1][j];
         const marker = createBCMarker('x');
         marker.position.set(cp.x, cp.y, cp.z);
         scene.add(marker);
         boundaryVisuals.push(marker);
+    }
+}
+
+function updateControlPoints() {
+    controlPointVisuals.forEach(obj => scene.remove(obj));
+    controlPointVisuals = [];
+    if (!visibilityState.cp) return;
+
+    const geo = new THREE.SphereGeometry(0.06);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+    patch.controlPoints.forEach((row, i) => {
+        row.forEach((cp, j) => {
+            const sphere = new THREE.Mesh(geo, mat);
+            sphere.position.set(cp.x, cp.y, cp.z);
+            scene.add(sphere);
+            controlPointVisuals.push(sphere);
+        });
+    });
+}
+
+function updateForceArrows() {
+    forceVisuals.forEach(obj => scene.remove(obj));
+    forceVisuals = [];
+    if (!visibilityState.force || targetState.load === 0) return;
+
+    // Fixed Radial Edge (Right side of specific mapping)
+    // For Hughes mapping, i=0 to nU-1 are the angular slices. 
+    // In our specific Top-Right generator, the radial outer edge is fixed or loaded.
+    // Let's find nodes that have maximum X or Y to apply visuals.
+    const nU = patch.controlPoints.length;
+    for (let i = 0; i < nU; i++) {
+        // Find outer radial point for each angular slice
+        const cp = patch.controlPoints[i][patch.controlPoints[0].length - 1];
+        if (cp.x > 3.9) { // Roughly at L boundary
+            const dir = new THREE.Vector3(1, 0, 0);
+            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
+            scene.add(arrow);
+            forceVisuals.push(arrow);
+        }
     }
 }
 
@@ -209,34 +249,33 @@ async function solverLoop() {
         const nU = patch.controlPoints.length;
         const nV = patch.controlPoints[0].length;
         
-        // --- Symmetry BCs (Top-Right Quadrant) ---
         const bcs = [];
-        // Left edge (x=0) fix X
-        for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'x', value: 0 });
-        // Bottom edge (y=0) fix Y
-        for(let i=0; i<nU; i++) bcs.push({ i: i, j: 0, axis: 'y', value: 0 });
+        // Angular edge i=0 is bottom (y=0) -> Fix Y
+        for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
+        // Angular edge i=nU-1 is left (x=0) -> Fix X
+        for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
         
-        // --- Traction Load (T_x) on RIGHT edge ---
         const loads = [];
-        for(let j=0; j<nV; j++) {
-            loads.push({ i: nU-1, j: j, fx: targetState.load, fy: 0 });
+        // We apply traction to the radial outer edge (j=nV-1) where it acts as a "square" boundary
+        for(let i=0; i<nU; i++) {
+            const cp = patch.controlPoints[i][nV-1];
+            if (cp.x > 3.9) loads.push({ i: i, j: nV-1, fx: targetState.load, fy: 0 });
+            if (cp.y > 3.9) loads.push({ i: i, j: nV-1, fx: targetState.load, fy: 0 }); 
         }
 
         try {
             analysisData.u = solver.solve(patch, bcs, loads);
             const t1 = performance.now();
             const maxD = calculateMaxDisp(analysisData.u);
-            
             if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
             if (document.getElementById('stress-conc')) {
-                // Heuristic mapping for SC factor visualization
                 const sc = 3.0 * (1 - Math.exp(-maxD*15)) + 1.0;
                 document.getElementById('stress-conc').textContent = Math.min(sc, 3.01).toFixed(2);
             }
-
             updateSurface();
             updateBoundaryVisuals();
-            
+            updateControlPoints();
+            updateForceArrows();
             if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Success: Solved in ${ (t1 - t0).toFixed(1) }ms`;
             activeState = { ...targetState };
         } catch (err) {
@@ -248,14 +287,25 @@ async function solverLoop() {
 }
 
 function setupUI() {
-    const slider = document.getElementById('load-slider');
-    if (slider) {
-        slider.oninput = (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('load-val').textContent = `${val} N/mm`;
-            targetState.load = val;
-        };
-    }
+    document.getElementById('load-slider').oninput = (e) => {
+        const val = parseFloat(e.target.value);
+        document.getElementById('load-val').textContent = `${val} N/mm`;
+        targetState.load = val;
+    };
+    
+    document.getElementById('toggle-cp').onchange = (e) => {
+        visibilityState.cp = e.target.checked;
+        updateControlPoints();
+    };
+    document.getElementById('toggle-bc').onchange = (e) => {
+        visibilityState.bc = e.target.checked;
+        updateBoundaryVisuals();
+    };
+    document.getElementById('toggle-force').onchange = (e) => {
+        visibilityState.force = e.target.checked;
+        updateForceArrows();
+    };
+
     solverLoop();
 }
 

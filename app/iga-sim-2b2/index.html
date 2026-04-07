@@ -69,13 +69,30 @@
             </div>
         </div>
 
-        <button id="solve-btn" class="btn-action mt-4">
-            <i class="fa-solid fa-bolt"></i> Run Analysis
-        </button>
+        <div class="control-group pt-4 border-t border-slate-700">
+            <span class="control-label mb-3 text-emerald-400">Visibility Toggles</span>
+            <div class="grid grid-cols-1 gap-2">
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="toggle-cp" class="hidden peer">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Control Points</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="toggle-bc" checked class="hidden peer">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Boundary Conditions</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="toggle-force" checked class="hidden peer">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Applied Forces</span>
+                </label>
+            </div>
+        </div>
         
         <div class="mt-6 flex flex-col gap-2">
             <a href="../theory-2b2.html" class="block text-center py-2 px-4 bg-rose-600/20 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-bold no-underline transition-all hover:bg-rose-600/40">
-                <i class="fa-solid fa-graduation-cap mr-2"></i> Nonlinear Theory
+                <i class="fa-solid fa-graduation-cap mr-2"></i> Benchmark Theory
             </a>
             <a href="../index.html" class="block text-center py-2 px-4 border border-slate-700 hover:bg-slate-800 rounded-lg text-sm transition-colors text-slate-400 no-underline">
                 <i class="fa-solid fa-house mr-2"></i> Simulation Hub
