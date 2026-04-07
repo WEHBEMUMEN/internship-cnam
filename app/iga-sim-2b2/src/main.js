@@ -48,21 +48,11 @@ function applyRefinements() {
     // Reset to Base
     patch = JSON.parse(JSON.stringify(basePatch));
     
-    // p-refinement: elevateDirection(patch, 'U'/'V') elevates by 1 per call, mutates in-place
-    if (targetState.p > 2) {
-        const delta = targetState.p - 2;
-        for (let i = 0; i < delta; i++) {
-            engine.elevateDirection(patch, 'U');
-            engine.elevateDirection(patch, 'V');
-        }
-    }
-    
-    // h-refinement
-    if (targetState.h > 0) {
-        for(let i=0; i<targetState.h; i++) {
-            patch = engine.subdivideGlobal(patch);
-        }
-    }
+    // Apply Refinement Stack (p elevation then h subdivision)
+    RefineUtils.apply(engine, patch, { 
+        h: targetState.h, 
+        p: targetState.p 
+    });
     
     updateStatusLabels();
     updateSurface();
