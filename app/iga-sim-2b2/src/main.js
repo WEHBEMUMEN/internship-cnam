@@ -48,11 +48,13 @@ function applyRefinements() {
     // Reset to Base
     patch = JSON.parse(JSON.stringify(basePatch));
     
-    // p-refinement
+    // p-refinement: elevateDirection(patch, 'U'/'V') elevates by 1 per call, mutates in-place
     if (targetState.p > 2) {
         const delta = targetState.p - 2;
-        patch = engine.elevateDirection(patch, 0, delta);
-        patch = engine.elevateDirection(patch, 1, delta);
+        for (let i = 0; i < delta; i++) {
+            engine.elevateDirection(patch, 'U');
+            engine.elevateDirection(patch, 'V');
+        }
     }
     
     // h-refinement
