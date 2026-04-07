@@ -168,7 +168,7 @@ function createBCMarker(type = 'x') {
         triangle.position.y = -0.15;
         roller.position.y = -0.28;
     } else {
-        triangle.rotation.z = Math.PI / 2;
+        triangle.rotation.z = -Math.PI / 2; // Inverted to point right -> left
         triangle.position.x = -0.15;
         roller.position.x = -0.28;
     }
@@ -181,8 +181,8 @@ function updateBoundaryVisuals() {
     boundaryVisuals = [];
     if (!visibilityState.bc) return;
 
-    const nU = patch.controlPoints.length; // Rows (Angular)
-    const nV = patch.controlPoints[0].length; // Cols (Radial)
+    const nU = patch.controlPoints.length; 
+    const nV = patch.controlPoints[0].length; 
     
     // Bottom edge (Angular i=0 is x-axis) -> Fix Y
     for(let j=0; j<nV; j++) {
@@ -224,20 +224,17 @@ function updateForceArrows() {
     forceVisuals = [];
     if (!visibilityState.force || targetState.load === 0) return;
 
-    // Fixed Radial Edge (Right side of specific mapping)
-    // For Hughes mapping, i=0 to nU-1 are the angular slices. 
-    // In our specific Top-Right generator, the radial outer edge is fixed or loaded.
-    // Let's find nodes that have maximum X or Y to apply visuals.
     const nU = patch.controlPoints.length;
+    const nV = patch.controlPoints[0].length;
+    
+    // Outer radial boundary (j=nV-1)
     for (let i = 0; i < nU; i++) {
-        // Find outer radial point for each angular slice
-        const cp = patch.controlPoints[i][patch.controlPoints[0].length - 1];
-        if (cp.x > 3.9) { // Roughly at L boundary
-            const dir = new THREE.Vector3(1, 0, 0);
-            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
-            scene.add(arrow);
-            forceVisuals.push(arrow);
-        }
+        const cp = patch.controlPoints[i][nV - 1];
+        // All points on the outer boundary receive traction in this setup
+        const dir = new THREE.Vector3(1, 0, 0);
+        const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
+        scene.add(arrow);
+        forceVisuals.push(arrow);
     }
 }
 
