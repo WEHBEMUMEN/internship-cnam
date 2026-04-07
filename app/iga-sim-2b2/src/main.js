@@ -318,24 +318,26 @@ async function solverLoop() {
         const nV = patch.controlPoints[0].length;
 
         const bcs = [];
-        // Angular edge i=0 is bottom (y=0) -> Fix Y
+        // Edge u=0 is bottom (y=0) -> Fix Y (Symmetry)
         if (patch.controlPoints[0]) {
             for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
         }
-        // Angular edge i=nU-1 is left (x=0) -> Fix X
-        if (patch.controlPoints[nU-1]) {
-            for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
-        }
         
         const loads = [];
-        // Apply traction only to the Right edge (x = L)
+        // Apply traction to the Right edge (v=1, where x=L)
         for(let i=0; i<nU; i++) {
             const cp = patch.controlPoints[i][nV-1];
             if (cp && Math.abs(cp.x - L) < 1e-3) {
-                // For uniform traction, internal nodes get 1.0 weight and ends get 0.5
-                const weight = (i === 0 || i === nU-1) ? 0.5 : 1.0;
+                 // The ends of the loaded edge get half the tributary area
+                const isEndNode = (i === 0 || Math.abs(cp.y - L) < 1e-3);
+                const weight = isEndNode ? 0.5 : 1.0;
                 loads.push({ i: i, j: nV-1, fx: targetState.load * weight, fy: 0 });
             }
+        }
+
+        // Edge u=1 is left (x=0) -> Fix X (Symmetry)
+        if (patch.controlPoints[nU-1]) {
+            for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
         }
 
         try {
