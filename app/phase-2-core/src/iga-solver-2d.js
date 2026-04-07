@@ -134,6 +134,14 @@ class IGA2DSolver {
             [deriv.dU.y, deriv.dV.y]
         ];
         const detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+        
+        // Safety: Handle singularity at degenerate corner
+        if (Math.abs(detJ_2D) < 1e-12) {
+            const B_zero = [];
+            for (let k = 0; k < nU * nV; k++) B_zero.push([[0,0],[0,0],[0,0]]);
+            return B_zero;
+        }
+
         const J_inv = [
             [ J[1][1]/detJ_2D, -J[0][1]/detJ_2D],
             [-J[1][0]/detJ_2D,  J[0][0]/detJ_2D]
