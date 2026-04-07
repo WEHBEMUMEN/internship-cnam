@@ -147,6 +147,44 @@ END FOR</pre>
             <p class="text-xs text-slate-400 mt-4 italic">Note: The top-right corner nudge ensures $\det(\mathbf{J}) > 0$, preventing matrix singularity while keeping the assembly topologically exact.</p>
         </section>
 
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">8. Analytical Solution (Stress Benchmarking)</h2>
+            <p>For the benchmark problem of an infinite plate with a circular hole of radius $R$, the exact analytical stress field under uniaxial tension $T_x$ at infinity is defined in polar coordinates $(r, \theta)$:</p>
+            
+            <div class="math-card space-y-4">
+                <div>
+                    <span class="text-rose-400 font-bold">Radial Stress:</span>
+                    $$\sigma_{rr}(r,\theta) = \frac{T_x}{2} \left[ \left(1 - \frac{R^2}{r^2}\right) + \left(1 - 4\frac{R^2}{r^2} + 3\frac{R^4}{r^4}\right) \cos 2\theta \right]$$
+                </div>
+                <div>
+                    <span class="text-emerald-400 font-bold">Hoop Stress:</span>
+                    $$\sigma_{\theta\theta}(r,\theta) = \frac{T_x}{2} \left[ \left(1 + \frac{R^2}{r^2}\right) - \left(1 + 3\frac{R^4}{r^4}\right) \cos 2\theta \right]$$
+                </div>
+                <div>
+                    <span class="text-blue-400 font-bold">Shear Stress:</span>
+                    $$\sigma_{r\theta}(r,\theta) = -\frac{T_x}{2} \left(1 + 2\frac{R^2}{r^2} - 3\frac{R^4}{r^4}\right) \sin 2\theta$$
+                </div>
+            </div>
+            <p class="text-slate-400 text-sm mt-4">These equations serve as the "ground truth" to which our NURBS-based numerical solution is compared during the benchmarking process.</p>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">9. $L_2$-Norm Error & Convergence</h2>
+            <p>To rigorously evaluate accuracy, we compute the <b>Relative $L_2$-Norm of Stress Error</b>. This measures the total energy difference between the numerical ($\sigma_{num}$) and exact ($\sigma_{exact}$) fields over the entire domain $\Omega$:</p>
+            
+            <div class="math-card">
+                $$\|e\|_{L_2} = \frac{\sqrt{\int_{\Omega} (\sigma_{num} - \sigma_{exact})^2 d\Omega}}{\sqrt{\int_{\Omega} \sigma_{exact}^2 d\Omega}}$$
+            </div>
+
+            <h3 class="text-lg font-bold mt-6 mb-2 text-slate-300">Convergence Rates</h3>
+            <p>As the mesh size $h_{max}$ decreases, the error should drop at an optimal rate related to the polynomial degree $p$ of the NURBS basis functions:</p>
+            <ul class="list-disc ml-6 mt-4 text-slate-400">
+                <li><b>Quadratic ($p=2$):</b> Error $\approx \mathcal{O}(h^2)$</li>
+                <li><b>Cubic ($p=3$):</b> Error $\approx \mathcal{O}(h^3)$</li>
+                <li><b>Quartic ($p=4$):</b> Error $\approx \mathcal{O}(h^4)$</li>
+            </ul>
+        </section>
+
         <section class="content-section text-center">
             <h2 class="text-2xl font-bold mb-4">Launch Nonlinear Lab</h2>
             <p class="mb-8 text-slate-400">Experience quadratic convergence and large-scale bending in our interactive 2D benchmark.</p>

@@ -622,6 +622,100 @@ class IGA2DSolver {
         }
         return x;
     }
+
+    // =========================================================================
+    // SECTION 4: BENCHMARKING & STRESS ANALYSIS
+    // =========================================================================
+
+    getDMatrix(E, nu) {
+        const factor = E / (1 - nu * nu);
+        return [
+            [factor, factor * nu, 0],
+            [factor * nu, factor, 0],
+            [0, 0, factor * (1 - nu) / 2]
+        ];
+    }
+
+    getExactStress(x, y, R, Tx) {
+        const r = Math.sqrt(x * x + y * y);
+        const theta = Math.atan2(y, x);
+        const R2 = R * R;
+        const R4 = R2 * R2;
+        const r2 = r * r;
+        const r4 = r2 * r2;
+        const cos2t = Math.cos(2 * theta);
+        const sin2t = Math.sin(2 * theta);
+
+        const s_rr = (Tx / 2) * (1 - R2/r2) + (Tx / 2) * (1 - 4*R2/r2 + 3*R4/r4) * cos2t;
+        const s_tt = (Tx / 2) * (1 + R2/r2) - (Tx / 2) * (1 + 3*R4/r4) * cos2t;
+        const s_rt = -(Tx / 2) * (1 + 2*R2/r2 - 3*R4/r4) * sin2t;
+
+        const c = Math.cos(theta); const s = Math.sin(theta);
+        const sxx = s_rr * c*c + s_tt * s*s - 2 * s_rt * s*c;
+        const syy = s_rr * s*s + s_tt * c*c + 2 * s_rt * s*c;
+        const sxy = (s_rr - s_tt) * s * c + s_rt * (c*c - s*s);
+
+        return { sxx, syy, sxy };
+    }
+
+    getNumericalStress(patch, u_disp, u, v, E, nu) {
+        const p = patch.p; const q = patch.q;
+        const U = patch.U; const V = patch.V;
+        const nV = patch.controlPoints[0].length;
+        const nNodes = patch.controlPoints.length * patch.controlPoints[0].length;
+
+        const B = this.getBMatrix(patch, u, v);
+        const D = this.getDMatrix(E, nu);
+        const eps = [0, 0, 0];
+
+        for (let i = 0; i < nNodes; i++) {
+            const ux = u_disp[i * 2];
+            const uy = u_disp[i * 2 + 1];
+            eps[0] += B[i][0][0] * ux;
+            eps[1] += B[i][1][1] * uy;
+            eps[2] += B[i][2][0] * ux + B[i][2][1] * uy;
+        }
+
+        const sxx = D[0][0] * eps[0] + D[0][1] * eps[1];
+        const syy = D[1][0] * eps[0] + D[1][1] * eps[1];
+        const sxy = D[2][2] * eps[2];
+        const vonMises = Math.sqrt(sxx*sxx + syy*syy - sxx*syy + 3*sxy*sxy);
+
+        return { sxx, syy, sxy, vonMises };
+    }
+
+    calculateRelativeL2Error(patch, u_disp, E, nu, Tx, R) {
+        const { U, V, p } = patch;
+        const uniqueU = [...new Set(U)]; const uniqueV = [...new Set(V)];
+        let err2 = 0; let ex2 = 0;
+        const gauss = GaussQuadrature2D.getPoints(p + 1);
+
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            for (let j = 0; j < uniqueV.length - 1; j++) {
+                const u0 = uniqueU[i]; const u1 = uniqueU[i+1];
+                const v0 = uniqueV[j]; const v1 = uniqueV[j+1];
+                if (u1 - u0 < 1e-9 || v1 - v0 < 1e-9) continue;
+
+                for (let gu = 0; gu < gauss.points.length; gu++) {
+                    for (let gv = 0; gv < gauss.points.length; gv++) {
+                        const u = ((u1 - u0) * gauss.points[gu] + (u1 + u0)) / 2;
+                        const v = ((v1 - v0) * gauss.points[gv] + (v1 + v0)) / 2;
+                        const J = this.engine.getJacobian(patch, u, v);
+                        const detJ = Math.abs(J[0][0]*J[1][1] - J[0][1]*J[1][0]);
+                        const Jmod = detJ * gauss.weights[gu] * gauss.weights[gv] * (u1-u0)*(v1-v0)/4;
+
+                        const sN = this.getNumericalStress(patch, u_disp, u, v, E, nu);
+                        const pos = this.engine.evaluateSurface(patch, u, v);
+                        const sE = this.getExactStress(pos.x, pos.y, R, Tx);
+
+                        err2 += (Math.pow(sN.sxx - sE.sxx, 2) + Math.pow(sN.syy - sE.syy, 2) + 2*Math.pow(sN.sxy - sE.sxy, 2)) * Jmod;
+                        ex2 += (Math.pow(sE.sxx, 2) + Math.pow(sE.syy, 2) + 2*Math.pow(sE.sxy, 2)) * Jmod;
+                    }
+                }
+            }
+        }
+        return Math.sqrt(err2) / Math.sqrt(ex2);
+    }
 }
 
 // Export for browser

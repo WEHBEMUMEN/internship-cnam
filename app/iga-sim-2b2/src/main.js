@@ -105,6 +105,13 @@ let visibilityState = {
     force: true
 };
 
+let viewMode = 'displacement'; // 'displacement' or 'stress'
+
+window.setViewMode = (m) => {
+    viewMode = m;
+    updateSurface();
+};
+
 function init() {
     setupUI();
     updateSurface();
@@ -122,7 +129,15 @@ function updateSurface() {
     const positions = [];
     const colors = [];
     
-    const maxDisp = analysisData.u ? calculateMaxDisp(analysisData.u) : 1;
+    const mode = viewMode;
+    let maxVal = 1;
+    if (analysisData.u) {
+        if (mode === 'displacement') maxVal = calculateMaxDisp(analysisData.u);
+        else maxVal = calculateMaxStress(analysisData.u);
+    }
+
+    const legendMax = document.getElementById('legend-val-max');
+    if (legendMax) legendMax.innerText = mode === 'displacement' ? `${maxVal.toFixed(3)} mm` : `${maxVal.toFixed(1)} MPa`;
 
     for (let i = 0; i <= res; i++) {
         const u = i / res;
@@ -136,8 +151,15 @@ function updateSurface() {
                 p.x += interp.x;
                 p.y += interp.y;
                 
-                const mag = Math.abs(interp.x); 
-                const t = Math.min(mag / (maxDisp || 1), 1.0);
+                let val = 0;
+                if (mode === 'displacement') {
+                    val = Math.sqrt(interp.x**2 + interp.y**2);
+                } else {
+                    const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
+                    val = s.vonMises;
+                }
+                
+                const t = Math.min(val / (maxVal || 1e-6), 1.0);
                 const color = getHeatmapColor(t);
                 colors.push(color.r, color.g, color.b);
             } else {
@@ -362,18 +384,32 @@ async function solverLoop() {
         try {
             analysisData.u = solver.solve(patch, bcs, loads);
             const t1 = performance.now();
+            
+            // L2-Norm Stress Error Analysis (Plate with Hole Benchmark)
+            const R_hole = 1.0; 
+            const l2Error = solver.calculateRelativeL2Error(patch, analysisData.u, targetState.E, targetState.nu, targetState.load, R_hole);
+            const hMax = calculateHMax(patch);
+
             const maxD = calculateMaxDisp(analysisData.u);
+            const maxS = calculateMaxStress(analysisData.u);
+            
             if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
+            if (document.getElementById('max-stress')) document.getElementById('max-stress').textContent = `${maxS.toFixed(2)} MPa`;
+            if (document.getElementById('l2-error')) document.getElementById('l2-error').textContent = `${(l2Error * 100).toFixed(3)}%`;
             
             // Update Heatmap Legend
+            const mode = viewMode;
             const legendVal = document.getElementById('legend-val-max');
-            if (legendVal) legendVal.innerText = maxD.toFixed(3) + ' mm';
+            if (legendVal) legendVal.innerText = mode === 'displacement' ? `${maxD.toFixed(3)} mm` : `${maxS.toFixed(1)} MPa`;
 
             updateSurface();
             updateBoundaryVisuals();
             updateControlPoints();
             updateForceArrows();
-            if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Success: Solved in ${ (t1 - t0).toFixed(1) }ms`;
+            
+            if (document.getElementById('conv-stat')) {
+                document.getElementById('conv-stat').textContent = `Success: L2 Err = ${(l2Error*100).toFixed(4)}% | Solved in ${(t1 - t0).toFixed(1)}ms`;
+            }
             activeState = JSON.parse(JSON.stringify(targetState));
         } catch (err) {
             if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Error: ${err.message}`;
@@ -454,6 +490,47 @@ function setupUI() {
 
     updateStatusLabels();
     solverLoop();
+}
+
+function calculateMaxDisp(u) {
+    let max = 0;
+    for (let i = 0; i < u.length; i+=2) {
+        const mag = Math.sqrt(u[i]*u[i] + u[i+1]*u[i+1]);
+        if (mag > max) max = mag;
+    }
+    return max;
+}
+
+function calculateMaxStress(u_disp) {
+    let max = 0;
+    const res = 15;
+    for (let i = 0; i <= res; i++) {
+        for (let j = 0; j <= res; j++) {
+            const s = solver.getNumericalStress(patch, u_disp, i/res, j/res, targetState.E, targetState.nu);
+            if (s.vonMises > max) max = s.vonMises;
+        }
+    }
+    return max;
+}
+
+function calculateHMax(patch) {
+    const { U, V } = patch;
+    const uniqueU = [...new Set(U)];
+    const uniqueV = [...new Set(V)];
+    let hMax = 0;
+    for (let i = 0; i < uniqueU.length - 1; i++) {
+        for (let j = 0; j < uniqueV.length - 1; j++) {
+            const uMin = uniqueU[i]; const uMax = uniqueU[i+1];
+            const vMin = uniqueV[j]; const vMax = uniqueV[j+1];
+            if (uMax - uMin < 1e-9 || vMax - vMin < 1e-9) continue;
+            
+            const p00 = engine.evaluateSurface(patch, uMin, vMin);
+            const p11 = engine.evaluateSurface(patch, uMax, vMax);
+            const diag = Math.sqrt((p11.x - p00.x)**2 + (p11.y - p00.y)**2);
+            if (diag > hMax) hMax = diag;
+        }
+    }
+    return hMax;
 }
 
 function animate() {

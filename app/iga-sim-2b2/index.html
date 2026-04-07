@@ -165,23 +165,29 @@
                 <i class="fa-solid fa-rotate-left mr-1"></i> Reset
             </button>
         </div>
+        <div class="control-group pt-4 border-t border-slate-700 mt-4">
+            <span class="control-label mb-3 text-emerald-400">View Mode & Toggles</span>
+            
+            <!-- View Mode Tabs -->
+            <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg mb-4">
+                <button onclick="switchView('displacement')" id="view-disp" class="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all bg-emerald-600 text-white">Displacement</button>
+                <button onclick="switchView('stress')" id="view-stress" class="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-400 hover:text-slate-200">Stress (v. Mises)</button>
+            </div>
 
-        <div class="control-group pt-4 border-t border-slate-700 mt-4">
-            <span class="control-label mb-3 text-emerald-400">Visibility Toggles</span>
             <div class="grid grid-cols-1 gap-2">
                 <label class="flex items-center gap-3 cursor-pointer group">
                     <input type="checkbox" id="toggle-cp" class="hidden peer">
-                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
                     <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Control Points</span>
                 </label>
                 <label class="flex items-center gap-3 cursor-pointer group">
                     <input type="checkbox" id="toggle-bc" checked class="hidden peer">
-                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
                     <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Boundary Conditions</span>
                 </label>
                 <label class="flex items-center gap-3 cursor-pointer group">
                     <input type="checkbox" id="toggle-force" checked class="hidden peer">
-                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
                     <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Applied Forces</span>
                 </label>
             </div>
@@ -196,11 +202,17 @@
                     if (panel) panel.classList.toggle('hidden', id !== t);
                 });
             }
+            function switchView(v) {
+                const isDisp = v === 'displacement';
+                document.getElementById('view-disp').className = "flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all " + (isDisp ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200");
+                document.getElementById('view-stress').className = "flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all " + (!isDisp ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200");
+                if (window.setViewMode) window.setViewMode(v);
+            }
         </script>
     </div>
 
     <!-- Results Popup -->
-    <div id="convergence-popup" style="height: 180px;">
+    <div id="convergence-popup" style="height: 220px;">
         <h2 class="text-sm font-bold text-slate-200 mb-1"><i class="fa-solid fa-square-poll-vertical text-blue-500 mr-2"></i>Analysis Results</h2>
         <div class="bg-black/30 rounded p-3 flex-1 flex flex-col justify-center gap-2">
             <div class="flex justify-between text-[11px]">
@@ -208,12 +220,17 @@
                 <span id="max-disp" class="text-blue-400 font-mono">0.000 mm</span>
             </div>
             <div class="flex justify-between text-[11px]">
-                <span class="text-slate-400">Stress Concentration:</span>
-                <span id="stress-conc" class="text-blue-400 font-mono">1.00</span>
+                <span class="text-slate-400">Max Stress (vM):</span>
+                <span id="max-stress" class="text-rose-400 font-mono">0.00 MPa</span>
+            </div>
+            <div class="flex justify-between text-[11px] border-t border-slate-800 pt-2 mt-1">
+                <span class="text-slate-400 font-bold">Relative L2 Error:</span>
+                <span id="l2-error" class="text-emerald-400 font-bold font-mono">0.00%</span>
             </div>
         </div>
         <div id="conv-stat" class="text-[10px] text-center mt-2 text-slate-400">Status: Running Assembly...</div>
     </div>
+
 
     <script src="../shared/performance.js"></script>
     <script src="../phase-2-core/src/nurbs-2d.js"></script>
