@@ -12,14 +12,8 @@ const L = 4.0;
 solver.E = 100000;
 solver.nu = 0.3;
 
-// Re-generate patch to be in the Top-Right quadrant (+x, +y)
+// The preset now generates the correct Top-Right quadrant directly
 let patch = NURBSPresets.generatePlateWithHole(R, L);
-// Flip sign of x to make it Top-Right
-for(let i=0; i<patch.controlPoints.length; i++) {
-    for(let j=0; j<patch.controlPoints[0].length; j++) {
-        patch.controlPoints[i][j].x = Math.abs(patch.controlPoints[i][j].x);
-    }
-}
 
 let analysisData = {
     u: null,
@@ -36,20 +30,20 @@ scene.background = new THREE.Color(0x020617);
 
 // Top-Down Orthographic-like Perspective
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(2, 2, 12); // Positioned above the XY plane
-camera.lookAt(2, 2, 0);
+camera.position.set(2.5, 2.5, 12); 
+camera.lookAt(2.5, 2.5, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableRotate = false; // Fix to 2D plane
-controls.target.set(2, 2, 0);
+controls.enableRotate = false; // Stick to 2D
+controls.target.set(2.5, 2.5, 0);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+scene.add(new THREE.AmbientLight(0xffffff, 1.0));
 
-// Axes Helper for orientation
+// XY orientation helper
 const axesHelper = new THREE.AxesHelper(5);
 scene.add(axesHelper);
 

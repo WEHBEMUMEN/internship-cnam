@@ -101,43 +101,58 @@ class NURBSPresets {
      */
     static generatePlateWithHole(R = 1.0, L = 4.0) {
         const p = 2, q = 2;
-        const w = 1 / Math.sqrt(2); // Weight for 45-degree quadratic circular arc
+        const w = 1 / Math.sqrt(2); 
         
-        // Knot vectors for a single quadratic patch
+        // --- 1. Geometry Setup (Top-Right Quadrant) ---
+        // U direction: Radial (Hole to Outer Edge)
+        // V direction: Angular (0 to 90 degrees)
         const U = [0, 0, 0, 1, 1, 1];
         const V = [0, 0, 0, 1, 1, 1];
         
-        // 3x3 Control Point Grid for a Quadratic Quadrant
-        // We use a standard construction for a circular-to-square mapping
-        const controlPoints = [
-            [ {x: -R, y: 0, z: 0}, {x: -R, y: R, z: 0}, {x: 0, y: R, z: 0} ],    // Interior (Circular Hole)
-            [ {x: -L, y: 0, z: 0}, {x: -L, y: L, z: 0}, {x: 0, y: L, z: 0} ],    // Mid (Approximate)
-            [ {x: -L, y: 0, z: 0}, {x: -L, y: L, z: 0}, {x: 0, y: L, z: 0} ]     // Exterior (Square)
-        ];
+        const controlPoints = [];
+        const weights = [];
+
+        // We construct 3 layers of 3 points (Quadratic 3x3 Grid)
+        // Layer 0: Hole radius R
+        // Layer 1: Intermediate
+        // Layer 2: Outer edge L
         
-        // Refining the control points for exact 1/4 hole
-        // Inner circle points (r=R)
-        controlPoints[0][0] = { x: -R, y: 0, z: 0 };
-        controlPoints[0][1] = { x: -R, y: R, z: 0 };
-        controlPoints[0][2] = { x: 0, y: R, z: 0 };
-        
-        // Mid points (transitional)
-        controlPoints[1][0] = { x: -(R+L)/2, y: 0, z: 0 };
-        controlPoints[1][1] = { x: -(R+L)/2, y: (R+L)/2, z: 0 };
-        controlPoints[1][2] = { x: 0, y: (R+L)/2, z: 0 };
-        
-        // Outer square points (r=L)
-        controlPoints[2][0] = { x: -L, y: 0, z: 0 };
-        controlPoints[2][1] = { x: -L, y: L, z: 0 };
-        controlPoints[2][2] = { x: 0, y: L, z: 0 };
-        
-        const weights = [
-            [ 1, w, 1 ],
-            [ 1, w, 1 ],
-            [ 1, w, 1 ]
+        // Inner Circular Boundary (u=0)
+        const inner = [
+            { x: R, y: 0, z: 0 },
+            { x: R, y: R, z: 0 }, // Weight w
+            { x: 0, y: R, z: 0 }
         ];
 
-        return { p, q, U, V, controlPoints, weights };
+        // Outer Square Boundary (u=1)
+        const outer = [
+            { x: L, y: 0, z: 0 },
+            { x: L, y: L, z: 0 },
+            { x: 0, y: L, z: 0 }
+        ];
+
+        // Mid Layer (Linear interpolate R and L)
+        const mid = inner.map((p, i) => ({
+            x: p.x + (outer[i].x - p.x) * 0.5,
+            y: p.y + (outer[i].y - p.y) * 0.5,
+            z: 0
+        }));
+
+        const grid = [inner, mid, outer];
+        for(let i=0; i<3; i++) {
+            controlPoints[i] = grid[i];
+            weights[i] = [1, w, 1];
+        }
+
+        const patch = { p, q, U, V, controlPoints, weights };
+
+        // --- 2. Initial p-Refinement (Ensure sufficient nodes for the plot) ---
+        // Increase resolution to p=3, q=3 for smoother plotting and assembly
+        const engine = new NURBS2D();
+        engine.elevateDirection(patch, 'U');
+        engine.elevateDirection(patch, 'V');
+
+        return patch;
     }
 }
 
