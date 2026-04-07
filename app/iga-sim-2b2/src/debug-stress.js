@@ -1,47 +1,76 @@
-// Debug stress recovery - run this in the browser console after solving
-// This will diagnose why the L2 error is 93%
-
-function debugStress() {
-    console.log("=== STRESS DIAGNOSTIC ===");
-    console.log("Patch:", patch.p, patch.q, "nU:", patch.controlPoints.length, "nV:", patch.controlPoints[0].length);
+// Enhanced stress diagnostic - checks forces, displacement consistency, and stress at key points
+function debugStress2() {
+    console.log("=== ENHANCED STRESS DIAGNOSTIC ===");
     console.log("E:", targetState.E, "nu:", targetState.nu, "Tx:", targetState.load);
     
-    // Test point: mid-hole boundary at theta=90 (top of hole)
-    // In parametric space: u=1 (left edge, 90 deg), v=0 (hole boundary)
-    const testPoints = [
-        { u: 0.0, v: 0.0, label: "u=0,v=0 (R,0) bottom-hole" },
-        { u: 1.0, v: 0.0, label: "u=1,v=0 (0,R) left-hole" },
-        { u: 0.5, v: 0.0, label: "u=0.5,v=0 (hole at 45deg)" },
-        { u: 0.0, v: 0.5, label: "u=0,v=0.5 (bottom mid-radial)" },
-        { u: 0.5, v: 0.5, label: "u=0.5,v=0.5 (center)" },
-        { u: 0.0, v: 1.0, label: "u=0,v=1 (L,0) bottom-outer" },
-    ];
-    
-    for (const tp of testPoints) {
-        const pos = engine.evaluateSurface(patch, tp.u, tp.v);
-        const sN = solver.getNumericalStress(patch, analysisData.u, tp.u, tp.v, targetState.E, targetState.nu);
-        const sE = solver.getExactStress(pos.x, pos.y, 1.0, targetState.load);
-        
-        console.log(`\n--- ${tp.label} ---`);
-        console.log(`  Physical: (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)})`);
-        console.log(`  Numerical: sxx=${sN.sxx.toFixed(2)}, syy=${sN.syy.toFixed(2)}, sxy=${sN.sxy.toFixed(2)}, vM=${sN.vonMises.toFixed(2)}`);
-        console.log(`  Exact:     sxx=${sE.sxx.toFixed(2)}, syy=${sE.syy.toFixed(2)}, sxy=${sE.sxy.toFixed(2)}`);
-        console.log(`  Error:     dxx=${(sN.sxx - sE.sxx).toFixed(2)}, dyy=${(sN.syy - sE.syy).toFixed(2)}, dxy=${(sN.sxy - sE.sxy).toFixed(2)}`);
-    }
-    
-    // Also check the displacement at a few known points
-    console.log("\n=== DISPLACEMENT CHECK ===");
+    const nU = patch.controlPoints.length;
     const nV = patch.controlPoints[0].length;
-    for (let i = 0; i < patch.controlPoints.length; i++) {
+    const nDofs = nU * nV * 2;
+    
+    // 1. Check applied forces
+    const forces = solver.calculateNodalTraction(patch, targetState.load, 'right');
+    console.log("\n=== APPLIED FORCES (from Kirsch traction) ===");
+    let totalFx = 0, totalFy = 0;
+    for (let i = 0; i < nU; i++) {
         for (let j = 0; j < nV; j++) {
             const idx = (i * nV + j) * 2;
-            const cp = patch.controlPoints[i][j];
-            if (Math.abs(analysisData.u[idx]) > 0.001 || Math.abs(analysisData.u[idx+1]) > 0.001) {
-                console.log(`  CP[${i}][${j}] at (${cp.x.toFixed(2)}, ${cp.y.toFixed(2)}): ux=${analysisData.u[idx].toFixed(5)}, uy=${analysisData.u[idx+1].toFixed(5)}`);
+            const fx = forces[idx];
+            const fy = forces[idx + 1];
+            if (Math.abs(fx) > 0.001 || Math.abs(fy) > 0.001) {
+                const cp = patch.controlPoints[i][j];
+                console.log(`  CP[${i}][${j}] at (${cp.x.toFixed(2)}, ${cp.y.toFixed(2)}): fx=${fx.toFixed(3)}, fy=${fy.toFixed(3)}`);
+                totalFx += fx;
+                totalFy += fy;
             }
         }
     }
+    console.log(`  TOTAL: Fx=${totalFx.toFixed(3)}, Fy=${totalFy.toFixed(3)}`);
+    
+    // 2. Check physical displacement at sample points (not CP displacement)
+    console.log("\n=== PHYSICAL DISPLACEMENT (interpolated) ===");
+    const samplePts = [
+        {u: 0.0, v: 0.0}, {u: 0.0, v: 0.5}, {u: 0.0, v: 1.0},
+        {u: 0.5, v: 0.0}, {u: 0.5, v: 0.5},
+        {u: 1.0, v: 0.0}, {u: 1.0, v: 0.5}, {u: 1.0, v: 1.0}
+    ];
+    for (const sp of samplePts) {
+        const state = engine.getSurfaceState(patch, sp.u, sp.v);
+        const interp = interpolateDisplacement(sp.u, sp.v, state.denominator);
+        console.log(`  (u=${sp.u}, v=${sp.v}) -> phys (${state.position.x.toFixed(3)}, ${state.position.y.toFixed(3)}) -> disp (${interp.x.toFixed(6)}, ${interp.y.toFixed(6)})`);
+    }
+    
+    // 3. Verify stress at mid-field point where exact solution is simple
+    // At (L, 0), the exact solution should be close to far-field: σ_xx ≈ Tx
+    console.log("\n=== STRESS VERIFICATION ===");
+    const verifyPts = [
+        {u: 0.0, v: 0.5, label: "mid-bottom (≈2.5, 0)"},
+        {u: 0.0, v: 0.9, label: "near-bottom-outer (≈3.7, 0)"},
+        {u: 1.0, v: 0.5, label: "mid-left (≈0, 2.5)"},
+    ];
+    for (const vp of verifyPts) {
+        const pos = engine.evaluateSurface(patch, vp.u, vp.v);
+        const sN = solver.getNumericalStress(patch, analysisData.u, vp.u, vp.v, targetState.E, targetState.nu);
+        const sE = solver.getExactStress(pos.x, pos.y, 1.0, targetState.load);
+        const ratio_xx = sE.sxx !== 0 ? (sN.sxx / sE.sxx * 100).toFixed(1) : 'N/A';
+        console.log(`  ${vp.label}: Num_sxx=${sN.sxx.toFixed(2)}, Exact_sxx=${sE.sxx.toFixed(2)}, ratio=${ratio_xx}%`);
+    }
+    
+    // 4. Check stiffness matrix condition
+    console.log("\n=== STIFFNESS MATRIX DIAGNOSTIC ===");
+    const K = solver.assembleStiffness(patch);
+    let maxK = 0, minNonZeroK = Infinity;
+    for (let i = 0; i < nDofs; i++) {
+        for (let j = 0; j < nDofs; j++) {
+            const val = Math.abs(K[i][j]);
+            if (val > maxK) maxK = val;
+            if (val > 1e-15 && val < minNonZeroK) minNonZeroK = val;
+        }
+    }
+    console.log(`  Max |K_ij| = ${maxK.toExponential(4)}`);
+    console.log(`  Min nonzero |K_ij| = ${minNonZeroK.toExponential(4)}`);
+    console.log(`  Condition ratio ≈ ${(maxK/minNonZeroK).toExponential(4)}`);
+    console.log(`  Diagonal K[0][0] = ${K[0][0].toFixed(4)}, K[1][1] = ${K[1][1].toFixed(4)}`);
 }
 
-window.debugStress = debugStress;
-console.log("Debug loaded. Run debugStress() after switching to Stress mode and pressing Analysis.");
+window.debugStress2 = debugStress2;
+console.log("Enhanced debug loaded. Run debugStress2() after Analysis in Stress mode.");
