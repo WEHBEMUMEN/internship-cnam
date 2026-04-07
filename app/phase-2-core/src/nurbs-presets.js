@@ -149,11 +149,11 @@ class NURBSPresets {
         controlPoints[2][2] = { x: L - eps, y: L, z: 0 }; 
         controlPoints[3][2] = { x: 0, y: L, z: 0 };
 
-        // Mid points
+        // Mid points — interpolate between inner circle and outer square
         const midR = (R + L) / 2;
         controlPoints[0][1] = { x: midR, y: 0, z: 0 };
-        controlPoints[1][1] = { x: L, y: midR*Math.tan(Math.PI/8), z: 0 };
-        controlPoints[2][1] = { x: midR*Math.tan(Math.PI/8), y: L, z: 0 };
+        controlPoints[1][1] = { x: midR, y: midR*Math.tan(Math.PI/8), z: 0 };
+        controlPoints[2][1] = { x: midR*Math.tan(Math.PI/8), y: midR, z: 0 };
         controlPoints[3][1] = { x: 0, y: midR, z: 0 };
 
         const weights = [
