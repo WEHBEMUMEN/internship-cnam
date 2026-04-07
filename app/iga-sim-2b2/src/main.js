@@ -174,11 +174,10 @@ function updateSurface() {
                     val = Math.abs(interp.x); 
                 } else {
                     const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
-                    // Suppress artifacts near the degenerate outer boundary (right/top walls)
-                    const posCheck = engine.evaluateSurface(patch, u, v);
-                    const nearWall = (posCheck.x > 0.9 * 4.0 || posCheck.y > 0.9 * 4.0);
-                    const damping = nearWall ? 0.0 : 1.0;
-                    val = Number.isFinite(s.vonMises) ? s.vonMises * damping : 0;
+                    // Cap stress at a physical maximum to prevent singularity blow-ups
+                    // from washing out the heatmap (SCF = 3, plus margin → 4× Tx)
+                    const stressCap = 4.0 * Math.abs(targetState.load);
+                    val = Number.isFinite(s.vonMises) ? Math.min(s.vonMises, stressCap) : 0;
                 }
                 
                 const t = Math.min(Math.max(val / (maxVal || 1e-6), 0), 1.0);
