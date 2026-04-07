@@ -233,21 +233,25 @@ function updateBoundaryVisuals() {
     const nU = patch.controlPoints.length; 
     const nV = patch.controlPoints[0].length; 
     
-    // Bottom edge (Angular i=0 is x-axis) -> Fix Y
+    // Bottom edge (i=0) -> Fix Y (Symmetry)
     for(let j=0; j<nV; j++) {
         const cp = patch.controlPoints[0][j];
-        const marker = createBCMarker('y');
-        marker.position.set(cp.x, cp.y, cp.z);
-        scene.add(marker);
-        boundaryVisuals.push(marker);
+        if (Math.abs(cp.y) < 1e-3) {
+            const marker = createBCMarker('y');
+            marker.position.set(cp.x, cp.y, cp.z);
+            scene.add(marker);
+            boundaryVisuals.push(marker);
+        }
     }
-    // Left edge (Angular i=nU-1 is y-axis) -> Fix X
+    // Left edge (i=nU-1) -> Fix X (Symmetry)
     for(let j=0; j<nV; j++) {
         const cp = patch.controlPoints[nU-1][j];
-        const marker = createBCMarker('x');
-        marker.position.set(cp.x, cp.y, cp.z);
-        scene.add(marker);
-        boundaryVisuals.push(marker);
+        if (Math.abs(cp.x) < 1e-3) {
+            const marker = createBCMarker('x');
+            marker.position.set(cp.x, cp.y, cp.z);
+            scene.add(marker);
+            boundaryVisuals.push(marker);
+        }
     }
 }
 
@@ -318,13 +322,15 @@ async function solverLoop() {
         const nV = patch.controlPoints[0].length;
 
         const bcs = [];
-        // Angular edge i=0 is bottom (y=0) -> Fix Y
-        if (patch.controlPoints[0]) {
-            for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
+        // Bottom edge (i=0) -> Symmetry (Fix Y)
+        for(let j=0; j<nV; j++) {
+            const cp = patch.controlPoints[0][j];
+            if (Math.abs(cp.y) < 1e-3) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
         }
-        // Angular edge i=nU-1 is left (x=0) -> Fix X
-        if (patch.controlPoints[nU-1]) {
-            for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
+        // Left edge (i=nU-1) -> Symmetry (Fix X)
+        for(let j=0; j<nV; j++) {
+            const cp = patch.controlPoints[nU-1][j];
+            if (Math.abs(cp.x) < 1e-3) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
         }
         
         const loads = [];
@@ -333,6 +339,8 @@ async function solverLoop() {
             const cp = patch.controlPoints[i][nV-1];
             if (cp && Math.abs(cp.x - L) < 1e-3) {
                 // For uniform traction, internal nodes get 1.0 weight and ends get 0.5
+                // Note: corner nodes on symmetry boundaries are handled by BCs elsewhere,
+                // but we apply force to all right-edge nodes.
                 const weight = (i === 0 || i === nU-1) ? 0.5 : 1.0;
                 loads.push({ i: i, j: nV-1, fx: targetState.load * weight, fy: 0 });
             }
