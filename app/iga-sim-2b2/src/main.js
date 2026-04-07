@@ -226,13 +226,16 @@ function updateForceArrows() {
     forceVisuals = [];
     if (!visibilityState.force || targetState.load === 0) return;
 
-    const nU = patch.controlPoints.length;
+    const samples = 15; // Number of arrows along the edge
     const nV = patch.controlPoints[0].length;
     
-    // Outer radial boundary (j=nV-1)
-    for (let i = 0; i < nU; i++) {
-        const cp = patch.controlPoints[i][nV - 1];
-        // All points on the outer boundary receive traction in this setup
+    // Outer radial boundary (v=1)
+    for (let i = 0; i <= samples; i++) {
+        const u = i / samples;
+        const v = 1.0;
+        const state = engine.getSurfaceState(patch, u, v);
+        const cp = state.position;
+
         const dir = new THREE.Vector3(1, 0, 0);
         const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
         scene.add(arrow);
