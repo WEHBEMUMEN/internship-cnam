@@ -138,13 +138,20 @@ function updateSurface() {
     
     const mode = viewMode;
     let maxVal = 1;
+
+    // EXCLUSIVE MAX CALCULATION
     if (analysisData.u) {
         if (mode === 'displacement') maxVal = calculateMaxDisp(analysisData.u);
         else maxVal = calculateMaxStress(analysisData.u);
     }
 
+    // Dynamic UI Legend Synchronization
     const legendMax = document.getElementById('legend-val-max');
-    if (legendMax) legendMax.innerText = mode === 'displacement' ? `${maxVal.toFixed(3)} mm` : `${maxVal.toFixed(1)} MPa`;
+    const legendMin = document.getElementById('legend-val-min');
+    const unit = mode === 'displacement' ? 'mm' : 'MPa';
+    
+    if (legendMax) legendMax.innerText = `${maxVal.toFixed(mode === 'displacement' ? 3 : 1)} ${unit}`;
+    if (legendMin) legendMin.innerText = `${(0).toFixed(mode === 'displacement' ? 3 : 1)} ${unit}`;
 
     for (let i = 0; i <= res; i++) {
         const u = i / res;
@@ -155,18 +162,22 @@ function updateSurface() {
 
             if (analysisData.u) {
                 const interp = interpolateDisplacement(u, v, state.denominator);
-                p.x += interp.x;
-                p.y += interp.y;
+                
+                // NAN SAFETY FOR GEOMETRY
+                if (Number.isFinite(interp.x) && Number.isFinite(interp.y)) {
+                    p.x += interp.x;
+                    p.y += interp.y;
+                }
                 
                 let val = 0;
                 if (mode === 'displacement') {
-                    val = Math.abs(interp.x); // REVERT: Only X-displacement
+                    val = Math.abs(interp.x); 
                 } else {
                     const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
-                    val = s.vonMises;
+                    val = Number.isFinite(s.vonMises) ? s.vonMises : 0;
                 }
                 
-                const t = Math.min(val / (maxVal || 1e-6), 1.0);
+                const t = Math.min(Math.max(val / (maxVal || 1e-6), 0), 1.0);
                 const color = getHeatmapColor(t);
                 colors.push(color.r, color.g, color.b);
             } else {
