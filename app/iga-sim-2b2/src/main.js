@@ -226,20 +226,22 @@ function updateForceArrows() {
     forceVisuals = [];
     if (!visibilityState.force || targetState.load === 0) return;
 
-    const samples = 15; // Number of arrows along the edge
-    const nV = patch.controlPoints[0].length;
+    const samples = 15;
     
-    // Outer radial boundary (v=1)
+    // Sample along the outer boundary (v=1)
     for (let i = 0; i <= samples; i++) {
         const u = i / samples;
         const v = 1.0;
         const state = engine.getSurfaceState(patch, u, v);
         const cp = state.position;
 
-        const dir = new THREE.Vector3(1, 0, 0);
-        const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
-        scene.add(arrow);
-        forceVisuals.push(arrow);
+        // Only show arrows on the RIGHT boundary (x = L)
+        if (Math.abs(cp.x - L) < 1e-3) {
+            const dir = new THREE.Vector3(1, 0, 0);
+            const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
+            scene.add(arrow);
+            forceVisuals.push(arrow);
+        }
     }
 }
 
@@ -249,23 +251,19 @@ async function solverLoop() {
         await new Promise(r => setTimeout(r, 10));
         const t0 = performance.now();
         const nU = patch.controlPoints.length;
-        const nV = patch.controlPoints[0].length;
-        
         const loads = [];
-        // Apply traction to the entire radial outer edge (j=nV-1)
+        // Apply traction only to the Right edge (x = L)
         for(let i=0; i<nU; i++) {
-            // Nodal force distributed to the outer boundary
-            // For a coarse mesh, we use simple nodal loads. 
-            // The edge has length approx L. 
-            let scale = 1.0;
-            if (i === 0 || i === nU - 1) scale = 0.5; // Half force at corners/ends for nodal distribution
-            
-            loads.push({ 
-                i: i, 
-                j: nV-1, 
-                fx: targetState.load * scale, 
-                fy: 0 
-            });
+            const cp = patch.controlPoints[i][nV-1];
+            // Only load points on the right-hand boundary (x = L)
+            if (Math.abs(cp.x - L) < 1e-3) {
+                let scale = 1.0;
+                // For a 4x3 grid: i=0(bottom), 1&2(interior), 3(top)
+                // We use weight 2 for interior nodes for uniform nodal distribution
+                if (i === 1 || i === 2) scale = 2.0; 
+                
+                loads.push({ i: i, j: nV-1, fx: targetState.load * scale, fy: 0 });
+            }
         }
 
         try {
