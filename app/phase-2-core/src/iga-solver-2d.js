@@ -723,6 +723,11 @@ class IGA2DSolver {
         let err2 = 0; let ex2 = 0;
         const gauss = GaussQuadrature2D.getPoints(p + 1);
 
+        // Geometry parameters for singularity exclusion
+        const L = 4.0; // Plate half-dimension
+        const cornerDistThreshold = 0.3; // Exclude points within this radius of (L,L)
+        const minDetJ = 1e-6; // Skip Gauss points with near-singular Jacobian
+
         for (let i = 0; i < uniqueU.length - 1; i++) {
             for (let j = 0; j < uniqueV.length - 1; j++) {
                 const u0 = uniqueU[i]; const u1 = uniqueU[i+1];
@@ -735,10 +740,17 @@ class IGA2DSolver {
                         const v = ((v1 - v0) * gauss.points[gv] + (v1 + v0)) / 2;
                         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
                         const detJ = Math.abs(deriv.dU.x * deriv.dV.y - deriv.dV.x * deriv.dU.y);
-                        const Jmod = detJ * gauss.weights[gu] * gauss.weights[gv] * (u1-u0)*(v1-v0)/4;
 
-                        const sN = this.getNumericalStress(patch, u_disp, u, v, E, nu);
+                        // Skip points with near-singular Jacobian (degenerate corner)
+                        if (detJ < minDetJ) continue;
+
+                        // Skip points physically near the degenerate corner (L,L)
                         const pos = this.engine.evaluateSurface(patch, u, v);
+                        const cornerDist = Math.sqrt((pos.x - L)**2 + (pos.y - L)**2);
+                        if (cornerDist < cornerDistThreshold) continue;
+
+                        const Jmod = detJ * gauss.weights[gu] * gauss.weights[gv] * (u1-u0)*(v1-v0)/4;
+                        const sN = this.getNumericalStress(patch, u_disp, u, v, E, nu);
                         const sE = this.getExactStress(pos.x, pos.y, R, Tx);
 
                         err2 += (Math.pow(sN.sxx - sE.sxx, 2) + Math.pow(sN.syy - sE.syy, 2) + 2*Math.pow(sN.sxy - sE.sxy, 2)) * Jmod;

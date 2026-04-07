@@ -573,10 +573,18 @@ function calculateMaxDisp(u) {
 function calculateMaxStress(u_disp) {
     let max = 0;
     const res = 15;
+    const L = 4.0;
     for (let i = 0; i <= res; i++) {
         for (let j = 0; j <= res; j++) {
-            const s = solver.getNumericalStress(patch, u_disp, i/res, j/res, targetState.E, targetState.nu);
-            if (s.vonMises > max) max = s.vonMises;
+            const u = i / res;
+            const v = j / res;
+            // Skip the degenerate corner region
+            const pos = engine.evaluateSurface(patch, u, v);
+            const cornerDist = Math.sqrt((pos.x - L)**2 + (pos.y - L)**2);
+            if (cornerDist < 0.3) continue;
+            
+            const s = solver.getNumericalStress(patch, u_disp, u, v, targetState.E, targetState.nu);
+            if (isFinite(s.vonMises) && s.vonMises > max) max = s.vonMises;
         }
     }
     return max;
