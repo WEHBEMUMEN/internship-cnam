@@ -39,20 +39,28 @@ async function initPyodide() {
     try {
         pyodide = await loadPyodide();
         const statusEl = document.getElementById('node-status');
-        if (statusEl) statusEl.innerText = 'Loading Packages...';
+        if (statusEl) statusEl.innerText = 'Loading Env...';
         
-        await pyodide.loadPackage(['numpy', 'scipy']);
-        await pyodide.runPythonAsync(`
-            import micropip
-            await micropip.install('nutils')
-        `).catch(err => {
-            console.warn("Nutils direct install failed, trying fallback...", err);
-        });
+        // Explicitly load micropip first
+        await pyodide.loadPackage('micropip');
+        const micropip = pyodide.pyimport('micropip');
+        
+        if (statusEl) statusEl.innerText = 'Installing Nutils...';
+        
+        // Pre-load large built-in dependencies to speed up micropip
+        await pyodide.loadPackage(['numpy', 'scipy', 'matplotlib']);
+        
+        // Install nutils and its pure-python dependencies
+        await micropip.install('nutils');
 
         // Load the local solver.py script into Pyodide virtual filesystem
         const response = await fetch('src/solver.py');
+        if (!response.ok) throw new Error("Could not load solver.py");
         const pythonCode = await response.text();
         pyodide.FS.writeFile('solver_impl.py', pythonCode);
+        
+        // Final Verification
+        await pyodide.runPythonAsync(`import nutils; print(f"Nutils {nutils.__version__} loaded")`);
         
         pyodideReady = true;
         if (statusEl) {
@@ -67,6 +75,8 @@ async function initPyodide() {
         if (statusEl) {
             statusEl.innerText = 'WASM Error';
             statusEl.className = 'text-rose-400';
+            const convStat = document.getElementById('conv-stat');
+            if (convStat) convStat.innerText = "Error loading dependencies. Check console.";
         }
     }
 }
