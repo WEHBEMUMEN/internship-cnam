@@ -32,39 +32,49 @@ let targetState = {
     useHybridSolver: false
 };
 let activeState = { load: -1, h: -1, p: -1, k: false, E: -1, nu: -1, useHybridSolver: -1 };
-let localNodeOnline = false;
+let pyodideReady = false;
+let pyodide = null;
 
-async function checkLocalNode() {
+async function initPyodide() {
     try {
-        const res = await fetch('http://localhost:8000/', { mode: 'cors' });
-        const data = await res.json();
-        const wasOnline = localNodeOnline;
-        localNodeOnline = data.status === 'online';
-        
+        pyodide = await loadPyodide();
         const statusEl = document.getElementById('node-status');
+        if (statusEl) statusEl.innerText = 'Loading Packages...';
+        
+        await pyodide.loadPackage(['numpy', 'scipy']);
+        await pyodide.runPythonAsync(`
+            import micropip
+            await micropip.install('nutils')
+        `).catch(err => {
+            console.warn("Nutils direct install failed, trying fallback...", err);
+        });
+
+        // Load the local solver.py script into Pyodide virtual filesystem
+        const response = await fetch('src/solver.py');
+        const pythonCode = await response.text();
+        pyodide.FS.writeFile('solver_impl.py', pythonCode);
+        
+        pyodideReady = true;
+        if (statusEl) {
+            statusEl.innerText = 'WASM Ready';
+            statusEl.className = 'text-emerald-400 font-bold';
+        }
         const nodeToggle = document.getElementById('toggle-hybrid');
-        
-        if (statusEl) {
-            statusEl.innerText = localNodeOnline ? 'Online' : 'Offline';
-            statusEl.className = localNodeOnline ? 'text-emerald-400 font-bold' : 'text-slate-400';
-        }
-        if (nodeToggle) {
-            nodeToggle.disabled = !localNodeOnline;
-            if (!localNodeOnline) {
-                nodeToggle.checked = false;
-                targetState.useHybridSolver = false;
-            }
-        }
-    } catch(e) {
-        localNodeOnline = false;
+        if (nodeToggle) nodeToggle.disabled = false;
+    } catch (e) {
+        console.error("Pyodide Init Failed:", e);
         const statusEl = document.getElementById('node-status');
         if (statusEl) {
-            statusEl.innerText = 'Offline';
-            statusEl.className = 'text-slate-400';
+            statusEl.innerText = 'WASM Error';
+            statusEl.className = 'text-rose-400';
         }
     }
 }
-setInterval(checkLocalNode, 2000);
+initPyodide();
+
+function checkLocalNode() {
+    // Legacy function disabled - replaced by Pyodide readiness
+}
 let isSolving = false;
 
 function updateStatusLabels() {
@@ -477,27 +487,43 @@ async function solverLoop() {
         }
 
         try {
-            if (targetState.useHybridSolver && localNodeOnline) {
-                // FULL SYNC REQUEST: Send entire UI state to Nutils
-                const response = await fetch('http://localhost:8000/solve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        cps: patch.controlPoints.map(row => row.map(cp => ({ x: cp.x, y: cp.y, z: cp.z || 0, w: cp.w }))),
-                        p: patch.p,
-                        q: patch.q,
-                        U: Array.from(patch.U),
-                        V: Array.from(patch.V),
-                        E: targetState.E,
-                        nu: targetState.nu,
-                        traction: targetState.load,
-                        radius: R,
-                        length: L
-                    })
-                });
-                const remoteData = await response.json();
-                // Load high-fidelity displacements
-                analysisData.u = new Float64Array(remoteData.u);
+            if (targetState.useHybridSolver && pyodideReady) {
+                // EXECUTE IN BROWSER WASM (Nutils)
+                if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Status: Solving via WASM...`;
+                
+                const solveReq = {
+                    cps: patch.controlPoints.map(row => row.map(cp => ({ x: cp.x, y: cp.y, z: cp.z || 0, w: cp.w }))),
+                    p: patch.p,
+                    q: patch.q,
+                    U: Array.from(patch.U),
+                    V: Array.from(patch.V),
+                    E: targetState.E,
+                    nu: targetState.nu,
+                    traction: targetState.load,
+                    radius: R,
+                    length: L
+                };
+
+                // Pass the request object to Python as a global variable
+                pyodide.globals.set("solve_req", pyodide.toPy(solveReq));
+                
+                const result = await pyodide.runPythonAsync(`
+                    import solver_impl
+                    from types import SimpleNamespace
+                    
+                    # Convert JS dict to SimpleNamespace for dot notation in Python
+                    def dict_to_ns(d):
+                        if isinstance(d, dict):
+                            return SimpleNamespace(**{k: dict_to_ns(v) for k, v in d.items()})
+                        if isinstance(d, list):
+                            return [dict_to_ns(i) for i in d]
+                        return d
+                        
+                    ns_req = dict_to_ns(solve_req.to_py())
+                    solver_impl.solve(ns_req)
+                `);
+                
+                analysisData.u = new Float64Array(result.toJs());
                 analysisData.isRemote = true;
             } else {
                 // LOCAL JS SOLVE
