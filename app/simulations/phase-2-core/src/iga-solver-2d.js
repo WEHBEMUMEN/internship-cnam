@@ -557,12 +557,60 @@ class IGA2DSolver {
         return forces;
     }
 
+    applyPenaltyConstraints(K, patch) {
+        const { controlPoints } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const pts = [];
+        
+        for (let i = 0; i < nU; i++) {
+            for (let j = 0; j < nV; j++) {
+                pts.push({
+                    id: (i * nV + j) * 2,
+                    cp: controlPoints[i][j]
+                });
+            }
+        }
+        
+        // Large penalty relative to expected stiffness
+        const penalty = 1e12; 
+        
+        for (let i = 0; i < pts.length; i++) {
+            for (let j = i + 1; j < pts.length; j++) {
+                const p1 = pts[i].cp;
+                const p2 = pts[j].cp;
+                
+                const dist2 = (p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2;
+                if (dist2 < 1e-20) { // Distance essentially 0
+                    const id1 = pts[i].id;
+                    const id2 = pts[j].id;
+                    
+                    // Tie X-DOF
+                    K[id1][id1] += penalty;
+                    K[id2][id2] += penalty;
+                    K[id1][id2] -= penalty;
+                    K[id2][id1] -= penalty;
+                    
+                    // Tie Y-DOF
+                    K[id1+1][id1+1] += penalty;
+                    K[id2+1][id2+1] += penalty;
+                    K[id1+1][id2+1] -= penalty;
+                    K[id2+1][id1+1] -= penalty;
+                }
+            }
+        }
+    }
+
     solve(patch, bcs, loads) {
         const nU = patch.controlPoints.length;
         const nV = patch.controlPoints[0].length;
         const nDofs = nU * nV * 2;
         
         const K_full = this.assembleStiffness(patch);
+        
+        // Stabilize singularities (e.g. degenerate corners) 
+        this.applyPenaltyConstraints(K_full, patch);
+
         const F = new Float64Array(nDofs).fill(0);
         
         // 1. Apply Point Loads (Neumann)

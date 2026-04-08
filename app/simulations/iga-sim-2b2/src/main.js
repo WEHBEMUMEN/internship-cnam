@@ -36,49 +36,7 @@ let pyodideReady = false;
 let pyodide = null;
 
 async function initPyodide() {
-    try {
-        pyodide = await loadPyodide();
-        const statusEl = document.getElementById('node-status');
-        if (statusEl) statusEl.innerText = 'Loading Env...';
-        
-        // Explicitly load micropip first
-        await pyodide.loadPackage('micropip');
-        const micropip = pyodide.pyimport('micropip');
-        
-        if (statusEl) statusEl.innerText = 'Installing Nutils...';
-        
-        // Pre-load large built-in dependencies to speed up micropip
-        await pyodide.loadPackage(['numpy', 'scipy', 'matplotlib']);
-        
-        // Install nutils and its pure-python dependencies
-        await micropip.install('nutils');
-
-        // Load the local solver.py script into Pyodide virtual filesystem
-        const response = await fetch('src/solver.py');
-        if (!response.ok) throw new Error("Could not load solver.py");
-        const pythonCode = await response.text();
-        pyodide.FS.writeFile('solver_impl.py', pythonCode);
-        
-        // Final Verification
-        await pyodide.runPythonAsync(`import nutils; print(f"Nutils {nutils.__version__} loaded")`);
-        
-        pyodideReady = true;
-        if (statusEl) {
-            statusEl.innerText = 'WASM Ready';
-            statusEl.className = 'text-emerald-400 font-bold';
-        }
-        const nodeToggle = document.getElementById('toggle-hybrid');
-        if (nodeToggle) nodeToggle.disabled = false;
-    } catch (e) {
-        console.error("Pyodide Init Failed:", e);
-        const statusEl = document.getElementById('node-status');
-        if (statusEl) {
-            statusEl.innerText = 'WASM Error';
-            statusEl.className = 'text-rose-400';
-            const convStat = document.getElementById('conv-stat');
-            if (convStat) convStat.innerText = "Error loading dependencies. Check console.";
-        }
-    }
+    console.log("Python/WASM hybrid solver is disabled.");
 }
 initPyodide();
 
@@ -497,49 +455,9 @@ async function solverLoop() {
         }
 
         try {
-            if (targetState.useHybridSolver && pyodideReady) {
-                // EXECUTE IN BROWSER WASM (Nutils)
-                if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Status: Solving via WASM...`;
-                
-                const solveReq = {
-                    cps: patch.controlPoints.map(row => row.map(cp => ({ x: cp.x, y: cp.y, z: cp.z || 0, w: cp.w }))),
-                    p: patch.p,
-                    q: patch.q,
-                    U: Array.from(patch.U),
-                    V: Array.from(patch.V),
-                    E: targetState.E,
-                    nu: targetState.nu,
-                    traction: targetState.load,
-                    radius: R,
-                    length: L
-                };
-
-                // Pass the request object to Python as a global variable
-                pyodide.globals.set("solve_req", pyodide.toPy(solveReq));
-                
-                const result = await pyodide.runPythonAsync(`
-                    import solver_impl
-                    from types import SimpleNamespace
-                    
-                    # Convert JS dict to SimpleNamespace for dot notation in Python
-                    def dict_to_ns(d):
-                        if isinstance(d, dict):
-                            return SimpleNamespace(**{k: dict_to_ns(v) for k, v in d.items()})
-                        if isinstance(d, list):
-                            return [dict_to_ns(i) for i in d]
-                        return d
-                        
-                    ns_req = dict_to_ns(solve_req.to_py())
-                    solver_impl.solve(ns_req)
-                `);
-                
-                analysisData.u = new Float64Array(result.toJs());
-                analysisData.isRemote = true;
-            } else {
-                // LOCAL JS SOLVE
-                analysisData.u = solver.solve(patch, bcs, loads);
-                analysisData.isRemote = false;
-            }
+            // LOCAL JS SOLVE
+            analysisData.u = solver.solve(patch, bcs, loads);
+            analysisData.isRemote = false;
             const t1 = performance.now();
             
             // EXCLUSIVE CALCULATION & UI UPDATE

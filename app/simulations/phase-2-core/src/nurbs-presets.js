@@ -142,8 +142,8 @@ class NURBSPresets {
         controlPoints[3][0] = { x: 0, y: R, z: 0 };
 
         // Outer square (degenerate corner L, L)
-        // Nudge the coincident points slightly to prevent singular Jacobian 'locking'
-        const eps = 0.01;
+        // Points overlap exactly at the corner, creating a geometric singularity
+        const eps = 0.0;
         controlPoints[0][2] = { x: L, y: 0, z: 0 };
         controlPoints[1][2] = { x: L, y: L - eps, z: 0 }; 
         controlPoints[2][2] = { x: L - eps, y: L, z: 0 }; 
