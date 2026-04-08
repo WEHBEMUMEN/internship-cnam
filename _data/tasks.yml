@@ -108,31 +108,31 @@ tasks:
     deadline: 2026-04-16
     description: Deployed a unified glassmorphic performance overlay tracking FPS and CPU transit time across all simulation phases.
 
-  # ── IN PROGRESS ───────────────────────────────────────────────────────────
   - title: "Phase 2B.1: Assemble 2D Stiffness Matrix (K)"
-    status: In Progress
+    status: Done
     priority: High
     deadline: 2026-04-21
-    description: Assemble global stiffness matrix for a 2D cantilever plate or shell.
+    description: Assemble global stiffness matrix for a 2D cantilever plate or shell using native JS solver.
 
-  - title: "Phase 2B.2: Nonlinear Newton-Raphson (2D)"
-    status: To Do
+  - title: "Phase 2B.2: Plate with hole, stress/disp test"
+    status: Done
     priority: High
     deadline: 2026-04-28
-    description: "Integrate geometric nonlinearity into the 2D solver with convergence monitoring."
+    description: "High-fidelity stress validation on the Kirsch benchmark. Resolved corner locking with penalty constraints."
 
-  # ── TO DO (Phase 2C — Snapshots) ─────────────────────────────────────────
   - title: "Phase 2C.1: Latin Hypercube Parameter Sampling"
-    status: To Do
+    status: Done
     priority: High
     deadline: 2026-05-05
-    description: Execute LHS strategy for parameter vector $\mu$ (stiffness, load, geometry).
+    description: Execute LHS strategy for parameter vector μ (stiffness, load, geometry).
 
   - title: "Phase 2C.2: Generate Snapshot Database"
-    status: To Do
+    status: Done
     priority: High
     deadline: 2026-05-12
     description: Run and save 50+ high-fidelity snapshots in .npy format for ROM training.
+
+  # ── IN PROGRESS ───────────────────────────────────────────────────────────
 
   # ── TO DO (Phase 2D — POD ROM) ────────────────────────────────────────────
   - title: "Phase 2D.1: SVD Reduction & POD Basis"

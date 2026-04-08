@@ -1346,62 +1346,62 @@
             </div>
 
             <div class="flow-section reveal reveal-up">
-              <span class="badge" style="background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);">PHASE 2B.2</span>
-              <h3 style="margin-top: 10px; color: var(--text-primary);">Geometric Non-Linear NR Solver Pipeline</h3>
+              <span class="badge" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3);">PHASE 2B.2</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Stress & Displacement Validation Pipeline</h3>
               <div class="flow-grid">
 
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
-                  <i class="fa-solid fa-arrow-trend-up"></i>
-                  <h4>Green-Lagrange ε</h4>
-                  <p>Define non-linear strain: E = ½(F^T·F - I) via deformation grad F</p>
-                </div>
-                <i class="fa-solid fa-arrow-right flow-arrow"></i>
-                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
-                  <i class="fa-solid fa-sliders"></i>
-                  <h4>Load Stepping</h4>
-                  <p>Divide total load into Δλ·F_ext increments for arc-length control</p>
+                  <i class="fa-solid fa-circle-dot"></i>
+                  <h4>Reference Plate</h4>
+                  <p>Define NURBS mapping for the Kirsch 'Plate with a Hole' benchmark</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
                   <i class="fa-solid fa-calculator"></i>
-                  <h4>Material Matrix D</h4>
-                  <p>Linearize constitutive law: S = C:E → σ = D·ε at current state</p>
+                  <h4>Quadrature Points</h4>
+                  <p>Initialize Gaussian integration weights on parametric grid</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
-                  <i class="fa-solid fa-layer-group"></i>
-                  <h4>K_material</h4>
-                  <p>Integrate B^T·D·B·|J| over domain — same as linear but at u_n</p>
+                  <i class="fa-solid fa-link-slash"></i>
+                  <h4>Penalty Tying</h4>
+                  <p>Tie coincident points at corners with $10^{12}$ penalty to resolve locking</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
-                  <i class="fa-solid fa-arrows-alt"></i>
-                  <h4>K_geometric</h4>
-                  <p>Integrate G^T·σ·G·|J| — stress-stiffening term from current σ</p>
+                  <i class="fa-solid fa-table-cells"></i>
+                  <h4>Stiffness [K]</h4>
+                  <p>Assemble global solver matrix via native JS IGA physics engine</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
-                  <i class="fa-solid fa-plus-minus"></i>
-                  <h4>Tangent K_T</h4>
-                  <p>Assemble K_T = K_material + K_geometric at current iterate</p>
+                  <i class="fa-solid fa-arrows-to-dot"></i>
+                  <h4>Integrated Load</h4>
+                  <p>Apply analytical tractions via 1D integrated boundary assembly</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
-                  <i class="fa-solid fa-arrows-spin"></i>
-                  <h4>Newton-Raphson Δu</h4>
-                  <p>Solve K_T·Δu = R(u_n) where R = f_ext - f_int(u_n)</p>
+                  <i class="fa-solid fa-bolt"></i>
+                  <h4>Linear Solve</h4>
+                  <p>Solve K·u = f directly in browser using native Gaussian elimination</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
-                  <i class="fa-solid fa-clock-rotate-left"></i>
-                  <h4>Convergence Check</h4>
-                  <p>Test ||R_n||/||R_0|| < 1e-6; if not, update u_n+1 = u_n + Δu</p>
+                  <i class="fa-solid fa-magnifying-glass-chart"></i>
+                  <h4>Stress Retrieval</h4>
+                  <p>Evaluate σ_xx, σ_yy, σ_xy fields from recovered NURBS displacement u</p>
                 </div>
                 <i class="fa-solid fa-arrow-right flow-arrow"></i>
                 <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
                   <i class="fa-solid fa-chart-line"></i>
-                  <h4>Deformed Shape</h4>
-                  <p>Reconstruct nodal positions x + u_n; render final buckled form</p>
+                  <h4>L2-Norm Error</h4>
+                  <p>Compute ||e||_L2 versus analytical solution; confirm h-convergence</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2b2/index.html'">
+                  <i class="fa-solid fa-certificate"></i>
+                  <h4>Validation</h4>
+                  <p>Compare numerical stress profiles vs analytical ground truth</p>
                 </div>
               </div>
             </div>
