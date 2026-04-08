@@ -173,8 +173,8 @@ class IGA2DSolver {
                 const dRdv = ( (Ni * dMj * w) * W - (Ni * Mj * w) * Wv ) / (W * W);
                 
                 // Basis derivatives w.r.t. physical x, y
-                const dRdx = J_inv[0][0] * dRdu + J_inv[0][1] * dRdv;
-                const dRdy = J_inv[1][0] * dRdu + J_inv[1][1] * dRdv;
+                const dRdx = J_inv[0][0] * dRdu + J_inv[1][0] * dRdv;
+                const dRdy = J_inv[0][1] * dRdu + J_inv[1][1] * dRdv;
 
                 // [B_ij] = [ dRdx  0   ]
                 //          [ 0     dRdy]
@@ -399,7 +399,7 @@ class IGA2DSolver {
                 const w = weights[i][j];
                 const dRdu = ((dNi * Mj * w) * W - (Ni * Mj * w) * Wu) / (W * W);
                 const dRdv = ((Ni * dMj * w) * W - (Ni * Mj * w) * Wv) / (W * W);
-                grads.push([J_inv[0][0] * dRdu + J_inv[0][1] * dRdv, J_inv[1][0] * dRdu + J_inv[1][1] * dRdv]);
+                grads.push([J_inv[0][0] * dRdu + J_inv[1][0] * dRdv, J_inv[0][1] * dRdu + J_inv[1][1] * dRdv]);
             }
         }
         return grads;
