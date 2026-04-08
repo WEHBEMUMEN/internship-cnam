@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,24 +8,100 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
     <style>
-        :root { --primary: #f43f5e; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
-        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
-        .badge { background: rgba(244, 63, 94, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(244, 63, 94, 0.2); display: inline-block; margin-bottom: 20px; }
-        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #fb7185, #f43f5e); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
-        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
-        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        :root {
+            --primary: #f43f5e;
+            --bg: #020617;
+            --card: #0f172a;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 100px 30px;
+        }
+
+        .badge {
+            background: rgba(244, 63, 94, 0.1);
+            color: var(--primary);
+            padding: 5px 15px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #fb7185, #f43f5e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .content-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .math-card {
+            background: #020617;
+            padding: 25px;
+            border-radius: 16px;
+            margin: 20px 0;
+            border-left: 4px solid var(--primary);
+            overflow-x: auto;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header class="text-center mb-16">
@@ -35,24 +112,31 @@
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">1. Geometric Nonlinearity</h2>
-            <p>When a structure undergoes large rotations or displacements, the linear strain assumption ($\epsilon = \frac{1}{2}(\nabla u + \nabla u^T)$) is no longer valid. We must use the **Green-Lagrange Strain Tensor** $E$, which accounts for the quadratic terms of deformation:</p>
+            <p>When a structure undergoes large rotations or displacements, the linear strain assumption ($\epsilon =
+                \frac{1}{2}(\nabla u + \nabla u^T)$) is no longer valid. We must use the **Green-Lagrange Strain
+                Tensor** $E$, which accounts for the quadratic terms of deformation:</p>
             <div class="math-card">
                 $$E = \frac{1}{2}(\mathbf{F}^T \mathbf{F} - \mathbf{I})$$
-                $$E_{ij} = \frac{1}{2} \left( \frac{\partial u_i}{\partial X_j} + \frac{\partial u_j}{\partial X_i} + \frac{\partial u_k}{\partial X_i} \frac{\partial u_k}{\partial X_j} \right)$$
+                $$E_{ij} = \frac{1}{2} \left( \frac{\partial u_i}{\partial X_j} + \frac{\partial u_j}{\partial X_i} +
+                \frac{\partial u_k}{\partial X_i} \frac{\partial u_k}{\partial X_j} \right)$$
             </div>
-            <p>where $\mathbf{F} = \mathbf{I} + \nabla \mathbf{u}$ is the deformation gradient. This allows us to track the stiffness change caused by the current shape of the structure.</p>
+            <p>where $\mathbf{F} = \mathbf{I} + \nabla \mathbf{u}$ is the deformation gradient. This allows us to track
+                the stiffness change caused by the current shape of the structure.</p>
         </section>
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">2. The Newton-Raphson Loop</h2>
-            <p>Since the equilibrium equation $F_{ext} = F_{int}(u)$ is now nonlinear, we cannot solve for $u$ in a single step. We use the **Newton-Raphson method**, which linearizes the problem at each iteration $k$:</p>
+            <p>Since the equilibrium equation $F_{ext} = F_{int}(u)$ is now nonlinear, we cannot solve for $u$ in a
+                single step. We use the **Newton-Raphson method**, which linearizes the problem at each iteration $k$:
+            </p>
             <div class="math-card">
                 $$\mathbf{K}_t(\mathbf{u}_k) \Delta \mathbf{u} = \mathbf{F}_{ext} - \mathbf{F}_{int}(\mathbf{u}_k)$$
                 $$\mathbf{u}_{k+1} = \mathbf{u}_k + \Delta \mathbf{u}$$
             </div>
             <ul class="list-disc ml-6 mt-4 text-slate-400">
                 <li>$\mathbf{K}_t$ is the **Tangent Stiffness Matrix**, composed of material and geometric parts.</li>
-                <li>$\mathbf{R} = \mathbf{F}_{ext} - \mathbf{F}_{int}$ is the **Residual Force**, representing the out-of-equilibrium error.</li>
+                <li>$\mathbf{R} = \mathbf{F}_{ext} - \mathbf{F}_{int}$ is the **Residual Force**, representing the
+                    out-of-equilibrium error.</li>
             </ul>
         </section>
 
@@ -64,63 +148,78 @@
             </div>
             <ul class="list-disc ml-6 mt-4 text-slate-400">
                 <li>$\mathbf{K}_{mat}$: The standard stiffness, but evaluated at the current deformed state.</li>
-                <li>$\mathbf{K}_{geo}$: The **Geometric Stiffness** (or stress-stiffening), which accounts for how internal stresses resist or assist further deformation (like a guitar string becoming stiffer when pulled).</li>
+                <li>$\mathbf{K}_{geo}$: The **Geometric Stiffness** (or stress-stiffening), which accounts for how
+                    internal stresses resist or assist further deformation (like a guitar string becoming stiffer when
+                    pulled).</li>
             </ul>
         </section>
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">4. Numerical Stability & Jacobian Locking</h2>
-            <p>A common issue in Isogeometric Analysis (IGA) occurs at corners where multiple control points are coincident (degenerate mapping). While this ensures a sharp geometric corner, it creates a <b>Singular Jacobian</b>.</p>
-            
+            <p>A common issue in Isogeometric Analysis (IGA) occurs at corners where multiple control points are
+                coincident (degenerate mapping). While this ensures a sharp geometric corner, it creates a <b>Singular
+                    Jacobian</b>.</p>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-6">
                 <div class="p-6 bg-slate-900/50 rounded-xl border border-rose-500/20">
                     <h3 class="text-rose-400 font-bold mb-2">The Old Method (Singular)</h3>
-                    <p class="text-sm text-slate-400">Placing multiple control points at the exact same coordinate $(L, L)$ causes the area element to vanish:</p>
+                    <p class="text-sm text-slate-400">Placing multiple control points at the exact same coordinate $(L,
+                        L)$ causes the area element to vanish:</p>
                     <div class="math-card py-2 text-sm">
                         $$\det(\mathbf{J}) \to 0 \implies \mathbf{K} \propto \frac{1}{\det(\mathbf{J})} \to \infty$$
                     </div>
-                    <p class="text-sm text-slate-400">Result: <b>Stiffness Locking</b>. The boundary nodes appear "blue" (fixed) because their stiffness is numerically infinite.</p>
+                    <p class="text-sm text-slate-400">Result: <b>Stiffness Locking</b>. The boundary nodes appear "blue"
+                        (fixed) because their stiffness is numerically infinite.</p>
                 </div>
                 <div class="p-6 bg-slate-900/50 rounded-xl border border-emerald-500/20">
                     <h3 class="text-emerald-400 font-bold mb-2">The New Solution (Nudged)</h3>
-                    <p class="text-sm text-slate-400">We apply a tiny <b>Micro-Nudge</b> ($0.01\,\text{mm}$) to the redundant points. This restores a valid mapping while maintaining visual accuracy:</p>
+                    <p class="text-sm text-slate-400">We apply a tiny <b>Micro-Nudge</b> ($0.01\,\text{mm}$) to the
+                        redundant points. This restores a valid mapping while maintaining visual accuracy:</p>
                     <div class="math-card py-2 text-sm">
-                        $$\det(\mathbf{J}) > \epsilon \implies \mathbf{K} < \text{Tol}$$
+                        $$\det(\mathbf{J}) > \epsilon \implies \mathbf{K} < \text{Tol}$$ </div>
+                            <p class="text-sm text-slate-400">Result: <b>Physical Movement</b>. The boundary is now
+                                flexible and correctly responds to traction loads.</p>
                     </div>
-                    <p class="text-sm text-slate-400">Result: <b>Physical Movement</b>. The boundary is now flexible and correctly responds to traction loads.</p>
                 </div>
-            </div>
         </section>
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">5. Boundary Traction Integration</h2>
-            <p>In classical FEM, nodal loads are often applied using simple "tributary areas." In Isogeometric Analysis (IGA), where meshes are frequently non-uniform or higher-order, we must use <b>Boundary Integration</b> to ensure a perfectly uniform traction distribution.</p>
-            
+            <p>In classical FEM, nodal loads are often applied using simple "tributary areas." In Isogeometric Analysis
+                (IGA), where meshes are frequently non-uniform or higher-order, we must use <b>Boundary Integration</b>
+                to ensure a perfectly uniform traction distribution.</p>
+
             <div class="math-card">
                 $$\mathbf{f}_i^{\text{ext}} = \int_{\Gamma_N} R_i(\xi) \mathbf{T}(\xi) \det(\mathbf{J}_{1D}) d\xi$$
             </div>
-            
+
             <p class="text-slate-400 text-sm mt-4">
-                By integrating the traction $\mathbf{T}$ over the basis functions $R_i$, the solver automatically "weights" the nodal forces based on the physical size of the elements. This prevents "force clustering" in refined areas and ensures the total applied load matches the theoretical requirement exactly.
+                By integrating the traction $\mathbf{T}$ over the basis functions $R_i$, the solver automatically
+                "weights" the nodal forces based on the physical size of the elements. This prevents "force clustering"
+                in refined areas and ensures the total applied load matches the theoretical requirement exactly.
             </p>
         </section>
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">6. Evolution of Force Assembly</h2>
             <p>Our journey to a physically rigorous traction load involved three distinct stages of refinement:</p>
-            
+
             <div class="space-y-4 mt-6 uppercase text-[10px] font-bold tracking-widest text-slate-500">
                 <div class="p-4 bg-slate-900 rounded-xl border-l-4 border-slate-600">
                     <span class="text-slate-300 block mb-1">Stage 1: Simple Nodal Loads</span>
-                    <p class="font-normal text-slate-500 normal-case italic">Applying equal forces to each node. Inaccurate for non-uniform meshes; causes "force clustering" in dense regions.</p>
+                    <p class="font-normal text-slate-500 normal-case italic">Applying equal forces to each node.
+                        Inaccurate for non-uniform meshes; causes "force clustering" in dense regions.</p>
                 </div>
                 <div class="p-4 bg-slate-900 rounded-xl border-l-4 border-amber-600">
                     <span class="text-amber-400 block mb-1">Stage 2: Geometric Manual Weighting</span>
-                    <p class="font-normal text-slate-500 normal-case italic">Manually halving the force at the corners. Better, but failed to account for NURBS parameter non-uniformity and degenerate corner locking.</p>
+                    <p class="font-normal text-slate-500 normal-case italic">Manually halving the force at the corners.
+                        Better, but failed to account for NURBS parameter non-uniformity and degenerate corner locking.
+                    </p>
                 </div>
                 <div class="p-4 bg-slate-900 rounded-xl border-l-4 border-emerald-600">
                     <span class="text-emerald-400 block mb-1">Stage 3: Integrated Boundary Assembly (Current)</span>
-                    <p class="font-normal text-slate-500 normal-case italic">Using Gaussian quadrature to integrate traction over shape functions. Mathematically exact for any mesh density.</p>
+                    <p class="font-normal text-slate-500 normal-case italic">Using Gaussian quadrature to integrate
+                        traction over shape functions. Mathematically exact for any mesh density.</p>
                 </div>
             </div>
         </section>
@@ -128,7 +227,7 @@
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">7. Numerical Algorithm (Appendix 4.C)</h2>
             <p>To implement the integrated traction load, we follow standard element-assembly logic:</p>
-            
+
             <div class="math-card py-6">
                 <pre class="text-[11px] font-mono leading-relaxed text-indigo-300 bg-black/40 p-4 rounded-lg">
 FOR each boundary element e DO
@@ -143,41 +242,51 @@ FOR each boundary element e DO
    Assemble f_local into Global Force Vector f_ext
 END FOR</pre>
             </div>
-            
-            <p class="text-xs text-slate-400 mt-4 italic">Note: The top-right corner nudge ensures $\det(\mathbf{J}) > 0$, preventing matrix singularity while keeping the assembly topologically exact.</p>
+
+            <p class="text-xs text-slate-400 mt-4 italic">Note: The top-right corner nudge ensures $\det(\mathbf{J}) >
+                0$, preventing matrix singularity while keeping the assembly topologically exact.</p>
         </section>
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">8. Analytical Solution (Stress Benchmarking)</h2>
-            <p>For the benchmark problem of an infinite plate with a circular hole of radius $R$, the exact analytical stress field under uniaxial tension $T_x$ at infinity is defined in polar coordinates $(r, \theta)$:</p>
-            
+            <p>For the benchmark problem of an infinite plate with a circular hole of radius $R$, the exact analytical
+                stress field under uniaxial tension $T_x$ at infinity is defined in polar coordinates $(r, \theta)$:</p>
+
             <div class="math-card space-y-4">
                 <div>
                     <span class="text-rose-400 font-bold">Radial Stress:</span>
-                    $$\sigma_{rr}(r,\theta) = \frac{T_x}{2} \left[ \left(1 - \frac{R^2}{r^2}\right) + \left(1 - 4\frac{R^2}{r^2} + 3\frac{R^4}{r^4}\right) \cos 2\theta \right]$$
+                    $$\sigma_{rr}(r,\theta) = \frac{T_x}{2} \left[ \left(1 - \frac{R^2}{r^2}\right) + \left(1 -
+                    4\frac{R^2}{r^2} + 3\frac{R^4}{r^4}\right) \cos 2\theta \right]$$
                 </div>
                 <div>
                     <span class="text-emerald-400 font-bold">Hoop Stress:</span>
-                    $$\sigma_{\theta\theta}(r,\theta) = \frac{T_x}{2} \left[ \left(1 + \frac{R^2}{r^2}\right) - \left(1 + 3\frac{R^4}{r^4}\right) \cos 2\theta \right]$$
+                    $$\sigma_{\theta\theta}(r,\theta) = \frac{T_x}{2} \left[ \left(1 + \frac{R^2}{r^2}\right) - \left(1
+                    + 3\frac{R^4}{r^4}\right) \cos 2\theta \right]$$
                 </div>
                 <div>
                     <span class="text-blue-400 font-bold">Shear Stress:</span>
-                    $$\sigma_{r\theta}(r,\theta) = -\frac{T_x}{2} \left(1 + 2\frac{R^2}{r^2} - 3\frac{R^4}{r^4}\right) \sin 2\theta$$
+                    $$\sigma_{r\theta}(r,\theta) = -\frac{T_x}{2} \left(1 + 2\frac{R^2}{r^2} - 3\frac{R^4}{r^4}\right)
+                    \sin 2\theta$$
                 </div>
             </div>
-            <p class="text-slate-400 text-sm mt-4">These equations serve as the "ground truth" to which our NURBS-based numerical solution is compared during the benchmarking process.</p>
+            <p class="text-slate-400 text-sm mt-4">These equations serve as the "ground truth" to which our NURBS-based
+                numerical solution is compared during the benchmarking process.</p>
         </section>
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">9. $L_2$-Norm Error & Convergence</h2>
-            <p>To rigorously evaluate accuracy, we compute the <b>Relative $L_2$-Norm of Stress Error</b>. This measures the total energy difference between the numerical ($\sigma_{num}$) and exact ($\sigma_{exact}$) fields over the entire domain $\Omega$:</p>
-            
+            <p>To rigorously evaluate accuracy, we compute the <b>Relative $L_2$-Norm of Stress Error</b>. This measures
+                the total energy difference between the numerical ($\sigma_{num}$) and exact ($\sigma_{exact}$) fields
+                over the entire domain $\Omega$:</p>
+
             <div class="math-card">
-                $$\|e\|_{L_2} = \frac{\sqrt{\int_{\Omega} (\sigma_{num} - \sigma_{exact})^2 d\Omega}}{\sqrt{\int_{\Omega} \sigma_{exact}^2 d\Omega}}$$
+                $$\|e\|_{L_2} = \frac{\sqrt{\int_{\Omega} (\sigma_{num} - \sigma_{exact})^2
+                d\Omega}}{\sqrt{\int_{\Omega} \sigma_{exact}^2 d\Omega}}$$
             </div>
 
             <h3 class="text-lg font-bold mt-6 mb-2 text-slate-300">Convergence Rates</h3>
-            <p>As the mesh size $h_{max}$ decreases, the error should drop at an optimal rate related to the polynomial degree $p$ of the NURBS basis functions:</p>
+            <p>As the mesh size $h_{max}$ decreases, the error should drop at an optimal rate related to the polynomial
+                degree $p$ of the NURBS basis functions:</p>
             <ul class="list-disc ml-6 mt-4 text-slate-400">
                 <li><b>Quadratic ($p=2$):</b> Error $\approx \mathcal{O}(h^2)$</li>
                 <li><b>Cubic ($p=3$):</b> Error $\approx \mathcal{O}(h^3)$</li>
@@ -187,16 +296,19 @@ END FOR</pre>
 
         <section class="content-section text-center">
             <h2 class="text-2xl font-bold mb-4">Launch Nonlinear Lab</h2>
-            <p class="mb-8 text-slate-400">Experience quadratic convergence and large-scale bending in our interactive 2D benchmark.</p>
+            <p class="mb-8 text-slate-400">Experience quadratic convergence and large-scale bending in our interactive
+                2D benchmark.</p>
             <div class="flex justify-center gap-4">
                 <a href="../app/simulations/iga-sim-2b2/index.html" class="btn btn-primary">Launch Nonlinear Lab</a>
                 <a href="theory-2b1.html" class="btn bg-slate-800 text-white">Back to Linear</a>
             </div>
         </section>
-        
+
         <div class="mt-12 text-center text-slate-500">
-            <p>Next: <a href="theory-snapshots.html" class="text-rose-400 font-bold">Phase 2C | Snapshot Databases</a></p>
+            <p>Next: <a href="theory-snapshots.html" class="text-rose-400 font-bold">Phase 2C | Snapshot Databases</a>
+            </p>
         </div>
     </div>
 </body>
+
 </html>
