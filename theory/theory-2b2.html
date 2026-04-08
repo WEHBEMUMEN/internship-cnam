@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theory 2B.2 | Nonlinear Newton-Raphson</title>
+    <title>Theory 2B.2 | Stress & Displacement Validation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
         onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
     <style>
         :root {
-            --primary: #f43f5e;
+            --primary: #0ea5e9;
             --bg: #020617;
             --card: #0f172a;
             --text: #f8fafc;
@@ -105,53 +105,53 @@
 <body>
     <div class="container">
         <header class="text-center mb-16">
-            <span class="badge">Phase 2B.2 | Advanced Analysis</span>
-            <h1>Nonlinear<br>Newton-Raphson</h1>
-            <p class="text-xl text-slate-400">Large deformations and the iterative path to equilibrium.</p>
+            <span class="badge">Phase 2B.2 | Stress Analysis</span>
+            <h1>Plate with hole<br>Stress & Displacement</h1>
+            <p class="text-xl text-slate-400">Benchmarking a native JS solver against the analytical Kirsch solution.</p>
         </header>
 
         <section class="content-section">
-            <h2 class="text-2xl font-bold mb-4">1. Geometric Nonlinearity</h2>
-            <p>When a structure undergoes large rotations or displacements, the linear strain assumption ($\epsilon =
-                \frac{1}{2}(\nabla u + \nabla u^T)$) is no longer valid. We must use the **Green-Lagrange Strain
-                Tensor** $E$, which accounts for the quadratic terms of deformation:</p>
-            <div class="math-card">
-                $$E = \frac{1}{2}(\mathbf{F}^T \mathbf{F} - \mathbf{I})$$
-                $$E_{ij} = \frac{1}{2} \left( \frac{\partial u_i}{\partial X_j} + \frac{\partial u_j}{\partial X_i} +
-                \frac{\partial u_k}{\partial X_i} \frac{\partial u_k}{\partial X_j} \right)$$
+            <h2 class="text-2xl font-bold mb-4">1. Evolution of the Solver Architecture</h2>
+            <p>Our computational core has undergone a major shift from a server-side dependency to a <b>Native Client-Side Engine</b>. This evolution was necessary to achieve the real-time performance goals of a true Digital Twin.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+                <div class="p-6 bg-slate-900 border border-slate-700 rounded-xl">
+                    <h3 class="text-rose-400 font-bold mb-3"><i class="fa-solid fa-server mr-2"></i>The Previous Method</h3>
+                    <p class="text-sm text-slate-400 mb-4">Originally, we used a <b>FastAPI + Nutils</b> backend. The browser sent the NURBS geometry to a Python server, which solved the system and returned the results.</p>
+                    <ul class="text-xs text-slate-500 space-y-2">
+                        <li><i class="fa-solid fa-xmark text-rose-500 mr-2"></i><b>Network Latency:</b> Round-trip delay made real-time interaction impossible.</li>
+                        <li><i class="fa-solid fa-xmark text-rose-500 mr-2"></i><b>Infrastructure Load:</b> High setup complexity requiring a persistent Python environment.</li>
+                        <li><i class="fa-solid fa-xmark text-rose-500 mr-2"></i><b>Sync Issues:</b> Keeping the JS UI state and Python solver topology in sync was error-prone.</li>
+                    </ul>
+                </div>
+                <div class="p-6 bg-slate-900 border border-sky-500/30 rounded-xl">
+                    <h3 class="text-sky-400 font-bold mb-3"><i class="fa-solid fa-bolt mr-2"></i>The New Implementation</h3>
+                    <p class="text-sm text-slate-400 mb-4">We have transitioned to a <b>Pure JavaScript High-Fidelity Solver</b> using custom-developed IGA classes that run directly in the user's browser.</p>
+                    <ul class="text-xs text-slate-500 space-y-2">
+                        <li><i class="fa-solid fa-check text-sky-500 mr-2"></i><b>Instant Feedback:</b> 0ms network latency; computations happen locally.</li>
+                        <li><i class="fa-solid fa-check text-sky-500 mr-2"></i><b>Zero Setup:</b> Runs on any modern browser without needing a backend server.</li>
+                        <li><i class="fa-solid fa-check text-sky-500 mr-2"></i><b>Total Control:</b> The logic is unified in a single language (JS), allowing deeper integration.</li>
+                    </ul>
+                </div>
             </div>
-            <p>where $\mathbf{F} = \mathbf{I} + \nabla \mathbf{u}$ is the deformation gradient. This allows us to track
-                the stiffness change caused by the current shape of the structure.</p>
         </section>
 
         <section class="content-section">
-            <h2 class="text-2xl font-bold mb-4">2. The Newton-Raphson Loop</h2>
-            <p>Since the equilibrium equation $F_{ext} = F_{int}(u)$ is now nonlinear, we cannot solve for $u$ in a
-                single step. We use the **Newton-Raphson method**, which linearizes the problem at each iteration $k$:
-            </p>
+            <h2 class="text-2xl font-bold mb-4">2. Native IGA Assembly Logic</h2>
+            <p>The new JavaScript solver implements the full **Galerkin Method** pipeline for 2D NURBS patches. It handles the mapping from parametric space to physical space analytically:</p>
             <div class="math-card">
-                $$\mathbf{K}_t(\mathbf{u}_k) \Delta \mathbf{u} = \mathbf{F}_{ext} - \mathbf{F}_{int}(\mathbf{u}_k)$$
-                $$\mathbf{u}_{k+1} = \mathbf{u}_k + \Delta \mathbf{u}$$
+                $$\mathbf{K} = \sum_{e} \int_{\Omega_e} \mathbf{B}^T \mathbf{D} \mathbf{B} \det(\mathbf{J}) d\Omega$$
             </div>
-            <ul class="list-disc ml-6 mt-4 text-slate-400">
-                <li>$\mathbf{K}_t$ is the **Tangent Stiffness Matrix**, composed of material and geometric parts.</li>
-                <li>$\mathbf{R} = \mathbf{F}_{ext} - \mathbf{F}_{int}$ is the **Residual Force**, representing the
-                    out-of-equilibrium error.</li>
-            </ul>
+            <p class="text-slate-400 mt-4">By leveraging <b>Gaussian Quadrature</b> (typically $p+1$ points), we integrate the material stiffness across every knot span. The <b>B-matrix</b> is constructed using analytical NURBS derivatives, ensuring that the "Isogeometric" principle—using the same basis for geometry and physics—is strictly maintained.</p>
         </section>
 
         <section class="content-section">
-            <h2 class="text-2xl font-bold mb-4">3. Tangent Stiffness Components</h2>
-            <p>The tangent stiffness $\mathbf{K}_t$ is split into two physical effects:</p>
+            <h2 class="text-2xl font-bold mb-4">3. Scaling for Large Clusters</h2>
+            <p>To solve the resulting linear system $\mathbf{K}\mathbf{u} = \mathbf{f}$, we use efficient matrix reduction techniques that mask Dirichlet boundary conditions and solve for the unknown displacements using stabilized Gaussian elimination.</p>
             <div class="math-card">
-                $$\mathbf{K}_t = \mathbf{K}_{mat} + \mathbf{K}_{geo}$$
+                $$\begin{bmatrix} \mathbf{K}_{ff} & \mathbf{K}_{fc} \\ \mathbf{K}_{cf} & \mathbf{K}_{cc} \end{bmatrix} \begin{Bmatrix} \mathbf{u}_f \\ \mathbf{u}_c \end{Bmatrix} = \begin{Bmatrix} \mathbf{f}_f \\ \mathbf{f}_c \end{Bmatrix}$$
             </div>
-            <ul class="list-disc ml-6 mt-4 text-slate-400">
-                <li>$\mathbf{K}_{mat}$: The standard stiffness, but evaluated at the current deformed state.</li>
-                <li>$\mathbf{K}_{geo}$: The **Geometric Stiffness** (or stress-stiffening), which accounts for how
-                    internal stresses resist or assist further deformation (like a guitar string becoming stiffer when
-                    pulled).</li>
-            </ul>
+            <p class="text-slate-400 mt-4">This allows us to maintain high precision even as the control point lattice grows, providing the numerical stability required for benchmarking against analytical solutions.</p>
         </section>
 
         <section class="content-section">
@@ -295,12 +295,11 @@ END FOR</pre>
         </section>
 
         <section class="content-section text-center">
-            <h2 class="text-2xl font-bold mb-4">Launch Nonlinear Lab</h2>
-            <p class="mb-8 text-slate-400">Experience quadratic convergence and large-scale bending in our interactive
-                2D benchmark.</p>
+            <h2 class="text-2xl font-bold mb-4">Launch Verification Lab</h2>
+            <p class="mb-8 text-slate-400">Experience the high-fidelity stress distribution on the Kirsch hole benchmark using our native JS solver.</p>
             <div class="flex justify-center gap-4">
-                <a href="../app/simulations/iga-sim-2b2/index.html" class="btn btn-primary">Launch Nonlinear Lab</a>
-                <a href="theory-2b1.html" class="btn bg-slate-800 text-white">Back to Linear</a>
+                <a href="../app/simulations/iga-sim-2b2/index.html" class="btn btn-primary">Launch Stress Lab</a>
+                <a href="theory-2b1.html" class="btn bg-slate-800 text-white">Back to Assembly</a>
             </div>
         </section>
 
