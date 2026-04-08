@@ -745,7 +745,16 @@ class IGA2DSolver {
         const nV = patch.controlPoints[0].length;
         const nNodes = patch.controlPoints.length * patch.controlPoints[0].length;
 
-        const B = this.getBMatrix(patch, u, v);
+        let u_ev = u;
+        let v_ev = v;
+        let detJ = this.engine.getJacobianDeterminant(patch, u_ev, v_ev);
+        
+        if (Math.abs(detJ) <= 1e-8) {
+            u_ev = Math.max(0, Math.min(1, u - 0.01));
+            v_ev = Math.max(0, Math.min(1, v + 0.001));
+        }
+
+        const B = this.getBMatrix(patch, u_ev, v_ev);
         const D = this.getDMatrix(E, nu);
         const eps = [0, 0, 0];
 
