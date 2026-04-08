@@ -155,32 +155,27 @@
         </section>
 
         <section class="content-section">
-            <h2 class="text-2xl font-bold mb-4">4. Numerical Stability & Jacobian Locking</h2>
-            <p>A common issue in Isogeometric Analysis (IGA) occurs at corners where multiple control points are
-                coincident (degenerate mapping). While this ensures a sharp geometric corner, it creates a <b>Singular
-                    Jacobian</b>.</p>
+            <h2 class="text-2xl font-bold mb-4">4. Numerical Stability & The "Overlapping Points" Issue</h2>
+            <p>One of the most significant challenges encountered during the implementation of the Kirsch benchmark was the <b>Issue of Overlapping Control Points</b>. In NURBS-based IGA, degenerate or "collapsed" mappings are often used to create sharp corners, but they introduce severe numerical artifacts.</p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-6">
-                <div class="p-6 bg-slate-900/50 rounded-xl border border-rose-500/20">
-                    <h3 class="text-rose-400 font-bold mb-2">The Old Method (Singular)</h3>
-                    <p class="text-sm text-slate-400">Placing multiple control points at the exact same coordinate $(L,
-                        L)$ causes the area element to vanish:</p>
+                <div class="p-6 bg-slate-900/50 rounded-xl border border-sky-500/20">
+                    <h3 class="text-sky-400 font-bold mb-2">The Problem: Coincident Points</h3>
+                    <p class="text-sm text-slate-400">Placing two control points at the exact same spatial coordinate (e.g., to force a $C^0$ sharp corner) causes the local area element to collapse to zero.</p>
                     <div class="math-card py-2 text-sm">
-                        $$\det(\mathbf{J}) \to 0 \implies \mathbf{K} \propto \frac{1}{\det(\mathbf{J})} \to \infty$$
+                        $$\det(\mathbf{J}) = 0 \implies \text{Stiffness } K = \infty$$
                     </div>
-                    <p class="text-sm text-slate-400">Result: <b>Stiffness Locking</b>. The boundary nodes appear "blue"
-                        (fixed) because their stiffness is numerically infinite.</p>
+                    <p class="text-sm text-slate-400"><b>Impact:</b> This caused <b>Numerical Locking</b>. Even under massive loads, the nodes at these locations appeared "frozen" or "blue" (zero displacement) because the computer treated their stiffness as infinite.</p>
                 </div>
                 <div class="p-6 bg-slate-900/50 rounded-xl border border-emerald-500/20">
-                    <h3 class="text-emerald-400 font-bold mb-2">The New Solution (Nudged)</h3>
-                    <p class="text-sm text-slate-400">We apply a tiny <b>Micro-Nudge</b> ($0.01\,\text{mm}$) to the
-                        redundant points. This restores a valid mapping while maintaining visual accuracy:</p>
+                    <h3 class="text-emerald-400 font-bold mb-2">The Solution: The "Nudge"</h3>
+                    <p class="text-sm text-slate-400">To resolve this, we implemented a <b>Geometric Separation</b> (a "Micro-Nudge" of $0.001$). By separating the coincident points by a distance smaller than any physical concern:</p>
                     <div class="math-card py-2 text-sm">
-                        $$\det(\mathbf{J}) > \epsilon \implies \mathbf{K} < \text{Tol}$$ </div>
-                            <p class="text-sm text-slate-400">Result: <b>Physical Movement</b>. The boundary is now
-                                flexible and correctly responds to traction loads.</p>
+                        $$\det(\mathbf{J}) > 0 \implies \text{Stiffness } K < \text{Inf}$$
                     </div>
+                    <p class="text-sm text-slate-400"><b>Result:</b> This restores the physical validity of the mapping. The structure can now move naturally, allowing the stress waves to pass correctly through the corners.</p>
                 </div>
+            </div>
         </section>
 
         <section class="content-section">
@@ -254,7 +249,7 @@ END FOR</pre>
 
             <div class="math-card space-y-4">
                 <div>
-                    <span class="text-rose-400 font-bold">Radial Stress:</span>
+                    <span class="text-sky-400 font-bold">Radial Stress:</span>
                     $$\sigma_{rr}(r,\theta) = \frac{T_x}{2} \left[ \left(1 - \frac{R^2}{r^2}\right) + \left(1 -
                     4\frac{R^2}{r^2} + 3\frac{R^4}{r^4}\right) \cos 2\theta \right]$$
                 </div>
@@ -304,7 +299,7 @@ END FOR</pre>
         </section>
 
         <div class="mt-12 text-center text-slate-500">
-            <p>Next: <a href="theory-snapshots.html" class="text-rose-400 font-bold">Phase 2C | Snapshot Databases</a>
+            <p>Next: <a href="theory-snapshots.html" class="text-sky-400 font-bold">Phase 2C | Snapshot Databases</a>
             </p>
         </div>
     </div>
