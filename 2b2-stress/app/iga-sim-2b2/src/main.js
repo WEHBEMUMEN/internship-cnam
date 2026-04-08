@@ -208,7 +208,16 @@ function updateSurface() {
                 if (mode === 'displacement') {
                     val = Math.abs(interp.x); 
                 } else {
-                    const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
+                    let s;
+                    if (analysisData.remote) {
+                        // Use pre-computed remote results if available
+                        // Finding nearest point in high-res grid is slow, 
+                        // so for "testing" we just interpolate if we had a grid mapper.
+                        // For now we'll call local JS for visual continuity unless we strictly want remote values.
+                        s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
+                    } else {
+                        s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
+                    }
                     // Cap stress at a physical maximum to prevent singularity blow-ups
                     // from washing out the heatmap (SCF = 3, plus margin → 4× Tx)
                     const stressCap = 4.0 * Math.abs(targetState.load);
@@ -478,31 +487,27 @@ async function solverLoop() {
 
         try {
             if (targetState.useHybridSolver && localNodeOnline) {
-                // FULL SYNC REQUEST: Send entire UI state to Nutils
+                // REMOTE PYTHON SOLVE (Nutils)
                 const response = await fetch('http://localhost:8000/solve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        cps: patch.controlPoints.map(row => row.map(cp => ({ x: cp.x, y: cp.y, z: cp.z || 0, w: cp.w }))),
-                        p: patch.p,
-                        q: patch.q,
-                        U: Array.from(patch.U),
-                        V: Array.from(patch.V),
+                        radius: 1.0,
+                        length: 4.0,
                         E: targetState.E,
                         nu: targetState.nu,
                         traction: targetState.load,
-                        radius: R,
-                        length: L
+                        nrefine: targetState.h
                     })
                 });
                 const remoteData = await response.json();
-                // Load high-fidelity displacements
-                analysisData.u = new Float64Array(remoteData.u);
-                analysisData.isRemote = true;
+                // Store remote stress data for visualization
+                analysisData.remote = remoteData;
+                analysisData.u = new Float64Array(patch.controlPoints.length * patch.controlPoints[0].length * 2); // Dummy for compatibility
             } else {
                 // LOCAL JS SOLVE
                 analysisData.u = solver.solve(patch, bcs, loads);
-                analysisData.isRemote = false;
+                analysisData.remote = null;
             }
             const t1 = performance.now();
             
