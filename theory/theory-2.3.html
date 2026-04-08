@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2.3 | h-Refinement (Knot Insertion)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary: #10b981; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
+        .badge { background: rgba(16, 185, 129, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.2); display: inline-block; margin-bottom: 20px; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #34d399, #10b981); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
+        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-16">
+            <span class="badge">Phase 2.3 | Geometry</span>
+            <h1>h-Refinement:<br>Knot Insertion</h1>
+            <p class="text-xl text-slate-400">Localized subdivision for complex, detailed surfaces.</p>
+        </header>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">1. Localized Subdivision</h2>
+            <p>Unlike traditional mesh mesh subdivision (like Catmull-Clark), <strong>h-refinement</strong> in NURBS works by inserting a new knot into the parametric space. If you insert a knot $\bar{u}$ into the interval $[u_k, u_{k+1}]$, you create a new control point without changing the shape of the surface.</p>
+            <p>This is mathematically exact subdivision. The new control points are linear combinations of the old ones:</p>
+            <div class="math-card">
+                $$\mathbf{P}_i^w = \alpha_i \mathbf{P}_i^w + (1 - \alpha_i) \mathbf{P}_{i-1}^w$$
+                $$\alpha_i = \frac{\bar{u} - u_i}{u_{i+p} - u_i}$$
+            </div>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">2. Why h-Refinement?</h2>
+            <p>In structural analysis, you often need a denser mesh in areas of high stress (concentration). h-refinement allows you to "zooom in" on details by adding control points precisely where they are needed.</p>
+        </section>
+
+        <section class="content-section text-center">
+            <h2 class="text-2xl font-bold mb-4">Master Local Control</h2>
+            <p class="mb-8 text-slate-400">Launch the h-Lab and watch the lattice subdivide while the surface stays mathematically identical.</p>
+            <div class="flex justify-center gap-4">
+                <a href="../app/simulations/iga-sim-2.3/index.html" class="btn btn-primary">Launch h-Refinement Lab</a>
+                <a href="theory-2.2.html" class="btn bg-slate-800 text-white">Back to p-Refine</a>
+            </div>
+        </section>
+        
+        <div class="mt-12 text-center text-slate-500">
+            <p>Next: <a href="theory-2.4.html" class="text-purple-400 font-bold">Phase 2.4 | k-Refinement & The Perfect Sphere</a></p>
+        </div>
+    </div>
+</body>
+</html>

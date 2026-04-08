@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2.1 | Surface Mapping foundations</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary: #3b82f6; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
+        .badge { background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.2); display: inline-block; margin-bottom: 20px; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
+        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-16">
+            <span class="badge">Phase 2.1 | Foundations</span>
+            <h1>Surface Mapping &<br>Bivariate Basis</h1>
+            <p class="text-xl text-slate-400">Scaling IGA from 1D lines to 2D tensor-product patches.</p>
+        </header>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">1. The Tensor Product Mesh</h2>
+            <p>A NURBS surface is formed by the <strong>Tensor Product</strong> of two univariate basis systems. If you have basis functions $N_{i,p}(\xi)$ in the longitudinal direction and $M_{j,q}(\eta)$ in the lateral direction, the bivariate basis is:</p>
+            <div class="math-card">
+                $$R_{i,j}(\xi, \eta) = \frac{N_{i,p}(\xi) M_{j,q}(\eta) w_{i,j}}{\sum \sum N_{k,p}(\xi) M_{l,q}(\eta) w_{k,l}}$$
+            </div>
+            <p>This creates a grid-like influence where each control point $\mathbf{P}_{i,j}$ affects a local rectangular patch of the surface.</p>
+        </section>
+
+        <section class="content-section text-center">
+            <h2 class="text-2xl font-bold mb-4">Ready to explore mapping?</h2>
+            <p class="mb-8 text-slate-400">Manipulate a 4x4 grid in 3D to see how parametric coordinates translate to physical space.</p>
+            <div class="flex justify-center gap-4">
+                <a href="../app/simulations/iga-sim-2.1/index.html" class="btn btn-primary">Launch Mapping Lab</a>
+                <a href="../app/index.html" class="btn bg-slate-800 text-white">Return to Hub</a>
+            </div>
+        </section>
+        
+        <div class="mt-12 text-center text-slate-500">
+            <p>Next: <a href="theory-2.2.html" class="text-blue-400 font-bold">Phase 2.2 | p-Refinement & Smoothness</a></p>
+        </div>
+    </div>
+</body>
+</html>

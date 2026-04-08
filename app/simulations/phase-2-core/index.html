@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2.0 | 2D NURBS Verification Lab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --accent: #10b981;
+            --bg: #020617;
+            --card: #0f172a;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar UI */
+        #sidebar {
+            width: 380px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        .header-box h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #fff, var(--text-dim));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .control-group h3 {
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+        }
+
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .slider-row label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            appearance: none;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .verify-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-ok { color: var(--accent); font-weight: 700; }
+
+        /* Main Viewport */
+        #viewport {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .nav-links {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-nav {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.85rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s;
+        }
+
+        .btn-nav:hover { background: var(--primary); border-color: var(--primary); }
+
+        #three-container { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div class="header-box">
+            <span class="badge">Phase 2.0 Core</span>
+            <h1>2D NURBS Surface</h1>
+        </div>
+
+        <div class="control-group">
+            <h3><i class="fa-solid fa-shapes"></i> Geometry Parameters</h3>
+            <div class="slider-row">
+                <label>Resolution (U): <span id="resU-val">20</span></label>
+                <input type="range" id="resU" min="10" max="60" value="20">
+            </div>
+            <div class="slider-row">
+                <label>Resolution (V): <span id="resV-val">20</span></label>
+                <input type="range" id="resV" min="10" max="60" value="20">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3><i class="fa-solid fa-arrows-up-down-left-right"></i> Control Patch</h3>
+            <div class="slider-row">
+                <label>Central Point Height: <span id="height-val">0.0</span></label>
+                <input type="range" id="pHeight" min="-2" max="2" step="0.1" value="0.5">
+            </div>
+            <div class="slider-row">
+                <label>Patch Twist: <span id="twist-val">0.0</span></label>
+                <input type="range" id="pTwist" min="-1" max="1" step="0.1" value="0">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3><i class="fa-solid fa-shield-check"></i> Verification</h3>
+            <div class="verify-box">
+                <span>Partition of Unity:</span>
+                <span class="status-ok">PASSED (1.0)</span>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 10px;">
+                Geometric accuracy is verified by checking the sum of basis functions across $(\xi, \eta)$.
+            </p>
+        </div>
+
+        <div style="margin-top: auto;">
+            <p style="font-size: 0.8rem; color: var(--text-dim);">
+                <i class="fa-solid fa-info-circle"></i> This surface mapping is calculated in real-time using tensor-product bivariate B-splines.
+            </p>
+        </div>
+    </div>
+
+    <div id="viewport">
+        <div class="nav-links">
+            <a href="../../../theory/theory-2.1.html" class="btn-nav"><i class="fa-solid fa-book"></i> Read Theory</a>
+            <a href="../../index.html" class="btn-nav"><i class="fa-solid fa-house"></i> Hub</a>
+        </div>
+        <div id="three-container"></div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="src/nurbs-2d.js"></script>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>

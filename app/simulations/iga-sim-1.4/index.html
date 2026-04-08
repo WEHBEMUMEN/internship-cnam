@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IGA Sim | Phase 1.4 Vector Calculus</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <i class="fa-solid fa-location-crosshairs logo-icon"></i>
+                <h1>Calculus Engine</h1>
+                <span class="badge">Phase 1.4</span>
+            </header>
+
+            <section class="controls">
+                <div class="control-group">
+                    <label for="degree">Degree ($p$)</label>
+                    <input type="range" id="degree" min="0" max="5" value="2" step="1">
+                    <span class="value-display" id="degree-val">2</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="cp-count">Control Points ($n$)</label>
+                    <input type="range" id="cp-count" min="3" max="15" value="6" step="1">
+                    <span class="value-display" id="cp-val">6</span>
+                </div>
+
+                <div class="control-group" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+                    <label for="eval-point" style="color: var(--accent);">Derivative Eval Point ($\xi$)</label>
+                    <input type="range" id="eval-point" min="0" max="1" value="0.5" step="0.01">
+                    <span class="value-display" id="eval-val">0.50</span>
+                </div>
+
+                <div class="control-group">
+                    <label>View Mode</label>
+                    <div class="toggle-group">
+                        <button id="view-basis" class="btn btn-tab active">Basis</button>
+                        <button id="view-curve" class="btn btn-tab">Curve</button>
+                    </div>
+                </div>
+
+                <div class="control-group" id="weights-section">
+                    <label>Weights ($w_i$)</label>
+                    <div id="weights-editor" class="weights-editor">
+                        <!-- Weights will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Knot Vector ($\Xi$)</label>
+                    <div id="knot-editor" class="knot-editor">
+                        <!-- Knots will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="reset-btn" class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                    <button id="download-json" class="btn btn-primary"><i class="fa-solid fa-download"></i> Export JSON</button>
+                    <div style="flex-basis: 100%; border-top: 1px solid var(--border); margin-top: 8px; padding-top: 15px;">
+                        <span style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:8px;"><strong>Kinematics Benchmark:</strong> Computes iterative mapping constraints bounding the analytical quotient rules scaling directly across dense high-frequency differential geometries.</span>
+                        <button id="benchmark-btn" class="btn btn-primary" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-gauge-high"></i> Benchmark Derivatives</button>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="sidebar-footer">
+                <p>&copy; 2026 EPN04 | Digital Twin Project</p>
+            </footer>
+        </aside>
+
+        <main class="viewport">
+            <div class="canvas-header">
+                <div class="title-group">
+                    <h2>B-Spline Basis Functions</h2>
+                    <p>Interactive visualization of $N_{i,p}(\xi)$</p>
+                </div>
+                <div class="status-group">
+                    <span class="status-item"><i class="fa-solid fa-bolt"></i> <span id="fps">60</span> FPS</span>
+                </div>
+            </div>
+            
+            <div class="canvas-wrapper">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+
+            <div class="info-panel">
+                <div class="math-card" style="flex: 1;">
+                    <h4>General B-Spline Equation</h4>
+                    <div class="math-display">
+                        $\mathbf{A}(\xi) = \sum_{i=0}^n N_{i,p}(\xi) \, \mathbf{P}_i$
+                    </div>
+                </div>
+                <div class="math-card" style="flex: 1.5; background: rgba(59, 130, 246, 0.05); border-color: rgba(59, 130, 246, 0.2);">
+                    <h4>First Derivative (Tangent Velocity)</h4>
+                    <div class="math-display">
+                        $\mathbf{C}'(\xi) = \frac{\mathbf{A}'(\xi)W(\xi) - \mathbf{A}(\xi)W'(\xi)}{W(\xi)^2}$
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px;">Exact Differential Quotient Mapping</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../../shared/performance.js"></script>
+    <script type="module" src="src/main.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        if (window.renderMathInElement) {
+          renderMathInElement(document.body, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false}
+            ]
+          });
+        }
+      });
+    </script>
+</body>
+</html>

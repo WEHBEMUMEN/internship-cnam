@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2C | Snapshot Generator</title>
+    <script>if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; width: 360px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 24px;
+            z-index: 10; pointer-events: auto;
+            max-height: calc(100vh - 40px); overflow-y: auto;
+        }
+        #coverage-popup {
+            position: absolute; bottom: 20px; right: 20px; width: 320px; height: 260px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 15px;
+            z-index: 10; pointer-events: auto; display: flex; flex-direction: column;
+        }
+        .control-group { margin-bottom: 24px; }
+        .control-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; color: #0ea5e9; margin-bottom: 15px; display: block; font-weight: 700; }
+        .btn-primary { 
+            width: 100%; padding: 14px; border-radius: 10px; font-size: 0.9rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: #0ea5e9; color: white; transition: all 0.2s; cursor: pointer; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .progress-container { margin-top: 20px; background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: #0ea5e9; transition: width 0.3s; }
+        
+        .chart-box { flex: 1; min-height: 0; position: relative; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.05); }
+        .log-box { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; background: #020617; border-radius: 8px; padding: 12px; margin-top: 15px; height: 120px; overflow-y: auto; color: #94a3b8; border: 1px solid #1e293b; }
+        .badge { background: rgba(14, 165, 233, 0.1); color: #38bdf8; padding: 3px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="ui-panel">
+        <h1 class="text-2xl font-black mb-6 tracking-tight flex items-center justify-between">
+            <span>SNAPSHOT LAB</span>
+            <span class="badge">OFFLINE</span>
+        </h1>
+        
+        <div class="control-group">
+            <span class="control-label">Base Physical Configuration</span>
+            
+            <div class="mb-4">
+                <label class="text-[10px] text-slate-400 block mb-1">Boundary Restraint</label>
+                <select id="bound-edge" class="w-full bg-slate-800 border border-slate-700 text-white rounded p-1.5 text-xs outline-none focus:border-sky-500 mb-3">
+                    <option value="left">Left Edge (Cantilever x=0)</option>
+                    <option value="right">Right Edge (x=L)</option>
+                    <option value="bottom">Bottom Edge (y=0)</option>
+                    <option value="top">Top Edge (y=H)</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Force U (0-3)</label>
+                    <input type="number" id="force-u" min="0" max="3" value="3" class="w-full bg-slate-800 border border-slate-700 text-white rounded p-1.5 text-xs outline-none focus:border-sky-500">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Force V (0-3)</label>
+                    <input type="number" id="force-v" min="0" max="3" value="1" class="w-full bg-slate-800 border border-slate-700 text-white rounded p-1.5 text-xs outline-none focus:border-sky-500">
+                </div>
+            </div>
+            
+            <div class="mb-2 border-b border-slate-800 pb-4">
+                <label class="text-[10px] text-slate-400 block mb-1">Force Direction</label>
+                <select id="force-dir" class="w-full bg-slate-800 border border-slate-700 text-white rounded p-1.5 text-xs outline-none focus:border-sky-500">
+                    <option value="vertical">Vertical (Y-Axis)</option>
+                    <option value="horizontal">Horizontal (X-Axis)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="control-group pt-2">
+            <span class="control-label">Generation Settings</span>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center text-sm">
+                    <span>Number of Samples (N)</span>
+                    <span id="n-val" class="font-bold text-sky-400">25</span>
+                </div>
+                <input type="range" id="n-slider" class="w-full" min="10" max="100" value="25">
+                
+                <div class="flex justify-between items-center text-sm">
+                    <span>Solver Accuracy</span>
+                    <span class="text-xs text-slate-500">Newton-Raphson 10<sup>-6</sup></span>
+                </div>
+            </div>
+        </div>
+
+        <button id="start-btn" class="btn-primary">
+            <i class="fa-solid fa-play"></i> START BATCH GENERATION
+        </button>
+
+        <div class="progress-section hidden" id="process-ui">
+            <div class="flex justify-between items-center mt-6 text-xs text-slate-400 mb-2">
+                <span id="status-text">Ready to sample...</span>
+                <span id="percent-text">0%</span>
+            </div>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="log-box" id="log-console">
+            > Standby. Ready for Offline Phase...
+        </div>
+
+        <button id="download-btn" class="btn-primary mt-4 bg-emerald-600 shadow-emerald-900/20 hidden">
+            <i class="fa-solid fa-download"></i> DOWNLOAD SNAPSHOTS (.JSON)
+        </button>
+        
+        <div class="mt-8 flex flex-col gap-2">
+            <a href="../../../theory/theory-2c.html" class="block text-center py-2 px-4 bg-sky-600/20 text-sky-400 border border-sky-500/30 rounded-lg text-sm font-bold no-underline transition-all hover:bg-sky-600/40">
+                <i class="fa-solid fa-graduation-cap mr-2"></i> Snapshot Theory
+            </a>
+            <a href="../../index.html" class="block text-center py-2 px-4 border border-slate-700 hover:bg-slate-800 rounded-lg text-sm transition-colors text-slate-400 no-underline">
+                <i class="fa-solid fa-house mr-2"></i> Simulation Hub
+            </a>
+        </div>
+    </div>
+
+    <!-- Floating Coverage Window -->
+    <div id="coverage-popup">
+        <h2 class="text-sm font-bold text-slate-200 mb-1"><i class="fa-solid fa-braille text-sky-400 mr-2"></i>LHS Space Coverage</h2>
+        <div class="chart-box mt-0">
+            <canvas id="lhs-chart"></canvas>
+        </div>
+    </div>
+
+    <script src="../../shared/performance.js"></script>
+    <script src="../../shared/sampling-utils.js"></script>
+    <script src="../phase-2-core/src/nurbs-2d.js"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>

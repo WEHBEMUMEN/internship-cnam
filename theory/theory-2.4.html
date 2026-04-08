@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2.4 | k-Refinement & The Perfect Sphere</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary: #8b5cf6; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
+        .badge { background: rgba(139, 92, 246, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(139, 92, 246, 0.2); display: inline-block; margin-bottom: 20px; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #a78bfa, #8b5cf6); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
+        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-16">
+            <span class="badge">Phase 2.4 | Synthesis</span>
+            <h1>The Perfect Sphere:<br>k-Refinement</h1>
+            <p class="text-xl text-slate-400">The peak of Isogeometric Analysis.</p>
+        </header>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">1. k-Refinement: The IGA Advantage</h2>
+            <p>In NURBS, the order of refinement matters. If you perform p-refinement (degree elevation) <strong>before</strong> h-refinement (knot insertion), you achieve a special state called <strong>k-refinement</strong>. </p>
+            <p>This results in a basis that is $C^{p-1}$ continuous across the entire mesh. Traditional Finite Elements are typically only $C^0$ between elements. k-refinement creates the smoothest possible mathematical grid.</p>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">2. Designing the Exact Sphere in IGA</h2>
+            <p>In Isogeometric Analysis, a sphere is defined as a NURBS surface, allowing for the exact mathematical representation of the CAD geometry. This exactness is achieved by utilizing the <strong>rational</strong> nature of the basis functions.</p>
+            
+            <div class="math-card">
+                <p class="font-bold flex items-center gap-2 mb-2"><i class="fa-solid fa-square-root-variable text-purple-500"></i> Mathematical Formulation</p>
+                A NURBS surface $\mathbf{S}(u, v)$ is defined as a bivariate tensor product:
+                $$\mathbf{S}(u, v) = \frac{\sum_{i=0}^n \sum_{j=0}^m N_{i,p}(u) M_{j,q}(v) w_{i,j} \mathbf{P}_{i,j}}{\sum_{k=0}^n \sum_{l=0}^m N_{k,p}(u) M_{l,q}(v) w_{k,l}}$$
+                Where $\mathbf{P}_{i,j}$ represents the grid of control points (the control net) and $w_{i,j}$ are the associated rational weights.
+            </div>
+
+            <div class="mt-6 flex flex-col gap-4">
+                <h3 class="text-xl font-bold text-slate-300">Construction Methods</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
+                        <h4 class="font-bold text-blue-400 mb-2">1. Single-Patch Surface of Revolution</h4>
+                        <p class="text-sm">Generated by revolving a semi-circular NURBS curve (degree $p=2$) around a central axis.</p>
+                        <ul class="text-sm mt-2 text-slate-400 list-disc list-inside">
+                            <li><strong>Pros:</strong> Compact representation using a single surface patch.</li>
+                            <li><strong>Cons:</strong> Creates geometrical singularities ("poles") at the top/bottom point convergences.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
+                        <h4 class="font-bold text-emerald-400 mb-2">2. Multi-Patch "Cubed Sphere"</h4>
+                        <p class="text-sm">Avoids poles by projecting the six faces of a cube onto a spherical surface.</p>
+                        <ul class="text-sm mt-2 text-slate-400 list-disc list-inside">
+                            <li><strong>Pros:</strong> Analysis-Suitable Geometry (ASG) with regular clean quadrilaterals.</li>
+                            <li><strong>Cons:</strong> Requires complex handling of $C^1$ or $C^0$ continuity across interfaces.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-bold text-slate-300 mt-8 mb-4">Requirements for Exact Representation</h3>
+            <ul class="space-y-3 mb-6">
+                <li><strong>Rational Weights ($w$):</strong> A 90-degree circular arc ($p=2$) physically requires three control points with weights $\{1, \frac{\sqrt{2}}{2}, 1\}$ to pull the curve into a perfect constant radius circle.</li>
+                <li><strong>Knot Vectors:</strong> Open (clamped) knot vectors are generally used, where the first and last knots are repeated $p+1$ times (e.g. $\{0,0,0,1,1,1\}$ for quadratic arcs).</li>
+                <li><strong>Degree ($p$):</strong> While degree 2 is the minimum for circular exactness, IGA often uses higher degrees (like cubic $p=3$) to allow for superior inter-element continuity ($C^{p-1}$) during refinement.</li>
+            </ul>
+            <p>By using this NURBS-based definition, the exact CAD geometry of the sphere is preserved throughout the simulation, regardless of how many $h$-, $p$-, or $k$-refinement steps are performed.</p>
+        </section>
+
+        <section class="content-section text-center">
+            <h2 class="text-2xl font-bold mb-4">Experience the Ultimate Geometry</h2>
+            <p class="mb-8 text-slate-400">Load the Exact Sphere and k-Refine it. Watch the lattice grow while the curvature stays perfect.</p>
+            <div class="flex justify-center gap-4">
+                <a href="../app/simulations/iga-sim-2.4/index.html" class="btn btn-primary">Launch k-Lab & Sphere</a>
+                <a href="theory-2.3.html" class="btn bg-slate-800 text-white">Back to h-Refine</a>
+            </div>
+        </section>
+        
+        <div class="mt-12 text-center text-slate-500">
+            <p>Next: <a href="theory-2.5.html" class="text-blue-400 font-bold">Phase 2.5 | Differential Area & Jacobian</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 1.8 | Circle Geometry & Refinement</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --primary: #a78bfa;
+            --primary-glow: rgba(167, 139, 250, 0.4);
+            --accent: #10b981;
+            --bg: #020617;
+            --card: #0f172a;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.7; overflow-x: hidden;
+        }
+        .scroll-progress {
+            position: fixed; top: 0; left: 0; height: 4px; background: var(--primary); width: 0%; z-index: 1000;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 100px 30px; }
+        header.hero { text-align: center; margin-bottom: 100px; position: relative; }
+        header.hero::before {
+            content: ''; position: absolute;
+            top: -50px; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 300px;
+            background: var(--primary); filter: blur(150px); opacity: 0.15; z-index: -1;
+        }
+        .badge {
+            background: rgba(167, 139, 250, 0.1); color: var(--primary);
+            padding: 8px 20px; border-radius: 100px; font-size: 0.85rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+            border: 1px solid rgba(167, 139, 250, 0.2);
+            display: inline-block; margin-bottom: 30px;
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800;
+            margin-bottom: 24px; letter-spacing: -0.03em;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; line-height: 1.1;
+        }
+        .subtitle { font-size: 1.4rem; color: var(--text-dim); max-width: 700px; margin: 0 auto; font-weight: 300; }
+        .hero-stats {
+            display: flex; justify-content: center; gap: 40px;
+            margin-top: 50px; flex-wrap: wrap;
+        }
+        .stat-item { text-align: center; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; font-weight: 700; color: var(--primary); display: block; }
+        .stat-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+        .content-section {
+            background: var(--card); border: 1px solid var(--border); border-radius: 32px;
+            padding: 60px; margin-bottom: 60px; position: relative; overflow: hidden;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .content-section:hover { border-color: var(--primary); }
+        h2 {
+            font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700;
+            margin-bottom: 30px; display: flex; align-items: center; gap: 15px; color: #fff;
+        }
+        h2 i { color: var(--primary); font-size: 1.8rem; }
+        .math-card {
+            background: #020617; padding: 30px; border-radius: 20px; margin: 30px 0;
+            border-left: 5px solid var(--primary); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); overflow-x: auto;
+        }
+        .note-box { background: rgba(167, 139, 250, 0.05); border: 1px solid rgba(167, 139, 250, 0.2); padding: 25px; border-radius: 16px; margin-top: 30px; }
+        .note-box h4 { color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .note-box-green { background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 25px; border-radius: 16px; margin-top: 30px; }
+        .note-box-green h4 { color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .note-box-amber { background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 25px; border-radius: 16px; margin-top: 30px; }
+        .note-box-amber h4 { color: #f59e0b; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 40px 0; }
+        .comparison-table th { text-align: left; padding: 20px; color: var(--text-dim); font-size: 0.9rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        .comparison-table td { padding: 20px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); font-size: 1.1rem; }
+        .highlight { color: var(--primary); font-weight: 700; }
+        .chart-container { position: relative; width: 100%; height: 350px; margin-top: 20px; }
+        .footer-nav { display: flex; flex-direction: column; align-items: center; margin-top: 100px; gap: 20px; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 12px;
+            padding: 18px 36px; border-radius: 16px; font-weight: 700;
+            text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1.1rem;
+        }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 10px 20px -10px var(--primary-glow); }
+        .btn-primary:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -15px var(--primary-glow); filter: brightness(1.1); }
+        .back-link { color: var(--text-dim); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: color 0.2s; }
+        .back-link:hover { color: var(--text); }
+    </style>
+</head>
+<body>
+    <div class="scroll-progress"></div>
+
+    <div class="container">
+        <header class="hero">
+            <span class="badge">Phase 1.8 | Exact Geometry</span>
+            <h1>Circle Geometry<br>& Refinement Theory</h1>
+            <p class="subtitle">How NURBS represent exact conic sections through rational weights, and how p, h, and k-refinement alter the basis without changing the geometry.</p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-value">9 CPs</span>
+                    <span class="stat-label">Quadratic Circle</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">w<sub>i</sub></span>
+                    <span class="stat-label">Rational Weights</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">p / h / k</span>
+                    <span class="stat-label">Refinement Modes</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- NEW: Executive Summary -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-file-lines"></i> Executive Summary</h2>
+            <p>
+                This interactive application serves as the digital synthesis of the CNAM internship project, focusing specifically on the structural elements defined in <strong>Theory Document 1.8</strong>. We transition from basic spline physics to exact quadratic geometry and advanced refinement strategies.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <div class="p-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                    <div class="text-3xl mb-3">🎯</div>
+                    <h3 class="font-bold text-lg mb-2 text-slate-100">Objective</h3>
+                    <p class="text-sm text-slate-400">Achieve geometric exactness for conic sections and implement higher-order k-refinement logic.</p>
+                </div>
+                <div class="p-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                    <div class="text-3xl mb-3">⚙️</div>
+                    <h3 class="font-bold text-lg mb-2 text-slate-100">Methodology</h3>
+                    <p class="text-sm text-slate-400">Application of Theory 1.8 principles, comparing p, h, and k refinement continuity states.</p>
+                </div>
+                <div class="p-6 bg-slate-800/50 rounded-lg border border-slate-700">
+                    <div class="text-3xl mb-3">🚀</div>
+                    <h3 class="font-bold text-lg mb-2 text-slate-100">Final Lab</h3>
+                    <p class="text-sm text-slate-400">A real-time Refinement Lab allowing interactive knot insertion and degree elevation.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- NEW: Analytical Lab (Charts) -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-chart-line"></i> Analytical Lab</h2>
+            <p>
+                Visualizing the sampling distributions and convergence performance utilized for the Theory 1.8 refinement validation.
+            </p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">Refinement Distribution</h3>
+                    <p class="text-sm text-slate-500 mb-4">Breakdown of element counts across different refinement levels.</p>
+                    <div class="chart-container">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">Error Sensitivity</h3>
+                    <p class="text-sm text-slate-500 mb-4">Relative geometric error impact of top NURBS parameters.</p>
+                    <div class="chart-container">
+                        <canvas id="featureChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-12">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-100 italic">Convergence Tracking</h3>
+                        <p class="text-sm text-slate-500">Validation accuracy tracked across integration iterations.</p>
+                    </div>
+                    <div class="flex space-x-2 bg-slate-800 p-1 rounded-lg border border-slate-700">
+                        <button class="model-toggle px-4 py-2 text-xs font-bold rounded-md bg-slate-700 text-indigo-300" data-model="baseline">Polynomial</button>
+                        <button class="model-toggle px-4 py-2 text-xs font-bold rounded-md text-slate-400" data-model="theory18">NURBS 1.8</button>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Exact Circle -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-circle"></i> Exact Circle Representation</h2>
+            <p>
+                A circle cannot be represented exactly by polynomial B-splines. However, <strong>NURBS</strong> (Non-Uniform Rational B-Splines) use rational weights $w_i$ to project a polynomial curve from a higher-dimensional space, enabling exact representation of all conic sections — circles, ellipses, parabolas.
+            </p>
+            <div class="math-card">
+                $$\mathbf{C}(\xi) = \frac{\sum_{i=0}^{n} N_{i,p}(\xi) \, w_i \, \mathbf{P}_i}{\sum_{j=0}^{n} N_{j,p}(\xi) \, w_j}$$
+            </div>
+            <p>
+                The Phase 1.8 engine constructs a unit circle using <strong>9 quadratic ($p=2$) control points</strong> arranged symmetrically. The key insight is the <strong>weight pattern</strong>:
+            </p>
+            <div class="note-box">
+                <h4><i class="fa-solid fa-weight-hanging"></i> Weight Configuration</h4>
+                <p>
+                    Corner control points (on the circle) carry $w = 1.0$, while midpoint control points carry $w = \cos(\pi/4) \approx 0.7071$. This specific ratio produces an <em>exact</em> circular arc between each pair of corner points.
+                </p>
+                $$w_{corner} = 1.0, \quad w_{mid} = \cos\!\left(\frac{\pi}{4}\right) = \frac{\sqrt{2}}{2}$$
+            </div>
+            <p>
+                Unlike a polygon approximation that visually looks circular at high resolution, this NURBS circle is <strong>mathematically exact</strong> — every single evaluated point lies precisely on the unit circle to machine precision.
+            </p>
+        </section>
+
+        <!-- Section 2: p-Refinement -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-arrow-up-right-dots"></i> p-Refinement (Degree Elevation)</h2>
+            <p>
+                Degree elevation increases the polynomial degree $p$ of the basis functions to $p + 1$ while preserving the <strong>exact same geometric curve</strong>. The number of control points increases, and the knot vector is enriched with repeated knots.
+            </p>
+            <div class="math-card">
+                $$p \to p + 1, \quad n_{cp} \uparrow, \quad \text{Geometry unchanged}$$
+            </div>
+            
+            <div class="note-box">
+                <h4><i class="fa-solid fa-cog"></i> How It Works</h4>
+                <p>
+                    The engine uses a Least Squares projection approach: after building the new knot vector (with elevated degree and appropriately increased knot multiplicities), the new control points $\mathbf{P}'_i$ are computed by sampling the original curve densely and solving a fitting system against the new, higher-degree basis functions.
+                </p>
+            </div>
+
+            <div class="note-box-green">
+                <h4><i class="fa-solid fa-lightbulb"></i> Why It Matters for IGA</h4>
+                <p>
+                    Higher-degree bases provide superior approximation for stress/strain fields in structural analysis. A cubic ($p=3$) basis has $C^2$ continuity at knot spans, giving smooth second derivatives — critical for accurate bending moment calculations.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 3: h-Refinement -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-scissors"></i> h-Refinement (Knot Insertion)</h2>
+            <p>
+                Knot insertion adds new knot values into the knot vector, splitting existing elements into smaller ones. This increases the number of control points and elements <strong>without changing the degree or the geometry</strong>.
+            </p>
+            <div class="math-card">
+                $$\bar{\xi} \in [u_k, u_{k+1}) \implies \mathbf{P}'_i = (1 - \alpha_i)\mathbf{P}_{i-1} + \alpha_i \mathbf{P}_i$$
+            </div>
+            <p>
+                where the blending coefficients $\alpha_i$ are computed from the local knot ratios:
+            </p>
+            <div class="math-card">
+                $$\alpha_i = \begin{cases} 1 & \text{if } u_{i+p} \geq \bar{\xi} \\ \frac{\bar{\xi} - u_i}{u_{i+p} - u_i} & \text{otherwise} \end{cases}$$
+            </div>
+
+            <div class="note-box">
+                <h4><i class="fa-solid fa-crosshairs"></i> Selective Density</h4>
+                <p>
+                    Unlike global mesh refinement in classical FEM, h-refinement allows engineers to pack denser control points locally around areas of high stress concentration while keeping the rest of the domain coarse. The Phase 1.8 engine inserts midpoint knots into every unique span uniformly.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 4: k-Refinement -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-layer-group"></i> k-Refinement</h2>
+            <p>
+                k-Refinement is the unique IGA-native refinement strategy that <strong>has no analogue in classical FEM</strong>. It combines degree elevation (p-refine) <em>first</em>, then performs knot insertion (h-refine) <em>second</em>. The order matters critically.
+            </p>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Order of Operations</th>
+                        <th>Resulting Continuity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>h then p</strong></td>
+                        <td>Insert knots first, then elevate degree</td>
+                        <td>$C^0$ at new knots (FEM-like)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>k-Refinement (p then h)</strong></td>
+                        <td class="highlight">Elevate degree first, then insert knots</td>
+                        <td class="highlight">$C^{p-1}$ at new knots (Hyper-smooth)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="note-box-amber">
+                <h4><i class="fa-solid fa-star"></i> The Key Advantage</h4>
+                <p>
+                    When you elevate degree <em>before</em> inserting knots, the newly inserted knots inherit the maximum continuity of the elevated space ($C^{p_{new}-1}$). If you reverse the order (h then p), the inserted knots are already locked at $C^0$ and degree elevation cannot recover the lost smoothness. This is why k-refinement achieves dramatically better accuracy per degree of freedom in IGA simulations.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 5: Continuity Comparison -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-infinity"></i> Continuity Comparison</h2>
+            <p>
+                The fundamental advantage of Isogeometric Analysis over classical Finite Element meshes lies in inter-element continuity:
+            </p>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Classical FEM</th>
+                        <th>IGA (NURBS)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Inter-element continuity</strong></td>
+                        <td>$C^0$ (position only)</td>
+                        <td class="highlight">$C^{p-k}$ (derivatives smooth)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Basis function support</strong></td>
+                        <td>1 element</td>
+                        <td class="highlight">$p+1$ elements</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Exact geometry</strong></td>
+                        <td>Approximated (faceted)</td>
+                        <td class="highlight">Exact (same as CAD)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Stress field quality</strong></td>
+                        <td>Discontinuous between elements</td>
+                        <td class="highlight">Smooth across entire domain</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                In Phase 1.8, you can observe this directly: applying k-refinement to the circle increases the number of elements and control points while maintaining $C^{p-1}$ smoothness everywhere.
+            </p>
+        </section>
+
+        <div class="footer-nav">
+            <a href="../app/simulations/iga-sim-1.8/index.html" class="btn btn-primary">
+                <i class="fa-solid fa-circle-notch"></i> Launch Refinement Lab
+            </a>
+            <a href="../app/index.html" class="back-link">
+                <i class="fa-solid fa-house"></i> Return to Simulation Hub
+            </a>
+        </div>
+    </div>
+
+    <footer class="bg-slate-900 border-t border-slate-800 text-slate-500 py-8 text-center text-sm">
+        <p>Interactive Report generated for CNAM Internship - Theory 1.8</p>
+        <p class="mt-2">Rendered dynamically via Chart.js and KaTeX.</p>
+    </footer>
+
+    <script>
+        const chartData = {
+            distribution: {
+                labels: ['Coarse', 'H-Refine x1', 'H-Refine x2', 'Refinement Max'],
+                values: [100, 250, 600, 1200]
+            },
+            features: {
+                labels: ['Weight Ratio', 'Knot Density', 'Degree (p)', 'Continuity', 'Basis Support'],
+                values: [0.95, 0.78, 0.65, 0.55, 0.38]
+            },
+            performance: {
+                labels: ['Iter 1', 'Iter 5', 'Iter 10', 'Iter 15', 'Iter 20', 'Iter 25', 'Iter 30', 'Iter 35', 'Iter 40', 'Iter 50'],
+                baseline: [40, 55, 68, 75, 78, 79, 80, 80.5, 80.8, 81],
+                theory18: [35, 50, 75, 88, 94, 96, 98.5, 99.2, 99.8, 99.9]
+            }
+        };
+
+        let performanceChartInstance;
+
+        function initCharts() {
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = '#94a3b8';
+
+            // Distribution Chart
+            const ctxDist = document.getElementById('distributionChart').getContext('2d');
+            new Chart(ctxDist, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.distribution.labels,
+                    datasets: [{
+                        data: chartData.distribution.values,
+                        backgroundColor: ['#a78bfa', '#10b981', '#f59e0b', '#334155'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+
+            // Feature Chart
+            const ctxFeat = document.getElementById('featureChart').getContext('2d');
+            new Chart(ctxFeat, {
+                type: 'bar',
+                data: {
+                    labels: chartData.features.labels,
+                    datasets: [{
+                        label: 'Sensitivity Score',
+                        data: chartData.features.values,
+                        backgroundColor: '#a78bfa',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            // Performance Chart
+            const ctxPerf = document.getElementById('performanceChart').getContext('2d');
+            performanceChartInstance = new Chart(ctxPerf, {
+                type: 'line',
+                data: {
+                    labels: chartData.performance.labels,
+                    datasets: [{
+                        label: 'Accuracy (%)',
+                        data: chartData.performance.baseline,
+                        borderColor: '#64748b',
+                        backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#64748b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 30, max: 100, grid: { color: '#1e293b' } },
+                        x: { grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+
+            initResultsToggle();
+        }
+
+        function initResultsToggle() {
+            const btns = document.querySelectorAll('.model-toggle');
+            btns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const model = e.target.dataset.model;
+                    
+                    btns.forEach(b => {
+                        b.classList.remove('bg-slate-700', 'text-indigo-300');
+                        b.classList.add('text-slate-400');
+                    });
+                    
+                    e.target.classList.remove('text-slate-400');
+                    e.target.classList.add('bg-slate-700', 'text-indigo-300');
+
+                    if (model === 'baseline') {
+                        performanceChartInstance.data.datasets[0].data = chartData.performance.baseline;
+                        performanceChartInstance.data.datasets[0].borderColor = '#64748b';
+                        performanceChartInstance.data.datasets[0].backgroundColor = 'rgba(100, 116, 139, 0.1)';
+                        performanceChartInstance.data.datasets[0].pointBackgroundColor = '#64748b';
+                    } else {
+                        performanceChartInstance.data.datasets[0].data = chartData.performance.theory18;
+                        performanceChartInstance.data.datasets[0].borderColor = '#a78bfa';
+                        performanceChartInstance.data.datasets[0].backgroundColor = 'rgba(167, 139, 250, 0.1)';
+                        performanceChartInstance.data.datasets[0].pointBackgroundColor = '#a78bfa';
+                    }
+                    performanceChartInstance.update();
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            
+            // Scroll progress
+            window.addEventListener('scroll', () => {
+                const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+                const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const progressEl = document.querySelector(".scroll-progress");
+                if (progressEl) progressEl.style.width = (winScroll / height) * 100 + "%";
+            });
+        });
+    </script>
+</body>
+</html>

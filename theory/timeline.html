@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeline | Digital Twin & ROM</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script src="../scripts.js" defer></script>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="../index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="../index.html" class="home-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="timeline.html" style="color: var(--accent);"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+        <a href="dictionary.html"><i class="fa-solid fa-book-bookmark"></i> <span>Dictionary</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem;">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal reveal-up">
+          <span class="badge">PROJECT ROADMAP</span>
+          <h2 class="section-title">Implementation Timeline</h2>
+          <p class="section-sub">A detailed 6-month roadmap from research to core development.</p>
+        </div>
+        <div class="gantt-container reveal reveal-up delay-1">
+          <div class="gantt-chart">
+            <!-- Header -->
+            <div class="gantt-header">PHASE</div>
+            <div class="gantt-header">MAR</div>
+            <div class="gantt-header">APR</div>
+            <div class="gantt-header">MAY</div>
+            <div class="gantt-header">JUN</div>
+            <div class="gantt-header">JUL</div>
+            <div class="gantt-header">AUG</div>
+
+            <!-- Phase 1 -->
+            <div class="gantt-row">
+              <div class="gantt-label">1. Research</div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">Planning</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="gantt-row">
+              <div class="gantt-label">2. Core Logic</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">Computational</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="gantt-row">
+              <div class="gantt-label">3. Physical</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">CAD Design</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="gantt-row">
+              <div class="gantt-label">4. Digital Twin</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell" style="grid-column: span 2;">
+                <div class="gantt-bar" style="width: 100%;">Integration</div>
+              </div>
+              <div class="gantt-grid-cell"></div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="gantt-row">
+              <div class="gantt-label">5. Finalization</div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell"></div>
+              <div class="gantt-grid-cell">
+                <div class="gantt-bar" style="width: 100%;">Finalization</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 60px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+          <div class="gantt-bar-info reveal reveal-up">
+            <h4>1. Research & Planning</h4>
+            <p>State-of-the-Art assessment (IGA, ROM, Digital Twin). Software requirements definition and initial literature review.</p>
+          </div>
+          <div class="gantt-bar-info reveal reveal-up delay-1">
+            <h4>2. Computational Core</h4>
+            <p>Definition of 2D/3D parameterized test cases. Generating the ROM basis and validating the reduced model strategy.</p>
+          </div>
+          <div class="gantt-bar-info reveal reveal-up delay-2">
+            <h4>3. Physical Prototypes</h4>
+            <p>CAD design (FreeCAD/SolidWorks) and 3D printing of structural models for the digital twin set-up.</p>
+          </div>
+          <div class="gantt-bar-info reveal reveal-up">
+            <h4>4. Digital Twin Integration</h4>
+            <p>App UI development and real-time virtual environment scaling. Connecting physical and virtual set-ups with hybrid logic.</p>
+          </div>
+          <div class="gantt-bar-info reveal reveal-up delay-1">
+            <h4>5. Finalization & Papers</h4>
+            <p>Developing pedagogical tutorials and environments. Drafting final research papers and internship conclusions.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBE Mumen & EPN04, Cnam.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

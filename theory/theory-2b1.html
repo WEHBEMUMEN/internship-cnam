@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2B.1 | Stiffness Matrix Assembly</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary: #3b82f6; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
+        .badge { background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.2); display: inline-block; margin-bottom: 20px; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #60a5fa, #3b82f6); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
+        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-16">
+            <span class="badge">Phase 2B.1 | Analysis</span>
+            <h1>Stiffness Matrix<br>Assembly</h1>
+            <p class="text-xl text-slate-400">From geometric mapping to physical equilibrium.</p>
+        </header>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">1. The Principle of Virtual Work</h2>
+            <p>In structural mechanics, the equilibrium of a body is found by minimizing the total potential energy. For a 2D elastic patch, this leads to the **Stiffness Matrix** $K$, which relates control point displacements $\mathbf{d}$ to external forces $\mathbf{f}$:</p>
+            <div class="math-card">
+                $$K = \sum_e K_e = \sum_e \int_{\hat{\Omega}_e} B^T D B |J| \, d\hat{\Omega}$$
+            </div>
+            <ul class="list-disc ml-6 mt-4 text-slate-400">
+                <li>$B$ is the **Strain-Displacement** matrix (derivatives of basis functions).</li>
+                <li>$D$ is the **Constitutive** matrix (material properties).</li>
+                <li>$|J|$ is the **Jacobian Determinant** (area scaling factor).</li>
+            </ul>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">2. The B-Matrix for NURBS</h2>
+            <p>Unlike standard FEM, where shape functions are local to each triangle/quad, IGA uses the global NURBS basis $R_i(\xi, \eta)$. The B-matrix maps the $x$ and $y$ displacements of a control point to the local strain vector $[\epsilon_{xx}, \epsilon_{yy}, \gamma_{xy}]^T$:</p>
+            <div class="math-card">
+                $$B_i = \begin{bmatrix} \frac{\partial R_i}{\partial x} & 0 \\ 0 & \frac{\partial R_i}{\partial y} \\ \frac{\partial R_i}{\partial y} & \frac{\partial R_i}{\partial x} \end{bmatrix}$$
+            </div>
+            <p>The physical derivatives are calculated by inverting the Jacobian matrix $J$:</p>
+            <div class="math-card">
+                $$\begin{bmatrix} \frac{\partial R_i}{\partial x} \\ \frac{\partial R_i}{\partial y} \end{bmatrix} = J^{-1} \begin{bmatrix} \frac{\partial R_i}{\partial \xi} \\ \frac{\partial R_i}{\partial \eta} \end{bmatrix}$$
+            </div>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">3. Gaussian Quadrature</h2>
+            <p>Because the integral is computationally expensive and the basis functions are non-polynomial (rational), we use **Gauss-Legendre Quadrature**. For quadratic $p=q=2$ patches, we typically use a $3 \times 3$ grid of Gauss points per knot span to ensure accurate integration of the $B^T D B$ term.</p>
+        </section>
+
+        <section class="content-section text-center">
+            <h2 class="text-2xl font-bold mb-4">Run the Solver</h2>
+            <p class="mb-8 text-slate-400">Launch the 2B Lab to solve a 2D Plate problem and visualize the displacement field.</p>
+            <div class="flex justify-center gap-4">
+                <a href="../app/simulations/iga-sim-2b1/index.html" class="btn btn-primary">Launch Solver Lab</a>
+                <a href="theory-2.5.html" class="btn bg-slate-800 text-white">Back to Jacobian</a>
+            </div>
+        </section>
+        
+        <div class="mt-12 text-center text-slate-500">
+            <p>Next: <a href="theory-nl.html" class="text-blue-400 font-bold">Phase 2B.2 | Nonlinear Newton-Raphson</a></p>
+        </div>
+    </div>
+</body>
+</html>

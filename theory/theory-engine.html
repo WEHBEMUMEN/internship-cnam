@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theory Context | The JavaScript Engine</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-sub: #475569;
+      --accent-primary: #3b82f6;
+      --accent-secondary: #8b5cf6;
+      --border-color: #e2e8f0;
+    }
+    body {
+      background-color: var(--bg-page);
+      background-image: 
+        radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.04) 0%, transparent 40%);
+      min-height: 100vh;
+      color: var(--text-main);
+    }
+    .theory-content { max-width: 900px; margin: 80px auto; padding: 0 20px; padding-bottom: 60px; }
+    h2 { font-size: 3.5rem; margin-bottom: 25px; font-weight: 900; letter-spacing: -0.04em; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    h3 { font-size: 2rem; margin-top: 60px; margin-bottom: 25px; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 15px; }
+    h3::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, rgba(59, 130, 246, 0.2), transparent); }
+    p { line-height: 1.8; color: var(--text-sub); font-size: 1.15rem; margin-bottom: 20px; }
+    
+    .analogy-box {
+      background: linear-gradient(to right, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+      border-left: 4px solid var(--accent-primary);
+      padding: 25px;
+      border-radius: 0 16px 16px 0;
+      margin-bottom: 40px;
+    }
+    .analogy-box h4 { margin-top: 0; color: var(--accent-primary); font-size: 1.25rem; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    .analogy-box p { color: var(--text-main); margin-bottom: 0; font-size: 1.1rem; line-height: 1.7; }
+    
+    .algo-step { display: flex; gap: 25px; margin-bottom: 30px; padding: 25px; background: #ffffff; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+    .step-num { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+    .step-content h4 { margin-top: 0; color: var(--text-main); font-size: 1.25rem; margin-bottom: 10px; }
+    
+    .badge { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: var(--accent-primary); padding: 8px 16px; border-radius: 100px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; display: inline-block; }
+    
+    header { background: rgba(255, 255, 255, 0.9) !important; backdrop-filter: blur(12px) !important; border-bottom: 1px solid var(--border-color) !important; }
+    .logo span { color: var(--text-main) !important; }
+    .nav-links a { color: var(--text-sub) !important; }
+    .nav-links a:hover { color: var(--accent-primary) !important; }
+    .footer { border-top: 1px solid var(--border-color); background: var(--bg-page); color: var(--text-sub); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="../app/index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Simulation Hub</span>
+      </a>
+      <nav class="nav-links">
+        <a href="../app/index.html" class="home-link"><i class="fa-solid fa-arrow-left"></i> <span>Back to Hub</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="theory-content">
+    <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.2);">UNDER THE HOOD</span>
+    <h2>The Javascript V8 Engine</h2>
+    <p>Calculating the complex Cox-de Boor recursions for hundreds of segments is mathematically demanding. Doing it interactively, in a standard web browser without crashing the user's computer, requires specific computer science techniques.</p>
+
+    <div class="analogy-box" style="border-left-color: #f59e0b; background: linear-gradient(to right, rgba(245, 158, 11, 0.05), transparent);">
+      <h4 style="color: #f59e0b;"><i class="fa-solid fa-film"></i> The "Flipbook vs Engine" Analogy</h4>
+      <p>Most 3D animations you watch online (like a Pixar movie or a pre-rendered engineering video) are <strong>Flipbooks</strong>. A supercomputer spent weeks calculating the physics and drawing each frame. When you click play, it simply flips through those static pictures quickly. You cannot touch or alter a flipbook while it's playing.<br><br>The Simulation Hub is a true <strong>Rendering Engine</strong>. It does not load pre-drawn pictures. Instead, every 16 milliseconds (60 times a second), the JavaScript V8 engine recalculates the entire mathematical state of the universe from scratch and draws the curve onto an HTML5 Canvas. Because it rebuilds the universe every frame, you can reach in (via your mouse) and grab a control point, and the system instantly incorporates your actions into the next frame's physics.</p>
+    </div>
+
+    <h3>1. Efficient Recursion</h3>
+    <p>The Cox-de Boor algorithm is a "recursive" function—meaning it calls itself over and over to solve a problem. Poorly written recursive algorithms cause computers to freeze as they get stuck in infinite loops or run out of memory.</p>
+    <p>Our JS engine utilizes an optimized looping structure that calculates lower-degree basis functions first and securely holds them in local variables. It then continuously builds the higher degrees <em>on top</em> of those cached values. This reduces a potentially exponential $O(2^p)$ nightmare into an incredibly fast, linear $O(p^2)$ operation.</p>
+
+    <h3>2. The Animation Request Loop</h3>
+    <p>To draw smoothly, the engine locks into the browser's native `requestAnimationFrame` API.</p>
+    
+    <div class="algo-step">
+      <div class="step-num" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">1</div>
+      <div class="step-content">
+        <h4>Wipe the Slate</h4>
+        <p>The entire `&lt;canvas&gt;` context is completely erased. The screen becomes instantly blank.</p>
+      </div>
+    </div>
+
+    <div class="algo-step">
+      <div class="step-num" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">2</div>
+      <div class="step-content">
+        <h4>Evaluate State</h4>
+        <p>The engine checks the `mouseX` and `mouseY` variables. If the user is dragging a control point, it updates the math matrix with the new coordinates immediately.</p>
+      </div>
+    </div>
+
+    <div class="algo-step">
+      <div class="step-num" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">3</div>
+      <div class="step-content">
+        <h4>Matrix Mapping (0.002 Sampling)</h4>
+        <p>The mathematical Cox-de Boor evaluation fires, calculating exactly 500 positional segments for the curve across the updated knot spans.</p>
+      </div>
+    </div>
+
+    <div class="algo-step">
+      <div class="step-num" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">4</div>
+      <div class="step-content">
+        <h4>Vector Rendering</h4>
+        <p>The HTML5 Canvas API takes those 500 coordinates and traces a continuous pixel line `ctx.lineTo(x, y)` between them, then fills it with vibrant gradients. The entire process takes less than 2 milliseconds, well under the 16ms budget required for 60 FPS!</p>
+      </div>
+    </div>
+
+    <div style="margin-top: 50px; text-align: center;">
+        <a href="../app/index.html" class="btn btn-outline" style="padding: 15px 30px; font-size: 1.1rem; border-radius: 12px;">Back to Hub <i class="fa-solid fa-arrow-left" style="margin-left:8px;"></i></a>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container" style="text-align: center; padding: 20px 0;">
+      <p>&copy; 2026 EPN04, Cnam. Digital Twin Project.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

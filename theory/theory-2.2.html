@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2.2 | p-Refinement (Degree Elevation)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary: #3b82f6; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
+        .badge { background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.2); display: inline-block; margin-bottom: 20px; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #60a5fa, #3b82f6); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
+        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-16">
+            <span class="badge">Phase 2.2 | Smoothness</span>
+            <h1>p-Refinement:<br>Degree Elevation</h1>
+            <p class="text-xl text-slate-400">Achieving higher-order continuity without adding extra mesh elements.</p>
+        </header>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">1. What is p-Refinement?</h2>
+            <p>The p-refinement strategy focuses on increasing the polynomial degree of the basis functions, thereby enhancing the order of approximation. This is particularly effective for problems where the solution is expected to be smooth, as it leverages the spectral accuracy inherent in higher-order polynomials.</p>
+            <p class="mt-4">Unlike classical FEM where shape functions are arbitrarily enriched, degree elevation in NURBS mathematically guarantees that the geometrical shape is maintained <strong>exactly</strong> invariant.</p>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">2. The Piegl-Tiller Algorithm</h2>
+            <p>The standard robust approach for elevating the degree of a NURBS entity, as detailed by Piegl and Tiller, follows a sequential three-step process designed to perfectly maintain the geometric and parametric identity of the model:</p>
+            <ul class="space-y-4 mt-6 text-slate-300">
+                <li><strong class="text-blue-400">1. Bézier Decomposition:</strong> The NURBS curve or surface is decomposed into constituent rational Bézier segments. This is achieved by inserting knots at every internal location until their multiplicity equals the current degree $p$.</li>
+                <li><strong class="text-blue-400">2. Segment Elevation:</strong> Each Bézier segment is elevated from degree $p$ to $p+1$. For a Bézier segment with control points $\mathbf{P}_i$, the new points $\mathbf{Q}_i$ are recursively calculated via homogeneous affine combinations:
+                    <div class="math-card text-center my-3">
+                        $$\mathbf{Q}_i = \frac{i}{p+1} \mathbf{P}_{i-1} + \left(1 - \frac{i}{p+1}\right) \mathbf{P}_i$$
+                    </div>
+                </li>
+                <li><strong class="text-blue-400">3. Re-Composition:</strong> The elevated Bézier segments are merged back into a continuous NURBS structure. This involves removing unnecessary knots at the segment interfaces to restore the original continuity level.</li>
+            </ul>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">3. Direct Degree Elevation (DDE) Fast-Paths</h2>
+            <p>In a two-dimensional context, degree elevation must be performed for both the $\xi$ and $\eta$ tensor directions. This is computationally demanding, as each row and column of the control net must undergo the full decomposition and re-composition process.</p>
+            <p class="mt-4">To improve computational performance, <strong>Direct Degree Elevation (DDE)</strong> algorithms naturally avoid the expensive topological knot insertion and removal steps. DDE methods utilize direct arithmetic updates to the control points, which can be up to 50% faster.</p>
+            <p class="mt-4">For the specific linear clamped NURBS case ($p=1$), DDE maps the control points through a simple averaging geometric scheme that gracefully expands the net:</p>
+            <div class="math-card text-center my-4">
+                $$\mathbf{Q}_{2i} = \mathbf{P}_i, \quad \mathbf{Q}_{2i+1} = \frac{\mathbf{P}_i + \mathbf{P}_{i+1}}{2}$$
+            </div>
+            <p class="mt-4">This algorithmic efficiency is critical in adaptive $k$-refinement cycles where thousands of patches might be elevated synchronously.</p>
+        </section>
+
+        <section class="content-section text-center">
+            <h2 class="text-2xl font-bold mb-4">Experience Degree Elevation</h2>
+            <p class="mb-8 text-slate-400">Launch the p-Lab to see how the mathematical basis stretches and smooths as you elevate the degree.</p>
+            <div class="flex justify-center gap-4">
+                <a href="../app/simulations/iga-sim-2.2/index.html" class="btn btn-primary">Launch p-Refinement Lab</a>
+                <a href="theory-2.1.html" class="btn bg-slate-800 text-white">Back to Mapping</a>
+            </div>
+        </section>
+        
+        <div class="mt-12 text-center text-slate-500">
+            <p>Next: <a href="theory-2.3.html" class="text-green-400 font-bold">Phase 2.3 | h-Refinement & Subdivision</a></p>
+        </div>
+    </div>
+</body>
+</html>
