@@ -123,9 +123,8 @@
             <button id="start-btn" class="w-full py-3 rounded-lg font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20 transition-all">
                 <i class="fa-solid fa-play mr-2"></i> START BATCH GENERATION
             </button>
-        </div>
 
-        <div id="process-ui" class="hidden mt-6 pt-4 border-t border-slate-700">
+        <div id="process-ui" class="mt-6 pt-4 border-t border-slate-700">
             <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1">
                 <span id="status-text">Ready...</span>
                 <span id="percent-text">0%</span>
@@ -137,10 +136,10 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button id="download-btn" class="hidden flex-1 py-3 rounded-lg font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition-all">
+            <button id="download-btn" disabled class="opacity-50 cursor-not-allowed flex-1 py-3 rounded-lg font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition-all">
                 <i class="fa-solid fa-download mr-1"></i> JSON
             </button>
-            <button id="download-csv-btn" class="hidden flex-1 py-3 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-all">
+            <button id="download-csv-btn" disabled class="opacity-50 cursor-not-allowed flex-1 py-3 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-all">
                 <i class="fa-solid fa-file-excel mr-1"></i> CSV
             </button>
         </div>

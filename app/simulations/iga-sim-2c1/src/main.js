@@ -291,7 +291,10 @@ async function startBatch() {
     snapshots = []; parameters = []; l2_errors = [];
     const nSamples = parseInt(document.getElementById('n-slider').value);
     document.getElementById('start-btn').disabled = true;
-    document.getElementById('process-ui').classList.remove('hidden');
+    document.getElementById('download-btn').disabled = true;
+    document.getElementById('download-btn').classList.add('opacity-50', 'cursor-not-allowed');
+    document.getElementById('download-csv-btn').disabled = true;
+    document.getElementById('download-csv-btn').classList.add('opacity-50', 'cursor-not-allowed');
     document.getElementById('log-console').innerHTML = "";
     
     const dims = [ { name: 'E', min: 100, max: 500 }, { name: 'Load', min: 1000, max: 8000 } ];
@@ -336,14 +339,21 @@ async function startBatch() {
         
         updateProgress(i + 1, nSamples);
         updateSurface(res.u);
-        log(`[${i+1}/${nSamples}] E=${mu.E.toFixed(0)}k F=${mu.Load.toFixed(0)} | Err: ${(res.l2*100).toFixed(3)}%`);
+        const l2Val = activeSnapshotType === 'displacement' ? res.l2u : res.l2s;
+        log(`[${i+1}/${nSamples}] E=${mu.E.toFixed(0)}k F=${mu.Load.toFixed(0)} | Err: ${(l2Val*100).toFixed(3)}%`);
     }
 
     log(`Database generation complete.`);
     activity.isGenerating = false;
     document.getElementById('start-btn').disabled = false;
-    document.getElementById('download-btn').classList.remove('hidden');
-    document.getElementById('download-csv-btn').classList.remove('hidden');
+    document.getElementById('download-btn').disabled = false;
+    document.getElementById('download-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+    document.getElementById('download-csv-btn').disabled = false;
+    document.getElementById('download-csv-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+    
+    // Auto-scroll to the bottom of the panel so buttons are visible
+    const panel = document.getElementById('ui-panel');
+    setTimeout(() => { panel.scrollTop = panel.scrollHeight; }, 100);
 }
 
 function updateProgress(curr, total) {
