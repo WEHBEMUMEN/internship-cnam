@@ -680,9 +680,6 @@ class IGA2DSolver {
             
             [A[i], A[max]] = [A[max], A[i]]; [b[i], b[max]] = [b[max], b[i]];
             
-            // Robust Singularity Handling: 
-            // If the pivot is effectively zero, it means this DOF is unconstrained/unloaded.
-            // We set it to stay fixed (0 displacement) to avoid Inf/NaN overflows.
             if (Math.abs(A[i][i]) < 1e-15) {
                 A[i][i] = 1.0; 
                 b[i] = 0;
@@ -700,6 +697,76 @@ class IGA2DSolver {
             let s = 0;
             for (let j = i + 1; j < n; j++) s += A[i][j] * x[j];
             x[i] = (b[i] - s) / A[i][i];
+        }
+        return x;
+    }
+
+    /**
+     * LU Decomposition with Partial Pivoting
+     * Factors A into P*A = L*U
+     * A is modified in-place to store both L and U.
+     * Returns the permutation vector P.
+     */
+    decomposeLU(A) {
+        const n = A.length;
+        const P = new Uint32Array(n);
+        for (let i = 0; i < n; i++) P[i] = i;
+
+        for (let j = 0; j < n; j++) {
+            // Find pivot
+            let maxVal = 0;
+            let pivotRow = j;
+            for (let i = j; i < n; i++) {
+                if (Math.abs(A[i][j]) > maxVal) {
+                    maxVal = Math.abs(A[i][j]);
+                    pivotRow = i;
+                }
+            }
+
+            // Swap rows
+            if (pivotRow !== j) {
+                [A[j], A[pivotRow]] = [A[pivotRow], A[j]];
+                [P[j], P[pivotRow]] = [P[pivotRow], P[j]];
+            }
+
+            // Singularity check
+            if (Math.abs(A[j][j]) < 1e-15) {
+                A[j][j] = 1.0; // Stabilize
+            }
+
+            for (let i = j + 1; i < n; i++) {
+                A[i][j] /= A[j][j];
+                for (let k = j + 1; k < n; k++) {
+                    A[i][k] -= A[i][j] * A[j][k];
+                }
+            }
+        }
+        return P;
+    }
+
+    /**
+     * Solves the system LU * x = P * b
+     */
+    solveLU(LU, P, b) {
+        const n = b.length;
+        const x = new Float64Array(n);
+        
+        // 1. Forward Substitution (Ly = Pb)
+        for (let i = 0; i < n; i++) {
+            let sum = b[P[i]];
+            for (let j = 0; j < i; j++) {
+                sum -= LU[i][j] * x[j];
+            }
+            x[i] = sum;
+        }
+
+        // 2. Backward Substitution (Ux = y)
+        for (let i = n - 1; i >= 0; i--) {
+            let sum = x[i];
+            for (let j = i + 1; j < n; j++) {
+                sum -= LU[i][j] * x[j];
+            }
+            x[i] = sum / LU[i][i];
         }
         return x;
     }
@@ -737,6 +804,34 @@ class IGA2DSolver {
         const sxy = (s_rr - s_tt) * s * c + s_rt * (c*c - s*s);
 
         return { sxx, syy, sxy };
+    }
+
+    getExactDisplacement(x, y, R, Tx, E, nu) {
+        const r = Math.sqrt(x * x + y * y);
+        const theta = Math.atan2(y, x);
+        const G = E / (2 * (1 + nu));
+        const k = (3 - nu) / (1 + nu); // Plane Stress
+
+        const r2 = r * r;
+        const R2 = R * R;
+        const R4 = R2 * R2;
+        const cos2t = Math.cos(2 * theta);
+        const sin2t = Math.sin(2 * theta);
+
+        // Polar displacements (Kirsch)
+        const ur = (Tx / (8 * G * r)) * (
+            (k - 1) * r2 + 2 * R2 + 
+            (2 * (k + 1) * R2 + 2 * r2 - 2 * R4 / r2) * cos2t
+        );
+        const ut = (Tx / (8 * G * r)) * (
+            (2 * (k - 1) * R2 - 2 * r2 - 2 * R4 / r2) * sin2t
+        );
+
+        // Transform to Cartesian
+        const ux = ur * Math.cos(theta) - ut * Math.sin(theta);
+        const uy = ur * Math.sin(theta) + ut * Math.cos(theta);
+
+        return { ux, uy };
     }
 
     getNumericalStress(patch, u_disp, u, v, E, nu) {
@@ -780,12 +875,8 @@ class IGA2DSolver {
         let err2 = 0; let ex2 = 0;
         const gauss = GaussQuadrature2D.getPoints(p + 1);
 
-        // Physical radius cutoff: only integrate over r <= rMax
-        // This excludes the outer boundary strip where the degenerate mapping
-        // creates non-integrable stress singularities (σ ~ 1/detJ).
-        // r_max = 0.85*L covers the stress concentration zone while avoiding artifacts.
         const L = 4.0;
-        const rMax = 0.85 * L * Math.SQRT2; // ~4.8, excludes far corner region
+        const rMax = 0.85 * L * Math.SQRT2; 
         const minDetJ = 1e-6;
 
         for (let i = 0; i < uniqueU.length - 1; i++) {
@@ -801,21 +892,17 @@ class IGA2DSolver {
                         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
                         const detJ = Math.abs(deriv.dU.x * deriv.dV.y - deriv.dV.x * deriv.dU.y);
 
-                        // Skip near-singular Gauss points
                         if (detJ < minDetJ) continue;
 
-                        // Physical position and radius check
                         const pos = this.engine.evaluateSurface(patch, u, v);
                         const r = Math.sqrt(pos.x * pos.x + pos.y * pos.y);
                         if (r > rMax) continue;
-                        // Also skip if too close to outer walls
                         if (pos.x > 0.95 * L || pos.y > 0.95 * L) continue;
 
                         const Jmod = detJ * gauss.weights[gu] * gauss.weights[gv] * (u1-u0)*(v1-v0)/4;
                         const sN = this.getNumericalStress(patch, u_disp, u, v, E, nu);
                         const sE = this.getExactStress(pos.x, pos.y, R, Tx);
 
-                        // Additional safety: skip points with obviously blown-up stresses
                         const maxPhysicalStress = 5 * Math.abs(Tx);
                         if (Math.abs(sN.sxx) > maxPhysicalStress * 10 || 
                             Math.abs(sN.syy) > maxPhysicalStress * 10 ||
@@ -827,7 +914,69 @@ class IGA2DSolver {
                 }
             }
         }
-        return Math.sqrt(err2) / Math.sqrt(ex2);
+        return Math.sqrt(err2) / (Math.sqrt(ex2) || 1e-12);
+    }
+
+    calculateRelativeL2DisplacementError(patch, u_disp, E, nu, Tx, R) {
+        const { U, V, p } = patch;
+        const uniqueU = [...new Set(U)]; const uniqueV = [...new Set(V)];
+        const nBasisU = patch.controlPoints.length;
+        const nBasisV = patch.controlPoints[0].length;
+        
+        let err2 = 0; let ex2 = 0;
+        const gauss = GaussQuadrature2D.getPoints(p + 1);
+
+        const L = 4.0;
+        const rMax = 0.85 * L * Math.SQRT2; 
+
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            for (let j = 0; j < uniqueV.length - 1; j++) {
+                const u0 = uniqueU[i]; const u1 = uniqueU[i+1];
+                const v0 = uniqueV[j]; const v1 = uniqueV[j+1];
+                if (u1 - u0 < 1e-9 || v1 - v0 < 1e-9) continue;
+
+                for (let gu = 0; gu < gauss.points.length; gu++) {
+                    for (let gv = 0; gv < gauss.points.length; gv++) {
+                        const u = ((u1 - u0) * gauss.points[gu] + (u1 + u0)) / 2;
+                        const v = ((v1 - v0) * gauss.points[gv] + (v1 + v0)) / 2;
+                        
+                        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                        const detJ = Math.abs(deriv.dU.x * deriv.dV.y - deriv.dV.x * deriv.dU.y);
+                        if (detJ < 1e-12) continue;
+
+                        const pos = this.engine.evaluateSurface(patch, u, v);
+                        const r = Math.sqrt(pos.x * pos.x + pos.y * pos.y);
+                        if (r > rMax) continue;
+                        if (pos.x > 0.95 * L || pos.y > 0.95 * L) continue;
+
+                        const Jmod = detJ * gauss.weights[gu] * gauss.weights[gv] * (u1-u0)*(v1-v0)/4;
+
+                        // Numerical displacement at (u, v)
+                        let uNx = 0, uNy = 0;
+                        const W = deriv.W;
+                        for (let a = 0; a < nBasisU; a++) {
+                            const Na = this.engine.basis1D(a, patch.p, U, u);
+                            if (Na === 0) continue;
+                            for (let b = 0; b < nBasisV; b++) {
+                                const Mb = this.engine.basis1D(b, patch.q, V, v);
+                                if (Mb === 0) continue;
+                                const R_basis = (Na * Mb * patch.weights[a][b]) / W;
+                                const idx = (a * nBasisV + b) * 2;
+                                uNx += R_basis * u_disp[idx];
+                                uNy += R_basis * u_disp[idx + 1];
+                            }
+                        }
+
+                        // Exact displacement
+                        const uE = this.getExactDisplacement(pos.x, pos.y, R, Tx, E, nu);
+
+                        err2 += (Math.pow(uNx - uE.ux, 2) + Math.pow(uNy - uE.uy, 2)) * Jmod;
+                        ex2 += (Math.pow(uE.ux, 2) + Math.pow(uE.uy, 2)) * Jmod;
+                    }
+                }
+            }
+        }
+        return Math.sqrt(err2) / (Math.sqrt(ex2) || 1e-12);
     }
 
 }

@@ -35,6 +35,19 @@ let activeState = { load: -1, h: -1, p: -1, k: false, E: -1, nu: -1, useHybridSo
 let pyodideReady = false;
 let pyodide = null;
 
+// Solver & Scalar Scaling State
+let solverCache = {
+    meshKey: "",
+    LU: null,
+    P: null,
+    referenceData: null, // { u_ref: Float64Array, load_ref: number, stress_ref: Float32Array }
+    useScalarScaling: true 
+};
+
+function getMeshKey() {
+    return `${targetState.h}-${targetState.p}-${targetState.k}-${targetState.E}-${targetState.nu}`;
+}
+
 async function initPyodide() {
     console.log("Python/WASM hybrid solver is disabled.");
 }
@@ -132,12 +145,52 @@ window.setViewMode = (m) => {
     updateSurface();
 };
 
-function init() {
-    setupUI();
-    updateSurface();
-    updateBoundaryVisuals();
-    updateForceArrows();
-    animate();
+function precomputeReferenceCache(u_ref) {
+    const t0 = performance.now();
+    const res = 50;
+    const nPts = (res + 1) * (res + 1);
+    const stress_ref = new Float32Array(nPts);
+    const dx_ref = new Float32Array(nPts);
+    const dy_ref = new Float32Array(nPts);
+    const px_ref = new Float32Array(nPts);
+    const py_ref = new Float32Array(nPts);
+    const pz_ref = new Float32Array(nPts);
+
+    const stressCap = 4.0 * Math.abs(solverCache.referenceData.load_ref);
+
+    for (let i = 0; i <= res; i++) {
+        for (let j = 0; j <= res; j++) {
+            const u = i / res;
+            const v = j / res;
+            const idx = i * (res + 1) + j;
+            
+            const state = engine.getSurfaceState(patch, u, v);
+            px_ref[idx] = state.position.x;
+            py_ref[idx] = state.position.y;
+            pz_ref[idx] = state.position.z;
+
+            // Displacement
+            const interp = interpolateDisplacement(u, v, state.denominator, u_ref);
+            if (Number.isFinite(interp.x) && Number.isFinite(interp.y)) {
+                dx_ref[idx] = interp.x;
+                dy_ref[idx] = interp.y;
+            } else {
+                dx_ref[idx] = 0;
+                dy_ref[idx] = 0;
+            }
+
+            const s = solver.getNumericalStress(patch, u_ref, u, v, targetState.E, targetState.nu);
+            const val = Number.isFinite(s.vonMises) ? Math.min(s.vonMises, stressCap) : 0;
+            stress_ref[idx] = val;
+        }
+    }
+    solverCache.referenceData.stress_ref = stress_ref;
+    solverCache.referenceData.dx_ref = dx_ref;
+    solverCache.referenceData.dy_ref = dy_ref;
+    solverCache.referenceData.px_ref = px_ref;
+    solverCache.referenceData.py_ref = py_ref;
+    solverCache.referenceData.pz_ref = pz_ref;
+    console.log(`Vis Cache Rebuilt in ${(performance.now() - t0).toFixed(1)}ms`);
 }
 
 function updateSurface() {
@@ -152,17 +205,21 @@ function updateSurface() {
     const mode = viewMode;
     let maxVal = 1;
 
-    // EXCLUSIVE MAX CALCULATION
-    if (analysisData.u) {
-        if (mode === 'displacement') maxVal = calculateMaxDisp(analysisData.u);
-        else maxVal = calculateMaxStress(analysisData.u);
+    // SCALAR SCALING FACTOR
+    const currentLoad = targetState.load;
+    const ref = solverCache.referenceData;
+    const scale = (ref && solverCache.useScalarScaling) ? (currentLoad / ref.load_ref) : 1.0;
+    const u_active = (ref && solverCache.useScalarScaling) ? ref.u_ref : (analysisData.u || null);
+
+    if (u_active) {
+        if (mode === 'displacement') maxVal = calculateMaxDisp(u_active) * Math.abs(scale);
+        else maxVal = calculateMaxStress(u_active) * Math.abs(scale);
     }
 
     // Dynamic UI Legend Synchronization
     const legendMax = document.getElementById('legend-val-max');
     const legendMin = document.getElementById('legend-val-min');
     const unit = mode === 'displacement' ? 'mm' : 'MPa';
-    
     if (legendMax) legendMax.innerText = `${maxVal.toFixed(mode === 'displacement' ? 3 : 1)} ${unit}`;
     if (legendMin) legendMin.innerText = `${(0).toFixed(mode === 'displacement' ? 3 : 1)} ${unit}`;
 
@@ -170,36 +227,60 @@ function updateSurface() {
         const u = i / res;
         for (let j = 0; j <= res; j++) {
             const v = j / res;
-            const state = engine.getSurfaceState(patch, u, v);
-            let p = { ...state.position };
+            let val = 0;
 
-            if (analysisData.u) {
-                const interp = interpolateDisplacement(u, v, state.denominator);
+            if (u_active && ref && ref.dx_ref) {
+                // EXTREMELY FAST CACHE LOOKUP
+                const idx = i * (res + 1) + j;
+                const dx = ref.dx_ref[idx] * scale;
+                const dy = ref.dy_ref[idx] * scale;
                 
-                // NAN SAFETY FOR GEOMETRY
-                if (Number.isFinite(interp.x) && Number.isFinite(interp.y)) {
-                    p.x += interp.x;
-                    p.y += interp.y;
-                }
-                
-                let val = 0;
+                const px = ref.px_ref[idx] + dx;
+                const py = ref.py_ref[idx] + dy;
+                const pz = ref.pz_ref[idx];
+                positions.push(px, py, pz);
+
                 if (mode === 'displacement') {
-                    val = Math.abs(interp.x); 
-                } else {
-                    const s = solver.getNumericalStress(patch, analysisData.u, u, v, targetState.E, targetState.nu);
-                    // Cap stress at a physical maximum to prevent singularity blow-ups
-                    // from washing out the heatmap (SCF = 3, plus margin → 4× Tx)
-                    const stressCap = 4.0 * Math.abs(targetState.load);
-                    val = Number.isFinite(s.vonMises) ? Math.min(s.vonMises, stressCap) : 0;
+                    val = Math.abs(dx); 
+                } else if (ref.stress_ref) {
+                    val = ref.stress_ref[idx] * Math.abs(scale);
                 }
-                
                 const t = Math.min(Math.max(val / (maxVal || 1e-6), 0), 1.0);
                 const color = getHeatmapColor(t);
                 colors.push(color.r, color.g, color.b);
             } else {
-                colors.push(0.1, 0.2, 0.4);
+                // FALLBACK
+                const state = engine.getSurfaceState(patch, u, v);
+                let p = { ...state.position };
+
+                if (u_active) {
+                    const interp = interpolateDisplacement(u, v, state.denominator, u_active);
+                    const dx = interp.x * scale;
+                    const dy = interp.y * scale;
+
+                    if (Number.isFinite(dx) && Number.isFinite(dy)) {
+                        p.x += dx;
+                        p.y += dy;
+                    }
+                    
+                    if (mode === 'displacement') {
+                        val = Math.abs(dx); 
+                    } else if (ref && ref.stress_ref) {
+                        val = ref.stress_ref[i * (res + 1) + j] * Math.abs(scale);
+                    } else {
+                        const sRef = solver.getNumericalStress(patch, u_active, u, v, targetState.E, targetState.nu);
+                        const stressCap = 4.0 * Math.abs(ref ? ref.load_ref : currentLoad);
+                        val = Number.isFinite(sRef.vonMises) ? (Math.min(sRef.vonMises, stressCap) * Math.abs(scale)) : 0;
+                    }
+                    
+                    const t = Math.min(Math.max(val / (maxVal || 1e-6), 0), 1.0);
+                    const color = getHeatmapColor(t);
+                    colors.push(color.r, color.g, color.b);
+                } else {
+                    colors.push(0.1, 0.2, 0.4);
+                }
+                positions.push(p.x, p.y, p.z);
             }
-            positions.push(p.x, p.y, p.z);
         }
     }
 
@@ -229,7 +310,7 @@ function updateSurface() {
     scene.add(wireframeOverlay);
 }
 
-function interpolateDisplacement(u, v, denom) {
+function interpolateDisplacement(u, v, denom, u_disp) {
     const nU = patch.controlPoints.length;
     const nV = patch.controlPoints[0].length;
     let dx = 0, dy = 0;
@@ -240,8 +321,8 @@ function interpolateDisplacement(u, v, denom) {
             const Mj = engine.basis1D(j, patch.q, patch.V, v);
             const R = (Ni * Mj * patch.weights[i][j]) / denom;
             const idx = (i * nV + j) * 2;
-            dx += R * analysisData.u[idx];
-            dy += R * analysisData.u[idx + 1];
+            dx += R * u_disp[idx];
+            dy += R * u_disp[idx + 1];
         }
     }
     return { x: dx, y: dy };
@@ -403,23 +484,29 @@ function updateForceArrows() {
 }
 
 async function solverLoop() {
-    const stateChanged = targetState.load !== activeState.load || 
-                         targetState.h !== activeState.h || 
+    const currentMeshKey = getMeshKey();
+    const meshChanged = targetState.h !== activeState.h || 
                          targetState.p !== activeState.p ||
                          targetState.k !== activeState.k ||
                          targetState.E !== activeState.E ||
                          targetState.nu !== activeState.nu;
+    
+    const loadChanged = targetState.load !== activeState.load;
+    
+    // Optimization: If Scalar Scaling is on and only load changed, just re-render
+    if (solverCache.useScalarScaling && !meshChanged && loadChanged) {
+        updateSurface();
+        activeState.load = targetState.load;
+    }
+
+    const stateChanged = meshChanged || loadChanged;
 
     if (!isSolving && stateChanged) {
         isSolving = true;
 
-        // Sync Material Properties to Solver
-        solver.E = targetState.E;
-        solver.nu = targetState.nu;
-        
-        // If topology changed, re-apply refinements
-        if (targetState.h !== activeState.h || targetState.p !== activeState.p || targetState.k !== activeState.k) {
+        if (meshChanged) {
             applyRefinements();
+            solverCache.meshKey = currentMeshKey;
         }
 
         await new Promise(r => setTimeout(r, 10));
@@ -428,61 +515,82 @@ async function solverLoop() {
         const nV = patch.controlPoints[0].length;
 
         const bcs = [];
-        // Edge u=0 is bottom (y=0) -> Fix Y (Symmetry)
-        if (patch.controlPoints[0]) {
-            for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
-        }
-        
-        // NEW: Physically accurate 1D Gaussian Integration for boundary traction
-        const integratedForces = solver.calculateNodalTraction(patch, targetState.load, 'right');
+        if (patch.controlPoints[0]) for(let j=0; j<nV; j++) bcs.push({ i: 0, j: j, axis: 'y', value: 0 });
+        if (patch.controlPoints[nU-1]) for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
+
+        // Solve for Reference Load (or current if Scaling is off)
+        const solverLoad = solverCache.useScalarScaling ? 100 : targetState.load;
+        const integratedForces = solver.calculateNodalTraction(patch, solverLoad, 'right');
         const loads = [];
         for (let i = 0; i < integratedForces.length; i++) {
             if (integratedForces[i] !== 0) {
-                // Map flat index back to {i, j, axis} if needed, or update solver to take raw vector
-                const dofId = i % 2;
                 const nodeIdx = Math.floor(i / 2);
-                const a = Math.floor(nodeIdx / nV);
-                const b = nodeIdx % nV;
-                
-                if (dofId === 0) loads.push({ i: a, j: b, fx: integratedForces[i], fy: 0 });
+                const a = Math.floor(nodeIdx / nV), b = nodeIdx % nV;
+                if (i % 2 === 0) loads.push({ i: a, j: b, fx: integratedForces[i], fy: 0 });
                 else            loads.push({ i: a, j: b, fx: 0, fy: integratedForces[i] });
             }
         }
 
-        // Edge u=1 is left (x=0) -> Fix X (Symmetry)
-        if (patch.controlPoints[nU-1]) {
-            for(let j=0; j<nV; j++) bcs.push({ i: nU-1, j: j, axis: 'x', value: 0 });
-        }
-
         try {
-            // LOCAL JS SOLVE
-            analysisData.u = solver.solve(patch, bcs, loads);
-            analysisData.isRemote = false;
+            // Check LU Cache
+            let u_sol;
+            const useLU = document.getElementById('toggle-lu')?.checked;
+            if (useLU) {
+                if (!solverCache.LU || meshChanged) {
+                    if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = "Factorizing Stiffness...";
+                    const K_full = solver.assembleStiffness(patch);
+                    solver.applyPenaltyConstraints(K_full, patch);
+                    const nDofs = nU * nV * 2;
+                    const freeIndices = [], fixedValues = new Map();
+                    bcs.forEach(bc => {
+                        const baseIdx = (bc.i * nV + bc.j) * 2;
+                        if (bc.axis === 'x' || bc.axis === 'both') fixedValues.set(baseIdx, bc.value);
+                        if (bc.axis === 'y' || bc.axis === 'both') fixedValues.set(baseIdx + 1, bc.value);
+                    });
+                    for (let i = 0; i < nDofs; i++) if (!fixedValues.has(i)) freeIndices.push(i);
+                    const K_red = Array.from({ length: freeIndices.length }, () => new Float64Array(freeIndices.length));
+                    for (let i = 0; i < freeIndices.length; i++) for (let j = 0; j < freeIndices.length; j++) K_red[i][j] = K_full[freeIndices[i]][freeIndices[j]];
+                    solverCache.LU = K_red;
+                    solverCache.P = solver.decomposeLU(solverCache.LU);
+                    solverCache.freeIndices = freeIndices;
+                    solverCache.fixedValues = fixedValues;
+                }
+                const F_full = new Float64Array(nU * nV * 2).fill(0);
+                for (let i = 0; i < integratedForces.length; i++) F_full[i] = integratedForces[i];
+                const F_red = new Float64Array(solverCache.freeIndices.length);
+                for (let i = 0; i < solverCache.freeIndices.length; i++) F_red[i] = F_full[solverCache.freeIndices[i]];
+                const sol_red = solver.solveLU(solverCache.LU, solverCache.P, F_red);
+                u_sol = new Float64Array(nU * nV * 2);
+                let freeIdx = 0;
+                for (let i = 0; i < u_sol.length; i++) u_sol[i] = solverCache.fixedValues.has(i) ? solverCache.fixedValues.get(i) : sol_red[freeIdx++];
+            } else {
+                solver.E = targetState.E; solver.nu = targetState.nu;
+                u_sol = solver.solve(patch, bcs, loads);
+            }
+
+            if (solverCache.useScalarScaling) {
+                solverCache.referenceData = { u_ref: u_sol, load_ref: solverLoad };
+                precomputeReferenceCache(u_sol);
+                analysisData.u = null; 
+            } else {
+                analysisData.u = u_sol;
+            }
+
             const t1 = performance.now();
-            
+            const u_active = solverCache.useScalarScaling ? solverCache.referenceData.u_ref : u_sol;
+            const activeLoad = solverCache.useScalarScaling ? solverCache.referenceData.load_ref : targetState.load;
+            const scale = targetState.load / activeLoad;
+
             // EXCLUSIVE CALCULATION & UI UPDATE
             if (viewMode === 'displacement') {
-                const maxD = calculateMaxDisp(analysisData.u);
-                if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `${maxD.toFixed(4)} mm`;
-                if (document.getElementById('max-stress')) document.getElementById('max-stress').textContent = `---`;
-                if (document.getElementById('l2-error')) document.getElementById('l2-error').textContent = `---`;
-                if (document.getElementById('legend-val-max')) document.getElementById('legend-val-max').innerText = `${maxD.toFixed(3)} mm`;
-                if (document.getElementById('legend-val-min')) document.getElementById('legend-val-min').innerText = `0.000 mm`;
+                const maxD = calculateMaxDisp(u_active) * scale;
+                const l2ErrorDisp = solver.calculateRelativeL2DisplacementError(patch, u_active, targetState.E, targetState.nu, activeLoad, 1.0);
+                if (document.getElementById('l2-error')) document.getElementById('l2-error').textContent = `${(l2ErrorDisp * 100).toFixed(3)}%`;
+                if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `[LU+Scaling] L2 Err = ${(l2ErrorDisp*100).toFixed(4)}% | ${(t1-t0).toFixed(1)}ms`;
             } else {
-                // Stress analysis + Benchmark error
-                const maxS = calculateMaxStress(analysisData.u);
-                const R_hole = 1.0; 
-                const l2Error = solver.calculateRelativeL2Error(patch, analysisData.u, targetState.E, targetState.nu, targetState.load, R_hole);
-
-                if (document.getElementById('max-disp')) document.getElementById('max-disp').textContent = `---`;
-                if (document.getElementById('max-stress')) document.getElementById('max-stress').textContent = `${maxS.toFixed(2)} MPa`;
+                const l2Error = solver.calculateRelativeL2Error(patch, u_active, targetState.E, targetState.nu, activeLoad, 1.0);
                 if (document.getElementById('l2-error')) document.getElementById('l2-error').textContent = `${(l2Error * 100).toFixed(3)}%`;
-                if (document.getElementById('legend-val-max')) document.getElementById('legend-val-max').innerText = `${maxS.toFixed(1)} MPa`;
-                if (document.getElementById('legend-val-min')) document.getElementById('legend-val-min').innerText = `0.0 MPa`;
-                
-                if (document.getElementById('conv-stat')) {
-                    document.getElementById('conv-stat').textContent = `Stress Benchmarked: L2 Err = ${(l2Error*100).toFixed(4)}% | ${(t1 - t0).toFixed(1)}ms`;
-                }
+                if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `[LU+Scaling] Stress Err = ${(l2Error*100).toFixed(4)}% | ${(t1-t0).toFixed(1)}ms`;
             }
 
             updateSurface();
@@ -490,13 +598,9 @@ async function solverLoop() {
             updateControlPoints();
             updateForceArrows();
             
-            if (viewMode === 'displacement' && document.getElementById('conv-stat')) {
-                document.getElementById('conv-stat').textContent = `Displacement Computed: Solved in ${(performance.now() - t0).toFixed(1)}ms`;
-            }
             activeState = JSON.parse(JSON.stringify(targetState));
-        }
- catch (err) {
-            if (document.getElementById('conv-stat')) document.getElementById('conv-stat').textContent = `Error: ${err.message}`;
+        } catch (err) {
+            console.error(err);
         }
         isSolving = false;
     }

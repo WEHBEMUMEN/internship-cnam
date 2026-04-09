@@ -175,6 +175,20 @@
                     <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
                     <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Applied Forces</span>
                 </label>
+                <label class="flex items-center gap-3 cursor-pointer group mt-2 pt-2 border-t border-slate-700/50">
+                    <input type="checkbox" id="toggle-lu" checked class="hidden peer">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-blue-400 font-bold group-hover:text-blue-300 transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-bolt"></i> Live LU Optimization
+                    </span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer group mt-2 pt-2 border-t border-slate-700/50">
+                    <input type="checkbox" id="toggle-scalar" checked class="hidden peer" onchange="solverCache.useScalarScaling = this.checked">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-indigo-500 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-indigo-400 font-bold group-hover:text-indigo-300 transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-arrows-left-right-to-line"></i> Scalar Load Scaling
+                    </span>
+                </label>
             </div>
         </div>
         
