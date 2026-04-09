@@ -268,7 +268,7 @@ async function runProbe() {
     solverCache.referenceData = { u_ref: res.u, load_ref: targetState.load };
     
     // Automatically switch view if stress type is selected
-    if (activeSnapshotType === 'stress') viewMode = 'stress';
+    viewMode = (activeSnapshotType === 'stress') ? 'stress' : 'displacement';
     updateSurface(res.u);
     
     document.getElementById('probe-results').classList.remove('hidden');
@@ -307,20 +307,30 @@ async function startBatch() {
         const res = await solveVerified();
         
         let snapshotData = [];
-        if (activeSnapshotType === 'displacement') {
+        let snapshotDataStress = [];
+        if (activeSnapshotType === 'displacement' || activeSnapshotType === 'all') {
             snapshotData = Array.from(res.u);
-        } else {
+        } 
+        if (activeSnapshotType === 'stress' || activeSnapshotType === 'all') {
             // Stress Snapshot: Sample von Mises on a 30x30 grid
             const resGrid = 30;
+            const tempStress = [];
             for (let gu = 0; gu <= resGrid; gu++) {
                 for (let gv = 0; gv <= resGrid; gv++) {
                     const s = solver.getNumericalStress(patch, res.u, gu/resGrid, gv/resGrid, targetState.E, targetState.nu);
-                    snapshotData.push(s.vonMises);
+                    tempStress.push(s.vonMises);
                 }
             }
+            if (activeSnapshotType === 'all') snapshotDataStress = tempStress;
+            else snapshotData = tempStress;
         }
 
-        snapshots.push(snapshotData); 
+        if (activeSnapshotType === 'all') {
+            snapshots.push({ disp: snapshotData, stress: snapshotDataStress });
+        } else {
+            snapshots.push(snapshotData); 
+        }
+
         parameters.push({ ...mu }); 
         l2_errors.push(activeSnapshotType === 'displacement' ? res.l2u : res.l2s);
         
@@ -333,6 +343,7 @@ async function startBatch() {
     activity.isGenerating = false;
     document.getElementById('start-btn').disabled = false;
     document.getElementById('download-btn').classList.remove('hidden');
+    document.getElementById('download-csv-btn').classList.remove('hidden');
 }
 
 function updateProgress(curr, total) {
@@ -376,8 +387,38 @@ function setupUI() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = `snapshots_${activeSnapshotType}.json`; a.click();
     };
+    document.getElementById('download-csv-btn').onclick = () => {
+        let hasDisp = activeSnapshotType === 'displacement' || activeSnapshotType === 'all';
+        let hasStress = activeSnapshotType === 'stress' || activeSnapshotType === 'all';
+
+        let csv = "E,Load,L2_Error";
+        let lenDisp = hasDisp ? (activeSnapshotType === 'all' ? snapshots[0].disp.length : snapshots[0].length) : 0;
+        let lenStress = hasStress ? (activeSnapshotType === 'all' ? snapshots[0].stress.length :  snapshots[0].length) : 0;
+        
+        if (hasDisp) {
+            for(let i=0; i<lenDisp; i++) csv += `,Disp_${i}`;
+        }
+        if (hasStress) {
+            for(let i=0; i<lenStress; i++) csv += `,Stress_${i}`;
+        }
+        csv += "\n";
+        
+        for (let i = 0; i < parameters.length; i++) {
+             csv += `${parameters[i].E},${parameters[i].Load},${l2_errors[i]}`;
+             if (activeSnapshotType === 'all') {
+                 csv += `,${snapshots[i].disp.join(',')},${snapshots[i].stress.join(',')}`;
+             } else {
+                 csv += `,${snapshots[i].join(',')}`;
+             }
+             csv += "\n";
+        }
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `snapshots_${activeSnapshotType}.csv`; a.click();
+    };
     window.setViewMode = (m) => { viewMode = m; updateSurface(); };
-    window.setSnapshotMeta = (t) => { activeSnapshotType = t; };
+    window.setSnapshotMeta = (t) => { activeSnapshotType = t; viewMode = (t === 'stress') ? 'stress' : 'displacement'; updateSurface(); };
     updateStatusLabels();
 }
 
