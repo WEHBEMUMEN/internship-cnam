@@ -477,7 +477,7 @@ function updateForceArrows() {
         const state = engine.getSurfaceState(patch, bestU, 1.0);
         const cp = state.position;
         const dir = new THREE.Vector3(1, 0, 0);
-        const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/250, 0xef4444);
+        const arrow = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(cp.x, cp.y, cp.z), targetState.load/5000 + 0.3, 0xef4444);
         scene.add(arrow);
         forceVisuals.push(arrow);
     }

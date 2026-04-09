@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snapshot Lab 2C.1 | IGA ROM Trainer</title>
+    <script>if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; width: 340px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 20px;
+            z-index: 10; pointer-events: auto;
+            max-height: calc(100vh - 40px); overflow-y: auto;
+        }
+        #convergence-popup {
+            position: absolute; bottom: 20px; right: 20px; width: 320px; height: auto;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 15px;
+            z-index: 10; pointer-events: auto; display: flex; flex-direction: column;
+        }
+        .control-group { margin-bottom: 20px; }
+        .control-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 12px; display: block; }
+        .chart-container { flex: 1; min-height: 200px; position: relative; background: rgba(0,0,0,0.4); border-radius: 12px; padding: 10px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.05); }
+        .progress-container { margin-top: 10px; background: rgba(255,255,255,0.05); height: 6px; border-radius: 3px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: #0ea5e9; transition: width 0.3s; }
+        .log-box { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; background: #020617; border-radius: 8px; padding: 12px; margin-top: 15px; height: 100px; overflow-y: auto; color: #94a3b8; border: 1px solid #1e293b; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="ui-panel">
+        <h1 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <span class="text-indigo-500">2C.1</span> Snapshot Lab
+            <span class="bg-indigo-600 text-white px-2 py-0.5 rounded text-[10px]">GENERATOR</span>
+        </h1>
+
+        <!-- Live Status Cluster -->
+        <div class="mb-4 bg-slate-900/80 border border-slate-700/50 rounded-xl p-3 flex justify-around text-center">
+            <div>
+                <div class="text-[9px] text-slate-500 uppercase tracking-tighter">Degree</div>
+                <div id="status-degree" class="text-xs font-mono text-emerald-400">p=2, q=2</div>
+            </div>
+            <div class="border-x border-slate-800 px-4">
+                <div class="text-[9px] text-slate-500 uppercase tracking-tighter">Spans</div>
+                <div id="status-spans" class="text-xs font-mono text-blue-400">2 x 1</div>
+            </div>
+            <div>
+                <div class="text-[9px] text-slate-500 uppercase tracking-tighter">Points</div>
+                <div id="status-points" class="text-xs font-mono text-amber-400">4 x 3</div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg mb-3">
+                <button onclick="switchTab('h')" id="tab-h" class="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white">H-Ref</button>
+                <button onclick="switchTab('p')" id="tab-p" class="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-400 hover:text-slate-200">P-Ref</button>
+                <button onclick="switchTab('k')" id="tab-k" class="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-400 hover:text-slate-200">K-Ref</button>
+            </div>
+            <div id="panel-h">
+                <span class="control-label text-blue-400">Global Subdivision (h)</span>
+                <input type="range" id="h-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" min="0" max="4" value="0">
+            </div>
+            <div id="panel-p" class="hidden">
+                <span class="control-label text-emerald-400">Degree Elevation (p)</span>
+                <input type="range" id="p-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500" min="2" max="5" value="2">
+            </div>
+            <div id="panel-k" class="hidden">
+                <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg border-dashed">
+                    <span class="control-label text-indigo-400 mb-1">C^(p-1) Continuity</span>
+                    <p class="text-[9px] text-indigo-200/60 leading-relaxed mb-3">K-refinement ensures maximum smoothness across all elements.</p>
+                    <button id="apply-k" class="w-full py-2 bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 rounded text-[10px] hover:bg-indigo-600/50 transition-all font-bold">Apply K-Refinement (H+1, P+1)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group pt-4 border-t border-slate-700">
+            <span class="control-label text-amber-400">Single Sample Validation (Probe)</span>
+            <div class="space-y-4 mb-4 text-xs">
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Young's Modulus (E)</span>
+                        <span id="e-val" class="font-mono text-blue-400">100k</span>
+                    </div>
+                    <input type="range" id="e-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" min="10000" max="500000" step="10000" value="100000">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Traction Load (T_x)</span>
+                        <span id="load-val" class="font-mono text-rose-400">100 N</span>
+                    </div>
+                    <input type="range" id="load-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-rose-500" min="100" max="8000" step="100" value="100">
+                </div>
+            </div>
+            <button id="probe-btn" class="w-full py-2.5 rounded-lg font-bold text-[11px] bg-amber-600/20 border border-amber-500/40 text-amber-400 hover:bg-amber-600/40 transition-all">
+                <i class="fa-solid fa-bolt mr-2"></i> RUN SINGLE VALIDATION
+            </button>
+        </div>
+
+            <div class="mb-4">
+                <span class="control-label text-slate-400 mb-2">Snapshot Data Type</span>
+                <div class="flex gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-800">
+                    <button id="type-disp" onclick="setSnapshotType('displacement')" class="flex-1 py-1.5 text-[9px] font-bold rounded bg-indigo-600 text-white transition-all">DISPLACEMENT</button>
+                    <button id="type-stress" onclick="setSnapshotType('stress')" class="flex-1 py-1.5 text-[9px] font-bold rounded text-slate-500 hover:text-slate-300 transition-all">VON MISES STRESS</button>
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] text-slate-400">Samples (N)</span>
+                    <span id="n-val" class="text-xs font-bold text-blue-400">25</span>
+                </div>
+                <input type="range" id="n-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" min="10" max="100" value="25">
+            </div>
+            <button id="start-btn" class="w-full py-3 rounded-lg font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20 transition-all">
+                <i class="fa-solid fa-play mr-2"></i> START BATCH GENERATION
+            </button>
+        </div>
+
+        <div id="process-ui" class="hidden mt-6 pt-4 border-t border-slate-700">
+            <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1">
+                <span id="status-text">Ready...</span>
+                <span id="percent-text">0%</span>
+            </div>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <div class="log-box" id="log-console"></div>
+        </div>
+
+        <button id="download-btn" class="hidden w-full mt-4 py-3 rounded-lg font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition-all">
+            <i class="fa-solid fa-download mr-2"></i> DOWNLOAD SNAPSHOTS (.JSON)
+        </button>
+    </div>
+
+    <!-- Results Popup -->
+    <div id="convergence-popup">
+        <div id="heatmap-legend" class="flex items-center gap-3 mb-3 pb-3 border-b border-slate-700/50">
+            <div class="flex flex-col justify-between h-24 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                <span>MAX</span>
+                <span>0.0</span>
+            </div>
+            <div class="w-3 h-24 rounded-full border border-white/10" style="background: linear-gradient(to top, #3b82f6, #06b6d4, #10b981, #facc15, #f97316, #ef4444);"></div>
+            <div class="flex flex-col justify-between h-24 text-[10px] font-mono text-slate-300">
+                <span id="legend-val-max">---</span>
+                <div class="flex flex-col gap-0.5 items-start">
+                    <span id="legend-mode-title" class="text-rose-500/80 text-[10px]">Displacement</span>
+                    <span id="legend-mode-sub" class="text-[8px] text-slate-500 leading-none">Magnitude</span>
+                </div>
+                <span id="legend-val-min">---</span>
+            </div>
+        </div>
+        <div id="probe-results" class="hidden bg-black/30 rounded p-3 mb-3 border border-white/5 space-y-1">
+            <div class="flex justify-between text-[10px]">
+                <span class="text-slate-400">Max Displacement:</span>
+                <span id="max-disp" class="text-blue-400 font-mono">---</span>
+            </div>
+            <div class="flex justify-between text-[10px]">
+                <span class="text-slate-400">Max Von-Mises:</span>
+                <span id="max-stress" class="text-rose-400 font-mono">---</span>
+            </div>
+            <div class="flex justify-between text-[11px] font-bold border-t border-slate-700 pt-1 mt-1">
+                <span class="text-slate-400">L2 Error (U):</span>
+                <span id="l2-error" class="text-emerald-400 font-mono">---</span>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="lhs-chart"></canvas>
+        </div>
+    </div>
+
+    <script src="../../shared/performance.js"></script>
+    <script src="../../shared/sampling-utils.js"></script>
+    <script src="../phase-2-core/src/nurbs-2d.js"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js"></script>
+    <script src="../phase-2-core/src/refine-utils.js"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js"></script>
+    <script src="../../shared/fom-solver.js"></script>
+    <script src="src/main.js"></script>
+
+    <script>
+        function switchTab(t) {
+            ['h', 'p', 'k'].forEach(id => {
+                const btn = document.getElementById('tab-'+id);
+                const panel = document.getElementById('panel-'+id);
+                if (btn) btn.className = "flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all " + (id === t ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200");
+                if (panel) panel.classList.toggle('hidden', id !== t);
+            });
+        }
+        let snapshotType = 'displacement';
+        function setSnapshotType(t) {
+            snapshotType = t;
+            document.getElementById('type-disp').className = `flex-1 py-1.5 text-[9px] font-bold rounded transition-all ${t==='displacement' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`;
+            document.getElementById('type-stress').className = `flex-1 py-1.5 text-[9px] font-bold rounded transition-all ${t==='stress' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`;
+            if (window.setSnapshotMeta) window.setSnapshotMeta(t);
+        }
+        function switchView(v) {
+            const isDisp = v === 'displacement';
+            if (window.setViewMode) window.setViewMode(v);
+        }
+    </script>
+</body>
+</html>
