@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2C.1 | Snapshot Lab & Metadata</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary: #0284c7; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
+        .badge { background: rgba(2, 132, 199, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(2, 132, 199, 0.2); display: inline-block; margin-bottom: 20px; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #38bdf8, #0284c7); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; }
+        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-16">
+            <span class="badge">Phase 2C.1 | Snapshot Laboratory</span>
+            <h1>Material Sampling & <br>Intelligent Metadata</h1>
+            <p class="text-xl text-slate-400">Upgrading the ROM generation space for comprehensive Affine Decompositions.</p>
+        </header>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">1. The Need to Sample Poisson's Ratio</h2>
+            <p>In classical ROM benchmarks, researchers often sample simple variables like External Force ($\mathbf{F}$). However, modeling changes in **force** is a purely linear scalar operation ($\mathbf{u} = K^{-1}(\alpha \mathbf{F})$). It does not represent a true parametric digital twin.</p>
+            <p>To construct a rigorous ROM, we must sample the **material properties** themselves, forcing the stiffness matrix ($K$) to change continuously:</p>
+            <div class="math-card">
+                $$K(E, \nu) = \frac{E}{1-\nu^2} \begin{bmatrix} 1 & \nu & 0 \\ \nu & 1 & 0 \\ 0 & 0 & \frac{1-\nu}{2} \end{bmatrix}$$
+            </div>
+            <p>By sampling both Young's Modulus ($E$) and Poisson's Ratio ($\nu$) using Latin Hypercube Sampling (LHS), we capture both "scale" and "coupling" deformations in our snapshot library.</p>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">2. The "Research-Ready" JSON</h2>
+            <p>A major flaw in early ROM implementations is that saving just the numerical array of snapshots ($N_{dof} \times N_{samples}$) strips the data of its physical meaning. Without knowing *where* those degrees of freedom exist, the ROM cannot be visualized or verified.</p>
+            <p>Phase 2C.1 solves this by creating a **Self-Describing Topology Array**. We inject the full Isogeometric mathematical bounds directly into the `snapshots.json` export:</p>
+            <div class="math-card" style="font-family: monospace; font-size: 0.9em; color: #a5b4fc;">
+                {<br>
+                &nbsp;&nbsp;"meta": {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;"geometry": { "R": 1.0, "L": 4.0 },<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;"mesh": { "knotU": [...], "knotV": [...], "p": 3, "q": 3 }<br>
+                &nbsp;&nbsp;},<br>
+                &nbsp;&nbsp;"snapshots": [ ... ]<br>
+                }
+            </div>
+            <p>This ensures that any downstream script (like the SVD Lab) can instantly rebuild the physical 3D plate before reducing it.</p>
+        </section>
+
+        <section class="content-section text-center">
+            <h2 class="text-2xl font-bold mb-4">Test the Laboratory</h2>
+            <p class="mb-8 text-slate-400">Generate your own custom sample space and download the metadata payload.</p>
+            <div class="flex justify-center gap-4">
+                <a href="../app/simulations/iga-sim-2c1/index.html" class="btn btn-primary">Launch 2C.1 Lab</a>
+                <a href="../app/index.html" class="btn bg-slate-800 text-white">Back to Hub</a>
+            </div>
+        </section>
+        
+        <div class="mt-12 text-center text-slate-500">
+            <p>Next: <a href="../app/index.html" class="text-sky-400 font-bold">Phase 2D.1 | SVD Reduction & Projection</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1481,6 +1481,49 @@
               </div>
             </div>
 
+            <div class="flow-section reveal reveal-up">
+              <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3);">PHASE 2C.1</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Snapshot Lab & ROM Trainer Pipeline</h3>
+              <div class="flow-grid">
+
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2c1/index.html'">
+                  <i class="fa-solid fa-cube"></i>
+                  <h4>Define Geometry</h4>
+                  <p>Initialize Kirsch Plate with Hole basic NURBS Patch</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2c1/index.html'">
+                  <i class="fa-solid fa-bolt"></i>
+                  <h4>k-Refinement Target</h4>
+                  <p>Elevate (p,q) and insert knots for high continuity surface</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2c1/index.html'">
+                  <i class="fa-solid fa-vials"></i>
+                  <h4>Material Sampling</h4>
+                  <p>LHS Sampling over Young's Modulus (E) and Poisson's ratio (ν)</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2c1/index.html'">
+                  <i class="fa-solid fa-microchip"></i>
+                  <h4>Automated Solver Loop</h4>
+                  <p>Assemble K, apply fixed Traction load, solve for Displacement Field</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2c1/index.html'">
+                  <i class="fa-solid fa-file-code"></i>
+                  <h4>Topology Export</h4>
+                  <p>Log exact Mesh Topology (p,q,knots,weights) inside Metadata Array</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2c1/index.html'">
+                  <i class="fa-solid fa-file-export"></i>
+                  <h4>Research-Ready JSON</h4>
+                  <p>Download self-describing 'snapshots.json' to local system</p>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
