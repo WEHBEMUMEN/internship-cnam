@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
@@ -231,18 +230,6 @@
 
         <h2 class="text-sm font-bold text-slate-200 mb-1"><i class="fa-solid fa-square-poll-vertical text-blue-500 mr-2"></i>Analysis Results</h2>
         
-        <!-- Local Computing Node Status -->
-        <div class="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2 mb-3 border border-white/10">
-            <div class="flex flex-col">
-                <span class="text-[9px] uppercase tracking-wider text-slate-500 font-bold">WASM Python (Nutils)</span>
-                <span id="node-status" class="text-[11px] text-slate-400">Initializing...</span>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="toggle-hybrid" class="sr-only peer" disabled onchange="targetState.useHybridSolver = this.checked">
-                <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 opacity-50 peer-enabled:opacity-100"></div>
-            </label>
-        </div>
-
         <div class="bg-black/30 rounded p-3 flex-1 flex flex-col justify-center gap-2">
             <div class="flex justify-between text-[11px]">
                 <span class="text-slate-400">Max Displacement:</span>

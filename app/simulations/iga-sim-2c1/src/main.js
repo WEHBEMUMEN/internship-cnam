@@ -65,7 +65,7 @@ function initChart() {
         options: {
             scales: {
                 x: { title: { display: true, text: 'E (GPa)', color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
-                y: { title: { display: true, text: 'Load (N)', color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+                y: { title: { display: true, text: 'Poisson Ratio (ν)', color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
             },
             plugins: { legend: { display: false } },
             maintainAspectRatio: false
@@ -297,16 +297,19 @@ async function startBatch() {
     document.getElementById('download-csv-btn').classList.add('opacity-50', 'cursor-not-allowed');
     document.getElementById('log-console').innerHTML = "";
     
-    const dims = [ { name: 'E', min: 100, max: 500 }, { name: 'Load', min: 1000, max: 8000 } ];
+    
+    const dims = [ { name: 'E', min: 100, max: 500 }, { name: 'nu', min: 0.05, max: 0.48 } ];
     const samples = SamplingUtils.generateLHS(dims, nSamples);
-    chart.data.datasets[0].data = samples.map(s => ({ x: s.E, y: s.Load }));
+    chart.data.datasets[0].data = samples.map(s => ({ x: s.E, y: s.nu }));
     chart.update();
     
     log(`Batch initialized (${nSamples} samples). Type: ${activeSnapshotType}`);
 
     for (let i = 0; i < nSamples; i++) {
         const mu = samples[i];
-        targetState.E = mu.E * 1000; targetState.load = mu.Load;
+        targetState.E = mu.E * 1000; 
+        targetState.nu = mu.nu;
+        targetState.load = 100; // Fixed load for this benchmark
         const res = await solveVerified();
         
         let snapshotData = [];
@@ -340,7 +343,7 @@ async function startBatch() {
         updateProgress(i + 1, nSamples);
         updateSurface(res.u);
         const l2Val = activeSnapshotType === 'displacement' ? res.l2u : res.l2s;
-        log(`[${i+1}/${nSamples}] E=${mu.E.toFixed(0)}k F=${mu.Load.toFixed(0)} | Err: ${(l2Val*100).toFixed(3)}%`);
+        log(`[${i+1}/${nSamples}] E=${mu.E.toFixed(0)}k nu=${mu.nu.toFixed(2)} | Err: ${(l2Val*100).toFixed(3)}%`);
     }
 
     log(`Database generation complete.`);
@@ -378,16 +381,32 @@ function setupUI() {
     document.getElementById('apply-k').onclick = () => { targetState.k++; applyRefinements(); };
     
     document.getElementById('e-slider').oninput = (e) => { targetState.E = parseInt(e.target.value); document.getElementById('e-val').innerText = `${(targetState.E/1000).toFixed(0)}k`; };
-    document.getElementById('load-slider').oninput = (e) => { targetState.load = parseInt(e.target.value); document.getElementById('load-val').innerText = `${targetState.load} N`; };
+    document.getElementById('nu-slider').oninput = (e) => { targetState.nu = parseFloat(e.target.value); document.getElementById('nu-val').innerText = targetState.nu.toFixed(2); };
     document.getElementById('download-btn').onclick = () => {
+        const nU = patch.controlPoints.length;
+        const nV = patch.controlPoints[0].length;
+        const nDofs = nU * nV * 2;
+        
         const data = { 
             meta: { 
                 name: "IGA Snapshots", 
-                h: targetState.h, 
-                p: targetState.p,
-                k: targetState.k,
                 type: activeSnapshotType,
-                grid: (activeSnapshotType === 'stress') ? 30 : null
+                geometry: { R: R, L: L },
+                analysis: {
+                    h: targetState.h, 
+                    p: targetState.p,
+                    k: targetState.k,
+                    nDofs: nDofs,
+                    stressGrid: (activeSnapshotType === 'stress' || activeSnapshotType === 'all') ? 30 : null
+                },
+                mesh: {
+                    knotU: Array.from(patch.U),
+                    knotV: Array.from(patch.V),
+                    p: patch.p,
+                    q: patch.q,
+                    weights: patch.weights.map(row => Array.from(row)),
+                    controlPoints_base: patch.controlPoints.map(row => row.map(cp => ({ x: cp.x, y: cp.y, z: cp.z })))
+                }
             }, 
             parameters, 
             snapshots, 
@@ -401,7 +420,7 @@ function setupUI() {
         let hasDisp = activeSnapshotType === 'displacement' || activeSnapshotType === 'all';
         let hasStress = activeSnapshotType === 'stress' || activeSnapshotType === 'all';
 
-        let csv = "E,Load,L2_Error";
+        let csv = "E,nu,L2_Error";
         let lenDisp = hasDisp ? (activeSnapshotType === 'all' ? snapshots[0].disp.length : snapshots[0].length) : 0;
         let lenStress = hasStress ? (activeSnapshotType === 'all' ? snapshots[0].stress.length :  snapshots[0].length) : 0;
         
@@ -414,7 +433,7 @@ function setupUI() {
         csv += "\n";
         
         for (let i = 0; i < parameters.length; i++) {
-             csv += `${parameters[i].E},${parameters[i].Load},${l2_errors[i]}`;
+             csv += `${parameters[i].E},${parameters[i].nu},${l2_errors[i]}`;
              if (activeSnapshotType === 'all') {
                  csv += `,${snapshots[i].disp.join(',')},${snapshots[i].stress.join(',')}`;
              } else {

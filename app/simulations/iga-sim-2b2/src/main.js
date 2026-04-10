@@ -28,12 +28,9 @@ let targetState = {
     k: false,
     E: 100000,
     nu: 0.30,
-    useHybridBasis: true,
-    useHybridSolver: false
+    useHybridBasis: true
 };
-let activeState = { load: -1, h: -1, p: -1, k: false, E: -1, nu: -1, useHybridSolver: -1 };
-let pyodideReady = false;
-let pyodide = null;
+let activeState = { load: -1, h: -1, p: -1, k: false, E: -1, nu: -1 };
 
 // Solver & Scalar Scaling State
 let solverCache = {
@@ -48,14 +45,6 @@ function getMeshKey() {
     return `${targetState.h}-${targetState.p}-${targetState.k}-${targetState.E}-${targetState.nu}`;
 }
 
-async function initPyodide() {
-    console.log("Python/WASM hybrid solver is disabled.");
-}
-initPyodide();
-
-function checkLocalNode() {
-    // Legacy function disabled - replaced by Pyodide readiness
-}
 let isSolving = false;
 
 function updateStatusLabels() {
