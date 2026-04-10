@@ -136,13 +136,13 @@ tasks:
 
   # ── TO DO (Phase 2D — POD ROM) ────────────────────────────────────────────
   - title: "Phase 2D.1: SVD Reduction & POD Basis"
-    status: To Do
+    status: Done
     priority: High
     deadline: 2026-05-19
     description: Apply SVD to snapshot matrix and extract principal modes (POD basis $\Phi$).
 
   - title: "Phase 2D.2: Projection of ROM Operators"
-    status: To Do
+    status: Done
     priority: High
     deadline: 2026-05-26
     description: Project FOM equations onto the reduced basis ($K_{red} = \Phi^T K \Phi$).
