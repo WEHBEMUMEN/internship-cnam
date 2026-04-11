@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training Lab 2D.1 | SVD & Operator Projection</title>
+    <title>Training Lab 2D.2 | Operator Projection & Benchmarking</title>
     <script>if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -37,14 +37,17 @@
 
     <div id="ui-panel">
         <h1 class="text-xl font-bold mb-4 flex items-center gap-2">
-            <span class="text-pink-500">2D.1</span> SVD Lab
-            <span class="bg-pink-600 text-white px-2 py-0.5 rounded text-[10px]">REDUCTION</span>
+            <span class="text-fuchsia-500">2D.2</span> Projection Lab
+            <span class="bg-fuchsia-600 text-white px-2 py-0.5 rounded text-[10px]">PROJECTION</span>
         </h1>
 
         <div class="control-group pt-2">
-            <span class="control-label text-slate-400">1. Load Snapshot Database</span>
-            <input type="file" id="file-upload" accept=".json" class="block w-full text-[10px] text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-pink-500/20 file:text-pink-400 hover:file:bg-pink-500/30 cursor-pointer transition-all border border-slate-700 rounded-lg bg-slate-900/50 p-1 mb-2">
-            <div id="upload-status" class="text-[10px] text-slate-500 font-mono hidden">Waiting for file...</div>
+            <span class="control-label text-slate-400">1. FULL AUTOMATED PIPELINE</span>
+            <p class="text-[9px] text-slate-400 mb-3 leading-relaxed">Runs 25 FOM LHS samples on the Plate with Hole, computes SVD basis, projects ROM operators, and performs pareto-efficiency benchmark all locally.</p>
+            <button id="run-pipeline-btn" class="w-full py-3 rounded-lg font-bold text-sm bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-900/20 transition-all">
+                <i class="fa-solid fa-play mr-2"></i> START PIPELINE
+            </button>
+            <div id="pipeline-status" class="text-[10px] font-mono text-fuchsia-400 mt-3 hidden">Ready...</div>
         </div>
 
         <div class="control-group pt-4 border-t border-slate-700">
@@ -70,6 +73,34 @@
                 <i class="fa-solid fa-eye mr-2"></i> VISUALIZE MODE <span id="btn-mode-num">1</span>
             </button>
         </div>
+
+        <div class="control-group pt-4 border-t border-slate-700">
+            <span class="control-label text-indigo-400">3. Operator Projection (Offline)</span>
+            <p class="text-[9px] text-slate-400 mb-3 leading-relaxed">Projects the geometric (K1) and coupling (K2) stiffness matrices onto the truncated POD basis Φ.</p>
+            <div id="projection-status" class="text-[10px] font-mono text-indigo-400 mb-3 hidden"><i class="fa-solid fa-check text-emerald-400 mr-2"></i>K_red computed.</div>
+            <button id="project-btn" disabled class="w-full py-2.5 rounded-lg font-bold text-[11px] bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 hover:bg-indigo-600/40 transition-all mb-3">
+                <i class="fa-solid fa-compress mr-2"></i> PROJECT OPERATORS
+            </button>
+            <button id="validate-btn" disabled class="w-full py-2.5 rounded-lg font-bold text-[11px] bg-teal-600/20 border border-teal-500/40 text-teal-400 hover:bg-teal-600/40 transition-all hidden">
+                <i class="fa-solid fa-check-double mr-2"></i> RUN VALIDATION
+            </button>
+            <div id="validation-info" class="mt-3 p-3 bg-black/30 rounded-lg border border-slate-700/50 hidden space-y-2">
+                <div class="flex justify-between text-[10px]">
+                    <span class="text-slate-400">Orthogonality Error:</span>
+                    <span id="ortho-val" class="font-mono text-sky-400">---</span>
+                </div>
+                <div class="flex justify-between text-[10px]">
+                    <span class="text-slate-400">ROM Snapshot L2 Diff:</span>
+                    <span id="rom-l2-val" class="font-mono text-emerald-400">---</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-700">
+            <button id="export-basis-btn" disabled class="w-full py-3 rounded-lg font-bold text-sm bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-900/20 transition-all">
+                <i class="fa-solid fa-download mr-2"></i> EXPORT REDUCED BASIS
+            </button>
+        </div>
     </div>
 
     <!-- Analytics Popup -->
@@ -77,6 +108,8 @@
         <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg mb-2">
             <button onclick="switchChart('scree')" id="tab-scree" class="flex-1 py-1.5 text-[8px] font-bold rounded-md transition-all bg-sky-600 text-white">Scree Plot</button>
             <button onclick="switchChart('error')" id="tab-error" class="flex-1 py-1.5 text-[8px] font-bold rounded-md transition-all text-slate-400 hover:text-slate-200">Error Decay</button>
+            <button onclick="switchChart('time')" id="tab-time" class="flex-1 py-1.5 text-[8px] font-bold rounded-md transition-all text-slate-400 hover:text-slate-200">Break-Even</button>
+            <button onclick="switchChart('efficiency')" id="tab-efficiency" class="flex-1 py-1.5 text-[8px] font-bold rounded-md transition-all text-slate-400 hover:text-slate-200">Efficiency</button>
         </div>
         <div class="chart-container">
             <canvas id="analysis-chart"></canvas>
@@ -84,6 +117,7 @@
     </div>
 
     <script src="../../shared/performance.js"></script>
+    <script src="../../shared/sampling-utils.js"></script>
     <script src="../phase-2-core/src/nurbs-2d.js"></script>
     <script src="../phase-2-core/src/nurbs-presets.js"></script>
     <script src="../phase-2-core/src/refine-utils.js"></script>

@@ -7,15 +7,22 @@ const solver = new IGA2DSolver(engine);
 
 let snapshotData = null;
 let patch = null;
+let targetState = { k: 1 };
 
 // SVD Results
 let svdResult = null;
 let singularValues = [];
 let cumulativeEnergy = [];
 let PODModes = [];
+let t_offline = 0; // Cumulative offline overhead (ms)
+let t_fom = 0;     // Reference FOM solve time (ms)
 
-// UI state
-let targetState = { k: 1 };
+// Benchmark Data Cache
+let benchmarkData = {
+    errors: [],
+    romTimes: [],
+    ks: []
+};
 let viewMode = 'displacement';
 let currentModeIndex = 0;
 
@@ -59,39 +66,26 @@ function initChart() {
 }
 
 function switchChart(type) {
-    document.getElementById('tab-scree').className = `flex-1 py-1.5 text-[9px] font-bold rounded-md transition-all ${type === 'scree' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-slate-200'}`;
-    document.getElementById('tab-error').className = `flex-1 py-1.5 text-[9px] font-bold rounded-md transition-all ${type === 'error' ? 'bg-rose-600 text-white' : 'text-slate-400 hover:text-slate-200'}`;
-    document.getElementById('tab-time').className = `flex-1 py-1.5 text-[9px] font-bold rounded-md transition-all ${type === 'time' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'}`;
+    document.getElementById('tab-scree').className = `flex-1 py-1.5 text-[8px] font-bold rounded-md transition-all ${type === 'scree' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-slate-200'}`;
     
     if (!svdResult) return;
 
     if (type === 'scree') {
         chart.data.labels = singularValues.map((_, i) => i + 1);
-        chart.data.datasets[0] = { label: 'Cumulative Energy %', data: cumulativeEnergy.map(e => e * 100), borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.2)', fill: true, tension: 0.2 };
+        chart.data.datasets = [{ label: 'Cumulative Energy %', data: cumulativeEnergy.map(e => e * 100), borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.2)', fill: true, tension: 0.2 }];
+        chart.options.scales.y.type = 'linear';
         chart.options.scales.y.min = cumulativeEnergy[0] * 100 * 0.99;
         chart.options.scales.y.max = 100;
         chart.options.scales.y.title.text = 'Energy (%)';
     } else if (type === 'error') {
-        // Simplified error curve: 1 - energy
-        const err = cumulativeEnergy.map(e => (1 - e) * 100);
+        // Here we could plot log of single values, but since 2D.1 is just Scree and Error Decay logic was removed
+        // we map error decay as 1 - cumulative energy
         chart.data.labels = singularValues.map((_, i) => i + 1);
-        chart.data.datasets[0] = { label: 'Truncation Error %', data: err, borderColor: '#fb7185', backgroundColor: 'rgba(251, 113, 133, 0.2)', fill: true, tension: 0.2 };
-        chart.options.scales.y.min = 0;
-        chart.options.scales.y.max = err[0] * 1.1;
-        chart.options.scales.y.title.text = 'Error (%)';
-    } else {
-        // Speed up illustration
-        const modes = singularValues.map((_, i) => i + 1);
-        const fomTime = modes.map(() => 100); // 100% time
-        const romTime = modes.map(k => (k/100) * 100 + 1); // rough scaling
-        chart.data.labels = modes;
-        chart.data.datasets = [
-            { label: 'FOM Time', data: fomTime, borderColor: '#ef4444', borderDash: [5, 5], fill: false, tension: 0 },
-            { label: 'ROM Time', data: romTime, borderColor: '#10b981', fill: true, backgroundColor: 'rgba(16, 185, 129, 0.2)', tension: 0.2 }
-        ];
-        chart.options.scales.y.min = 0;
-        chart.options.scales.y.max = 110;
-        chart.options.scales.y.title.text = 'Relative Time (%)';
+        chart.data.datasets = [{ label: 'Discarded Energy (1 - Capture)', data: cumulativeEnergy.map(e => 1 - e), borderColor: '#fb7185', backgroundColor: 'rgba(251, 113, 133, 0.2)', fill: true, tension: 0.2 }];
+        chart.options.scales.y.type = 'logarithmic';
+        chart.options.scales.y.title.text = 'Discarded Energy (Log)';
+        delete chart.options.scales.y.min;
+        delete chart.options.scales.y.max;
     }
     
     chart.update();
@@ -127,6 +121,7 @@ function processSnapshots(data) {
     
     svdResult = svd;
     singularValues = svd.diagonal;
+    t_offline = (t1 - t0); // Initial offline cost
     
     // Extract POD Modes (left singular vectors)
     PODModes = svd.leftSingularVectors.to2DArray();
@@ -148,7 +143,6 @@ function processSnapshots(data) {
     document.getElementById('k-slider').disabled = false;
     document.getElementById('k-slider').max = singularValues.length;
     document.getElementById('visualize-mode-btn').disabled = false;
-    document.getElementById('project-btn').disabled = false;
     document.getElementById('mode-info').classList.remove('hidden');
     
     updateKSlider();
@@ -196,126 +190,7 @@ function visualizeCurrentMode() {
     currentModeIndex++;
 }
 
-async function projectOperators() {
-    const btn = document.getElementById('project-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> PROJECTING...';
-    
-    await new Promise(r => setTimeout(r, 10)); // UI refresh
-    
-    const { Matrix } = mlMatrix;
-    // Basis matrix slice
-    const Phi = new Matrix(PODModes.slice(0, targetState.k)).transpose(); // nDofs x k
-    
-    // We compute K1 and K2. K1 = K evaluated with E=1, nu=0. K2 = K evaluated with E=1, nu=delta
-    // Affine: K(E, nu) = E / (1-nu^2) * [ K_main + nu * K_cross ]
-    // We'll extract K_main and K_cross from the solver.
-    const K_main = solver.assembleStiffness(patch, 1.0, 0.0);
-    const K_nu_eval = solver.assembleStiffness(patch, 1.0, 0.3); // evaluating at nu=0.3 to extract K_cross
-    
-    const kDim = K_main.length;
-    const K1mat = new Matrix(kDim, kDim);
-    const K2mat = new Matrix(kDim, kDim);
-    
-    for (let i = 0; i < kDim; i++) {
-        for (let j = 0; j < kDim; j++) {
-            K1mat.set(i, j, K_main[i][j]);
-            const k2_val = (K_nu_eval[i][j] * (1 - 0.3*0.3) - K_main[i][j]) / 0.3;
-            K2mat.set(i, j, k2_val);
-        }
-    }
-    
-    // Project K1_red = Phi^T * K1 * Phi
-    const PhiT = Phi.transpose();
-    const K1_red = PhiT.mmul(K1mat).mmul(Phi).to2DArray();
-    const K2_red = PhiT.mmul(K2mat).mmul(Phi).to2DArray();
-    
-    // Compute Forces (Default Traction)
-    const integratedForces = solver.calculateNodalTraction(patch, 100, 'right'); // 100N base force
-    const F_full = new Float64Array(kDim).fill(0);
-    const nV = patch.controlPoints[0].length;
-    let idx = 0;
-    for (let i = 0; i < integratedForces.length; i++) {
-        if (integratedForces[i] !== 0) {
-            const nodeIdx = Math.floor(i / 2);
-            if (i%2==0) F_full[nodeIdx*2] = integratedForces[i];
-            else F_full[nodeIdx*2 + 1] = integratedForces[i];
-        }
-    }
-    const Fmat = new Matrix([Array.from(F_full)]).transpose();
-    const F_red = PhiT.mmul(Fmat).to2DArray().map(r => r[0]);
-    
-    // Apply boundary conditions directly to reduced system via Penalty on full system before projecting?
-    // Actually, penalty on K1:
-    const K_penalty = solver.assembleStiffness(patch, 0, 0); // zero stiffness
-    solver.applyPenaltyConstraints(K_penalty, patch);
-    const KpMat = new Matrix(K_penalty);
-    const Kp_red = PhiT.mmul(KpMat).mmul(Phi).to2DArray();
-    for (let i=0; i<targetState.k; i++) {
-        for(let j=0; j<targetState.k; j++) {
-             K1_red[i][j] += Kp_red[i][j];
-        }
-    }
-
-    document.getElementById('projection-status').classList.remove('hidden');
-    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> PROJECT OPERATORS';
-    btn.disabled = false;
-    document.getElementById('export-basis-btn').disabled = false;
-    
-    const vBtn = document.getElementById('validate-btn');
-    vBtn.disabled = false;
-    vBtn.classList.remove('hidden');
-    
-    // Save for export
-    window.ROMData = { Phi: Phi.to2DArray(), K1_red, K2_red, Fr: F_red };
-}
-
-async function validateReducedModel() {
-    const btn = document.getElementById('validate-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> VALIDATING...';
-    
-    await new Promise(r => setTimeout(r, 10)); // UI refresh
-    
-    const { Matrix } = mlMatrix;
-    const Phi = new Matrix(window.ROMData.Phi);
-    const PhiT = Phi.transpose();
-    
-    // 1. Orthogonality Check: || Phi^T * Phi - I ||
-    const identityTest = PhiT.mmul(Phi);
-    let orthoErr = 0;
-    for(let i=0; i<identityTest.rows; i++){
-        for(let j=0; j<identityTest.columns; j++){
-            let target = (i===j) ? 1.0 : 0.0;
-            orthoErr += Math.pow(identityTest.get(i,j) - target, 2);
-        }
-    }
-    orthoErr = Math.sqrt(orthoErr);
-    document.getElementById('ortho-val').innerText = orthoErr.toExponential(3);
-    
-    // 2. Snapshot Reconstruction Error
-    // Pick the middle snapshot to test
-    const testIdx = Math.floor(snapshotData.snapshots.length / 2);
-    let u_snap = snapshotData.snapshots[testIdx];
-    if (u_snap.disp) u_snap = u_snap.disp;
-    
-    const u_mat = new Matrix([Array.from(u_snap)]).transpose(); // Nx1
-    const q = PhiT.mmul(u_mat); // kx1
-    const u_tilde = Phi.mmul(q); // Nx1
-    
-    let l2_err_num = 0;
-    let l2_err_den = 0;
-    for(let i=0; i<u_snap.length; i++) {
-        let diff = u_snap[i] - u_tilde.get(i,0);
-        l2_err_num += diff*diff;
-        l2_err_den += u_snap[i]*u_snap[i];
-    }
-    const rel_err = Math.sqrt(l2_err_num / (l2_err_den || 1));
-    document.getElementById('rom-l2-val').innerText = (rel_err * 100).toFixed(6) + "%";
-    
-    document.getElementById('validation-info').classList.remove('hidden');
-    btn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i> VALIDATION COMPLETE';
-}
+// Project Operators and Benzchmarks are handled in Phase 2D.2
 
 function updateSurface(u_disp = null, skipHeatmap = false) {
     if (surfaceMesh) scene.remove(surfaceMesh);
@@ -410,12 +285,6 @@ function setupUI() {
 
     document.getElementById('k-slider').oninput = updateKSlider;
     document.getElementById('visualize-mode-btn').onclick = visualizeCurrentMode;
-    document.getElementById('project-btn').onclick = projectOperators;
-    document.getElementById('validate-btn').onclick = validateReducedModel;
-    document.getElementById('export-basis-btn').onclick = () => {
-        if (!window.ROMData) return;
-        ROMExporter.exportSmartBasis(snapshotData.meta, window.ROMData.Phi, window.ROMData.K1_red, window.ROMData.K2_red, window.ROMData.Fr);
-    };
 }
 
 function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }

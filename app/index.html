@@ -497,6 +497,48 @@
               <a href="../theory/theory-2b2.html" class="btn btn-outline btn-center" style="width: 100%;">Validation Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
             </div>
           </div>
+
+          <!-- Phase 2D.1: SVD Reduction -->
+          <div class="card reveal reveal-up">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-compress" style="font-size: 2rem; color: #ec4899;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(236, 72, 153, 0.1); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.2);">PHASE 2D.1</span>
+            </div>
+            <h3>SVD Reduction & POD Basis</h3>
+            <p>Apply SVD to the snapshot matrix to extract principal modes. Truncate the basis (POD) evaluating the energy capture.</p>
+            <div class="app-actions">
+              <a href="simulations/iga-sim-2d1/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #ec4899; box-shadow: 0 0 15px rgba(236, 72, 153, 0.3);">Launch SVD Lab <i class="fa-solid fa-compress" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-1.7.html" class="btn btn-outline btn-center" style="width: 100%;">ROM Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+
+          <!-- Phase 2D.2: Operator Projection -->
+          <div class="card reveal reveal-up">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 2rem; color: #d946ef;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(217, 70, 239, 0.1); color: #d946ef; border: 1px solid rgba(217, 70, 239, 0.2);">PHASE 2D.2</span>
+            </div>
+            <h3>Operator Projection</h3>
+            <p>Project Full Order Model (FOM) equations onto the reduced basis ($K_{red} = \Phi^T K \Phi$). Benchmark efficiency and errors.</p>
+            <div class="app-actions">
+              <a href="simulations/iga-sim-2d2/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #d946ef; box-shadow: 0 0 15px rgba(217, 70, 239, 0.3);">Launch Projection Lab <i class="fa-solid fa-bolt" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-1.7.html" class="btn btn-outline btn-center" style="width: 100%;">Benchmark Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+          
+          <!-- Phase 2D.3: Online Solver -->
+          <div class="card reveal reveal-up">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-microchip" style="font-size: 2rem; color: #10b981;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">PHASE 2D.3</span>
+            </div>
+            <h3>Online Solver (Digital Twin)</h3>
+            <p>Deploy the offline-generated reduced basis in a lightweight environment. Solves real-time dynamics with ~0 latency.</p>
+            <div class="app-actions">
+              <a href="simulations/iga-sim-2d3/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">Launch Online AI <i class="fa-solid fa-play" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+
           </div>
         </div>
 
@@ -1520,6 +1562,68 @@
                   <i class="fa-solid fa-file-export"></i>
                   <h4>Research-Ready JSON</h4>
                   <p>Download self-describing 'snapshots.json' to local system</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flow-section reveal reveal-up">
+              <span class="badge" style="background: rgba(236, 72, 153, 0.12); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.3);">PHASE 2D.1</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">SVD Reduction & POD Basis</h3>
+              <div class="flow-grid">
+
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d1/index.html'">
+                  <i class="fa-solid fa-database"></i>
+                  <h4>Load Snapshots</h4>
+                  <p>Import the snapshot matrix S generated from LHS sampling</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d1/index.html'">
+                  <i class="fa-solid fa-compress"></i>
+                  <h4>SVD Decomposition</h4>
+                  <p>Decompose S into U · Σ · V^T to isolate principal components</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d1/index.html'">
+                  <i class="fa-solid fa-chart-pie"></i>
+                  <h4>Energy Analysis</h4>
+                  <p>Analyze singular values to determine optimal truncation mode count (k)</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d1/index.html'">
+                  <i class="fa-solid fa-layer-group"></i>
+                  <h4>Extract POD Basis</h4>
+                  <p>Form the basis matrix Φ taking first k columns of U</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flow-section reveal reveal-up">
+              <span class="badge" style="background: rgba(217, 70, 239, 0.12); color: #d946ef; border: 1px solid rgba(217, 70, 239, 0.3);">PHASE 2D.2</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">ROM Operator Projection</h3>
+              <div class="flow-grid">
+
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d2/index.html'">
+                  <i class="fa-solid fa-calculator"></i>
+                  <h4>FOM Operators</h4>
+                  <p>Assemble global stiffness matrix K and evaluate baseline FOM parameters</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d2/index.html'">
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                  <h4>Galerkin Projection</h4>
+                  <p>Project FOM equations onto reduced basis: K_red = Φ^T K Φ</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d2/index.html'">
+                  <i class="fa-solid fa-bolt"></i>
+                  <h4>Online Execution</h4>
+                  <p>Solve k x k reduced system rapidly for query inputs</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d2/index.html'">
+                  <i class="fa-solid fa-chart-line"></i>
+                  <h4>Benchmarking</h4>
+                  <p>Analyze Break-Even curves and Time vs. Error Pareto efficiency</p>
                 </div>
               </div>
             </div>

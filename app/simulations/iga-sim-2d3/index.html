@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Lab 2D.3 | Online Real-Time Solver</title>
+    <script>if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; width: 340px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 20px;
+            z-index: 10; pointer-events: auto;
+            max-height: calc(100vh - 40px); overflow-y: auto;
+        }
+        .control-group { margin-bottom: 20px; }
+        .control-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 12px; display: block; }
+        
+        #upload-zone {
+            border: 2px dashed #4ade80;
+            background: rgba(74, 222, 128, 0.1);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #upload-zone:hover { background: rgba(74, 222, 128, 0.15); border-color: #22c55e; }
+        #upload-input { display: none; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="ui-panel">
+        <h1 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <span class="text-emerald-500">2D.3</span> Online Solver
+            <span class="bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px]">DIGITAL TWIN</span>
+        </h1>
+
+        <div class="control-group pt-2">
+            <span class="control-label text-slate-400">1. LOAD REDUCED BASIS</span>
+            <p class="text-[9px] text-slate-400 mb-3 leading-relaxed">Select the <code class="text-emerald-300">rom_basis_k.json</code> exported from Phase 2D.2.</p>
+            <div id="upload-zone">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-emerald-400 mb-3"></i>
+                <p class="text-sm font-bold text-emerald-300">Click to load JSON</p>
+                <input type="file" id="upload-input" accept=".json">
+            </div>
+            <div id="load-status" class="text-[10px] font-mono text-emerald-400 mt-3 hidden">
+                <i class="fa-solid fa-check mr-2"></i>Loaded <span id="k-info" class="font-bold text-emerald-300"></span> modes.
+            </div>
+        </div>
+
+        <div id="solver-controls" class="control-group pt-4 border-t border-slate-700 opacity-50 pointer-events-none transition-opacity duration-300">
+            <span class="control-label text-sky-400">2. ONLINE EVALUATION</span>
+            
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] text-slate-400">View Mode</span>
+                </div>
+                <select id="view-mode" class="w-full bg-slate-900 border border-slate-700 text-sky-400 text-xs rounded px-2 py-1.5 focus:outline-none focus:border-sky-500">
+                    <option value="displacement">X-Displacement</option>
+                    <option value="stress">Von Mises Stress</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] text-slate-400">Young's Modulus (E)</span>
+                    <span id="E-val" class="text-xs font-bold text-sky-400">100,000 MPa</span>
+                </div>
+                <!-- Logarithmic slider feel for E -->
+                <input type="range" id="E-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500" min="10000" max="300000" step="1000" value="100000">
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] text-slate-400">Poisson's Ratio (v)</span>
+                    <span id="nu-val" class="text-xs font-bold text-sky-400">0.30</span>
+                </div>
+                <input type="range" id="nu-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500" min="0.0" max="0.49" step="0.01" value="0.30">
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] text-slate-400">Applied Traction Force</span>
+                    <span id="F-val" class="text-xs font-bold text-sky-400">100 N</span>
+                </div>
+                <input type="range" id="F-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-rose-500" min="-1000" max="1000" step="10" value="100">
+            </div>
+
+            <div class="p-3 bg-black/30 rounded-lg border border-slate-700/50 space-y-2">
+                <div class="flex justify-between text-[10px]">
+                    <span class="text-slate-400">Solve Time (LU):</span>
+                    <span id="solve-time" class="font-mono text-emerald-400">---</span>
+                </div>
+                <div class="flex justify-between text-[10px]">
+                    <span class="text-slate-400">Reconstruction Time:</span>
+                    <span id="recon-time" class="font-mono text-emerald-400">---</span>
+                </div>
+                <div class="flex justify-between text-[10px]">
+                    <span class="text-slate-400">Render FPS (Approx):</span>
+                    <span id="fps-val" class="font-mono text-fuchsia-400">---</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="legend-container" class="absolute bottom-6 right-6 bg-slate-900/90 border border-slate-700 rounded-lg p-3 hidden pointer-events-none">
+        <div class="text-[10px] text-slate-400 mb-2 font-bold tracking-wider" id="legend-title">VON MISES STRESS (MPa)</div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-slate-300 w-8 text-right" id="legend-min">0</span>
+            <div class="w-48 h-3 rounded bg-gradient-to-r from-[#3a82f5] via-[#0ff] via-[#4ade80] via-[#fbbf24] to-[#ef4444]"></div>
+            <span class="text-xs font-mono text-slate-300 w-12" id="legend-max">Max</span>
+        </div>
+    </div>
+
+    <!-- We import nurbs-2d primarily for the rendering engine. We import iga-solver-2d purely for the O(1) post-processed stress recovery function. -->
+    <script src="../phase-2-core/src/nurbs-2d.js"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>
