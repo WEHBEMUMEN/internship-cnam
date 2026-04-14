@@ -27,7 +27,12 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Navigation -->
+    <a href="../app/index.html" class="absolute top-8 left-8 text-slate-400 hover:text-white transition-colors group flex items-center gap-2 font-semibold">
+        <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Back to Hub
+    </a>
+
+    <div class="container relative">
         <header class="text-center mb-16">
             <span class="badge">Phase 2D.3 | Online Solver Deployment</span>
             <h1>Real-Time Digital Twin & <br>Reduced Order Prediction</h1>
@@ -45,23 +50,31 @@
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">2. The Affine Parametric Expansion</h2>
-            <p>A static ROM only works for a fixed material. To enable sliders for $E$ and $\nu$ in the UI without re-projecting the whole system, we use an <span class="highlight">Affine Decomposition</span> of the stiffness matrix:</p>
+            <p>A static ROM only works for a fixed material. To enable sliders for $E$ and $\nu$ in the UI without re-projecting the whole system, we use an <span class="highlight">Affine Decomposition</span> of the stiffness matrix. The global stiffness $K(E, \nu)$ is expressed as:</p>
             <div class="math-card">
                 $$K(E, \nu) = \frac{E}{1-\nu^2} \left[ K_1 + \nu K_2 \right]$$
             </div>
-            <p>By pre-calculating the projected matrices $K_{r,1} = \Phi^T K_1 \Phi$ and $K_{r,2} = \Phi^T K_2 \Phi$ during the offline phase, the online solver only needs to perform a simple scalar addition and solve a tiny $k \times k$ system:</p>
+            <p>Where $K_1$ and $K_2$ are material-independent operators assembled during the FOM evaluation. Using proper Galerkin projection, the reduced operators are pre-calculated offline:</p>
+            <div class="math-card text-center">
+                $$K_{r,1} = \Phi^T K_1 \Phi \quad \text{and} \quad K_{r,2} = \Phi^T K_2 \Phi$$
+                $$\mathbf{F}_r = \Phi^T \mathbf{F}$$
+            </div>
+            <p>During the online phase, the solver performs a simple scalar addition and solves a tiny $k \times k$ system (typically $10 \times 10$ instead of $5000 \times 5000$):</p>
             <div class="math-card">
-                $$\left( \frac{E}{1-\nu^2} (K_{r,1} + \nu K_{r,2}) \right) \mathbf{q} = \mathbf{F}_r$$
+                $$\left[ \frac{E}{1-\nu^2} (K_{r,1} + \nu K_{r,2}) \right] \mathbf{q} = \mathbf{F}_r$$
             </div>
         </section>
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">3. High-Fidelity Reconstruction</h2>
-            <p>Once the reduced coordinates $\mathbf{q}$ are found, the full physical field (displacements or stresses) is reconstructed using the projection matrix:</p>
+            <p>Once the reduced coordinates $\mathbf{q}$ are found, the full physical displacement field is reconstructed using the projection matrix:</p>
             <div class="math-card">
-                $$\mathbf{u} \approx \Phi \mathbf{q}$$
+                $$\mathbf{u}_{FOM} \approx \Phi \mathbf{q}$$
             </div>
-            <p>For the Digital Twin visualization, we then perform a <span class="highlight">Numerical Stress Recovery</span> by evaluating the B-matrix at each visual vertex, allowing us to see Von Mises profiles in real-time as we interact with the physical parameters.</p>
+            <p>For the Digital Twin visualization, we perform a <span class="highlight">Numerical Stress Recovery</span>. Instead of interpolating the solution, we evaluate the exact gradient of the basis functions (B-matrix) at each physical coordinate $(x, y)$, mapping through the inverse Jacobian $J^{-1}$, to compute the Piola-Kirchhoff stress fields and finally the Von Mises stress in real-time:</p>
+            <div class="math-card">
+                $$\sigma_{vM} = \sqrt{\sigma_{xx}^2 + \sigma_{yy}^2 - \sigma_{xx}\sigma_{yy} + 3\sigma_{xy}^2}$$
+            </div>
         </section>
 
         <section class="content-section text-center">

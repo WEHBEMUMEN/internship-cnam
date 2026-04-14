@@ -103,7 +103,12 @@
 </head>
 
 <body>
-    <div class="container">
+    <!-- Navigation -->
+    <a href="../app/index.html" class="absolute top-8 left-8 text-slate-400 hover:text-white transition-colors group flex items-center gap-2 font-semibold">
+        <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Back to Hub
+    </a>
+
+    <div class="container relative">
         <header class="text-center mb-16">
             <span class="badge">Phase 2B.2 | Stress Analysis</span>
             <h1>Plate with hole<br>Stress & Displacement</h1>
@@ -146,12 +151,18 @@
         </section>
 
         <section class="content-section">
-            <h2 class="text-2xl font-bold mb-4">3. Scaling for Large Clusters</h2>
-            <p>To solve the resulting linear system $\mathbf{K}\mathbf{u} = \mathbf{f}$, we use efficient matrix reduction techniques that mask Dirichlet boundary conditions and solve for the unknown displacements using stabilized Gaussian elimination.</p>
+            <h2 class="text-2xl font-bold mb-4">3. Scaling for Large Clusters & Symmetry BCs</h2>
+            <p>To solve the resulting linear system $\mathbf{K}\mathbf{u} = \mathbf{f}$, we use efficient matrix reduction techniques that mask Dirichlet boundary conditions and solve for the unknown displacements.</p>
+            <p class="text-slate-400 mt-2">For the Plate with Hole benchmark, we model only a quarter of the plate and enforce <span class="highlight">Symmetry Boundary Conditions</span>. This restricts motion normal to the axis of symmetry:</p>
+            <ul class="list-disc ml-6 mt-4 mb-4 text-slate-400">
+                <li><strong class="text-white">Bottom Edge:</strong> Roller supports $u_y = 0$, representing symmetry across the X-axis.</li>
+                <li><strong class="text-white">Left Edge:</strong> Roller supports $u_x = 0$, representing symmetry across the Y-axis.</li>
+            </ul>
+            <p>We partition the system into "free" ($f$) and "constrained" ($c$) degrees of freedom:</p>
             <div class="math-card">
-                $$\begin{bmatrix} \mathbf{K}_{ff} & \mathbf{K}_{fc} \\ \mathbf{K}_{cf} & \mathbf{K}_{cc} \end{bmatrix} \begin{Bmatrix} \mathbf{u}_f \\ \mathbf{u}_c \end{Bmatrix} = \begin{Bmatrix} \mathbf{f}_f \\ \mathbf{f}_c \end{Bmatrix}$$
+                $$\begin{bmatrix} \mathbf{K}_{ff} & \mathbf{K}_{fc} \\ \mathbf{K}_{cf} & \mathbf{K}_{cc} \end{bmatrix} \begin{Bmatrix} \mathbf{u}_f \\ \mathbf{0} \end{Bmatrix} = \begin{Bmatrix} \mathbf{f}_f \\ \mathbf{f}_c \end{Bmatrix}$$
             </div>
-            <p class="text-slate-400 mt-4">This allows us to maintain high precision even as the control point lattice grows, providing the numerical stability required for benchmarking against analytical solutions.</p>
+            <p class="text-slate-400 mt-4">Because $\mathbf{u}_c = \mathbf{0}$, the condensed system simplifies to solving $\mathbf{K}_{ff}\mathbf{u}_f = \mathbf{f}_f$ using numerical stabilized Gaussian elimination.</p>
         </section>
 
         <section class="content-section">
