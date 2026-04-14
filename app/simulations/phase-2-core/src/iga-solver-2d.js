@@ -123,71 +123,61 @@ class IGA2DSolver {
      * Maps control point [ux, uy] to [eps_x, eps_y, gamma_xy]
      */
     getBMatrix(patch, u, v, deriv) {
-        // If derivatives aren't provided, calculate them internally
-        if (!deriv) {
-            deriv = this.engine.getSurfaceDerivatives(patch, u, v);
-        }
+        if (!deriv) deriv = this.engine.getSurfaceDerivatives(patch, u, v);
         
         const { p, q, U, V, weights, controlPoints } = patch;
         const nU = controlPoints.length;
         const nV = controlPoints[0].length;
         
-        // 1. Calculate physical derivatives dRi/dx, dRi/dy
-        // Using J_inv * [dRi/du, dRi/dv]'
-        const J = [
-            [deriv.dU.x, deriv.dV.x],
-            [deriv.dU.y, deriv.dV.y]
-        ];
+        const J = [[deriv.dU.x, deriv.dV.x], [deriv.dU.y, deriv.dV.y]];
         let detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
         
-        // Safety: Handle singularity at degenerate corner by using a stable regularizer
-        // rather than zeroing the B-matrix, which would cause numerical 'locking' or zero-displacement.
-        if (Math.abs(detJ_2D) < 1e-12) {
-            detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
-        }
+        if (Math.abs(detJ_2D) < 1e-12) detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
 
         const J_inv = [
             [ J[1][1]/detJ_2D, -J[0][1]/detJ_2D],
             [-J[1][0]/detJ_2D,  J[0][0]/detJ_2D]
         ];
 
-        const B = []; // Array of matrices for each CP [B1, B2, ...]
+        // Preallocate explicit zero blocks to maintain downstream compatibility
+        const B = Array(nU * nV).fill(0).map(() => [[0, 0], [0, 0], [0, 0]]);
         
-        // Denominator derivatives
-        const W = deriv.W;
-        const Wu = deriv.Wu;
-        const Wv = deriv.Wv;
+        const W = deriv.W, Wu = deriv.Wu, Wv = deriv.Wv;
 
-        for (let i = 0; i < nU; i++) {
-            const Ni = this.engine.basis1D(i, p, U, u);
-            const dNi = this.engine.basis1DDeriv(i, p, U, u);
+        const spanU = this.engine.findSpan(nU - 1, p, u, U);
+        const spanV = this.engine.findSpan(nV - 1, q, v, V);
+
+        const dersU = this.engine.basisFunsDerivs(spanU, u, p, U, 1);
+        const dersV = this.engine.basisFunsDerivs(spanV, v, q, V, 1);
+
+        for (let i = 0; i <= p; i++) {
+            const Ni = dersU[0][i];
+            const dNi = dersU[1][i];
+            const cpI = spanU - p + i;
             
-            for (let j = 0; j < nV; j++) {
-                const Mj = this.engine.basis1D(j, q, V, v);
-                const dMj = this.engine.basis1DDeriv(j, q, V, v);
+            for (let j = 0; j <= q; j++) {
+                const Mj = dersV[0][j];
+                const dMj = dersV[1][j];
+                const cpJ = spanV - q + j;
                 
-                const w = weights[i][j];
+                const w = weights[cpI][cpJ];
                 
-                // Basis derivatives w.r.t. parametric u, v
                 const dRdu = ( (dNi * Mj * w) * W - (Ni * Mj * w) * Wu ) / (W * W);
                 const dRdv = ( (Ni * dMj * w) * W - (Ni * Mj * w) * Wv ) / (W * W);
                 
-                // Basis derivatives w.r.t. physical x, y
                 const dRdx = J_inv[0][0] * dRdu + J_inv[1][0] * dRdv;
                 const dRdy = J_inv[0][1] * dRdu + J_inv[1][1] * dRdv;
 
-                // [B_ij] = [ dRdx  0   ]
-                //          [ 0     dRdy]
-                //          [ dRdy  dRdx]
-                B.push([
-                    [dRdx, 0],
-                    [0, dRdy],
-                    [dRdy, dRdx]
-                ]);
+                const bidx = cpI * nV + cpJ;
+                B[bidx][0][0] = dRdx;
+                B[bidx][1][1] = dRdy;
+                B[bidx][2][0] = dRdy;
+                B[bidx][2][1] = dRdx;
             }
         }
         return B;
     }
+
 
     accumulateContribution(K, B, D, factor, nU, nV) {
         const nPoints = nU * nV;
@@ -388,18 +378,38 @@ class IGA2DSolver {
         const nU = controlPoints.length;
         const nV = controlPoints[0].length;
         const J = [[deriv.dU.x, deriv.dV.x], [deriv.dU.y, deriv.dV.y]];
-        const detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+        let detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+        if (Math.abs(detJ_2D) < 1e-12) detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
         const J_inv = [[J[1][1]/detJ_2D, -J[0][1]/detJ_2D], [-J[1][0]/detJ_2D, J[0][0]/detJ_2D]];
+        
         const W = deriv.W, Wu = deriv.Wu, Wv = deriv.Wv;
-        const grads = [];
-        for (let i = 0; i < nU; i++) {
-            const Ni = this.engine.basis1D(i, p, U, u), dNi = this.engine.basis1DDeriv(i, p, U, u);
-            for (let j = 0; j < nV; j++) {
-                const Mj = this.engine.basis1D(j, q, V, v), dMj = this.engine.basis1DDeriv(j, q, V, v);
-                const w = weights[i][j];
+        const grads = Array(nU * nV).fill(0).map(() => [0, 0]);
+
+        const spanU = this.engine.findSpan(nU - 1, p, u, U);
+        const spanV = this.engine.findSpan(nV - 1, q, v, V);
+
+        const dersU = this.engine.basisFunsDerivs(spanU, u, p, U, 1);
+        const dersV = this.engine.basisFunsDerivs(spanV, v, q, V, 1);
+
+        for (let i = 0; i <= p; i++) {
+            const Ni = dersU[0][i];
+            const dNi = dersU[1][i];
+            const cpI = spanU - p + i;
+            
+            for (let j = 0; j <= q; j++) {
+                const Mj = dersV[0][j];
+                const dMj = dersV[1][j];
+                const cpJ = spanV - q + j;
+                
+                const w = weights[cpI][cpJ];
+                
                 const dRdu = ((dNi * Mj * w) * W - (Ni * Mj * w) * Wu) / (W * W);
                 const dRdv = ((Ni * dMj * w) * W - (Ni * Mj * w) * Wv) / (W * W);
-                grads.push([J_inv[0][0] * dRdu + J_inv[1][0] * dRdv, J_inv[0][1] * dRdu + J_inv[1][1] * dRdv]);
+                
+                const dRdx = J_inv[0][0] * dRdu + J_inv[1][0] * dRdv;
+                const dRdy = J_inv[0][1] * dRdu + J_inv[1][1] * dRdv;
+                
+                grads[cpI * nV + cpJ] = [dRdx, dRdy];
             }
         }
         return grads;

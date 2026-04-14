@@ -79,17 +79,125 @@ class NURBS2D {
     }
 
     /**
+     * Find the knot span index
+     */
+    findSpan(n, p, u, U) {
+        if (u >= U[n + 1]) return n;
+        if (u <= U[p]) return p;
+        let low = p;
+        let high = n + 1;
+        let mid = Math.floor((low + high) / 2);
+        while (u < U[mid] || u >= U[mid + 1]) {
+            if (u < U[mid]) high = mid;
+            else low = mid;
+            mid = Math.floor((low + high) / 2);
+        }
+        return mid;
+    }
+
+    /**
+     * Compute non-vanishing basis functions
+     */
+    basisFuns(i, u, p, U) {
+        const N = new Float64Array(p + 1);
+        N[0] = 1.0;
+        const left = new Float64Array(p + 1);
+        const right = new Float64Array(p + 1);
+        for (let j = 1; j <= p; j++) {
+            left[j] = u - U[i + 1 - j];
+            right[j] = U[i + j] - u;
+            let saved = 0.0;
+            for (let r = 0; r < j; r++) {
+                const temp = N[r] / (right[r + 1] + left[j - r] || 1e-12);
+                N[r] = saved + right[r + 1] * temp;
+                saved = left[j - r] * temp;
+            }
+            N[j] = saved;
+        }
+        return N;
+    }
+
+    /**
+     * Compute non-vanishing basis functions and their derivatives
+     */
+    basisFunsDerivs(i, u, p, U, n = 1) {
+        const ndu = Array(p + 1).fill(0).map(() => new Float64Array(p + 1));
+        ndu[0][0] = 1.0;
+        const left = new Float64Array(p + 1);
+        const right = new Float64Array(p + 1);
+        for (let j = 1; j <= p; j++) {
+            left[j] = u - U[i + 1 - j];
+            right[j] = U[i + j] - u;
+            let saved = 0.0;
+            for (let r = 0; r < j; r++) {
+                ndu[j][r] = right[r + 1] + left[j - r];
+                const temp = ndu[r][j - 1] / (ndu[j][r] || 1e-12);
+                ndu[r][j] = saved + right[r + 1] * temp;
+                saved = left[j - r] * temp;
+            }
+            ndu[j][j] = saved;
+        }
+
+        const ders = Array(n + 1).fill(0).map(() => new Float64Array(p + 1));
+        for (let j = 0; j <= p; j++) ders[0][j] = ndu[j][p];
+
+        const a = Array(2).fill(0).map(() => new Float64Array(p + 1));
+        for (let r = 0; r <= p; r++) {
+            let s1 = 0, s2 = 1;
+            a[0][0] = 1.0;
+            for (let k = 1; k <= n; k++) {
+                let d = 0.0;
+                const rk = r - k;
+                const pk = p - k;
+                if (r >= k) {
+                    a[s2][0] = a[s1][0] / (ndu[pk + 1][rk] || 1e-12);
+                    d = a[s2][0] * ndu[rk][pk];
+                }
+                const j1 = (rk >= -1) ? 1 : -rk;
+                const j2 = (r - 1 <= pk) ? k - 1 : p - r;
+                for (let j = j1; j <= j2; j++) {
+                    a[s2][j] = (a[s1][j] - a[s1][j - 1]) / (ndu[pk + 1][rk + j] || 1e-12);
+                    d += a[s2][j] * ndu[rk + j][pk];
+                }
+                if (r <= pk) {
+                    a[s2][k] = -a[s1][k - 1] / (ndu[pk + 1][r] || 1e-12);
+                    d += a[s2][k] * ndu[r][pk];
+                }
+                ders[k][r] = d;
+                const temp = s1; s1 = s2; s2 = temp;
+            }
+        }
+
+        let rD = p;
+        for (let k = 1; k <= n; k++) {
+            for (let j = 0; j <= p; j++) ders[k][j] *= rD;
+            rD *= (p - k);
+        }
+        return ders;
+    }
+
+    /**
      * Compute Surface Denominator
      */
     computeDenominator(patch, xi, eta) {
         const { p, q, U, V, weights } = patch;
+        const nU = weights.length;
+        const nV = weights[0].length;
+        
+        const eps = 1e-12;
+        xi = Math.max(0, Math.min(1 - eps, xi));
+        eta = Math.max(0, Math.min(1 - eps, eta));
+
+        const spanU = this.findSpan(nU - 1, p, xi, U);
+        const spanV = this.findSpan(nV - 1, q, eta, V);
+
+        const N = this.basisFuns(spanU, xi, p, U);
+        const M = this.basisFuns(spanV, eta, q, V);
+
         let denominator = 0;
-        for (let k = 0; k < weights.length; k++) {
-            const Nk = this.basis1D(k, p, U, xi);
-            if (Nk === 0) continue;
-            for (let l = 0; l < weights[0].length; l++) {
-                const Ml = this.basis1D(l, q, V, eta);
-                denominator += Nk * Ml * weights[k][l];
+        for (let i = 0; i <= p; i++) {
+            for (let j = 0; j <= q; j++) {
+                denominator += N[i] * M[j] * weights[spanU - p + i][spanV - q + j];
             }
         }
         return denominator;
@@ -102,30 +210,41 @@ class NURBS2D {
         const { controlPoints, weights, p, q, U, V } = patch;
         
         // Handle boundaries
-        const eps = 1e-8;
+        const eps = 1e-12;
         xi = Math.max(0, Math.min(1 - eps, xi));
         eta = Math.max(0, Math.min(1 - eps, eta));
 
-        const denominator = this.computeDenominator(patch, xi, eta) || 1.0;
-        
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+
+        const spanU = this.findSpan(nU - 1, p, xi, U);
+        const spanV = this.findSpan(nV - 1, q, eta, V);
+
+        const N = this.basisFuns(spanU, xi, p, U);
+        const M = this.basisFuns(spanV, eta, q, V);
+
         let position = { x: 0, y: 0, z: 0 };
-        for (let i = 0; i < weights.length; i++) {
-            const Ni = this.basis1D(i, p, U, xi);
-            if (Ni === 0) continue;
-            for (let j = 0; j < weights[0].length; j++) {
-                const Mj = this.basis1D(j, q, V, eta);
-                if (Mj === 0) continue;
+        let denominator = 0;
+
+        for (let i = 0; i <= p; i++) {
+            for (let j = 0; j <= q; j++) {
+                const w = weights[spanU - p + i][spanV - q + j];
+                const basis = N[i] * M[j] * w;
+                denominator += basis;
                 
-                const R = (Ni * Mj * weights[i][j]) / denominator;
-                const cp = controlPoints[i][j];
-                
-                position.x += R * cp.x;
-                position.y += R * cp.y;
-                position.z += R * cp.z;
+                const cp = controlPoints[spanU - p + i][spanV - q + j];
+                position.x += basis * cp.x;
+                position.y += basis * cp.y;
+                position.z += basis * cp.z;
             }
         }
 
-        // Final sanity check
+        if (denominator > 0) {
+            position.x /= denominator;
+            position.y /= denominator;
+            position.z /= denominator;
+        }
+
         if (isNaN(position.x) || isNaN(position.y) || isNaN(position.z)) {
             position = { x: 0, y: 0, z: 0 };
         }
@@ -147,6 +266,19 @@ class NURBS2D {
     getSurfaceDerivatives(patch, xi, eta) {
         const { controlPoints, weights, p, q, U, V } = patch;
         
+        const eps = 1e-12;
+        xi = Math.max(0, Math.min(1 - eps, xi));
+        eta = Math.max(0, Math.min(1 - eps, eta));
+
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+
+        const spanU = this.findSpan(nU - 1, p, xi, U);
+        const spanV = this.findSpan(nV - 1, q, eta, V);
+
+        const dersU = this.basisFunsDerivs(spanU, xi, p, U, 1);
+        const dersV = this.basisFunsDerivs(spanV, eta, q, V, 1);
+
         let A = { x: 0, y: 0, z: 0 };
         let Au = { x: 0, y: 0, z: 0 };
         let Av = { x: 0, y: 0, z: 0 };
@@ -154,20 +286,16 @@ class NURBS2D {
         let Wu = 0;
         let Wv = 0;
 
-        for (let i = 0; i < weights.length; i++) {
-            const Ni = this.basis1D(i, p, U, xi);
-            const dNi = this.basis1DDeriv(i, p, U, xi);
-            if (Ni === 0 && dNi === 0) continue;
+        for (let i = 0; i <= p; i++) {
+            const Ni = dersU[0][i];
+            const dNi = dersU[1][i];
+            for (let j = 0; j <= q; j++) {
+                const Mj = dersV[0][j];
+                const dMj = dersV[1][j];
 
-            for (let j = 0; j < weights[0].length; j++) {
-                const Mj = this.basis1D(j, q, V, eta);
-                const dMj = this.basis1DDeriv(j, q, V, eta);
-                if (Mj === 0 && dMj === 0) continue;
+                const w = weights[spanU - p + i][spanV - q + j];
+                const cp = controlPoints[spanU - p + i][spanV - q + j];
 
-                const w = weights[i][j];
-                const cp = controlPoints[i][j];
-
-                // Numerator sum
                 const basis = Ni * Mj * w;
                 const basisU = dNi * Mj * w;
                 const basisV = Ni * dMj * w;
@@ -176,7 +304,6 @@ class NURBS2D {
                 Au.x += basisU * cp.x; Au.y += basisU * cp.y; Au.z += basisU * cp.z;
                 Av.x += basisV * cp.x; Av.y += basisV * cp.y; Av.z += basisV * cp.z;
 
-                // Denominator sum
                 W += basis;
                 Wu += basisU;
                 Wv += basisV;

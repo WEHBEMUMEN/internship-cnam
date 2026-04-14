@@ -27,9 +27,27 @@ scene.add(new THREE.AmbientLight(0xffffff, 1.0));
 
 let surfaceMesh, wireframeOverlay;
 
+// FPS Tracking Variables
+let frameCount = 0;
+let lastFPSUpdateTime = performance.now();
+let currentFPS = 0;
+
 // Render loop
 function animate() {
     requestAnimationFrame(animate);
+    
+    // Real-time FPS Monitor
+    frameCount++;
+    const now = performance.now();
+    const delta = now - lastFPSUpdateTime;
+    if (delta >= 1000) {
+        currentFPS = Math.round((frameCount * 1000) / delta);
+        const fpsElement = document.getElementById('fps-val');
+        if (fpsElement) fpsElement.innerText = currentFPS;
+        frameCount = 0;
+        lastFPSUpdateTime = now;
+    }
+
     controls.update();
     renderer.render(scene, camera);
 }
@@ -133,7 +151,12 @@ function gaussianElimination(A, b) {
     for (let i = n - 1; i >= 0; i--) {
         let s = 0;
         for (let j = i + 1; j < n; j++) s += A[i][j] * x[j];
-        x[i] = (b[i] - s) / A[i][i];
+        if (Math.abs(A[i][i]) < 1e-15) {
+            console.warn("Singular matrix detected in Online Solve at row " + i);
+            x[i] = 0;
+        } else {
+            x[i] = (b[i] - s) / A[i][i];
+        }
     }
     return x;
 }
@@ -178,9 +201,6 @@ function evaluateOnline() {
     // Update charts
     document.getElementById('solve-time').innerText = (t1 - t0).toFixed(2) + " ms";
     document.getElementById('recon-time').innerText = (t2 - t1).toFixed(2) + " ms";
-    
-    const approxFPS = Math.min(1000 / ((t2 - t0) || 1), 144);
-    document.getElementById('fps-val').innerText = approxFPS.toFixed(0);
 
     // Warp visualization
     last_u_tilde = u_tilde;
@@ -190,19 +210,35 @@ function evaluateOnline() {
 // --- VISUALIZATION HELPERS (No Physics!) ---
 
 function updateSurface(u_disp = null, E = 100000, nu = 0.3) {
-    if (surfaceMesh) scene.remove(surfaceMesh);
-    if (wireframeOverlay) scene.remove(wireframeOverlay);
     if (!patch) return;
 
     const res = 40; 
-    const geometry = new THREE.BufferGeometry();
-    const positions = [], colors = [];
+    let isNewMesh = false;
+    
+    if (!surfaceMesh) {
+        isNewMesh = true;
+        const geometry = new THREE.BufferGeometry();
+        surfaceMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+        scene.add(surfaceMesh);
+
+        wireframeOverlay = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.15 }));
+        scene.add(wireframeOverlay);
+    }
+    
+    const geometry = surfaceMesh.geometry;
+    const numVertices = (res + 1) * (res + 1);
+    
+    // Arrays for Geometry Attributes
+    const positions = (geometry.attributes.position && geometry.attributes.position.count === numVertices) ? geometry.attributes.position.array : new Float32Array(numVertices * 3);
+    const colors = (geometry.attributes.color && geometry.attributes.color.count === numVertices) ? geometry.attributes.color.array : new Float32Array(numVertices * 3);
+
     
     const viewMode = document.getElementById('view-mode').value;
     const isStress = viewMode === 'stress';
     
     // First Pass: Calculate values and bounds
-    let maxVal = 1e-6; // prevent division by zero
+    let minVal = Infinity;
+    let maxVal = -Infinity;
     const vertexData = [];
 
     for (let i = 0; i <= res; i++) {
@@ -232,6 +268,7 @@ function updateSurface(u_disp = null, E = 100000, nu = 0.3) {
                 }
                 
                 if (val > maxVal) maxVal = val;
+                if (val < minVal) minVal = val;
             }
             
             vertexData.push({ p, interp, val, hasDisp: u_disp && state.denominator > 0 });
@@ -244,12 +281,27 @@ function updateSurface(u_disp = null, E = 100000, nu = 0.3) {
         if (!document.getElementById('legend-title').innerText.startsWith('ERROR')) {
             document.getElementById('legend-title').innerText = isStress ? "VON MISES STRESS (MPa)" : "X-DISPLACEMENT (mm)";
         }
-        document.getElementById('legend-max').innerText = isStress ? maxVal.toFixed(1) : maxVal.toExponential(2);
+        
+        // Handle no-variation or zero-state
+        if (minVal === Infinity) minVal = 0;
+        if (maxVal === -Infinity) maxVal = 0;
+        if (Math.abs(maxVal - minVal) < 1e-12) maxVal = minVal + 1e-6;
+
+        const formatVal = (v) => {
+            if (Math.abs(v) < 1e-3 && v !== 0) return v.toExponential(2);
+            if (Math.abs(v) > 10000) return v.toExponential(2);
+            return v.toFixed(isStress ? 2 : 3);
+        };
+
+        document.getElementById('legend-min').innerText = formatVal(minVal);
+        document.getElementById('legend-max').innerText = formatVal(maxVal);
     } else {
         document.getElementById('legend-container').classList.add('hidden');
     }
 
     // Second Pass: Color mapping and geometry building
+    const range = maxVal - minVal || 1e-6;
+    let vIdx = 0;
     for (let idx = 0; idx < vertexData.length; idx++) {
         const data = vertexData[idx];
         let p = data.p;
@@ -259,27 +311,35 @@ function updateSurface(u_disp = null, E = 100000, nu = 0.3) {
             p.x += data.interp.x * 50; 
             p.y += data.interp.y * 50;
             
-            const c = getHeatmapColor(data.val / maxVal);
-            colors.push(c.r, c.g, c.b);
+            const t = (data.val - minVal) / range;
+            const c = getHeatmapColor(Math.max(0, Math.min(1, t)));
+            colors[vIdx] = c.r; colors[vIdx+1] = c.g; colors[vIdx+2] = c.b;
         } else {
-            colors.push(0.1, 0.2, 0.4);
+            colors[vIdx] = 0.1; colors[vIdx+1] = 0.2; colors[vIdx+2] = 0.4;
         }
-        positions.push(p.x, p.y, p.z);
+        positions[vIdx] = p.x; positions[vIdx+1] = p.y; positions[vIdx+2] = p.z;
+        vIdx += 3;
     }
 
-    const indices = [];
-    for (let i = 0; i < res; i++) for (let j = 0; j < res; j++) {
-        const a = i * (res+1) + j, b = (i+1) * (res+1) + j, c = (i+1) * (res+1) + (j+1), d = i * (res+1) + (j+1);
-        indices.push(a, b, d, b, c, d);
+    if (isNewMesh) {
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        
+        const indices = [];
+        for (let i = 0; i < res; i++) {
+            for (let j = 0; j < res; j++) {
+                const a = i * (res+1) + j;
+                const b = (i+1) * (res+1) + j;
+                const c = (i+1) * (res+1) + (j+1);
+                const d = i * (res+1) + (j+1);
+                indices.push(a, b, d, b, c, d);
+            }
+        }
+        geometry.setIndex(indices);
+    } else {
+        geometry.attributes.position.needsUpdate = true;
+        geometry.attributes.color.needsUpdate = true;
     }
-
-    geometry.setIndex(indices);
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    surfaceMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-    scene.add(surfaceMesh);
-    wireframeOverlay = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 }));
-    scene.add(wireframeOverlay);
 }
 
 function getHeatmapColor(t) {
