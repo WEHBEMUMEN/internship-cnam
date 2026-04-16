@@ -130,6 +130,8 @@
             color: #22d3ee; margin-top: 8px; min-height: 16px;
         }
         .hidden { display: none !important; }
+        .hidden-fade { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .visible-fade { opacity: 1; pointer-events: auto; transition: opacity 0.3s; }
 
         /* ── Back link ── */
         .back-link {
@@ -217,16 +219,26 @@
 
         <!-- View Mode -->
         <div class="control-group">
-            <span class="section-label">Visualisation</span>
+            <span class="section-label">Show Analysis Map</span>
             <div class="btn-grid">
-                <button id="btn-view-disp" class="btn-pill active">Displacement</button>
-                <button id="btn-view-stress" class="btn-pill">Von Mises σ</button>
+                <button id="btn-map-on" class="btn-pill">On</button>
+                <button id="btn-map-off" class="btn-pill active">Off</button>
+            </div>
+        </div>
+
+        <div id="viz-selectors" class="hidden-fade">
+            <div class="control-group">
+                <span class="section-label">Visualisation</span>
+                <div class="btn-grid">
+                    <button id="btn-view-disp" class="btn-pill active">Displacement</button>
+                    <button id="btn-view-stress" class="btn-pill">Von Mises σ</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- ── Colorbar ── -->
-    <div id="colorbar-panel" class="glass-panel">
+    <div id="colorbar-panel" class="glass-panel hidden-fade">
         <span id="colorbar-label" style="font-size:.6rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;">Displacement</span>
         <canvas id="colorbar-canvas" width="18" height="180"></canvas>
         <div id="colorbar-ticks"></div>

@@ -138,6 +138,7 @@ class ROMApp32 {
         this.currentBenchmark = 'beam';
         this.solverMode = 'fom';   // 'fom' | 'rom'
         this.viewMode = 'disp';    // 'disp' | 'stress'
+        this.showMap = false;     // Toggle for colormapping
         this.loadMag = 100;
         this.k = 5;
         this.patch = null;
@@ -150,7 +151,8 @@ class ROMApp32 {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.surfaceMesh = null;
+        this.deformedMesh = null;
+        this.ghostMesh = null;
         this.wireMesh = null;
 
         this.initThree();
@@ -222,10 +224,15 @@ class ROMApp32 {
     }
 
     clearMesh() {
-        if (this.surfaceMesh) {
-            this.scene.remove(this.surfaceMesh);
-            this.surfaceMesh.geometry.dispose();
-            this.surfaceMesh = null;
+        if (this.deformedMesh) {
+            this.scene.remove(this.deformedMesh);
+            this.deformedMesh.geometry.dispose();
+            this.deformedMesh = null;
+        }
+        if (this.ghostMesh) {
+            this.scene.remove(this.ghostMesh);
+            this.ghostMesh.geometry.dispose();
+            this.ghostMesh = null;
         }
         if (this.wireMesh) {
             this.scene.remove(this.wireMesh);
@@ -412,19 +419,26 @@ class ROMApp32 {
 
     updateMesh(uDisp = null) {
         const res = 36;
-        const { positions, values } = this.computeFieldValues(res, uDisp);
+        const { positions: posDef, values } = this.computeFieldValues(res, uDisp);
+        const { positions: posUndef } = this.computeFieldValues(res, null);
 
-        // NaN-safe min/max (a single bad point won't corrupt the whole colormap)
+        // NaN-safe min/max
         const finite = values.filter(v => isFinite(v) && v >= 0);
         const minV = finite.length ? Math.min(...finite) : 0;
         const maxV = finite.length ? Math.max(...finite) : 1;
         const range = maxV - minV || 1;
-        // Use jet (displacement) or coolwarm (stress) — same as Phase 3.1 palette
+
+        // Compute Main Mesh Colors
         const colorFn = this.viewMode === 'stress' ? coolwarm : jet;
         const colors = [];
         values.forEach(v => {
-            const [r, g, b] = uDisp ? colorFn((v - minV) / range) : [0.05, 0.12, 0.22];
-            colors.push(r, g, b);
+            if (this.showMap && uDisp) {
+                const [r, g, b] = colorFn((v - minV) / range);
+                colors.push(r, g, b);
+            } else {
+                // Flat Light Blue for deformed state when map is OFF
+                colors.push(0.23, 0.51, 0.96);
+            }
         });
 
         // Update colorbar
@@ -439,37 +453,57 @@ class ROMApp32 {
         );
         this.colorbar.update(minV, maxV, unit);
 
-        if (!this.surfaceMesh) {
-            // First build — allocate geometry
-            const geo = new THREE.BufferGeometry();
+        // ── Dual Mesh Initialization/Update ──
+        if (!this.deformedMesh) {
+            const geoMain = new THREE.BufferGeometry();
+            const geoGhost = new THREE.BufferGeometry();
             const idx = [];
             for (let i = 0; i < res; i++) for (let j = 0; j < res; j++) {
                 const a = i * (res + 1) + j, b = (i + 1) * (res + 1) + j;
                 const c = (i + 1) * (res + 1) + (j + 1), d = i * (res + 1) + (j + 1);
                 idx.push(a, b, d, b, c, d);
             }
-            geo.setIndex(idx);
-            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-            this.surfaceMesh = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
-                vertexColors: true, side: THREE.DoubleSide, shininess: 30
+            // Deformed Mesh
+            geoMain.setIndex(idx);
+            geoMain.setAttribute('position', new THREE.Float32BufferAttribute(posDef, 3));
+            geoMain.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            this.deformedMesh = new THREE.Mesh(geoMain, new THREE.MeshPhongMaterial({
+                vertexColors: true, side: THREE.DoubleSide, shininess: 40
             }));
+
+            // Ghost Mesh (Undeformed)
+            geoGhost.setIndex(idx);
+            geoGhost.setAttribute('position', new THREE.Float32BufferAttribute(posUndef, 3));
+            this.ghostMesh = new THREE.Mesh(geoGhost, new THREE.MeshPhongMaterial({
+                color: 0x0a1e38, transparent: true, opacity: 0.25, side: THREE.DoubleSide
+            }));
+
             this.wireMesh = new THREE.LineSegments(
-                new THREE.WireframeGeometry(geo),
-                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 })
+                new THREE.WireframeGeometry(geoMain),
+                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05 })
             );
-            this.scene.add(this.surfaceMesh);
+
+            this.scene.add(this.ghostMesh);
+            this.scene.add(this.deformedMesh);
             this.scene.add(this.wireMesh);
         } else {
-            // In-place GPU update — no scene add/remove, no flicker
-            const posAttr = this.surfaceMesh.geometry.getAttribute('position');
-            const colAttr = this.surfaceMesh.geometry.getAttribute('color');
-            for (let i = 0; i < positions.length; i++) posAttr.array[i] = positions[i];
+            // Update Deformed
+            const posAttr = this.deformedMesh.geometry.getAttribute('position');
+            const colAttr = this.deformedMesh.geometry.getAttribute('color');
+            for (let i = 0; i < posDef.length; i++) posAttr.array[i] = posDef[i];
             for (let i = 0; i < colors.length; i++) colAttr.array[i] = colors[i];
             posAttr.needsUpdate = true;
             colAttr.needsUpdate = true;
-            this.surfaceMesh.geometry.computeBoundingSphere();
+            this.deformedMesh.geometry.computeBoundingSphere();
+
+            // Wireframe follows deformed
+            this.scene.remove(this.wireMesh);
+            this.wireMesh = new THREE.LineSegments(
+                new THREE.WireframeGeometry(this.deformedMesh.geometry),
+                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05 })
+            );
+            this.scene.add(this.wireMesh);
         }
     }
 
@@ -587,6 +621,22 @@ class ROMApp32 {
             this.colorbar = new Colorbar(
                 document.getElementById('colorbar-canvas'),
                 document.getElementById('colorbar-ticks'), coolwarm);
+            if (this.lastResult) { this.updateMesh(this.lastResult.u); this._render(); }
+        };
+
+        // Map Toggle
+        document.getElementById('btn-map-on').onclick = () => {
+            this.showMap = true;
+            this._setActive('btn-map-on', 'btn-map-off');
+            document.getElementById('viz-selectors').classList.replace('hidden-fade', 'visible-fade');
+            document.getElementById('colorbar-panel').classList.replace('hidden-fade', 'visible-fade');
+            if (this.lastResult) { this.updateMesh(this.lastResult.u); this._render(); }
+        };
+        document.getElementById('btn-map-off').onclick = () => {
+            this.showMap = false;
+            this._setActive('btn-map-off', 'btn-map-on');
+            document.getElementById('viz-selectors').classList.replace('visible-fade', 'hidden-fade');
+            document.getElementById('colorbar-panel').classList.replace('visible-fade', 'hidden-fade');
             if (this.lastResult) { this.updateMesh(this.lastResult.u); this._render(); }
         };
     }
