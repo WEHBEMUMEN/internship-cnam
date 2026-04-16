@@ -142,7 +142,7 @@ class ROMApp32 {
         this.initThree();
         this.initUI();
         this.loadBenchmark('beam');
-        this.animate();
+        // No animate() loop — rendering is on-demand only
     }
 
     // ── Three.js ─────────────────────────────────────────────────────────────
@@ -159,18 +159,21 @@ class ROMApp32 {
         this.controls.target.set(5, 1, 0);
         this.controls.update();
 
+        // On-demand rendering: only render when camera moves
+        this.controls.addEventListener('change', () => this._render());
+
         this.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
 
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this._render(); // Re-render on resize
         });
     }
 
-    animate() {
-        requestAnimationFrame(() => this.animate());
-        this.controls.update();
+    // Single render call — only fired on-demand
+    _render() {
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -200,6 +203,7 @@ class ROMApp32 {
         this.camera.updateProjectionMatrix();
         this.controls.update();
         this.updateMesh(null);
+        this._render(); // Initial render after benchmark load
     }
 
     clearMesh() {
@@ -269,6 +273,7 @@ class ROMApp32 {
         this.sparkline.update(result.residualHistory);
 
         this.updateMesh(result.u);
+        this._render(); // Fire exactly one render after physics
     }
 
     // ── Mesh / Colours ────────────────────────────────────────────────────────
