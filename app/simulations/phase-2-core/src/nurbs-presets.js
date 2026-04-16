@@ -3,7 +3,7 @@
  * Contains specialized geometries like exact Spheres and Toruses.
  */
 
-class NURBSPresets {
+export class NURBSPresets {
     static generateSheet() {
         const patch = {
             p: 2, q: 2,

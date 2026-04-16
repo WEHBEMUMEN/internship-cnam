@@ -20,7 +20,7 @@ class GaussQuadrature2D {
     }
 }
 
-class IGANonlinearSolver {
+export class IGANonlinearSolver {
     constructor(nurbsEngine) {
         this.engine = nurbsEngine;
         this.E = 200000; // Steel (MPa)

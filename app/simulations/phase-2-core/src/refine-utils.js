@@ -2,7 +2,7 @@
  * Refinement Utilities for IGA
  * Provides a standardized way to apply h, p, and k-refinement stacks.
  */
-class RefineUtils {
+export class RefineUtils {
     /**
      * Apply a refinement stack (degree followed by subdivision)
      * @param {NURBS2D} engine 
