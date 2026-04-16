@@ -58,16 +58,41 @@
 
         <section class="content-section">
             <h2 class="text-2xl font-bold mb-4">3. Latin Hypercube Sampling (LHS)</h2>
-            <p>To capture the behavior of the system efficiently, we must choose our parameters $\mu_i$ strategically. Simple random sampling (Monte Carlo) often leads to "clusters" and "Gaps" in the parameter space.</p>
-            <p>**LHS** ensures uniform coverage by dividing each parameter range into $N$ bins and ensuring each bin is sampled exactly once. This is known as a "Space-Filling" design, which significantly reduces the number of snapshots needed for a high-accuracy ROM.</p>
+            <p>To capture the behavior of the system efficiently, we must choose our parameters $\mu_i$ strategically. Choosing parameters randomly (Monte Carlo) often leads to significant "gaps" and "clusters" in the parameter space, which reduces the reliability of the POD basis.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-6">
+                <div class="p-6 bg-slate-900/50 rounded-xl border border-sky-500/20">
+                    <h3 class="text-sky-400 font-bold mb-2">The LHS Principle</h3>
+                    <p class="text-sm text-slate-400">If we want $N$ samples of $M$ parameters, we divide each parameter range into $N$ equal-probability intervals. We then select one sample from each interval such that for every parameter, each interval is sampled exactly once.</p>
+                </div>
+                <div class="p-6 bg-slate-900/50 rounded-xl border border-emerald-500/20">
+                    <h3 class="text-emerald-400 font-bold mb-2">Space-Filling Property</h3>
+                    <p class="text-sm text-slate-400">LHS ensures that the entire multidimensional space is explored uniformly. This "Space-Filling" design maximizes the information captured per snapshot, allowing high-accuracy ROMs with 80% fewer training samples than random search.</p>
+                </div>
+            </div>
+            
+            <p class="text-slate-400">Mathematically, LHS generates a permutation-based design where the projection of $N$ points onto any single parameter axis yields a perfectly uniform distribution.</p>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">4. Self-Describing Databases</h2>
+            <p>A "Snapshot Matrix" is useless if it is detached from its geometric context. Our architecture implements **Structural Persistence** by injecting topological metadata directly into the data payload:</p>
+            <div class="math-card" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: #38bdf8;">
+{
+  "topology": { "p": 3, "q": 3, "knots": [...] },
+  "parameters": { "ranges": { "E": [1e9, 2e11], "nu": [0.1, 0.45] } },
+  "snapshots": [ ... matrix data ... ]
+}
+            </div>
+            <p class="text-slate-400 mt-4">This ensures that any downstream POD solver can perfectly reconstruct the 2D physical field without external configuration files.</p>
         </section>
 
         <section class="content-section text-center">
             <h2 class="text-2xl font-bold mb-4">Generate Snapshot Data</h2>
             <p class="mb-8 text-slate-400">Automate the FOM solver sweep and build your own structural training database.</p>
             <div class="flex justify-center gap-4">
-                <a href="../app/simulations/iga-sim-2c/index.html" class="btn btn-primary">Launch Batch Generator</a>
-                <a href="theory-2b2.html" class="btn bg-slate-800 text-white">Back to Nonlinear</a>
+                <a href="../app/simulations/iga-sim-2c1/index.html" class="btn btn-primary">Launch Batch Generator</a>
+                <a href="theory-2b2.html" class="btn bg-slate-800 text-white">Back to Stress Lab</a>
             </div>
         </section>
         

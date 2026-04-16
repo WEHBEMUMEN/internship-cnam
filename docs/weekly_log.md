@@ -103,4 +103,30 @@ Use this document to track weekly goals, daily tasks, and notes from meetings wi
 
 ---
 
+## 📅 Week 4: April 13 – April 19, 2026
+**Primary Goal:** Finalize 2D Structural Nonlinearity (Geometric) and expand Theory Docs for 2D ROM.
+
+### 📋 Task Tracker
+- [x] **Geometric Nonlinearity (3A)**: Implemented a 2D Isogeometric Nonlinear engine using Green-Lagrange strain and Newton-Raphson iteration.
+- [x] **Penalty Stabilization**: Deployed robust penalty constraints to handle geometric singularities in corner-degenerate NURBS patches.
+- [x] **Interactive Analytics**: Integrated `chartjs-plugin-zoom` for professional-grade Stress-Strain and Force-Displacement telemetry.
+- [x] **Theory Suite Expansion**: Authored high-fidelity documentation for **2D POD (theory-2d1.html)** and **2D Projection (theory-2d2.html)**.
+- [x] **Hub Synchronization**: Fully updated the simulation hub with Phase 3A integration and logic-path flowcharts.
+- [x] **GitHub Deployment**: Synchronized the local codebase with the remote repository, ensuring full architectural integrity.
+
+### 🤝 Supervisor Meeting Notes
+**Date:** *(Scheduled for end of week)*
+
+**Pre-meeting prep:**
+- Demonstrate the 60 FPS nonlinear structural divergence on the Plate with Hole benchmark.
+- Show the Energy Capture (Scree Plot) in the new SVD Lab documentation.
+
+**Notes/Answers from meeting:**
+*(Fill in during meeting)*
+
+**Action items for Week 5:**
+- [ ] Begin Phase 3B: Implementation of Hyperelastic (Neo-Hookean) material models.
+
+---
+
 *(Copy the week block above to create new weeks as the internship progresses.)*

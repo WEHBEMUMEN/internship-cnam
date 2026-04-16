@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 2D.1 | Proper Orthogonal Decomposition (POD) in 2D</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #ec4899; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 30px; }
+        .badge { background: rgba(236, 72, 153, 0.1); color: var(--primary); padding: 5px 15px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; border: 1px solid rgba(236, 72, 153, 0.2); display: inline-block; margin-bottom: 20px; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #f472b6, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; transition: transform 0.3s ease; }
+        .content-section:hover { transform: translateY(-5px); border-color: var(--primary); }
+        .math-card { background: #020617; padding: 25px; border-radius: 16px; margin: 20px 0; border-left: 4px solid var(--primary); overflow-x: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 15px 30px; border-radius: 12px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+    <a href="../app/index.html" class="absolute top-8 left-8 text-slate-400 hover:text-white transition-colors group flex items-center gap-2 font-semibold">
+        <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> Back to Hub
+    </a>
+
+    <div class="container relative">
+        <header class="text-center mb-16">
+            <span class="badge">Phase 2D.1 | Dimensionality Reduction</span>
+            <h1>Proper Orthogonal Decomposition <br>(POD) in 2D</h1>
+            <p class="text-xl text-slate-400">Extracting dominant deformation modes from high-fidelity 2D Snapshot Matrices.</p>
+        </header>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">1. The 2D Snapshot Matrix</h2>
+            <p>In 2D Isogeometric Analysis, the solution vector $\mathbf{u}$ contains displacements for both $x$ and $y$ directions. For a mesh with $N_{cp}$ control points, the solution vector has a size of $2 \cdot N_{cp}$:</p>
+            <div class="math-card">
+                $$\mathbf{u} = [u_{x,1}, u_{y,1}, u_{x,2}, u_{y,2}, \dots, u_{x,N_{cp}}, u_{y,N_{cp}}]^T$$
+            </div>
+            <p>We collect $N_s$ such solutions (snapshots) across different material parameters ($\mu$) into the **Snapshot Matrix** $\mathbf{S}$:</p>
+            <div class="math-card">
+                $$\mathbf{S} = [\mathbf{u}(\mu_1), \mathbf{u}(\mu_2), \dots, \mathbf{u}(\mu_{N_s})] \in \mathbb{R}^{(2N_{cp}) \times N_s}$$
+            </div>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">2. Singular Value Decomposition (SVD)</h2>
+            <p>POD identifies the most energetic "modes" of the system by performing SVD on the snapshot matrix. This factorizes $\mathbf{S}$ into three components:</p>
+            <div class="math-card">
+                $$\mathbf{S} = \mathbf{U} \mathbf{\Sigma} \mathbf{V}^T$$
+            </div>
+            <ul class="list-disc ml-6 mt-4 text-slate-400 space-y-2">
+                <li><strong class="text-white">$\mathbf{U}$ (Left Singular Vectors):</strong> Contains the **POD Modes**. Each column is a spatial basis function representing a fundamental way the structure deforms.</li>
+                <li><strong class="text-white">$\mathbf{\Sigma}$ (Singular Values):</strong> A diagonal matrix showing the "energy" or "importance" of each mode.</li>
+                <li><strong class="text-white">$\mathbf{V}$ (Right Singular Vectors):</strong> Describes how much of each mode is present in each original snapshot.</li>
+            </ul>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">3. Energy Truncation & Efficiency</h2>
+            <p>The core power of ROM comes from the fact that most physical systems are dominated by only a few modes. We truncate the basis to keep only $k$ modes, where $k \ll N_s$.</p>
+            <p>We choose $k$ by calculating the **Cumulative Relative Energy** ($\eta$):</p>
+            <div class="math-card">
+                $$\eta(k) = \frac{\sum_{i=1}^k \sigma_i^2}{\sum_{i=1}^{N_s} \sigma_i^2} > 0.9999$$
+            </div>
+            
+            <div class="my-8 bg-black/40 p-6 rounded-xl border border-slate-700">
+                <canvas id="screeChart" height="200"></canvas>
+                <p class="text-center text-xs text-slate-500 mt-4 italic">Typical Scree Plot: Exponential decay of singular values allows 99.9% energy capture with < 5 modes.</p>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <h2 class="text-2xl font-bold mb-4">4. The Reduced Basis $\mathbf{\Phi}$</h2>
+            <p>The final reduced basis matrix $\mathbf{\Phi}$ consists of the first $k$ columns of $\mathbf{U}$. This allows us to map the high-dimensional displacement $\mathbf{u}$ to a low-dimensional **Latent Space** $\mathbf{q}$:</p>
+            <div class="math-card">
+                $$\mathbf{u} \approx \mathbf{\Phi} \mathbf{q}$$
+            </div>
+            <p>Solving for $\mathbf{q}$ (a vector of size $k$) is computationally negligible compared to solving for the full vector $\mathbf{u}$.</p>
+        </section>
+
+        <section class="content-section text-center">
+            <h2 class="text-2xl font-bold mb-4">Ready to Project?</h2>
+            <p class="mb-8 text-slate-400">Now that we have the dominant modes, we must project the physical equations onto this basis.</p>
+            <div class="flex justify-center gap-4">
+                <a href="theory-2d2.html" class="btn btn-primary">Next: Galerkin Projection</a>
+                <a href="theory-2c1.html" class="btn bg-slate-800 text-white">Back to Snapshots</a>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('screeChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mode 1', 'Mode 2', 'Mode 3', 'Mode 4', 'Mode 5', 'Mode 6', 'Mode 7', 'Mode 8', 'Mode 9', 'Mode 10'],
+                datasets: [{
+                    label: 'Singular Value (Energy)',
+                    data: [100, 45, 12, 4, 1.5, 0.8, 0.4, 0.2, 0.1, 0.05],
+                    borderColor: '#ec4899',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, display: false },
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

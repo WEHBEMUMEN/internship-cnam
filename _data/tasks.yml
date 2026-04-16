@@ -132,9 +132,6 @@ tasks:
     deadline: 2026-05-12
     description: Run and save 50+ high-fidelity snapshots in .npy format for ROM training.
 
-  # ── IN PROGRESS ───────────────────────────────────────────────────────────
-
-  # ── TO DO (Phase 2D — POD ROM) ────────────────────────────────────────────
   - title: "Phase 2D.1: SVD Reduction & POD Basis"
     status: Done
     priority: High
@@ -146,6 +143,20 @@ tasks:
     priority: High
     deadline: 2026-05-26
     description: Project FOM equations onto the reduced basis ($K_{red} = \Phi^T K \Phi$).
+
+  - title: "Phase 3A.1: 2D Geometric Nonlinearity Solver"
+    status: Done
+    priority: High
+    deadline: 2026-04-16
+    description: "Developed a 2D Isogeometric Nonlinear engine using Green-Lagrange strain and Newton-Raphson iteration."
+
+  - title: "Phase 3A.2: Interactive Theory & Hub"
+    status: Done
+    priority: High
+    deadline: 2026-04-16
+    description: "Generated multi-chart analytics and advanced 2D-specific theory documentation for the ROM pipeline."
+
+  # ── IN PROGRESS ───────────────────────────────────────────────────────────
 
   # ── TO DO (Phase 2E — Hyper-reduction) ────────────────────────────────────
   - title: "Phase 2E: Implement & Compare Hyper-reduction (DEIM / ECS / ECSW)"
