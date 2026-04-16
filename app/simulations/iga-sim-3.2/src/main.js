@@ -5,16 +5,30 @@ import { IGANonlinearSolver } from '../../phase-3-core/src/iga-nonlinear.js';
 import { ROMEngine } from '../../phase-3-core/src/rom-engine.js';
 
 // ─── Colour maps ────────────────────────────────────────────────────────────
-function coolwarm(t) {           // t in [0,1]
+// Jet (Blue→Cyan→Green→Yellow→Orange→Red) — same as Phase 3.1
+const JET_STOPS = [
+    { t: 0.0, r: 0.23, g: 0.51, b: 0.96 },
+    { t: 0.2, r: 0.02, g: 0.71, b: 0.83 },
+    { t: 0.4, r: 0.06, g: 0.73, b: 0.51 },
+    { t: 0.6, r: 0.98, g: 0.80, b: 0.08 },
+    { t: 0.8, r: 0.98, g: 0.45, b: 0.09 },
+    { t: 1.0, r: 0.94, g: 0.27, b: 0.27 }
+];
+function jet(t) {
+    t = Math.max(0, Math.min(1, t));
+    for (let i = 0; i < JET_STOPS.length - 1; i++) {
+        const s1 = JET_STOPS[i], s2 = JET_STOPS[i + 1];
+        if (t >= s1.t && t <= s2.t) {
+            const f = (t - s1.t) / (s2.t - s1.t);
+            return [s1.r + f*(s2.r-s1.r), s1.g + f*(s2.g-s1.g), s1.b + f*(s2.b-s1.b)];
+        }
+    }
+    return [0.94, 0.27, 0.27];
+}
+function coolwarm(t) {
     const r = Math.min(1, 2 * t);
     const b = Math.min(1, 2 * (1 - t));
     const g = 1 - 0.6 * Math.abs(t - 0.5) * 2;
-    return [r, g, b];
-}
-function viridis(t) {
-    const r = Math.max(0, 0.28 + 1.3 * t - 1.2 * t * t);
-    const g = Math.max(0, 0.06 + 1.6 * t - 1.5 * t * t);
-    const b = Math.max(0, 0.5 - 0.8 * t + 0.2 * t * t);
     return [r, g, b];
 }
 
@@ -203,7 +217,8 @@ class ROMApp32 {
         this.camera.updateProjectionMatrix();
         this.controls.update();
         this.updateMesh(null);
-        this._render(); // Initial render after benchmark load
+        this.updateOverlays();
+        this._render();
     }
 
     clearMesh() {
@@ -216,6 +231,92 @@ class ROMApp32 {
             this.scene.remove(this.wireMesh);
             this.wireMesh.geometry.dispose();
             this.wireMesh = null;
+        }
+        this.clearOverlays();
+    }
+
+    clearOverlays() {
+        (this._overlayObjects || []).forEach(o => this.scene.remove(o));
+        this._overlayObjects = [];
+    }
+
+    // ── BC + Force Arrows  ───────────────────────────────────────────────────
+    _makeBCMarker(type) {
+        const group = new THREE.Group();
+        if (type === 'both') {
+            // Hatched wall (vertical line + hatches)
+            const pts = [];
+            for (let k = 0; k < 5; k++) {
+                const y = -0.25 + k * 0.12;
+                pts.push(new THREE.Vector3(-0.18, y, 0), new THREE.Vector3(-0.06, y + 0.1, 0));
+            }
+            pts.push(new THREE.Vector3(-0.12, -0.3, 0), new THREE.Vector3(-0.12, 0.3, 0));
+            const geo = new THREE.BufferGeometry().setFromPoints(pts);
+            group.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x334155 })));
+
+            const coneGeo = new THREE.ConeGeometry(0.09, 0.18, 3);
+            const cone = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: 0x334155 }));
+            cone.rotation.z = Math.PI / 2;
+            cone.position.x = 0.09;
+            group.add(cone);
+        } else {
+            const coneGeo = new THREE.ConeGeometry(0.09, 0.18, 3);
+            const cone = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: 0x475569 }));
+            if (type === 'y') {
+                cone.position.y = -0.09;
+                // roller line
+                const lg = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(-0.15, -0.2, 0), new THREE.Vector3(0.15, -0.2, 0)
+                ]);
+                group.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x64748b })));
+            } else {
+                cone.rotation.z = Math.PI / 2;
+                cone.position.x = -0.09;
+                const lg = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(-0.2, -0.15, 0), new THREE.Vector3(-0.2, 0.15, 0)
+                ]);
+                group.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x64748b })));
+            }
+            group.add(cone);
+        }
+        return group;
+    }
+
+    updateOverlays() {
+        this.clearOverlays();
+        const cps = this.patch.controlPoints;
+        const nU = cps.length, nV = cps[0].length;
+
+        const addMarker = (type, cp) => {
+            const m = this._makeBCMarker(type);
+            m.position.set(cp.x, cp.y, 0.01);
+            this.scene.add(m);
+            this._overlayObjects.push(m);
+        };
+
+        if (this.currentBenchmark === 'beam') {
+            for (let j = 0; j < nV; j++) addMarker('both', cps[0][j]);
+            // Force arrows on right edge
+            const arrowDir = new THREE.Vector3(0, -1, 0);
+            [cps[nU-1][0], cps[nU-1][nV-1]].forEach(cp => {
+                const a = new THREE.ArrowHelper(arrowDir,
+                    new THREE.Vector3(cp.x, cp.y + 0.8, 0.01), 0.8, 0xef4444, 0.25, 0.12);
+                this.scene.add(a);
+                this._overlayObjects.push(a);
+            });
+        } else {
+            // Symmetry bottom edge — fix Y
+            for (let j = 0; j < nV; j++) addMarker('y', cps[0][j]);
+            // Symmetry left edge (last row in U) — fix X
+            for (let j = 0; j < nV; j++) addMarker('x', cps[nU-1][j]);
+            // Force arrows on right edge (i=0, outer radial)
+            const arrowDir = new THREE.Vector3(1, 0, 0);
+            [cps[0][nV-1], cps[1][nV-1]].forEach(cp => {
+                const a = new THREE.ArrowHelper(arrowDir,
+                    new THREE.Vector3(cp.x - 0.8, cp.y, 0.01), 0.8, 0xef4444, 0.25, 0.12);
+                this.scene.add(a);
+                this._overlayObjects.push(a);
+            });
         }
     }
 
@@ -311,10 +412,11 @@ class ROMApp32 {
         // Build colors from field values
         const minV = Math.min(...values), maxV = Math.max(...values);
         const range = maxV - minV || 1;
-        const colorFn = this.viewMode === 'disp' ? viridis : coolwarm;
+        // Use jet (displacement) or coolwarm (stress) — same as Phase 3.1 palette
+        const colorFn = this.viewMode === 'stress' ? coolwarm : jet;
         const colors = [];
         values.forEach(v => {
-            const [r, g, b] = colorFn((v - minV) / range);
+            const [r, g, b] = uDisp ? colorFn((v - minV) / range) : [0.05, 0.12, 0.22];
             colors.push(r, g, b);
         });
 
@@ -322,6 +424,12 @@ class ROMApp32 {
         const unit = this.viewMode === 'disp' ? 'mm' : 'MPa';
         const label = this.viewMode === 'disp' ? 'Displacement' : 'Von Mises';
         document.getElementById('colorbar-label').textContent = label;
+        const colorFnCb = this.viewMode === 'stress' ? coolwarm : jet;
+        this.colorbar = new Colorbar(
+            document.getElementById('colorbar-canvas'),
+            document.getElementById('colorbar-ticks'),
+            colorFnCb
+        );
         this.colorbar.update(minV, maxV, unit);
 
         if (!this.surfaceMesh) {
