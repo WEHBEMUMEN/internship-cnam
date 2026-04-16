@@ -172,7 +172,7 @@ tasks:
     deadline: 2026-06-16
     description: Build online query script that returns displacement field for new parameter in < 1 second. Export as JSON for Digital Twin frontend.
 
-  # ── TO DO (Phase 3 — Real-Time Application Roadmap) ──────────────────────────
+  # ── TO DO (Phase 3 — Nonlinear 2D Roadmap) ──────────────────────────
 
   - title: "Phase 3.4: 2D NURBS Expansion"
     status: To Do
