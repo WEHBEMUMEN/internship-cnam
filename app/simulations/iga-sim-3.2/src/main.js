@@ -34,16 +34,18 @@ class ROMApp32 {
 
     initThree() {
         this.scene.background = new THREE.Color(0x020617);
-        this.camera.position.set(2, 2, 8);
-        this.camera.lookAt(2, 0, 0);
+        // Default for Cantilever (L=10)
+        this.camera.position.set(5, 1, 12);
+        this.camera.lookAt(5, 1, 0);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         
-        const controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        controls.target.set(2, 0, 0);
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableRotate = false; // Lock to 2D
+        this.controls.target.set(5, 1, 0);
         
-        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        const ambient = new THREE.AmbientLight(0xffffff, 1.0);
         this.scene.add(ambient);
     }
 
@@ -71,15 +73,20 @@ class ROMApp32 {
         document.getElementById('train-status').classList.add('hidden');
         
         if (type === 'beam') {
-            this.patch = NURBSPresets.generateCantilever(4, 1);
+            this.patch = NURBSPresets.generateCantilever(10, 2);
             RefineUtils.apply(this.engine, this.patch, { p: 3, h: 1 });
+            this.camera.position.set(5, 1, 12);
+            this.controls.target.set(5, 1, 0);
         } else {
             this.patch = NURBSPresets.generatePlateWithHole(1.0, 4.0);
             RefineUtils.apply(this.engine, this.patch, { p: 3, h: 0 });
-            // Elevation for singularity
             this.patch = this.engine.elevateDegree(this.patch);
             this.patch = this.engine.subdivideGlobal(this.patch);
+            this.camera.position.set(2, 2, 8);
+            this.controls.target.set(2, 2, 0);
         }
+        this.camera.updateProjectionMatrix();
+        this.controls.update();
         
         this.updateMesh();
     }
