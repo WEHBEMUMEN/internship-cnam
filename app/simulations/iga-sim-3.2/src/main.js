@@ -521,7 +521,7 @@ class ROMApp32 {
         // Colorbar
         const cbCanvas = document.getElementById('colorbar-canvas');
         const cbLabel = document.getElementById('colorbar-ticks');
-        this.colorbar = new Colorbar(cbCanvas, cbLabel, viridis);
+        this.colorbar = new Colorbar(cbCanvas, cbLabel, jet);
 
         // Benchmark buttons
         document.getElementById('btn-beam').onclick = () => {
