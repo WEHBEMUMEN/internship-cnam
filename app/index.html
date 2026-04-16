@@ -149,17 +149,57 @@
     }
     h3 { margin-top: 35px; margin-bottom: 15px; color: var(--accent); font-weight: 800; font-size: 1.4rem; }
     
-    /* Centering buttons */
-    .app-actions {
-      margin-top: 25px;
-      display: grid;
-      gap: 12px;
-    }
-    .btn-center {
+    /* Filter System */
+    .filter-container {
       display: flex;
       justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
       align-items: center;
-      text-align: center;
+      gap: 8px;
+    }
+    .filter-btn:hover {
+      background: #ffffff;
+      color: var(--text-primary);
+      border-color: var(--accent);
+    }
+    .filter-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+    .grid-separator {
+      margin: 60px 0 40px 0;
+      border: none;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--border), transparent);
+      width: 100%;
+    }
+    .phase-section-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin: 40px 0 25px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-primary);
+    }
+    .card.hidden, .flow-section.hidden, .phase-section-title.hidden, .grid-separator.hidden {
+      display: none !important;
     }
   </style>
 </head>
@@ -204,14 +244,30 @@
             <p class="section-sub">Interactive prototypes and core engines for the Digital Twin project.</p>
           </div>
 
+          <!-- Phase Filters -->
+          <div class="filter-container reveal reveal-up">
+            <button class="filter-btn active" onclick="filterPhases('all', this)">
+              <i class="fa-solid fa-layer-group"></i> All Phases
+            </button>
+            <button class="filter-btn" onclick="filterPhases('1', this)">
+              <i class="fa-solid fa-check-circle"></i> Phase 1: 1D Core
+            </button>
+            <button class="filter-btn" onclick="filterPhases('2', this)">
+              <i class="fa-solid fa-rocket"></i> Phase 2: 2D Series
+            </button>
+            <button class="filter-btn" onclick="filterPhases('3', this)">
+              <i class="fa-solid fa-link"></i> Phase 3: Nonlinear
+            </button>
+          </div>
+
         <!-- Phase 1: 1D Foundation -->
-        <h3 style="color: #94a3b8; font-size: 1.5rem; margin-bottom: 30px; letter-spacing: -0.02em; font-weight: 700; display: flex; align-items: center; gap: 15px; opacity: 0.7;">
+        <h3 data-phase="1" class="phase-section-title" style="color: #94a3b8; opacity: 0.7;">
             <i class="fa-solid fa-check-circle"></i> Phase 1: 1D Core (Archived)
         </h3>
         
         <div class="grid">
           <!-- Digital Twin Context -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-earth-americas" style="font-size: 2rem; color: #f59e0b;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">CONTEXT</span>
@@ -224,7 +280,7 @@
           </div>
 
           <!-- 1D Core Engine (Performance) -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-wave-square" style="font-size: 2rem; color: #60a5fa;"></i>
                 <span class="badge" style="font-size: 0.7rem;">Phase 1.0</span>
@@ -238,7 +294,7 @@
           </div>
 
           <!-- 1D Core Engine (NURBS) -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-bezier-curve" style="font-size: 2rem; color: var(--accent);"></i>
                 <span class="badge" style="font-size: 0.7rem;">Phase 1.1</span>
@@ -252,7 +308,7 @@
           </div>
 
           <!-- 1D Degree Elevation -->
-          <div class="card reveal reveal-up delay-1">
+          <div class="card reveal reveal-up delay-1" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-chart-line" style="font-size: 2rem; color: var(--accent);"></i>
                 <span class="badge" style="font-size: 0.7rem;">Phase 1.2</span>
@@ -266,7 +322,7 @@
           </div>
 
           <!-- Knot Insertion -->
-          <div class="card reveal reveal-up delay-2">
+          <div class="card reveal reveal-up delay-2" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-scissors" style="font-size: 2rem; color: var(--accent);"></i>
                 <span class="badge" style="font-size: 0.7rem;">Phase 1.3</span>
@@ -280,7 +336,7 @@
           </div>
 
           <!-- Vector Calculus -->
-          <div class="card reveal reveal-up delay-1">
+          <div class="card reveal reveal-up delay-1" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-location-crosshairs" style="font-size: 2rem; color: var(--accent);"></i>
                 <span class="badge" style="font-size: 0.7rem;">Phase 1.4</span>
@@ -294,7 +350,7 @@
           </div>
           
           <!-- k-refinement -->
-          <div class="card reveal reveal-up delay-2">
+          <div class="card reveal reveal-up delay-2" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-layer-group" style="font-size: 2rem; color: var(--accent);"></i>
                 <span class="badge" style="font-size: 0.7rem;">Phase 1.5</span>
@@ -308,7 +364,7 @@
           </div>
 
           <!-- Structural Mechanics -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-bridge" style="font-size: 2rem; color: #10b981;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">Phase 1.6</span>
@@ -322,7 +378,7 @@
           </div>
 
           <!-- Phase 1.7 - ROM Benchmark -->
-          <div class="card reveal reveal-up delay-8">
+          <div class="card reveal reveal-up delay-8" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-microchip" style="font-size: 2rem; color: #3b82f6;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);">Phase 1.7</span>
@@ -336,7 +392,7 @@
           </div>
 
           <!-- Phase 1.8 - Circle & Refinement -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-circle-notch" style="font-size: 2rem; color: #a78bfa;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(167, 139, 250, 0.1); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.2);">Phase 1.8</span>
@@ -350,7 +406,7 @@
           </div>
 
           <!-- Phase NL - Non-Linear IGA & ROM -->
-          <div class="card reveal reveal-up delay-1">
+          <div class="card reveal reveal-up delay-1" data-phase="1">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-link" style="font-size: 2rem; color: #f43f5e;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2);">NL App</span>
@@ -364,16 +420,16 @@
           </div>
         </div>
 
-        <hr style="margin: 80px 0; border: none; height: 1px; background: linear-gradient(to right, transparent, rgba(59, 130, 246, 0.3), transparent);">
+        <hr data-phase="2" class="grid-separator">
 
         <!-- Phase 2: Dimensional Expansion -->
-        <h3 style="color: #3b82f6; font-size: 1.8rem; margin-bottom: 30px; letter-spacing: -0.02em; font-weight: 800; display: flex; align-items: center; gap: 15px;">
-            <i class="fa-solid fa-rocket"></i> Phase 2: 2D Multi-Variate Core (Latest)
+        <h3 data-phase="2" class="phase-section-title" style="color: #3b82f6;">
+            <i class="fa-solid fa-rocket"></i> Phase 2: 2D Multi-Variate Series
         </h3>
         
         <div class="grid">
           <!-- Phase 2.1: Foundations -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-layer-group" style="font-size: 2rem; color: #3b82f6;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6;">PHASE 2.1</span>
@@ -387,7 +443,7 @@
           </div>
 
           <!-- Phase 2.2: p-Refinement -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-arrow-up-right-dots" style="font-size: 2rem; color: #60a5fa;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(96, 165, 250, 0.1); color: #60a5fa;">PHASE 2.2</span>
@@ -401,7 +457,7 @@
           </div>
 
           <!-- Phase 2.3: h-Refinement -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-plus" style="font-size: 2rem; color: #10b981;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.1); color: #10b981;">PHASE 2.3</span>
@@ -415,7 +471,7 @@
           </div>
 
           <!-- Phase 2.4: k-Refinement -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-globe" style="font-size: 2rem; color: #8b5cf6;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">PHASE 2.4</span>
@@ -429,7 +485,7 @@
           </div>
 
           <!-- Phase 2.5: Jacobian -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-calculator" style="font-size: 2rem; color: #f59e0b;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">PHASE 2.5</span>
@@ -443,7 +499,7 @@
           </div>
 
           <!-- Phase 2B.1: Stiffness -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-building-columns" style="font-size: 2rem; color: #ef4444;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">PHASE 2B.1</span>
@@ -457,7 +513,7 @@
           </div>
 
           <!-- Phase 2B.2: Stress/Disp -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-vial" style="font-size: 2rem; color: #38bdf8;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.2);">PHASE 2B.2</span>
@@ -471,7 +527,7 @@
           </div>
 
           <!-- Phase 2C: Snapshots -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-database" style="font-size: 2rem; color: #0ea5e9;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(14, 165, 233, 0.1); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.2);">PHASE 2C</span>
@@ -485,7 +541,7 @@
           </div>
 
           <!-- Phase 2C.1: Snapshot Lab -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-microscope" style="font-size: 2rem; color: #0284c7;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.2);">PHASE 2C.1</span>
@@ -499,7 +555,7 @@
           </div>
 
           <!-- Phase 2D.1: SVD Reduction -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-compress" style="font-size: 2rem; color: #ec4899;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(236, 72, 153, 0.1); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.2);">PHASE 2D.1</span>
@@ -513,7 +569,7 @@
           </div>
 
           <!-- Phase 2D.2: Operator Projection -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-arrow-right-arrow-left" style="font-size: 2rem; color: #d946ef;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(217, 70, 239, 0.1); color: #d946ef; border: 1px solid rgba(217, 70, 239, 0.2);">PHASE 2D.2</span>
@@ -527,7 +583,7 @@
           </div>
           
           <!-- Phase 2D.3: Online Solver -->
-          <div class="card reveal reveal-up">
+          <div class="card reveal reveal-up" data-phase="2">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-microchip" style="font-size: 2rem; color: #10b981;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">PHASE 2D.3</span>
@@ -539,9 +595,18 @@
               <a href="../theory/theory-2d3.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
             </div>
           </div>
+        </div>
 
+        <hr data-phase="3" class="grid-separator">
+
+        <!-- Phase 3: Nonlinear Extensions -->
+        <h3 data-phase="3" class="phase-section-title" style="color: #f43f5e;">
+            <i class="fa-solid fa-link"></i> Phase 3: Nonlinear Extensions & Integration
+        </h3>
+
+        <div class="grid">
           <!-- Phase 3.1: Nonlinear Structural Divergence -->
-          <div class="card reveal reveal-up delay-1">
+          <div class="card reveal reveal-up delay-1" data-phase="3">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <i class="fa-solid fa-link" style="font-size: 2rem; color: #f43f5e;"></i>
                 <span class="badge" style="font-size: 0.7rem; background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2);">PHASE 3.1</span>
@@ -566,7 +631,7 @@
 
           <div class="flow-container container">
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="1">
               <span class="badge" style="background: rgba(96, 165, 250, 0.12); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3);">PHASE 1.0</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">1D Core (Performance) Pipeline</h3>
               <div class="flow-grid">
@@ -1355,7 +1420,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="2">
               <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">PHASE 2B.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">2D IGA Stiffness Assembly Pipeline</h3>
               <div class="flow-grid">
@@ -1416,7 +1481,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="2">
               <span class="badge" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3);">PHASE 2B.2</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Stress & Displacement Validation Pipeline</h3>
               <div class="flow-grid">
@@ -1477,7 +1542,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="2">
               <span class="badge" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3);">PHASE 2C</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Snapshot Database Generator Pipeline</h3>
               <div class="flow-grid">
@@ -1538,7 +1603,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="2">
               <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3);">PHASE 2C.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Snapshot Lab & ROM Trainer Pipeline</h3>
               <div class="flow-grid">
@@ -1581,7 +1646,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="2">
               <span class="badge" style="background: rgba(236, 72, 153, 0.12); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.3);">PHASE 2D.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">SVD Reduction & POD Basis</h3>
               <div class="flow-grid">
@@ -1612,7 +1677,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="2">
               <span class="badge" style="background: rgba(217, 70, 239, 0.12); color: #d946ef; border: 1px solid rgba(217, 70, 239, 0.3);">PHASE 2D.2</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">ROM Operator Projection</h3>
               <div class="flow-grid">
@@ -1642,7 +1707,7 @@
                 </div>
               </div>
             </div>
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section reveal reveal-up" data-phase="2">
               <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">PHASE 2D.3</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Online Solver (Digital Twin) Pipeline</h3>
               <div class="flow-grid">
@@ -1679,7 +1744,9 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <hr data-phase="3" class="grid-separator">
+
+            <div class="flow-section reveal reveal-up" data-phase="3">
               <span class="badge" style="background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);">PHASE 3.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Nonlinear Newton-Raphson Pipeline</h3>
               <div class="flow-grid">
@@ -1990,6 +2057,27 @@
         });
       }
     });
+
+    function filterPhases(phase, btn) {
+      // Update UI active state
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Filter logic
+      const elements = document.querySelectorAll('.card, .flow-section, .phase-section-title, .grid-separator');
+      
+      elements.forEach(el => {
+        const elPhase = el.getAttribute('data-phase');
+        if (phase === 'all' || elPhase === phase) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      // Special handling for the Flowchart section headers might be needed if they also have data-phase
+      // or we just filter by the section container.
+    }
   </script>
 
 </body>
