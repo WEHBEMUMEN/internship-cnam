@@ -56,11 +56,23 @@ class ROMApp32 {
             data: { labels: [], datasets: [{ label: 'Convergence Norm', data: [], borderColor: '#f43f5e', tension: 0.1 }] },
             options: {
                 scales: { 
-                    y: { type: 'logarithmic', grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { grid: { display: false } }
+                    y: { 
+                        type: 'logarithmic', 
+                        min: 1e-12, 
+                        max: 1e6,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#64748b', font: { size: 9 } }
+                    },
+                    x: { 
+                        min: 0,
+                        max: 15,
+                        grid: { display: false },
+                        ticks: { color: '#64748b', font: { size: 9 } }
+                    }
                 },
                 plugins: { legend: { display: false } },
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                animation: false
             }
         });
     }
@@ -190,11 +202,7 @@ class ROMApp32 {
     }
 
     updateMesh(uDisp = null) {
-        if (this.surfaceMesh) this.scene.remove(this.surfaceMesh);
-        if (this.wireMesh) this.scene.remove(this.wireMesh);
-
         const res = 40;
-        const geometry = new THREE.BufferGeometry();
         const positions = [];
         const colors = [];
 
@@ -208,7 +216,6 @@ class ROMApp32 {
                 if (uDisp) {
                     const disp = this.interpolateDisplacement(u, v, state.denominator, uDisp);
                     p.x += disp.x; p.y += disp.y;
-                    
                     const mag = Math.sqrt(disp.x**2 + disp.y**2) * 5;
                     colors.push(0.2, 0.4 + mag, 0.8);
                 } else {
@@ -218,26 +225,34 @@ class ROMApp32 {
             }
         }
 
-        const indices = [];
-        for (let i = 0; i < res; i++) {
-            for (let j = 0; j < res; j++) {
-                const a = i * (res + 1) + j;
-                const b = (i + 1) * (res + 1) + j;
-                const c = (i + 1) * (res + 1) + (j + 1);
-                const d = i * (res + 1) + (j + 1);
-                indices.push(a, b, d, b, c, d);
+        if (!this.surfaceMesh) {
+            const geometry = new THREE.BufferGeometry();
+            const indices = [];
+            for (let i = 0; i < res; i++) {
+                for (let j = 0; j < res; j++) {
+                    const a = i * (res + 1) + j;
+                    const b = (i + 1) * (res + 1) + j;
+                    const c = (i + 1) * (res + 1) + (j + 1);
+                    const d = i * (res + 1) + (j + 1);
+                    indices.push(a, b, d, b, c, d);
+                }
             }
+            geometry.setIndex(indices);
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            this.surfaceMesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide, shininess: 30 }));
+            this.wireMesh = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 }));
+            this.scene.add(this.surfaceMesh);
+            this.scene.add(this.wireMesh);
+        } else {
+            this.surfaceMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            this.surfaceMesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            this.surfaceMesh.geometry.attributes.position.needsUpdate = true;
+            this.surfaceMesh.geometry.attributes.color.needsUpdate = true;
+            
+            // Re-generate wireframe only if geometry is significantly different (optional, skipping for speed)
         }
-
-        geometry.setIndex(indices);
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-        
-        this.surfaceMesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide, shininess: 30 }));
-        this.wireMesh = new THREE.LineSegments(new THREE.WireframeGeometry(geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 }));
-        
-        this.scene.add(this.surfaceMesh);
-        this.scene.add(this.wireMesh);
     }
 
     interpolateDisplacement(u, v, denom, u_disp) {
