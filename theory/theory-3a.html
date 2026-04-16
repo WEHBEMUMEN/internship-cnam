@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 3A | 2D Geometric Nonlinearity</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --secondary: #10b981;
+            --bg: #020617;
+            --card: #0f172a;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 80px 30px; }
+        .math-card {
+            background: #020617;
+            padding: 30px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border-left: 4px solid var(--primary);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            overflow-x: auto;
+        }
+        .content-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 50px;
+            margin-bottom: 50px;
+            transition: border-color 0.3s ease;
+        }
+        .content-section:hover { border-color: var(--primary); }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 15px; }
+        .highlight { color: var(--primary); font-weight: 700; }
+        .flowchart-container { background: #020617; border-radius: 24px; padding: 40px; margin: 40px 0; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-20">
+            <span class="px-4 py-1.5 rounded-full bg-rose-500/10 text-rose-500 text-xs font-bold tracking-widest uppercase border border-rose-500/20 mb-6 inline-block">Phase 3 | Structural Nonlinearity</span>
+            <h1>High-Fidelity 2D IGA<br>Theory & Physics</h1>
+            <p class="mt-6 text-xl text-slate-400 font-light">Documenting the transition from infinitesimal elastic theory to finite-strain geometric stiffening.</p>
+        </header>
+
+        <!-- Section 1: Kinematics -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-vector-square"></i> 1. Finite Kinematics</h2>
+            <p>In linear elasticity, we assume rotations are tiny ($\cos\theta \approx 1$). In <strong>Geometric Nonlinearity</strong>, we throw that assumption away. We track the deformation from the reference state $\mathbf{X}$ to the current state $\mathbf{x}$.</p>
+            
+            <div class="math-card">
+                <p class="text-xs text-rose-500 mb-2 font-mono uppercase tracking-tighter">Deformation Gradient</p>
+                $$\mathbf{F} = \frac{\partial \mathbf{x}}{\partial \mathbf{X}} = \mathbf{I} + \nabla_{\mathbf{X}} \mathbf{u}$$
+            </div>
+            
+            <p>To measure true structural stretching without picking up "fake" strains from pure rotation, we use the <strong>Green-Lagrange Strain Tensor</strong> $\mathbf{E}$:</p>
+            
+            <div class="math-card">
+                $$\mathbf{E} = \frac{1}{2}(\mathbf{F}^T\mathbf{F} - \mathbf{I}) = \frac{1}{2}(\nabla\mathbf{u} + \nabla\mathbf{u}^T + \nabla\mathbf{u}^T\nabla\mathbf{u})$$
+            </div>
+            
+            <p>Notice the quadratic term $\nabla\mathbf{u}^T\nabla\mathbf{u}$. This is the "Engine" of nonlinearity. Even if your displacement is linear, this term generates the <strong>geometric stiffening</strong> that prevents cantilever beams from stretching into infinity.</p>
+        </section>
+
+        <!-- Section 2: Newton-Raphson Pipeline -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-diagram-project"></i> 2. Solver Pipeline</h2>
+            <p>Since the stiffness depends on the displacement, we cannot solve it in one shot. We use the <strong>Newton-Raphson</strong> algorithm to find the equilibrium where internal stress exactly balances the external load.</p>
+
+            <div class="flowchart-container">
+                <h4 class="text-xs font-bold text-slate-500 uppercase mb-8 tracking-widest text-center">Algorithmic Flow: Incremental NR Loop</h4>
+                <svg viewBox="0 0 800 500" class="w-full">
+                    <!-- Boxes -->
+                    <rect x="300" y="20" width="200" height="50" rx="8" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                    <text x="400" y="52" fill="#fff" font-size="14" text-anchor="middle" font-family="Outfit">Start: Set Load Increment</text>
+                    
+                    <path d="M 400 70 L 400 100" stroke="#f43f5e" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <rect x="250" y="100" width="300" height="70" rx="12" fill="#0f172a" stroke="#f43f5e" stroke-width="2"/>
+                    <text x="400" y="130" fill="#fff" font-size="14" text-anchor="middle" font-family="Outfit" font-weight="bold">Inner Newton Iteration</text>
+                    <text x="400" y="150" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="Inter">Build Kt(u) + Internal Forces Fi(u)</text>
+                    
+                    <path d="M 400 170 L 400 200" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <rect x="250" y="200" width="300" height="60" rx="12" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+                    <text x="400" y="225" fill="#fff" font-size="14" text-anchor="middle" font-family="Outfit">Solve: Kt Δu = Fext - Fi</text>
+                    <text x="400" y="245" fill="#10b981" font-size="11" text-anchor="middle" font-family="Inter">Update: u = u + Δu</text>
+                    
+                    <path d="M 400 260 L 400 300" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+                    
+                    <polygon points="400,300 480,340 400,380 320,340" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+                    <text x="400" y="345" fill="#fff" font-size="12" text-anchor="middle" font-family="Outfit">Residual < Tol?</text>
+                    
+                    <!-- Loop back -->
+                    <path d="M 320 340 L 200 340 L 200 135 L 250 135" stroke="#f43f5e" stroke-width="2" stroke-dasharray="5,3" fill="none" marker-end="url(#arrow)"/>
+                    <text x="210" y="240" fill="#f43f5e" font-size="12" text-anchor="middle" transform="rotate(-90 210,240)" font-family="Inter">Iterate</text>
+                    
+                    <!-- Exit -->
+                    <path d="M 480 340 L 600 340 L 600 420" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+                    <text x="540" y="330" fill="#10b981" font-size="12" text-anchor="middle" font-family="Inter">Converged</text>
+                    
+                    <rect x="500" y="420" width="200" height="50" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+                    <text x="600" y="452" fill="#fff" font-size="14" text-anchor="middle" font-family="Outfit">Recover Stresses / Plots</text>
+                    
+                    <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/></marker></defs>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 3: The Penalty Method -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-link"></i> 3. Penalty Constraint (Symmetry Fixing)</h2>
+            <p>In geometries like the <strong>Plate with a Hole</strong>, the NURBS mapping becomes "collapsed" at the center diagonal. Multiple control points occupy the same physical coordinate to form the circular boundary.</p>
+            
+            <div class="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-6 my-8">
+                <h4 class="text-rose-500 font-bold mb-2 uppercase text-xs tracking-widest"><i class="fa-solid fa-bug mr-2"></i> The Problem: Rank Deficiency</h4>
+                <p class="text-slate-400 text-sm">Without tying these points, the stiffness matrix becomes <strong>singular</strong>. The solver tries to move coincident points independently, causing the numerical stress to explode ("flare") at the singular center.</p>
+            </div>
+
+            <p>Our solver implements a <strong>Penalty Energy</strong> term to tie these coincident Degrees of Freedom (DOFs):</p>
+            <div class="math-card">
+                $$\Pi_{penalty} = \frac{1}{2} \beta |u_i - u_j|^2$$
+            </div>
+            <p>By using a massive penalty factor ($\beta \approx 10^{12}$), we effectively glue those nodes together, ensuring smooth stress gradients transitions across the symmetry diagonal.</p>
+        </section>
+
+        <!-- Section 4: Plot Analysis -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-chart-line"></i> 4. Macroscopic Analysis</h2>
+            <p>The simulator provides two critical real-time graphs to validate the nonlinear physics:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+                <div class="p-6 bg-slate-900/50 border border-slate-700 rounded-2xl">
+                    <h4 class="text-emerald-400 font-bold mb-2">Force-Displacement</h4>
+                    <p class="text-xs text-slate-400">Shows <strong>Stiffness Divergence</strong>. As the beam bends, the internal tension pulls it back, creating a curve that stays "under" the linear prediction.</p>
+                </div>
+                <div class="p-6 bg-slate-900/50 border border-slate-700 rounded-2xl">
+                    <h4 class="text-rose-400 font-bold mb-2">Stress-Strain</h4>
+                    <p class="text-xs text-slate-400">Shows <strong>Geometric Stiffening</strong>. Because we use Green-Lagrange strain, the stress rises quadratically against displacement, capturing true material failure risk.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center mt-20 border-t border-slate-800 pt-10">
+            <a href="../app/simulations/iga-sim-3a/index.html" class="px-8 py-3 bg-rose-600 rounded-xl font-bold hover:bg-rose-500 transition-all inline-flex items-center gap-2">
+                <i class="fa-solid fa-rocket"></i> Launch 2D Solver
+            </a>
+        </div>
+    </div>
+</body>
+</html>

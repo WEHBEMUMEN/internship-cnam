@@ -1,0 +1,434 @@
+/**
+ * 2D Isogeometric Analysis Nonlinear Solver (Phase 3 Core)
+ * Handles Large Deflections (Geometric Nonlinearity) using Newton-Raphson.
+ */
+
+class GaussQuadrature2D {
+    static getPoints(n = 3) {
+        if (n === 2) {
+            const p = 1.0 / Math.sqrt(3);
+            return { points: [-p, p], weights: [1, 1] };
+        }
+        if (n === 3) {
+            return { points: [-Math.sqrt(0.6), 0, Math.sqrt(0.6)], weights: [5/9, 8/9, 5/9] };
+        }
+        const p1 = Math.sqrt((3 - 2 * Math.sqrt(1.2)) / 7);
+        const p2 = Math.sqrt((3 + 2 * Math.sqrt(1.2)) / 7);
+        const w1 = (18 + Math.sqrt(30)) / 36;
+        const w2 = (18 - Math.sqrt(30)) / 36;
+        return { points: [-p2, -p1, p1, p2], weights: [w2, w1, w1, w2] };
+    }
+}
+
+class IGANonlinearSolver {
+    constructor(nurbsEngine) {
+        this.engine = nurbsEngine;
+        this.E = 200000; // Steel (MPa)
+        this.nu = 0.3;
+        this.thickness = 1.0;
+    }
+
+    getPlaneStressD() {
+        const factor = this.E / (1 - this.nu * this.nu);
+        return [
+            [factor, factor * this.nu, 0],
+            [factor * this.nu, factor, 0],
+            [0, 0, factor * (1 - this.nu) / 2]
+        ];
+    }
+
+    getBParametric(patch, u, v, deriv) {
+        const { p, q, U, V, weights, controlPoints } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const J = [[deriv.dU.x, deriv.dV.x], [deriv.dU.y, deriv.dV.y]];
+        let detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+        if (Math.abs(detJ_2D) < 1e-12) detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
+        const J_inv = [[J[1][1]/detJ_2D, -J[0][1]/detJ_2D], [-J[1][0]/detJ_2D, J[0][0]/detJ_2D]];
+        
+        const W = deriv.W, Wu = deriv.Wu, Wv = deriv.Wv;
+        const grads = Array(nU * nV).fill(0).map(() => [0, 0]);
+
+        const spanU = this.engine.findSpan(nU - 1, p, u, U);
+        const spanV = this.engine.findSpan(nV - 1, q, v, V);
+        const dersU = this.engine.basisFunsDerivs(spanU, u, p, U, 1);
+        const dersV = this.engine.basisFunsDerivs(spanV, v, q, V, 1);
+
+        for (let i = 0; i <= p; i++) {
+            const Ni = dersU[0][i], dNi = dersU[1][i];
+            const cpI = spanU - p + i;
+            for (let j = 0; j <= q; j++) {
+                const Mj = dersV[0][j], dMj = dersV[1][j];
+                const cpJ = spanV - q + j;
+                const w = weights[cpI][cpJ];
+                
+                const dRdu = ((dNi * Mj * w) * W - (Ni * Mj * w) * Wu) / (W * W);
+                const dRdv = ((Ni * dMj * w) * W - (Ni * Mj * w) * Wv) / (W * W);
+                const dRdx = J_inv[0][0] * dRdu + J_inv[1][0] * dRdv;
+                const dRdy = J_inv[0][1] * dRdu + J_inv[1][1] * dRdv;
+                
+                grads[cpI * nV + cpJ] = [dRdx, dRdy];
+            }
+        }
+        return grads;
+    }
+
+    calculateInternalForce(patch, u_disp) {
+        const { p, q, U, V, controlPoints } = patch;
+        const nBasisU = controlPoints.length;
+        const nBasisV = controlPoints[0].length;
+        const nDofs = nBasisU * nBasisV * 2;
+        const F_int = new Float64Array(nDofs).fill(0);
+
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const gRule = GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
+
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            if (uMax - uMin < 1e-10) continue;
+            for (let j = 0; j < uniqueV.length - 1; j++) {
+                const vMin = uniqueV[j], vMax = uniqueV[j+1];
+                if (vMax - vMin < 1e-10) continue;
+
+                for (let gu = 0; gu < gRule.points.length; gu++) {
+                    const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
+                    const wu = gRule.weights[gu] * (uMax - uMin) / 2;
+                    for (let gv = 0; gv < gRule.points.length; gv++) {
+                        const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
+                        const wv = gRule.weights[gv] * (vMax - vMin) / 2;
+
+                        const detJ = this.engine.getJacobianDeterminant(patch, u, v);
+                        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                        const B_param = this.getBParametric(patch, u, v, deriv);
+                        
+                        let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                            const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                            dudx += dRdx * u_disp[k * 2];
+                            dudy += dRdy * u_disp[k * 2];
+                            dvdx += dRdx * u_disp[k * 2 + 1];
+                            dvdy += dRdy * u_disp[k * 2 + 1];
+                        }
+
+                        const Exx = dudx + 0.5 * (dudx*dudx + dvdx*dvdx);
+                        const Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
+                        const Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy); // 2Exy
+                        
+                        const D = this.getPlaneStressD();
+                        const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
+                        const Syy = D[1][0]*Exx + D[1][1]*Eyy;
+                        const Sxy = D[2][2]*Exy2;
+
+                        const factor = detJ * wu * wv * this.thickness;
+
+                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                            const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                            const bexx_u = (1 + dudx) * dRdx;
+                            const bexx_v = (dvdx) * dRdx;
+                            const beyy_u = (dudy) * dRdy;
+                            const beyy_v = (1 + dvdy) * dRdy;
+                            const bexy_u = (1 + dudx)*dRdy + dudy*dRdx;
+                            const bexy_v = (1 + dvdy)*dRdx + dvdx*dRdy;
+
+                            F_int[k * 2] += (bexx_u * Sxx + beyy_u * Syy + bexy_u * Sxy) * factor;
+                            F_int[k * 2 + 1] += (bexx_v * Sxx + beyy_v * Syy + bexy_v * Sxy) * factor;
+                        }
+                    }
+                }
+            }
+        }
+        return F_int;
+    }
+
+    calculateTangentStiffness(patch, u_disp) {
+        const { p, q, U, V, controlPoints } = patch;
+        const nBasisU = controlPoints.length;
+        const nBasisV = controlPoints[0].length;
+        const nDofs = nBasisU * nBasisV * 2;
+        const Kt = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
+
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const gRule = GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
+
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            if (uMax - uMin < 1e-10) continue;
+            for (let j = 0; j < uniqueV.length - 1; j++) {
+                const vMin = uniqueV[j], vMax = uniqueV[j+1];
+                if (vMax - vMin < 1e-10) continue;
+
+                for (let gu = 0; gu < gRule.points.length; gu++) {
+                    const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
+                    const wu = gRule.weights[gu] * (uMax - uMin) / 2;
+                    for (let gv = 0; gv < gRule.points.length; gv++) {
+                        const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
+                        const wv = gRule.weights[gv] * (vMax - vMin) / 2;
+
+                        const detJ = this.engine.getJacobianDeterminant(patch, u, v);
+                        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                        const B_param = this.getBParametric(patch, u, v, deriv);
+
+                        let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                            dudx += B_param[k][0] * u_disp[k * 2];
+                            dudy += B_param[k][1] * u_disp[k * 2];
+                            dvdx += B_param[k][0] * u_disp[k * 2 + 1];
+                            dvdy += B_param[k][1] * u_disp[k * 2 + 1];
+                        }
+
+                        const D = this.getPlaneStressD();
+                        const factor = detJ * wu * wv * this.thickness;
+                        
+                        // Assemble Linear & Material Nonlinear
+                        const nPoints = nBasisU * nBasisV;
+                        for (let a = 0; a < nPoints; a++) {
+                            const dRdx_a = B_param[a][0], dRdy_a = B_param[a][1];
+                            const B_a = [
+                                [(1 + dudx) * dRdx_a, (dvdx) * dRdx_a],
+                                [(dudy) * dRdy_a, (1 + dvdy) * dRdy_a],
+                                [(1 + dudx) * dRdy_a + dudy * dRdx_a, (1 + dvdy) * dRdx_a + dvdx * dRdy_a]
+                            ];
+                            for (let b = 0; b < nPoints; b++) {
+                                const dRdx_b = B_param[b][0], dRdy_b = B_param[b][1];
+                                const B_b = [
+                                    [(1 + dudx) * dRdx_b, (dvdx) * dRdx_b],
+                                    [(dudy) * dRdy_b, (1 + dvdy) * dRdy_b],
+                                    [(1 + dudx) * dRdy_b + dudy * dRdx_b, (1 + dvdy) * dRdx_b + dvdx * dRdy_b]
+                                ];
+
+                                for (let ri = 0; ri < 2; ri++) {
+                                    for (let rj = 0; rj < 2; rj++) {
+                                        let kab = 0;
+                                        for (let r = 0; r < 3; r++) {
+                                            for (let c = 0; c < 3; c++) {
+                                                kab += B_a[r][ri] * D[r][c] * B_b[c][rj];
+                                            }
+                                        }
+                                        Kt[a * 2 + ri][b * 2 + rj] += kab * factor;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Assemble Geometric Stiffness
+                        const Exx = dudx + 0.5 * (dudx*dudx + dvdx*dvdx);
+                        const Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
+                        const Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy);
+                        const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
+                        const Syy = D[1][0]*Exx + D[1][1]*Eyy;
+                        const Sxy = D[2][2]*Exy2;
+
+                        for (let a = 0; a < nPoints; a++) {
+                            for (let b = 0; b < nPoints; b++) {
+                                const dRdx_a = B_param[a][0], dRdy_a = B_param[a][1];
+                                const dRdx_b = B_param[b][0], dRdy_b = B_param[b][1];
+                                
+                                const k_geo = (dRdx_a * Sxx * dRdx_b + dRdy_a * Syy * dRdy_b + 
+                                               dRdx_a * Sxy * dRdy_b + dRdy_a * Sxy * dRdx_b) * factor;
+                                
+                                Kt[a * 2][b * 2] += k_geo;
+                                Kt[a * 2 + 1][b * 2 + 1] += k_geo;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Kt;
+    }
+
+    applyPenaltyConstraints(Kt, patch) {
+        const { controlPoints } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const pts = [];
+        
+        for (let i = 0; i < nU; i++) {
+            for (let j = 0; j < nV; j++) {
+                pts.push({ id: (i * nV + j) * 2, cp: controlPoints[i][j] });
+            }
+        }
+        
+        const penalty = 1e12; 
+        for (let i = 0; i < pts.length; i++) {
+            for (let j = i + 1; j < pts.length; j++) {
+                const p1 = pts[i].cp;
+                const p2 = pts[j].cp;
+                
+                const dist2 = (p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2;
+                if (dist2 < 1e-20) { // Mapping degeneracy
+                    const id1 = pts[i].id;
+                    const id2 = pts[j].id;
+                    
+                    Kt[id1][id1] += penalty;
+                    Kt[id2][id2] += penalty;
+                    Kt[id1][id2] -= penalty;
+                    Kt[id2][id1] -= penalty;
+
+                    Kt[id1+1][id1+1] += penalty;
+                    Kt[id2+1][id2+1] += penalty;
+                    Kt[id1+1][id2+1] -= penalty;
+                    Kt[id2+1][id1+1] -= penalty;
+                }
+            }
+        }
+    }
+
+    getNumericalStress(patch, u_disp, u, v, E, nu, isLinear = false) {
+        this.E = E;
+        this.nu = nu;
+        
+        const { controlPoints } = patch;
+        const nBasisU = controlPoints.length;
+        const nBasisV = controlPoints[0].length;
+        
+        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+        const B_param = this.getBParametric(patch, u, v, deriv);
+
+        let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+        for (let k = 0; k < nBasisU * nBasisV; k++) {
+            dudx += B_param[k][0] * u_disp[k * 2];
+            dudy += B_param[k][1] * u_disp[k * 2];
+            dvdx += B_param[k][0] * u_disp[k * 2 + 1];
+            dvdy += B_param[k][1] * u_disp[k * 2 + 1];
+        }
+
+        // Strain calculation
+        let Exx, Eyy, Exy2;
+        if (isLinear) {
+            // Infinitesimal Strain (Linear)
+            Exx = dudx;
+            Eyy = dvdy;
+            Exy2 = (dudy + dvdx);
+        } else {
+            // Green-Lagrange Strain (Nonlinear)
+            Exx = dudx + 0.5 * (dudx*dudx + dvdx*dvdx);
+            Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
+            Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy); // 2Exy
+        }
+
+        // Stress Calculation
+        const D = this.getPlaneStressD();
+        const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
+        const Syy = D[1][0]*Exx + D[1][1]*Eyy;
+        const Sxy = D[2][2]*Exy2;
+
+        const vonMises = Math.sqrt(Sxx*Sxx - Sxx*Syy + Syy*Syy + 3*Sxy*Sxy);
+        
+        // Equivalent (von Mises) Strain
+        // For a 2D plane stress, epsilon_eff = sqrt(Exx^2 + Eyy^2 - Exx*Eyy + 3*Exy^2) [Approximate for visualization]
+        const Exy = Exy2 / 2;
+        const equivalentStrain = Math.sqrt(Exx*Exx - Exx*Eyy + Eyy*Eyy + 3*Exy*Exy);
+
+        return {
+            sxx: Sxx,
+            syy: Syy,
+            sxy: Sxy,
+            vonMises: vonMises,
+            vonMisesStrain: equivalentStrain
+        };
+    }
+
+    solveNonlinear(patch, bcs, loads, options = {}) {
+        const { iterations = 10, tolerance = 1e-6, steps = 1, isLinear = false, initialU = null, onProgress } = options;
+        const nU = patch.controlPoints.length;
+        const nV = patch.controlPoints[0].length;
+        const nDofs = nU * nV * 2;
+        
+        let u = initialU ? new Float64Array(initialU) : new Float64Array(nDofs).fill(0);
+        const residualHistory = [];
+
+        // Apply specific loads
+        const F_ext_total = new Float64Array(nDofs).fill(0);
+        loads.forEach(load => {
+            if (load.type === 'nodal') {
+                const idx = (load.i * nV + load.j) * 2;
+                F_ext_total[idx] += load.fx;
+                F_ext_total[idx + 1] += load.fy;
+            }
+        });
+
+        const fixedDofs = new Map();
+        bcs.forEach(bc => {
+            const baseIdx = (bc.i * nV + bc.j) * 2;
+            if (bc.axis === 'x' || bc.axis === 'both') fixedDofs.set(baseIdx, bc.value);
+            if (bc.axis === 'y' || bc.axis === 'both') fixedDofs.set(baseIdx + 1, bc.value);
+        });
+
+        // Preallocate for solver to avoid garbage collection
+        const nFree = nDofs - fixedDofs.size;
+        const freeIndices = [];
+        for (let i = 0; i < nDofs; i++) if (!fixedDofs.has(i)) freeIndices.push(i);
+
+        const Kt_red = Array.from({ length: nFree }, () => new Float64Array(nFree));
+        const R_red = new Float64Array(nFree);
+        const Kt_lin = isLinear ? this.calculateTangentStiffness(patch, new Float64Array(nDofs)) : null;
+        if (isLinear && Kt_lin) this.applyPenaltyConstraints(Kt_lin, patch);
+
+        for (let s = 1; s <= steps; s++) {
+            const F_ext = F_ext_total.map(f => f * (s / steps));
+
+            for (let iter = 0; iter < iterations; iter++) {
+                let F_int;
+                if (isLinear) {
+                    F_int = new Float64Array(nDofs);
+                    for (let i = 0; i < nDofs; i++) {
+                        for (let j = 0; j < nDofs; j++) F_int[i] += Kt_lin[i][j] * u[j];
+                    }
+                } else {
+                    F_int = this.calculateInternalForce(patch, u);
+                }
+
+                const R = F_ext.map((f, i) => f - F_int[i]);
+
+                let resNorm = 0;
+                fixedDofs.forEach((_, idx) => R[idx] = 0);
+                R.forEach(ri => resNorm += ri * ri);
+                const norm = Math.sqrt(resNorm);
+                residualHistory.push({step: s, iter, norm});
+
+                if (onProgress) onProgress({ step: s, iter, norm });
+
+                if (norm < tolerance && iter > 0) break;
+                if (isLinear && iter > 0) break; // Linear only takes 1 iteration
+
+                const Kt = isLinear ? Kt_lin : this.calculateTangentStiffness(patch, u);
+                if (!isLinear) this.applyPenaltyConstraints(Kt, patch);
+
+                for (let i = 0; i < nFree; i++) {
+                    const row = freeIndices[i];
+                    R_red[i] = R[row];
+                    for (let j = 0; j < nFree; j++) {
+                        Kt_red[i][j] = Kt[row][freeIndices[j]];
+                    }
+                }
+
+                const du_red = this.gaussianElimination(Kt_red, R_red);
+                for (let i = 0; i < nFree; i++) u[freeIndices[i]] += du_red[i];
+            }
+        }
+        return { u, residualHistory };
+    }
+
+    gaussianElimination(A, b) {
+        const n = b.length;
+        for (let i = 0; i < n; i++) {
+            let max = i;
+            for (let j = i + 1; j < n; j++) if (Math.abs(A[j][i]) > Math.abs(A[max][i])) max = j;
+            [A[i], A[max]] = [A[max], A[i]]; [b[i], b[max]] = [b[max], b[i]];
+            if (Math.abs(A[i][i]) < 1e-20) A[i][i] = 1e-20;
+            for (let j = i + 1; j < n; j++) {
+                const f = A[j][i] / A[i][i];
+                b[j] -= f * b[i];
+                for (let k = i; k < n; k++) A[j][k] -= f * A[i][k];
+            }
+        }
+        const x = new Float64Array(n);
+        for (let i = n - 1; i >= 0; i--) {
+            let s = 0;
+            for (let j = i + 1; j < n; j++) s += A[i][j] * x[j];
+            x[i] = (b[i] - s) / A[i][i];
+        }
+        return x;
+    }
+}

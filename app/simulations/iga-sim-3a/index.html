@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Lab 3A | Geometric Nonlinearity</title>
+    <script>if (!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('.html')) window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; width: 340px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 20px;
+            z-index: 10; pointer-events: auto;
+            max-height: calc(100vh - 40px); overflow-y: auto;
+        }
+        #convergence-popup {
+            position: absolute; bottom: 20px; right: 20px; width: 320px; height: 250px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #334155; border-radius: 16px; padding: 15px;
+            z-index: 10; pointer-events: auto; display: flex; flex-direction: column;
+        }
+        .control-group { margin-bottom: 20px; }
+        .control-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 12px; display: block; }
+        .btn-action { 
+            width: 100%; padding: 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); color: #fb7185;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .btn-action:hover { background: rgba(244, 63, 94, 0.25); transform: translateY(-1px); }
+        .chart-container { flex: 1; min-height: 0; position: relative; background: rgba(0,0,0,0.4); border-radius: 12px; padding: 10px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.05); }
+        .badge-nl { background: #f43f5e; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+
+
+    <div id="ui-panel">
+        <a href="../../index.html" class="text-slate-400 hover:text-white text-[11px] mb-3 inline-flex items-center gap-2 transition-colors font-bold uppercase tracking-wider">
+            <i class="fa-solid fa-arrow-left"></i> Back to Hub
+        </a>
+        <h1 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <span class="text-purple-500">3A.1</span> Geometric Nonlinearity
+            <span class="badge-purple bg-purple-600 text-white px-2 py-0.5 rounded text-[10px]">LARGE DEFLECTION</span>
+        </h1>
+
+        <!-- Live Status Cluster -->
+        <div class="mb-4 bg-slate-900/80 border border-slate-700/50 rounded-xl p-3 flex justify-around text-center">
+            <div>
+                <div class="text-[9px] text-slate-500 uppercase tracking-tighter">Degree</div>
+                <div id="status-degree" class="text-xs font-mono text-emerald-400">p=2, q=2</div>
+            </div>
+            <div class="border-x border-slate-800 px-4">
+                <div class="text-[9px] text-slate-500 uppercase tracking-tighter">Spans</div>
+                <div id="status-spans" class="text-xs font-mono text-blue-400">2 x 1</div>
+            </div>
+            <div>
+                <div class="text-[9px] text-slate-500 uppercase tracking-tighter">Points</div>
+                <div id="status-points" class="text-xs font-mono text-amber-400">4 x 3</div>
+            </div>
+        </div>
+
+        <!-- Solver Mode -->
+        <div class="mb-4 bg-slate-900 border border-slate-700/50 rounded-xl p-3">
+            <span class="control-label text-purple-400">Analysis Type</span>
+            <div class="flex gap-2">
+                <button onclick="setAnalysisType('linear')" id="type-linear" class="flex-1 py-1.5 text-[11px] font-bold rounded-md bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">Linear Statics</button>
+                <button onclick="setAnalysisType('nonlinear')" id="type-nonlinear" class="flex-1 py-1.5 text-[11px] font-bold rounded-md bg-purple-600 text-white shadow-[0_0_10px_rgba(147,51,234,0.3)] transition-colors">Nonlinear Newton</button>
+            </div>
+            
+            <div id="nl-controls" class="mt-3 pt-3 border-t border-slate-700 space-y-3">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-slate-400">Load Steps (Increments)</span>
+                        <span id="steps-val" class="text-xs font-mono text-purple-400">5</span>
+                    </div>
+                    <input type="range" id="steps-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500" min="1" max="20" value="5">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-slate-400">Max Iterations (per step)</span>
+                        <span id="iters-val" class="text-xs font-mono text-purple-400">10</span>
+                    </div>
+                    <input type="range" id="iters-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500" min="5" max="50" step="5" value="10">
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4 bg-slate-900 border border-slate-700/50 rounded-xl p-3">
+            <span class="control-label text-emerald-400">Geometry Model</span>
+            <select id="geometry-select" class="w-full bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-emerald-500">
+                <option value="cantilever">Slender Cantilever Beam</option>
+                <option value="plate-hole">Plate with Hole Benchmark</option>
+            </select>
+        </div>
+
+        <div class="control-group pt-4 border-t border-slate-700">
+            <span class="control-label text-blue-400">Material Properties</span>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-slate-400">Young's Modulus (E)</span>
+                        <span id="e-val" class="text-xs font-mono text-blue-400">10^5</span>
+                    </div>
+                    <input type="range" id="e-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" min="1000" max="500000" step="1000" value="100000">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-slate-400">Poisson's Ratio (ν)</span>
+                        <span id="nu-val" class="text-xs font-mono text-emerald-400">0.30</span>
+                    </div>
+                    <input type="range" id="nu-slider" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500" min="0" max="0.49" step="0.01" value="0.30">
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group pt-4 border-t border-slate-700">
+            <span class="control-label text-blue-400">Traction Load (T_x)</span>
+            <div class="flex justify-between items-center mb-2">
+                <span id="load-val" class="text-xs font-mono text-blue-400">100 N/mm</span>
+            </div>
+            <input type="range" id="load-slider" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500" min="0" max="100000" step="500" value="10000">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mt-4">
+            <button id="solve-btn" class="py-2.5 rounded-lg font-bold text-[11px] bg-purple-600/20 border border-purple-500/40 text-purple-400 hover:bg-purple-600/40 transition-all">
+                <i class="fa-solid fa-play mr-1"></i> Compute NL
+            </button>
+            <button id="reset-ref" class="py-2.5 rounded-lg font-bold text-[11px] bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700 transition-all">
+                <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+            </button>
+        </div>
+        <button id="generate-plot-btn" class="w-full mt-2 py-2.5 rounded-lg font-bold text-[11px] bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-600/40 transition-all">
+            <i class="fa-solid fa-chart-line mr-1"></i> Generate F-D Plot
+        </button>
+
+        <a href="../../theory/theory-3a.html" target="_blank" class="w-full mt-2 py-2.5 rounded-lg font-bold text-[11px] bg-purple-600/20 border border-purple-500/40 text-purple-400 hover:bg-purple-600/40 transition-all flex items-center justify-center gap-2">
+            <i class="fa-solid fa-book-open"></i> Theory & Documentation
+        </a>
+
+        <div class="control-group pt-4 border-t border-slate-700 mt-4">
+            <span class="control-label mb-3 text-emerald-400">View Mode & Toggles</span>
+            
+            <!-- View Mode Tabs -->
+            <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg mb-4">
+                <button onclick="switchView('displacement')" id="view-disp" class="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all bg-emerald-600 text-white">Displacement</button>
+                <button onclick="switchView('stress')" id="view-stress" class="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-400 hover:text-slate-200">Stress (v. Mises)</button>
+            </div>
+
+            <div class="grid grid-cols-1 gap-2">
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="toggle-cp" class="hidden peer">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Control Points</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="toggle-bc" checked class="hidden peer">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Boundary Conditions</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="toggle-force" checked class="hidden peer">
+                    <div class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-50 relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-transform peer-checked:after:translate-x-4"></div>
+                    <span class="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">Applied Forces</span>
+                </label>
+            </div>
+        </div>
+        
+        <script>
+            function setAnalysisType(t) {
+                const isNL = t === 'nonlinear';
+                document.getElementById('type-nonlinear').className = "flex-1 py-1.5 text-[11px] font-bold rounded-md transition-all " + (isNL ? "bg-purple-600 text-white shadow-[0_0_10px_rgba(147,51,234,0.3)]" : "bg-slate-700 text-slate-300 hover:bg-slate-600");
+                document.getElementById('type-linear').className = "flex-1 py-1.5 text-[11px] font-bold rounded-md transition-all " + (!isNL ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600");
+                document.getElementById('nl-controls').style.opacity = isNL ? "1" : "0.3";
+                document.getElementById('nl-controls').style.pointerEvents = isNL ? "auto" : "none";
+                if (window.setAnalysisTypeHandler) window.setAnalysisTypeHandler(t);
+            }
+            function switchView(v) {
+                const isDisp = v === 'displacement';
+                document.getElementById('view-disp').className = "flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all " + (isDisp ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200");
+                document.getElementById('view-stress').className = "flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all " + (!isDisp ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200");
+                if (window.setViewMode) window.setViewMode(v);
+            }
+        </script>
+    </div>
+
+    <!-- Results Popup with integrated Color Bar -->
+    <div id="convergence-popup" style="height: auto;">
+        <!-- Heatmap Legend (Color Bar) -->
+        <div id="heatmap-legend" class="flex items-center gap-3 mb-3 pb-3 border-b border-slate-700/50">
+            <div class="flex flex-col justify-between h-24 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                <span>MAX</span>
+                <span>0.0</span>
+            </div>
+            <div class="w-3 h-24 rounded-full border border-white/10" style="background: linear-gradient(to top, #3b82f6, #06b6d4, #10b981, #facc15, #f97316, #ef4444);"></div>
+            <div class="flex flex-col justify-between h-24 text-[10px] font-mono text-slate-300">
+                <span id="legend-val-max">---</span>
+                <div class="flex flex-col gap-0.5 items-start">
+                    <span id="legend-mode-title" class="text-rose-500/80 text-[10px]">Displacement</span>
+                    <span id="legend-mode-sub" class="text-[8px] text-slate-500 leading-none">X-Magnitude</span>
+                </div>
+                <span id="legend-val-min">---</span>
+            </div>
+        </div>
+
+        <h2 class="text-sm font-bold text-slate-200 mb-1"><i class="fa-solid fa-square-poll-vertical text-blue-500 mr-2"></i>Analysis Results</h2>
+        
+        <div class="bg-black/30 rounded p-3 flex-1 flex flex-col justify-center gap-2">
+            <div class="flex justify-between text-[11px]">
+                <span class="text-slate-400">Max Displacement:</span>
+                <span id="max-disp" class="text-blue-400 font-mono">0.000 mm</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+                <span class="text-slate-400">Max Stress (vM):</span>
+                <span id="max-stress" class="text-rose-400 font-mono">0.00 MPa</span>
+            </div>
+            <div class="flex justify-between text-[11px] border-t border-slate-800 pt-2 mt-1">
+                <span class="text-slate-400 font-bold" title="Structural divergence between Linear vs Nonlinear approximation.">Nonlinear Divergence:</span>
+                <span id="l2-error" class="text-emerald-400 font-bold font-mono">0.00%</span>
+            </div>
+        </div>
+        <div id="conv-stat" class="text-[10px] text-center mt-2 text-slate-400">Status: Running Assembly...</div>
+    </div>
+
+
+    <div id="chart-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden backdrop-blur-sm overflow-y-auto pt-10 pb-10">
+        <div class="bg-[#0f172a] rounded-xl border border-slate-700 p-6 w-[800px] max-w-[90vw] shadow-2xl relative my-auto">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700/50 pb-3">
+                <h2 class="text-lg font-bold text-slate-200"><i class="fa-solid fa-chart-line text-emerald-500 mr-2"></i>Macroscopic Response Plots</h2>
+                <div class="flex gap-3">
+                    <button id="reset-zoom-btn" class="px-3 py-1 rounded bg-slate-800 border border-slate-600 text-xs text-slate-300 hover:bg-slate-700 transition-colors"><i class="fa-solid fa-magnifying-glass-minus mr-1"></i>Reset Zoom</button>
+                    <button id="close-modal-btn" class="text-slate-400 hover:text-rose-400 transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+            </div>
+            
+            <div class="w-full h-[350px] mb-6">
+                <canvas id="fdChart"></canvas>
+            </div>
+            
+            <div class="w-full h-[350px]">
+                <canvas id="ssChart"></canvas>
+            </div>
+
+            <div class="mt-4 flex justify-between items-center text-xs text-slate-400">
+                <span><i class="fa-solid fa-circle-info mr-1"></i><strong>MATLAB Zoom:</strong> Click & drag a box to zoom. Ctrl+Drag to pan. Scroll to zoom.</span>
+                <span>Comparing strictly linear Hookean assumptions against true large-deformation geometric stiffness.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js and Zoom Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+    <script src="../../shared/performance.js"></script>
+    <script src="../phase-3-core/src/nurbs-engine.js"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js"></script>
+    <script src="../phase-3-core/src/iga-nonlinear.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>

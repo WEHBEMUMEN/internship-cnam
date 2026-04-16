@@ -540,6 +540,20 @@
             </div>
           </div>
 
+          <!-- Phase 3.1: Nonlinear Structural Divergence -->
+          <div class="card reveal reveal-up delay-1">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-link" style="font-size: 2rem; color: #f43f5e;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2);">PHASE 3.1</span>
+            </div>
+            <h3>Structural Divergence</h3>
+            <p>Large-deformation 2D IGA using Newton-Raphson. Quantifying structural stiffening vs. linear elastic approximation.</p>
+            <div class="app-actions">
+              <a href="simulations/iga-sim-3a/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #f43f5e; box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);">Launch 3.1 Lab <i class="fa-solid fa-rocket" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-3a.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+
           </div>
         </div>
 
@@ -1625,6 +1639,78 @@
                   <i class="fa-solid fa-chart-line"></i>
                   <h4>Benchmarking</h4>
                   <p>Analyze Break-Even curves and Time vs. Error Pareto efficiency</p>
+                </div>
+              </div>
+            <div class="flow-section reveal reveal-up">
+              <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">PHASE 2D.3</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Online Solver (Digital Twin) Pipeline</h3>
+              <div class="flow-grid">
+
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d3/index.html'">
+                  <i class="fa-solid fa-file-import"></i>
+                  <h4>Import POD Basis</h4>
+                  <p>Load the pre-computed reduced basis $\Phi$ and projected operators</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d3/index.html'">
+                  <i class="fa-solid fa-sliders"></i>
+                  <h4>Input Query</h4>
+                  <p>User adjusts $E$, $\nu$ or Loads via real-time sliders</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d3/index.html'">
+                  <i class="fa-solid fa-bolt"></i>
+                  <h4>Solve Reduced System</h4>
+                  <p>Direct solve of $k \times k$ system for coefficients $q$</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d3/index.html'">
+                  <i class="fa-solid fa-expand"></i>
+                  <h4>Physical Recovery</h4>
+                  <p>Reconstruct full field: $u = \Phi q$ at 120 FPS</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-2d3/index.html'">
+                  <i class="fa-solid fa-wave-square"></i>
+                  <h4>Stress Recovery</h4>
+                  <p>Analytical gradient evaluation for real-time von Mises heatmaps</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flow-section reveal reveal-up">
+              <span class="badge" style="background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);">PHASE 3.1</span>
+              <h3 style="margin-top: 10px; color: var(--text-primary);">Nonlinear Newton-Raphson Pipeline</h3>
+              <div class="flow-grid">
+
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-3a/index.html'">
+                  <i class="fa-solid fa-arrow-up-right-dots"></i>
+                  <h4>Load Increment</h4>
+                  <p>Divide total external load into $N_{steps}$ for path-following</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-3a/index.html'">
+                  <i class="fa-solid fa-arrows-spin"></i>
+                  <h4>NR Iteration</h4>
+                  <p>Compute Tangent $K_t(u)$ and Internal Forces $F_{int}(u)$</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-3a/index.html'">
+                  <i class="fa-solid fa-calculator"></i>
+                  <h4>Linear Update</h4>
+                  <p>Solve $K_t \Delta u = R$ and update $u = u + \Delta u$</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-3a/index.html'">
+                  <i class="fa-solid fa-chart-line"></i>
+                  <h4>Divergence Analysis</h4>
+                  <p>Log Force-Displacement to capture geometric stiffening curves</p>
+                </div>
+                <i class="fa-solid fa-arrow-right flow-arrow"></i>
+                <div class="flow-step" onclick="window.location.href='simulations/iga-sim-3a/index.html'">
+                  <i class="fa-solid fa-vial"></i>
+                  <h4>Stress/Strain Plots</h4>
+                  <p>Recover PK2 stress vs. Green-Lagrange max equivalent strain</p>
                 </div>
               </div>
             </div>
