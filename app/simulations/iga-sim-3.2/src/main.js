@@ -163,20 +163,16 @@ class ROMApp32 {
         const bcs = this.getBCs();
         const loads = this.getLoads(this.loadMag);
 
-        const onProgress = (p) => {
-            this.chart.data.labels.push(p.iter);
-            this.chart.data.datasets[0].data.push(p.norm);
-            this.chart.update();
-        };
-
-        this.chart.data.labels = [];
-        this.chart.data.datasets[0].data = [];
-
         if (this.viewMode === 'rom' && this.isTrained) {
-            result = this.romEngine.solveReduced(this.patch, bcs, loads, { onProgress });
+            result = this.romEngine.solveReduced(this.patch, bcs, loads, { iterations: 15 });
         } else {
-            result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, { onProgress });
+            result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, { iterations: 15 });
         }
+        
+        // Update Chart (Batch update to prevent flickering)
+        this.chart.data.labels = result.residualHistory.map(h => h.iter);
+        this.chart.data.datasets[0].data = result.residualHistory.map(h => h.norm);
+        this.chart.update('none'); // Update without animation for responsiveness
         
         const t1 = performance.now();
         const dt = t1 - t0;
