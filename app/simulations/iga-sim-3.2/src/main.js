@@ -381,9 +381,9 @@ class ROMApp32 {
     computeFieldValues(res, uDisp) {
         const positions = [], values = [];
         for (let i = 0; i <= res; i++) {
-            const u = i / res;
+            const u = Math.min(i / res, 0.9999); // avoid degenerate endpoints
             for (let j = 0; j <= res; j++) {
-                const v = j / res;
+                const v = Math.min(j / res, 0.9999);
                 const state = this.engine.getSurfaceState(this.patch, u, v);
                 let px = state.position.x, py = state.position.y;
 
@@ -394,8 +394,13 @@ class ROMApp32 {
                     if (this.viewMode === 'disp') {
                         field = Math.sqrt(disp.x * disp.x + disp.y * disp.y);
                     } else {
-                        const s = this.solverFOM.getNumericalStress(this.patch, uDisp, u, v, this.solverFOM.E, this.solverFOM.nu);
-                        field = s.vonMises;
+                        try {
+                            const s = this.solverFOM.getNumericalStress(
+                                this.patch, uDisp, u, v,
+                                this.solverFOM.E, this.solverFOM.nu);
+                            const vm = s.vonMises;
+                            field = isFinite(vm) ? vm : 0;
+                        } catch (_) { field = 0; }
                     }
                 }
                 positions.push(px, py, 0);
@@ -409,8 +414,10 @@ class ROMApp32 {
         const res = 36;
         const { positions, values } = this.computeFieldValues(res, uDisp);
 
-        // Build colors from field values
-        const minV = Math.min(...values), maxV = Math.max(...values);
+        // NaN-safe min/max (a single bad point won't corrupt the whole colormap)
+        const finite = values.filter(v => isFinite(v) && v >= 0);
+        const minV = finite.length ? Math.min(...finite) : 0;
+        const maxV = finite.length ? Math.max(...finite) : 1;
         const range = maxV - minV || 1;
         // Use jet (displacement) or coolwarm (stress) — same as Phase 3.1 palette
         const colorFn = this.viewMode === 'stress' ? coolwarm : jet;
