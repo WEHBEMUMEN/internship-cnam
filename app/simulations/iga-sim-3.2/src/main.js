@@ -17,6 +17,7 @@ class ROMApp32 {
         this.k = 5;
         this.patch = null;
         this.isTrained = false;
+        this._debounceTimer = null;
         
         // Three.js
         this.scene = new THREE.Scene();
@@ -311,7 +312,9 @@ class ROMApp32 {
         document.getElementById('input-load').oninput = (e) => {
             this.loadMag = parseFloat(e.target.value);
             document.getElementById('load-val').textContent = this.loadMag;
-            this.updatePhysics();
+            // Debounce: only solve 150ms after the user stops dragging
+            clearTimeout(this._debounceTimer);
+            this._debounceTimer = setTimeout(() => this.updatePhysics(), 150);
         };
 
         document.getElementById('btn-view-fom').onclick = () => {
