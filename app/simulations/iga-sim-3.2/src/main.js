@@ -339,9 +339,9 @@ class ROMApp32 {
         const nU = this.patch.controlPoints.length;
         const nV = this.patch.controlPoints[0].length;
         if (this.currentBenchmark === 'beam') {
-            for (let j = 0; j < nV; j++) loads.push({ i: nU - 1, j, fx: 0, fy: -mag / nV });
+            for (let j = 0; j < nV; j++) loads.push({ type: 'nodal', i: nU - 1, j, fx: 0, fy: -mag / nV });
         } else {
-            for (let j = 0; j < nV; j++) loads.push({ i: nU - 1, j, fx: mag / nV, fy: 0 });
+            for (let j = 0; j < nV; j++) loads.push({ type: 'nodal', i: nU - 1, j, fx: mag / nV, fy: 0 });
         }
         return loads;
     }
@@ -571,8 +571,8 @@ class ROMApp32 {
             // Update colorbar gradient
             this.colorbar = new Colorbar(
                 document.getElementById('colorbar-canvas'),
-                document.getElementById('colorbar-ticks'), viridis);
-            if (this.lastResult) this.updateMesh(this.lastResult.u);
+                document.getElementById('colorbar-ticks'), jet);
+            if (this.lastResult) { this.updateMesh(this.lastResult.u); this._render(); }
         };
         document.getElementById('btn-view-stress').onclick = () => {
             this.viewMode = 'stress';
@@ -580,7 +580,7 @@ class ROMApp32 {
             this.colorbar = new Colorbar(
                 document.getElementById('colorbar-canvas'),
                 document.getElementById('colorbar-ticks'), coolwarm);
-            if (this.lastResult) this.updateMesh(this.lastResult.u);
+            if (this.lastResult) { this.updateMesh(this.lastResult.u); this._render(); }
         };
     }
 
