@@ -33,6 +33,24 @@ export class NURBSPresets {
     }
 
     /**
+     * Exact 2D Cantilever Beam (Sheet)
+     * L: Length, H: Height
+     */
+    static generateCantilever(L = 10.0, H = 2.0) {
+        const p = 1, q = 1;
+        const U = [0, 0, 1, 1];
+        const V = [0, 0, 1, 1];
+        
+        const controlPoints = [
+            [ {x: 0, y: 0, z: 0}, {x: 0, y: H, z: 0} ],
+            [ {x: L, y: 0, z: 0}, {x: L, y: H, z: 0} ]
+        ];
+        const weights = [ [1,1], [1,1] ];
+        
+        return { p, q, U, V, controlPoints, weights };
+    }
+
+    /**
      * Exact NURBS Sphere - Single-Patch Surface of Revolution
      * Constructed by revolving a semi-circular NURBS curve (degree p=2) around a central axis.
      * Note: This method generates "poles" (singularities) at the top and bottom.
