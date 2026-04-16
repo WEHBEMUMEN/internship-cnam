@@ -78,6 +78,8 @@ class ROMApp32 {
     }
 
     loadBenchmark(type) {
+        this.clearMesh(); // Remove old benchmark from scene
+        
         this.currentBenchmark = type;
         this.isTrained = false;
         this.romEngine.clearSnapshots();
@@ -101,6 +103,19 @@ class ROMApp32 {
         this.controls.update();
         
         this.updateMesh();
+    }
+
+    clearMesh() {
+        if (this.surfaceMesh) {
+            this.scene.remove(this.surfaceMesh);
+            if (this.surfaceMesh.geometry) this.surfaceMesh.geometry.dispose();
+            this.surfaceMesh = null;
+        }
+        if (this.wireMesh) {
+            this.scene.remove(this.wireMesh);
+            if (this.wireMesh.geometry) this.wireMesh.geometry.dispose();
+            this.wireMesh = null;
+        }
     }
 
     async trainROM() {
