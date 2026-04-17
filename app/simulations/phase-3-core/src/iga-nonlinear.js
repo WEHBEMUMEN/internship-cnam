@@ -368,8 +368,9 @@ class IGANonlinearSolver {
         const fixedDofs = new Map();
         bcs.forEach(bc => {
             const baseIdx = (bc.i * nV + bc.j) * 2;
-            if (bc.axis === 'x' || bc.axis === 'both') fixedDofs.set(baseIdx, bc.value);
-            if (bc.axis === 'y' || bc.axis === 'both') fixedDofs.set(baseIdx + 1, bc.value);
+            const val = bc.value || 0;
+            if (bc.axis === 'x' || bc.axis === 'both') fixedDofs.set(baseIdx, val);
+            if (bc.axis === 'y' || bc.axis === 'both') fixedDofs.set(baseIdx + 1, val);
         });
 
         // Preallocate for solver to avoid garbage collection
@@ -384,6 +385,11 @@ class IGANonlinearSolver {
 
         for (let s = 1; s <= steps; s++) {
             const F_ext = F_ext_total.map(f => f * (s / steps));
+
+            // Enforce prescribed non-zero displacements incrementally
+            fixedDofs.forEach((val, idx) => {
+                u[idx] = val * (s / steps);
+            });
 
             for (let iter = 0; iter < iterations; iter++) {
                 let F_int;

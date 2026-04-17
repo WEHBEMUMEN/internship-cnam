@@ -203,10 +203,48 @@ class NURBSPresets {
         let base = this.generatePlateWithHole(R, L);
         const engine = new NURBS2D();
         
-        // Subdivide to reach 12 elements
         base = engine.subdivideGlobal(base);
         
         return base;
+    }
+
+    /**
+     * Exact 2D NURBS Annulus (360 degrees)
+     * Constructed as a single periodic-like patch.
+     * Ri: Inner radius, Ro: Outer radius
+     */
+    static generateAnnulus(Ri = 2.0, Ro = 4.0) {
+        const p = 2, q = 1;
+        const U = [0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1];
+        const V = [0, 0, 1, 1];
+        
+        const w = Math.sqrt(2) / 2;
+        const U_weights = [1, w, 1, w, 1, w, 1, w, 1];
+        
+        const u_pts = [
+            { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 },
+            { x: -1, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 },
+            { x: 0, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 0 }
+        ];
+
+        const controlPoints = [];
+        const weights = [];
+
+        for (let i = 0; i < 9; i++) {
+            controlPoints[i] = [];
+            weights[i] = [];
+            for (let j = 0; j < 2; j++) {
+                const R = j === 0 ? Ri : Ro;
+                controlPoints[i][j] = {
+                    x: u_pts[i].x * R,
+                    y: u_pts[i].y * R,
+                    z: 0
+                };
+                weights[i][j] = U_weights[i];
+            }
+        }
+
+        return { p, q, U, V, controlPoints, weights };
     }
 }
 
