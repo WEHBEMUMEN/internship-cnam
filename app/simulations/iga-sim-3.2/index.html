@@ -11,16 +11,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Shared NURBS Core (Loaded as Globals) -->
+    <script src="../phase-2-core/src/nurbs-2d.js?v=3"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js?v=3"></script>
+    <script src="../phase-2-core/src/refine-utils.js?v=3"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js?v=3"></script>
+    <!-- Phase 3 Core (Global Scripts) -->
+    <script src="../phase-3-core/src/iga-nonlinear.js?v=2"></script>
+    <script src="../phase-3-core/src/rom-engine.js?v=2"></script>
+
     <style>
         :root {
             --primary: #f43f5e;
             --secondary: #3b82f6;
-            --bg: #020617;
-            --card: rgba(15, 23, 42, 0.92);
-            --border: rgba(51, 65, 85, 0.5);
+            --bg: #ffffff;
+            --card: rgba(255, 255, 255, 0.8);
+            --border: rgba(148, 163, 184, 0.3);
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        body { background: var(--bg); color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
         #canvas-container { position: absolute; inset: 0; }
 
         /* ── Panels ── */
@@ -29,7 +41,7 @@
             backdrop-filter: blur(14px);
             border: 1px solid var(--border);
             border-radius: 20px;
-            box-shadow: 0 20px 50px -10px rgba(0,0,0,0.6);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
         }
         #ui-panel {
             position: absolute; top: 16px; left: 16px; width: 340px;
@@ -61,11 +73,11 @@
             margin-bottom: 8px;
         }
         .label-row .lbl { font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
-            letter-spacing: 1px; color: #64748b; }
+            letter-spacing: 1px; color: #475569; }
         .label-row .val { font-size: 0.8rem; font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
 
         input[type="range"] {
-            width: 100%; height: 3px; background: #1e293b; border-radius: 2px; appearance: none; cursor: pointer;
+            width: 100%; height: 3px; background: #e2e8f0; border-radius: 2px; appearance: none; cursor: pointer;
         }
         input[type="range"]::-webkit-slider-thumb {
             appearance: none; width: 14px; height: 14px;
@@ -81,7 +93,7 @@
             transition: all .2s; border: 1px solid var(--border); color: #94a3b8;
             background: transparent; white-space: nowrap;
         }
-        .btn-pill:hover { background: rgba(255,255,255,.05); color: #e2e8f0; }
+        .btn-pill:hover { background: rgba(0,0,0,.04); color: #1e293b; }
         .btn-pill.active {
             border-color: var(--primary); color: var(--primary);
             background: rgba(244,63,94,.12); box-shadow: 0 0 12px rgba(244,63,94,.2);
@@ -104,11 +116,11 @@
         /* ── Stat Cards ── */
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
         .stat-card {
-            background: rgba(0,0,0,.35); border-radius: 12px; padding: 12px;
+            background: rgba(241,245,249,.6); border-radius: 12px; padding: 12px;
             border: 1px solid var(--border);
         }
-        .stat-card .lbl { font-size: 0.6rem; color: #475569; text-transform: uppercase; letter-spacing: .8px; display: block; margin-bottom: 4px; }
-        .stat-num { font-size: 1.3rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-card .lbl { font-size: 0.6rem; color: #64748b; text-transform: uppercase; letter-spacing: .8px; display: block; margin-bottom: 4px; }
+        .stat-num { font-size: 1.3rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: #1e293b; }
 
         /* ── Divider ── */
         .divider { border-color: rgba(51,65,85,.4); margin: 16px 0; }
@@ -158,7 +170,7 @@
             <i class="fa-solid fa-arrow-left"></i> Back to Hub
         </a>
         <div class="panel-title">Phase 3.2 <span style="color:var(--primary)">NL-ROM</span></div>
-        <div class="panel-sub">2D Nonlinear Reduced Order Modeling</div>
+        <div class="panel-sub" style="color:#64748b">2D Nonlinear Reduced Order Modeling</div>
 
         <hr class="divider">
 
@@ -276,6 +288,7 @@
     </div>
 
     <script src="../../shared/performance.js"></script>
-    <script type="module" src="src/main.js"></script>
+    <script type="module" src="src/main.js?v=3"></script>
+
 </body>
 </html>

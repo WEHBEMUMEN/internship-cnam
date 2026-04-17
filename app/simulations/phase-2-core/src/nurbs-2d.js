@@ -4,7 +4,7 @@
  * Phase 2.0 | Computational Core
  */
 
-export class NURBS2D {
+class NURBS2D {
     constructor() {
         console.log("NURBS2D Engine Initialized");
     }

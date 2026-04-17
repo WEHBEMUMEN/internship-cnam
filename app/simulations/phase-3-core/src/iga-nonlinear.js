@@ -3,27 +3,31 @@
  * Handles Large Deflections (Geometric Nonlinearity) using Newton-Raphson.
  */
 
-class GaussQuadrature2D {
-    static getPoints(n = 3) {
-        if (n === 2) {
-            const p = 1.0 / Math.sqrt(3);
-            return { points: [-p, p], weights: [1, 1] };
+// Conditional guard: only define if not already loaded by phase-2-core
+if (typeof GaussQuadrature2D === 'undefined') {
+    class GaussQuadrature2D {
+        static getPoints(n = 3) {
+            if (n === 2) {
+                const p = 1.0 / Math.sqrt(3);
+                return { points: [-p, p], weights: [1, 1] };
+            }
+            if (n === 3) {
+                return { points: [-Math.sqrt(0.6), 0, Math.sqrt(0.6)], weights: [5/9, 8/9, 5/9] };
+            }
+            const p1 = Math.sqrt((3 - 2 * Math.sqrt(1.2)) / 7);
+            const p2 = Math.sqrt((3 + 2 * Math.sqrt(1.2)) / 7);
+            const w1 = (18 + Math.sqrt(30)) / 36;
+            const w2 = (18 - Math.sqrt(30)) / 36;
+            return { points: [-p2, -p1, p1, p2], weights: [w2, w1, w1, w2] };
         }
-        if (n === 3) {
-            return { points: [-Math.sqrt(0.6), 0, Math.sqrt(0.6)], weights: [5/9, 8/9, 5/9] };
-        }
-        const p1 = Math.sqrt((3 - 2 * Math.sqrt(1.2)) / 7);
-        const p2 = Math.sqrt((3 + 2 * Math.sqrt(1.2)) / 7);
-        const w1 = (18 + Math.sqrt(30)) / 36;
-        const w2 = (18 - Math.sqrt(30)) / 36;
-        return { points: [-p2, -p1, p1, p2], weights: [w2, w1, w1, w2] };
     }
+    window.GaussQuadrature2D = GaussQuadrature2D;
 }
 
-export class IGANonlinearSolver {
+class IGANonlinearSolver {
     constructor(nurbsEngine) {
         this.engine = nurbsEngine;
-        this.E = 200000; // Steel (MPa)
+        this.E = 100000; // Benchmark (MPa)
         this.nu = 0.3;
         this.thickness = 1.0;
     }
@@ -43,7 +47,7 @@ export class IGANonlinearSolver {
         const nV = controlPoints[0].length;
         const J = [[deriv.dU.x, deriv.dV.x], [deriv.dU.y, deriv.dV.y]];
         let detJ_2D = J[0][0] * J[1][1] - J[0][1] * J[1][0];
-        if (Math.abs(detJ_2D) < 1e-12) detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
+        if (isNaN(detJ_2D) || Math.abs(detJ_2D) < 1e-12) detJ_2D = (detJ_2D >= 0) ? 1e-12 : -1e-12;
         const J_inv = [[J[1][1]/detJ_2D, -J[0][1]/detJ_2D], [-J[1][0]/detJ_2D, J[0][0]/detJ_2D]];
         
         const W = deriv.W, Wu = deriv.Wu, Wv = deriv.Wv;
@@ -70,7 +74,7 @@ export class IGANonlinearSolver {
                 grads[cpI * nV + cpJ] = [dRdx, dRdy];
             }
         }
-        return grads;
+        return { grads, detJ: detJ_2D };
     }
 
     calculateInternalForce(patch, u_disp) {
@@ -97,9 +101,9 @@ export class IGANonlinearSolver {
                         const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
                         const wv = gRule.weights[gv] * (vMax - vMin) / 2;
 
-                        const detJ = this.engine.getJacobianDeterminant(patch, u, v);
+                        // Consistency: use same J calculations
                         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
-                        const B_param = this.getBParametric(patch, u, v, deriv);
+                        const { grads: B_param, detJ } = this.getBParametric(patch, u, v, deriv);
                         
                         let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
                         for (let k = 0; k < nBasisU * nBasisV; k++) {
@@ -130,8 +134,11 @@ export class IGANonlinearSolver {
                             const bexy_u = (1 + dudx)*dRdy + dudy*dRdx;
                             const bexy_v = (1 + dvdy)*dRdx + dvdx*dRdy;
 
-                            F_int[k * 2] += (bexx_u * Sxx + beyy_u * Syy + bexy_u * Sxy) * factor;
-                            F_int[k * 2 + 1] += (bexx_v * Sxx + beyy_v * Syy + bexy_v * Sxy) * factor;
+                            const val_u = (bexx_u * Sxx + beyy_u * Syy + bexy_u * Sxy) * factor;
+                            const val_v = (bexx_v * Sxx + beyy_v * Syy + bexy_v * Sxy) * factor;
+
+                            if (!isNaN(val_u)) F_int[k * 2] += val_u;
+                            if (!isNaN(val_v)) F_int[k * 2 + 1] += val_v;
                         }
                     }
                 }
@@ -164,9 +171,8 @@ export class IGANonlinearSolver {
                         const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
                         const wv = gRule.weights[gv] * (vMax - vMin) / 2;
 
-                        const detJ = this.engine.getJacobianDeterminant(patch, u, v);
                         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
-                        const B_param = this.getBParametric(patch, u, v, deriv);
+                        const { grads: B_param, detJ } = this.getBParametric(patch, u, v, deriv);
 
                         let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
                         for (let k = 0; k < nBasisU * nBasisV; k++) {
@@ -226,8 +232,8 @@ export class IGANonlinearSolver {
                                 const k_geo = (dRdx_a * Sxx * dRdx_b + dRdy_a * Syy * dRdy_b + 
                                                dRdx_a * Sxy * dRdy_b + dRdy_a * Sxy * dRdx_b) * factor;
                                 
-                                Kt[a * 2][b * 2] += k_geo;
-                                Kt[a * 2 + 1][b * 2 + 1] += k_geo;
+                                Kt[a * 2][b * 2] += isNaN(k_geo) ? 0 : k_geo;
+                                Kt[a * 2 + 1][b * 2 + 1] += isNaN(k_geo) ? 0 : k_geo;
                             }
                         }
                     }
@@ -237,7 +243,7 @@ export class IGANonlinearSolver {
         return Kt;
     }
 
-    applyPenaltyConstraints(Kt, patch) {
+    applyPenaltyConstraints(Kt, F_int, u, patch) {
         const { controlPoints } = patch;
         const nU = controlPoints.length;
         const nV = controlPoints[0].length;
@@ -249,26 +255,36 @@ export class IGANonlinearSolver {
             }
         }
         
-        const penalty = 1e12; 
+        const penalty = 1e8; // Lowered from 1e12 for better NR stability
         for (let i = 0; i < pts.length; i++) {
             for (let j = i + 1; j < pts.length; j++) {
-                const p1 = pts[i].cp;
-                const p2 = pts[j].cp;
+                const p1 = pts[i].cp, p2 = pts[j].cp;
                 
                 const dist2 = (p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2;
-                if (dist2 < 1e-20) { // Mapping degeneracy
-                    const id1 = pts[i].id;
-                    const id2 = pts[j].id;
+                if (dist2 < 1e-20) { 
+                    const id1 = pts[i].id, id2 = pts[j].id;
                     
-                    Kt[id1][id1] += penalty;
-                    Kt[id2][id2] += penalty;
-                    Kt[id1][id2] -= penalty;
-                    Kt[id2][id1] -= penalty;
+                    // Stiffness Penalty
+                    if (Kt) {
+                        Kt[id1][id1] += penalty;
+                        Kt[id2][id2] += penalty;
+                        Kt[id1][id2] -= penalty;
+                        Kt[id2][id1] -= penalty;
+                        Kt[id1+1][id1+1] += penalty;
+                        Kt[id2+1][id2+1] += penalty;
+                        Kt[id1+1][id2+1] -= penalty;
+                        Kt[id2+1][id1+1] -= penalty;
+                    }
 
-                    Kt[id1+1][id1+1] += penalty;
-                    Kt[id2+1][id2+1] += penalty;
-                    Kt[id1+1][id2+1] -= penalty;
-                    Kt[id2+1][id1+1] -= penalty;
+                    // Force Penalty (Coupling residual)
+                    if (F_int && u) {
+                        const dux = u[id1] - u[id2];
+                        const duy = u[id1+1] - u[id2+1];
+                        F_int[id1] += penalty * dux;
+                        F_int[id2] -= penalty * dux;
+                        F_int[id1+1] += penalty * duy;
+                        F_int[id2+1] -= penalty * duy;
+                    }
                 }
             }
         }
@@ -283,7 +299,7 @@ export class IGANonlinearSolver {
         const nBasisV = controlPoints[0].length;
         
         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
-        const B_param = this.getBParametric(patch, u, v, deriv);
+        const { grads: B_param } = this.getBParametric(patch, u, v, deriv);
 
         let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
         for (let k = 0; k < nBasisU * nBasisV; k++) {
@@ -313,12 +329,13 @@ export class IGANonlinearSolver {
         const Syy = D[1][0]*Exx + D[1][1]*Eyy;
         const Sxy = D[2][2]*Exy2;
 
-        const vonMises = Math.sqrt(Sxx*Sxx - Sxx*Syy + Syy*Syy + 3*Sxy*Sxy);
+        let vonMises = Math.sqrt(Sxx*Sxx - Sxx*Syy + Syy*Syy + 3*Sxy*Sxy);
+        if (isNaN(vonMises)) vonMises = 0;
         
         // Equivalent (von Mises) Strain
-        // For a 2D plane stress, epsilon_eff = sqrt(Exx^2 + Eyy^2 - Exx*Eyy + 3*Exy^2) [Approximate for visualization]
         const Exy = Exy2 / 2;
-        const equivalentStrain = Math.sqrt(Exx*Exx - Exx*Eyy + Eyy*Eyy + 3*Exy*Exy);
+        let equivalentStrain = Math.sqrt(Exx*Exx - Exx*Eyy + Eyy*Eyy + 3*Exy*Exy);
+        if (isNaN(equivalentStrain)) equivalentStrain = 0;
 
         return {
             sxx: Sxx,
@@ -363,7 +380,7 @@ export class IGANonlinearSolver {
         const Kt_red = Array.from({ length: nFree }, () => new Float64Array(nFree));
         const R_red = new Float64Array(nFree);
         const Kt_lin = isLinear ? this.calculateTangentStiffness(patch, new Float64Array(nDofs)) : null;
-        if (isLinear && Kt_lin) this.applyPenaltyConstraints(Kt_lin, patch);
+        if (isLinear && Kt_lin) this.applyPenaltyConstraints(Kt_lin, null, u, patch);
 
         for (let s = 1; s <= steps; s++) {
             const F_ext = F_ext_total.map(f => f * (s / steps));
@@ -377,6 +394,7 @@ export class IGANonlinearSolver {
                     }
                 } else {
                     F_int = this.calculateInternalForce(patch, u);
+                    this.applyPenaltyConstraints(null, F_int, u, patch);
                 }
 
                 const R = F_ext.map((f, i) => f - F_int[i]);
@@ -385,6 +403,10 @@ export class IGANonlinearSolver {
                 fixedDofs.forEach((_, idx) => R[idx] = 0);
                 R.forEach(ri => resNorm += ri * ri);
                 const norm = Math.sqrt(resNorm);
+                if (isNaN(norm)) {
+                    console.error("Nonlinear Solver: Divergence detected (NaN). Stopping iterations.");
+                    break;
+                }
                 residualHistory.push({step: s, iter, norm});
 
                 if (onProgress) onProgress({ step: s, iter, norm });
@@ -393,7 +415,7 @@ export class IGANonlinearSolver {
                 if (isLinear && iter > 0) break; // Linear only takes 1 iteration
 
                 const Kt = isLinear ? Kt_lin : this.calculateTangentStiffness(patch, u);
-                if (!isLinear) this.applyPenaltyConstraints(Kt, patch);
+                if (!isLinear) this.applyPenaltyConstraints(Kt, null, u, patch);
 
                 for (let i = 0; i < nFree; i++) {
                     const row = freeIndices[i];
@@ -427,8 +449,13 @@ export class IGANonlinearSolver {
         for (let i = n - 1; i >= 0; i--) {
             let s = 0;
             for (let j = i + 1; j < n; j++) s += A[i][j] * x[j];
-            x[i] = (b[i] - s) / A[i][i];
+            const div = A[i][i];
+            x[i] = (Math.abs(div) < 1e-25) ? 0 : (b[i] - s) / div;
+            if (isNaN(x[i])) x[i] = 0;
         }
         return x;
     }
 }
+
+// Expose globally for script-tag loading compatibility
+window.IGANonlinearSolver = IGANonlinearSolver;

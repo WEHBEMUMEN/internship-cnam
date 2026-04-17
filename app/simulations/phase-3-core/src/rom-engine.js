@@ -3,7 +3,7 @@
  * Handles Snapshot collection, POD basis extraction, and Reduced NR solvers.
  */
 
-export class ROMEngine {
+class ROMEngine {
     constructor(solverFOM) {
         this.fom = solverFOM; // IGANonlinearSolver instance
         this.Phi = null;      // Reduced Basis [nDofs x k]
@@ -146,3 +146,6 @@ export class ROMEngine {
         };
     }
 }
+
+// Expose globally for script-tag loading compatibility
+window.ROMEngine = ROMEngine;

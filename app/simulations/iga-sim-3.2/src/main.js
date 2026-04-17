@@ -1,8 +1,5 @@
-import { NURBS2D } from '../../phase-2-core/src/nurbs-2d.js';
-import { NURBSPresets } from '../../phase-2-core/src/nurbs-presets.js';
-import { RefineUtils } from '../../phase-2-core/src/refine-utils.js';
-import { IGANonlinearSolver } from '../../phase-3-core/src/iga-nonlinear.js';
-import { ROMEngine } from '../../phase-3-core/src/rom-engine.js';
+// IGANonlinearSolver and ROMEngine are loaded as global scripts via index.html
+
 
 // ─── Colour maps ────────────────────────────────────────────────────────────
 // Jet (Blue→Cyan→Green→Yellow→Orange→Red) — same as Phase 3.1
@@ -25,11 +22,24 @@ function jet(t) {
     }
     return [0.94, 0.27, 0.27];
 }
+// Stress colormap: Blue → Cyan → Green → Yellow → Red  (no white)
+const STRESS_STOPS = [
+    { t: 0.00, r: 0.09, g: 0.26, b: 0.85 }, // deep blue
+    { t: 0.25, r: 0.02, g: 0.71, b: 0.83 }, // cyan
+    { t: 0.50, r: 0.06, g: 0.73, b: 0.31 }, // green
+    { t: 0.75, r: 0.98, g: 0.80, b: 0.08 }, // yellow
+    { t: 1.00, r: 0.94, g: 0.10, b: 0.10 }, // red
+];
 function coolwarm(t) {
-    const r = Math.min(1, 2 * t);
-    const b = Math.min(1, 2 * (1 - t));
-    const g = 1 - 0.6 * Math.abs(t - 0.5) * 2;
-    return [r, g, b];
+    t = Math.max(0, Math.min(1, t));
+    for (let i = 0; i < STRESS_STOPS.length - 1; i++) {
+        const s1 = STRESS_STOPS[i], s2 = STRESS_STOPS[i + 1];
+        if (t >= s1.t && t <= s2.t) {
+            const f = (t - s1.t) / (s2.t - s1.t);
+            return [s1.r + f*(s2.r-s1.r), s1.g + f*(s2.g-s1.g), s1.b + f*(s2.b-s1.b)];
+        }
+    }
+    return [0.94, 0.10, 0.10];
 }
 
 // ─── Sparkline (no library — no animation — no flicker) ─────────────────────
@@ -47,7 +57,7 @@ class Sparkline {
         const { canvas, ctx, data } = this;
         const W = canvas.width, H = canvas.height;
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.8)';
         ctx.fillRect(0, 0, W, H);
         if (!data.length) return;
 
@@ -60,13 +70,13 @@ class Sparkline {
         const step = W / Math.max(data.length - 1, 1);
 
         // Grid lines
-        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.05)';
         ctx.lineWidth = 1;
         for (let e = Math.floor(minLog); e <= Math.ceil(maxLog); e++) {
             const y = toY(Math.pow(10, e));
             if (y < 0 || y > H) continue;
             ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-            ctx.fillStyle = '#475569';
+            ctx.fillStyle = '#64748b';
             ctx.font = '8px monospace';
             ctx.fillText(`10^${e}`, 2, y - 2);
         }
@@ -163,11 +173,12 @@ class ROMApp32 {
 
     // ── Three.js ─────────────────────────────────────────────────────────────
     initThree() {
-        this.scene.background = new THREE.Color(0x020617);
+        this.scene.background = new THREE.Color(0xffffff);
         this.camera.position.set(5, 1, 12);
         this.camera.lookAt(5, 1, 0);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setClearColor(0xffffff, 1);
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
 
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
@@ -178,7 +189,10 @@ class ROMApp32 {
         // On-demand rendering: only render when camera moves
         this.controls.addEventListener('change', () => this._render());
 
-        this.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        this.scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(5, 5, 10);
+        this.scene.add(dirLight);
 
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -210,9 +224,7 @@ class ROMApp32 {
             this.controls.target.set(5, 1, 0);
         } else {
             this.patch = NURBSPresets.generatePlateWithHole(1.0, 4.0);
-            RefineUtils.apply(this.engine, this.patch, { p: 3, h: 0 });
-            this.patch = this.engine.elevateDegree(this.patch);
-            this.patch = this.engine.subdivideGlobal(this.patch);
+            RefineUtils.apply(this.engine, this.patch, { p: 2, h: 0 }); // Match Phase 2
             this.camera.position.set(2, 2, 8);
             this.controls.target.set(2, 2, 0);
         }
@@ -312,18 +324,23 @@ class ROMApp32 {
                 this._overlayObjects.push(a);
             });
         } else {
-            // Symmetry bottom edge — fix Y
+            // Symmetry bottom edge (i=0) — fix Y
             for (let j = 0; j < nV; j++) addMarker('y', cps[0][j]);
-            // Symmetry left edge (last row in U) — fix X
+            // Symmetry left edge (i=nU-1) — fix X
             for (let j = 0; j < nV; j++) addMarker('x', cps[nU-1][j]);
-            // Force arrows on right edge (i=0, outer radial)
+            
+            // Force arrows on outer boundary pulling right (j=nV-1)
             const arrowDir = new THREE.Vector3(1, 0, 0);
-            [cps[0][nV-1], cps[1][nV-1]].forEach(cp => {
-                const a = new THREE.ArrowHelper(arrowDir,
-                    new THREE.Vector3(cp.x - 0.8, cp.y, 0.01), 0.8, 0xef4444, 0.25, 0.12);
-                this.scene.add(a);
-                this._overlayObjects.push(a);
-            });
+            // Targeted arrows along the vertical part of the outer edge
+            for (let i = 0; i < nU; i++) {
+                const cp = cps[i][nV - 1];
+                if (cp.x > 0.1) { // Only on vertical or transition parts, avoid left axis
+                    const a = new THREE.ArrowHelper(arrowDir,
+                        new THREE.Vector3(cp.x - 0.8, cp.y, 0.01), 0.8, 0xef4444, 0.25, 0.12);
+                    this.scene.add(a);
+                    this._overlayObjects.push(a);
+                }
+            }
         }
     }
 
@@ -335,8 +352,10 @@ class ROMApp32 {
         if (this.currentBenchmark === 'beam') {
             for (let j = 0; j < nV; j++) bcs.push({ i: 0, j, axis: 'both', value: 0 });
         } else {
+            // Symmetry bottom edge (i=0) - Fix Y
+            for (let j = 0; j < nV; j++) bcs.push({ i: 0, j, axis: 'y', value: 0 });
+            // Symmetry left edge (i=nU-1) - Fix X
             for (let j = 0; j < nV; j++) bcs.push({ i: nU - 1, j, axis: 'x', value: 0 });
-            for (let i = 0; i < nU; i++) bcs.push({ i, j: 0, axis: 'y', value: 0 });
         }
         return bcs;
     }
@@ -348,9 +367,79 @@ class ROMApp32 {
         if (this.currentBenchmark === 'beam') {
             for (let j = 0; j < nV; j++) loads.push({ type: 'nodal', i: nU - 1, j, fx: 0, fy: -mag / nV });
         } else {
-            for (let j = 0; j < nV; j++) loads.push({ type: 'nodal', i: nU - 1, j, fx: mag / nV, fy: 0 });
+            // Apply high-fidelity Kirsch analytical traction to truncated boundary
+            const nodalForces = this._calculateNodalTraction(this.patch, mag);
+            for (let i = 0; i < nU; i++) {
+                const idx = (i * nV + (nV - 1)) * 2;
+                loads.push({ type: 'nodal', i: i, j: nV - 1, fx: nodalForces[idx], fy: nodalForces[idx + 1] });
+            }
         }
         return loads;
+    }
+
+    _getExactStress(x, y, R, Tx) {
+        const r = Math.sqrt(x * x + y * y);
+        const theta = Math.atan2(y, x);
+        const R2 = R * R, R4 = R2 * R2, r2 = r * r, r4 = r2 * r2;
+        const cos2t = Math.cos(2 * theta), sin2t = Math.sin(2 * theta);
+
+        const s_rr = (Tx / 2) * (1 - R2/r2) + (Tx / 2) * (1 - 4*R2/r2 + 3*R4/r4) * cos2t;
+        const s_tt = (Tx / 2) * (1 + R2/r2) - (Tx / 2) * (1 + 3*R4/r4) * cos2t;
+        const s_rt = -(Tx / 2) * (1 + 2*R2/r2 - 3*R4/r4) * sin2t;
+
+        const c = Math.cos(theta), s = Math.sin(theta);
+        const sxx = s_rr * c*c + s_tt * s*s - 2 * s_rt * s*c;
+        const syy = s_rr * s*s + s_tt * c*c + 2 * s_rt * s*c;
+        const sxy = (s_rr - s_tt) * s * c + s_rt * (c*c - s*s);
+        return { sxx, syy, sxy };
+    }
+
+    _calculateNodalTraction(patch, loadValue) {
+        const { p, q, U, V, controlPoints, weights } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const forces = new Float64Array(nU * nV * 2);
+        
+        const gPoints = [-0.7745966692414833, 0.0, 0.7745966692414833];
+        const gWeights = [0.5555555555555556, 0.8888888888888888, 0.5555555555555556];
+        const uniqueU = [...new Set(U)];
+        const vParam = 1.0 - 1e-6; // Right boundary (j=nV-1)
+
+        for (let e = 0; e < uniqueU.length - 1; e++) {
+            const uMin = uniqueU[e], uMax = uniqueU[e+1];
+            if (uMax - uMin < 1e-9) continue;
+            for (let qu = 0; qu < gPoints.length; qu++) {
+                const u = ((uMax - uMin) * gPoints[qu] + (uMax + uMin)) / 2;
+                const gw = gWeights[qu] * (uMax - uMin) / 2;
+                const deriv = this.engine.getSurfaceDerivatives(patch, u, vParam);
+                const tangent = deriv.dU;
+                const detJ_1D = Math.sqrt(tangent.x**2 + tangent.y**2);
+                if (detJ_1D < 1e-12) continue;
+
+                const pos = deriv.pos;
+                const sigma = this._getExactStress(pos.x, pos.y, 1.0, loadValue);
+                const nx = tangent.y / detJ_1D;
+                const ny = -tangent.x / detJ_1D;
+                const tx = sigma.sxx * nx + sigma.sxy * ny;
+                const ty = sigma.sxy * nx + sigma.syy * ny;
+
+                let W_1D = 0;
+                for (let a = 0; a < nU; a++) {
+                    W_1D += this.engine.basis1D(a, p, U, u) * weights[a][nV-1];
+                }
+                if (W_1D < 1e-12) W_1D = 1e-12;
+
+                for (let a = 0; a < nU; a++) {
+                    const Na = this.engine.basis1D(a, p, U, u);
+                    if (Na === 0) continue;
+                    const Ra = (Na * weights[a][nV-1]) / W_1D;
+                    const idx = (a * nV + (nV - 1)) * 2;
+                    forces[idx]     += Ra * tx * detJ_1D * gw;
+                    forces[idx + 1] += Ra * ty * detJ_1D * gw;
+                }
+            }
+        }
+        return forces;
     }
 
     updatePhysics() {
@@ -363,7 +452,8 @@ class ROMApp32 {
         if (this.solverMode === 'rom' && this.isTrained) {
             result = this.romEngine.solveReduced(this.patch, bcs, loads, { iterations: 15 });
         } else {
-            result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, { iterations: 15 });
+            // Increase steps to 3 for better nonlinear stability
+            result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, { iterations: 15, steps: 3 });
         }
 
         const dt = performance.now() - t0;
@@ -380,7 +470,17 @@ class ROMApp32 {
         // Sparkline — no animation, instant paint
         this.sparkline.update(result.residualHistory);
 
+        // NaN safety: if solver diverged, freeze at last good state
+        const hasBadValues = result.u.some(v => !isFinite(v));
+        if (hasBadValues) {
+            console.warn('[IGA-3.2] Solver diverged — mesh frozen at last stable state');
+            this._render();
+            return;
+        }
+
         this.updateMesh(result.u);
+        const maxU = Math.max(...Array.from(result.u).map(Math.abs));
+        if (isFinite(maxU)) console.log(`Physics Update: load=${this.loadMag}, maxDisp=${maxU.toExponential(2)}, time=${dt.toFixed(1)}ms`);
         this._render(); // Fire exactly one render after physics
     }
 
@@ -392,12 +492,17 @@ class ROMApp32 {
             for (let j = 0; j <= res; j++) {
                 const v = Math.min(j / res, 0.9999);
                 const state = this.engine.getSurfaceState(this.patch, u, v);
-                let px = state.position.x, py = state.position.y;
+                // Guard against NaN from NURBS engine state
+                let px = isFinite(state.position.x) ? state.position.x : 0;
+                let py = isFinite(state.position.y) ? state.position.y : 0;
 
                 let field = 0;
                 if (uDisp) {
                     const disp = this.interpolateDisp(u, v, state.denominator, uDisp);
-                    px += disp.x; py += disp.y;
+                    // NaN-safety: only apply displacement if it's finite
+                    if (isFinite(disp.x) && isFinite(disp.y)) {
+                        px += disp.x; py += disp.y;
+                    }
                     if (this.viewMode === 'disp') {
                         field = Math.sqrt(disp.x * disp.x + disp.y * disp.y);
                     } else {
@@ -410,6 +515,11 @@ class ROMApp32 {
                         } catch (_) { field = 0; }
                     }
                 }
+                // Final safety for position and field
+                if (!isFinite(px)) px = state.position.x;
+                if (!isFinite(py)) py = state.position.y;
+                if (!isFinite(field)) field = 0;
+
                 positions.push(px, py, 0);
                 values.push(field);
             }
@@ -433,7 +543,8 @@ class ROMApp32 {
         const colors = [];
         values.forEach(v => {
             if (this.showMap && uDisp) {
-                const [r, g, b] = colorFn((v - minV) / range);
+                const param = isFinite(v) ? (v - minV) / range : 0;
+                const [r, g, b] = colorFn(Math.max(0, Math.min(1, param)));
                 colors.push(r, g, b);
             } else {
                 // Flat Light Blue for deformed state when map is OFF
@@ -468,20 +579,24 @@ class ROMApp32 {
             geoMain.setIndex(idx);
             geoMain.setAttribute('position', new THREE.Float32BufferAttribute(posDef, 3));
             geoMain.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-            this.deformedMesh = new THREE.Mesh(geoMain, new THREE.MeshPhongMaterial({
-                vertexColors: true, side: THREE.DoubleSide, shininess: 40
+            // Use MeshStandardMaterial or MeshBasicMaterial for better colors
+            this.deformedMesh = new THREE.Mesh(geoMain, new THREE.MeshStandardMaterial({
+                vertexColors: true, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.1
             }));
+            this.deformedMesh.geometry.computeVertexNormals();
 
             // Ghost Mesh (Undeformed)
             geoGhost.setIndex(idx);
             geoGhost.setAttribute('position', new THREE.Float32BufferAttribute(posUndef, 3));
             this.ghostMesh = new THREE.Mesh(geoGhost, new THREE.MeshPhongMaterial({
-                color: 0x0a1e38, transparent: true, opacity: 0.25, side: THREE.DoubleSide
+                color: 0xcbd5e1, transparent: true, opacity: 0.35, side: THREE.DoubleSide
             }));
+            this.ghostMesh.position.z = -0.05; // Move behind deformed shape
+            this.ghostMesh.renderOrder = -1;   // Ensure it's rendered behind
 
             this.wireMesh = new THREE.LineSegments(
                 new THREE.WireframeGeometry(geoMain),
-                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05 })
+                new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.06 })
             );
 
             this.scene.add(this.ghostMesh);
@@ -495,13 +610,14 @@ class ROMApp32 {
             for (let i = 0; i < colors.length; i++) colAttr.array[i] = colors[i];
             posAttr.needsUpdate = true;
             colAttr.needsUpdate = true;
+            this.deformedMesh.geometry.computeVertexNormals();
             this.deformedMesh.geometry.computeBoundingSphere();
 
             // Wireframe follows deformed
             this.scene.remove(this.wireMesh);
             this.wireMesh = new THREE.LineSegments(
                 new THREE.WireframeGeometry(this.deformedMesh.geometry),
-                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05 })
+                new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.06 })
             );
             this.scene.add(this.wireMesh);
         }
@@ -515,7 +631,8 @@ class ROMApp32 {
             if (!Ni) continue;
             for (let j = 0; j < nV; j++) {
                 const Mj = this.engine.basis1D(j, this.patch.q, this.patch.V, v);
-                const R = (Ni * Mj * this.patch.weights[i][j]) / denom;
+                const w = (this.patch.weights && this.patch.weights[i]) ? this.patch.weights[i][j] : 1.0;
+                const R = (Math.abs(denom) > 1e-12) ? (Ni * Mj * w) / denom : 0;
                 dx += R * uDisp[(i * nV + j) * 2];
                 dy += R * uDisp[(i * nV + j) * 2 + 1];
             }
@@ -536,7 +653,8 @@ class ROMApp32 {
         for (let i = 1; i <= n; i++) {
             const f = (i / n) * this.loadMag * 2;
             status.textContent = `FOM Step ${i}/${n}  F=${f.toFixed(0)}...`;
-            const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(f), { steps: 2 });
+            // More steps during training for better snapshots
+            const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(f), { steps: 4, iterations: 10 });
             this.romEngine.addSnapshot(res.u);
             await new Promise(r => setTimeout(r, 10));
         }
@@ -630,14 +748,18 @@ class ROMApp32 {
             this._setActive('btn-map-on', 'btn-map-off');
             document.getElementById('viz-selectors').classList.replace('hidden-fade', 'visible-fade');
             document.getElementById('colorbar-panel').classList.replace('hidden-fade', 'visible-fade');
-            if (this.lastResult) { this.updateMesh(this.lastResult.u); this._render(); }
+            // Always update mesh on toggle
+            this.updateMesh(this.lastResult ? this.lastResult.u : null);
+            this._render();
         };
         document.getElementById('btn-map-off').onclick = () => {
             this.showMap = false;
             this._setActive('btn-map-off', 'btn-map-on');
             document.getElementById('viz-selectors').classList.replace('visible-fade', 'hidden-fade');
             document.getElementById('colorbar-panel').classList.replace('visible-fade', 'hidden-fade');
-            if (this.lastResult) { this.updateMesh(this.lastResult.u); this._render(); }
+            // Always update mesh on toggle
+            this.updateMesh(this.lastResult ? this.lastResult.u : null);
+            this._render();
         };
     }
 
