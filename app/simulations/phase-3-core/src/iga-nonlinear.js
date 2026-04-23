@@ -255,39 +255,58 @@ class IGANonlinearSolver {
             }
         }
         
-        const penalty = 1e8; // Lowered from 1e12 for better NR stability
+        const penalty = 1e9; // Fixed penalty for C0 coupling
         for (let i = 0; i < pts.length; i++) {
             for (let j = i + 1; j < pts.length; j++) {
                 const p1 = pts[i].cp, p2 = pts[j].cp;
+                const d2 = (p1.x - p2.x)**2 + (p1.y - p2.y)**2;
                 
-                const dist2 = (p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2;
-                if (dist2 < 1e-20) { 
+                if (d2 < 1e-18) { // Overlapping periodic or degenerate nodes
                     const id1 = pts[i].id, id2 = pts[j].id;
-                    
-                    // Stiffness Penalty
                     if (Kt) {
-                        Kt[id1][id1] += penalty;
-                        Kt[id2][id2] += penalty;
-                        Kt[id1][id2] -= penalty;
-                        Kt[id2][id1] -= penalty;
-                        Kt[id1+1][id1+1] += penalty;
-                        Kt[id2+1][id2+1] += penalty;
-                        Kt[id1+1][id2+1] -= penalty;
-                        Kt[id2+1][id1+1] -= penalty;
+                        Kt[id1][id1] += penalty; Kt[id2][id2] += penalty;
+                        Kt[id1][id2] -= penalty; Kt[id2][id1] -= penalty;
+                        Kt[id1+1][id1+1] += penalty; Kt[id2+1][id2+1] += penalty;
+                        Kt[id1+1][id2+1] -= penalty; Kt[id2+1][id1+1] -= penalty;
                     }
-
-                    // Force Penalty (Coupling residual)
                     if (F_int && u) {
-                        const dux = u[id1] - u[id2];
-                        const duy = u[id1+1] - u[id2+1];
-                        F_int[id1] += penalty * dux;
-                        F_int[id2] -= penalty * dux;
-                        F_int[id1+1] += penalty * duy;
-                        F_int[id2+1] -= penalty * duy;
+                        const dux = u[id1] - u[id2], duy = u[id1+1] - u[id2+1];
+                        F_int[id1] += penalty * dux; F_int[id2] -= penalty * dux;
+                        F_int[id1+1] += penalty * duy; F_int[id2+1] -= penalty * duy;
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Calculate Follower Forces (Traction that turns with the body)
+     * For 3.3 Annulus: Applies tangential traction on the outer boundary.
+     */
+    calculateFollowerForces(patch, totalTorque, uDisp) {
+        const { controlPoints } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const F_follow = new Float64Array(nU * nV * 2).fill(0);
+        
+        for (let i = 0; i < nU; i++) {
+            const cp = controlPoints[i][nV - 1]; // Outer boundary
+            let px = cp.x + uDisp[(i * nV + nV - 1) * 2];
+            let py = cp.y + uDisp[(i * nV + nV - 1) * 2 + 1];
+            
+            const r = Math.sqrt(px*px + py*py);
+            if (r < 1e-12) continue;
+            
+            const tx = -py / r; // Tangential unit vector
+            const ty = px / r;
+            
+            let nodeForce = totalTorque / (nU - 1);
+            if (i === 0 || i === nU - 1) nodeForce /= 2;
+            
+            F_follow[(i * nV + nV - 1) * 2] = nodeForce * tx;
+            F_follow[(i * nV + nV - 1) * 2 + 1] = nodeForce * ty;
+        }
+        return F_follow;
     }
 
     getNumericalStress(patch, u_disp, u, v, E, nu, isLinear = false) {
@@ -384,51 +403,51 @@ class IGANonlinearSolver {
         if (isLinear && Kt_lin) this.applyPenaltyConstraints(Kt_lin, null, u, patch);
 
         for (let s = 1; s <= steps; s++) {
-            const F_ext = F_ext_total.map(f => f * (s / steps));
-
-            // Enforce prescribed non-zero displacements incrementally
-            fixedDofs.forEach((val, idx) => {
-                u[idx] = val * (s / steps);
-            });
+            const fraction = s / steps;
+            
+            // Incrementally enforce prescribed non-zero displacements
+            fixedDofs.forEach((val, idx) => { u[idx] = val * fraction; });
 
             for (let iter = 0; iter < iterations; iter++) {
-                let F_int;
-                if (isLinear) {
-                    F_int = new Float64Array(nDofs);
+                // Update Follower Loads (dynamic) if requested
+                let F_ext_current = F_ext_total.map(f => f * fraction);
+                if (options.updateLoad) {
+                    const F_follow = options.updateLoad(u, fraction);
+                    for (let i = 0; i < nDofs; i++) F_ext_current[i] += F_follow[i];
+                }
+
+                let F_int = isLinear ? new Float64Array(nDofs) : this.calculateInternalForce(patch, u);
+                if (isLinear && Kt_lin) {
                     for (let i = 0; i < nDofs; i++) {
                         for (let j = 0; j < nDofs; j++) F_int[i] += Kt_lin[i][j] * u[j];
                     }
-                } else {
-                    F_int = this.calculateInternalForce(patch, u);
-                    this.applyPenaltyConstraints(null, F_int, u, patch);
                 }
-
-                const R = F_ext.map((f, i) => f - F_int[i]);
+                
+                this.applyPenaltyConstraints(null, F_int, u, patch);
+                const R = F_ext_current.map((f, i) => f - F_int[i]);
 
                 let resNorm = 0;
                 fixedDofs.forEach((_, idx) => R[idx] = 0);
                 R.forEach(ri => resNorm += ri * ri);
                 const norm = Math.sqrt(resNorm);
-                if (isNaN(norm)) {
-                    console.error("Nonlinear Solver: Divergence detected (NaN). Stopping iterations.");
-                    break;
+                
+                if (isNaN(norm) || norm > 1e15) {
+                    console.error("Nonlinear Solver: Divergence detected.");
+                    return { u, residualHistory, diverged: true };
                 }
+                
                 residualHistory.push({step: s, iter, norm});
-
                 if (onProgress) onProgress({ step: s, iter, norm });
-
                 if (norm < tolerance && iter > 0) break;
-                if (isLinear && iter > 0) break; // Linear only takes 1 iteration
+                if (isLinear && iter > 0) break;
 
                 const Kt = isLinear ? Kt_lin : this.calculateTangentStiffness(patch, u);
-                if (!isLinear) this.applyPenaltyConstraints(Kt, null, u, patch);
+                this.applyPenaltyConstraints(Kt, null, u, patch);
 
                 for (let i = 0; i < nFree; i++) {
                     const row = freeIndices[i];
                     R_red[i] = R[row];
-                    for (let j = 0; j < nFree; j++) {
-                        Kt_red[i][j] = Kt[row][freeIndices[j]];
-                    }
+                    for (let j = 0; j < nFree; j++) Kt_red[i][j] = Kt[row][freeIndices[j]];
                 }
 
                 const du_red = this.gaussianElimination(Kt_red, R_red);

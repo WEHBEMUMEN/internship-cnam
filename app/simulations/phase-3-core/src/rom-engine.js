@@ -112,10 +112,11 @@ class ROMEngine {
 
                 // 2. Evaluate FOM Residual and Tangent
                 const F_int = this.fom.calculateInternalForce(patch, u_full);
+                this.fom.applyPenaltyConstraints(null, F_int, u_full, patch);
                 const R_full = F_ext.map((f, i) => f - F_int[i]);
                 
                 const Kt_full = this.fom.calculateTangentStiffness(patch, u_full);
-                this.fom.applyPenaltyConstraints(Kt_full, patch);
+                this.fom.applyPenaltyConstraints(Kt_full, null, u_full, patch);
 
                 // 3. Project to Reduced Space
                 const { R_red, Kt_red } = this.projectSystem(R_full, Kt_full);
