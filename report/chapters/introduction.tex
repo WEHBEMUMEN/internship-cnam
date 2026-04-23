@@ -1,0 +1,56 @@
+% ════════════════════════════════════════════════════════════════
+%  INTRODUCTION
+% ════════════════════════════════════════════════════════════════
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+\markboth{Introduction}{Introduction}
+
+% ─────────────────────────────────────────────────────────────
+\section*{Context}
+% ─────────────────────────────────────────────────────────────
+
+The rapid advancement of computational mechanics and the growing demand for interactive simulation tools have created a fertile ground for innovation at the intersection of numerical methods and digital engineering. This internship takes place within the Équipement pour la Performance et le Numérique (EPN04) department at the \acrlong{cnam} in Paris, under the supervision of Dr.\ Christophe Hoareau.
+
+\paragraph{Who.} The project is carried out by WEHBE Mumen, an engineering student, in collaboration with the EPN04 research team specializing in advanced numerical simulation and structural mechanics.
+
+\paragraph{What.} The objective is to develop a real-time \acrfull{dt} platform that couples a physical 3D-printed structural model with a virtual simulation environment powered by \acrfull{rom} techniques built upon \acrfull{iga}.
+
+\paragraph{Where.} The work is conducted at the Cnam campus (Paris), leveraging the department's computational infrastructure and pedagogical environment.
+
+\paragraph{When.} The internship spans six months, from March to September 2026, following a structured timeline that progresses from theoretical foundations through computational implementation to application deployment.
+
+\paragraph{Why.} Traditional high-fidelity simulations of nonlinear structural problems are computationally expensive, often requiring minutes to hours for a single parameter evaluation. This renders them impractical for real-time applications, interactive teaching, and rapid design exploration. The need for a methodology that preserves simulation fidelity while achieving real-time performance motivates this work.
+
+% ─────────────────────────────────────────────────────────────
+\section*{Problematic and Research Gap}
+% ─────────────────────────────────────────────────────────────
+
+While \acrlong{rom} techniques have been extensively studied for linear structural problems, their application to \textbf{geometrically nonlinear} problems with \textbf{parametric variations} remains an active area of research. The key challenges include:
+
+\begin{itemize}
+    \item \textbf{Nonlinear operator dependence:} The tangent stiffness matrix $\mat{K}_T(\vect{u})$ changes at every Newton--Raphson iteration, requiring repeated projection onto the reduced basis---a computational bottleneck that standard Galerkin projection alone cannot resolve efficiently.
+    
+    \item \textbf{Geometric parameterization:} When the geometry itself is a parameter (e.g., varying aspect ratios or hole sizes), the physical domain $\Omega(\mu)$ changes, invalidating the fixed-mesh assumption of classical ROM approaches.
+    
+    \item \textbf{Hyper-reduction for nonlinear terms:} Even after projection, evaluating internal forces $\mat{F}_{\text{int}}(\vect{u})$ requires integration over the full mesh. Hyper-reduction techniques (DEIM, ECSW) are needed to reduce this cost, but their application to IGA-discretized nonlinear problems is not yet well established.
+    
+    \item \textbf{Pedagogical accessibility:} Existing ROM implementations are typically confined to research codes (Python/MATLAB) that are inaccessible to students without specialized software environments.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\section*{Objectives}
+% ─────────────────────────────────────────────────────────────
+
+The primary objectives of this internship are:
+
+\begin{enumerate}
+    \item \textbf{Develop an IGA-based computational core} capable of solving 2D geometrically nonlinear elasticity problems with NURBS discretization, including stiffness assembly, Newton--Raphson iteration, and stress recovery.
+    
+    \item \textbf{Construct a projection-based ROM framework} using POD/SVD for basis extraction and Galerkin projection for operator reduction, extended to handle nonlinear terms via hyper-reduction.
+    
+    \item \textbf{Build a real-time web application} that serves as both a research validation tool and an interactive pedagogical platform, enabling students to explore IGA, ROM, and nonlinear mechanics concepts through live simulations.
+    
+    \item \textbf{Validate the methodology} through benchmark problems (cantilever beam, plate with hole) and quantify the speedup and accuracy of the ROM against the full-order model.
+    
+    \item \textbf{Explore 3D extensions} (time permitting) to assess the scalability of the approach to industrially relevant three-dimensional geometries.
+\end{enumerate}

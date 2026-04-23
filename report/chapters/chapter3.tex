@@ -1,0 +1,171 @@
+% ════════════════════════════════════════════════════════════════
+%  CHAPTER 3 : REAL-TIME PEDAGOGICAL APPLICATION
+% ════════════════════════════════════════════════════════════════
+\chapter{Real-Time Pedagogical Application}
+\label{ch:application}
+
+This chapter presents the design, implementation, and validation of the web-based Digital Twin platform that serves as both a research tool and an interactive pedagogical environment.
+
+% ──────────────────────────────────────────────────────────────
+\section{Workflow with AI}
+\label{sec:ai-workflow}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{AI-Assisted Development Methodology}
+
+The development of this project leveraged AI-assisted coding tools throughout the software engineering lifecycle. This approach enabled a single developer to build a full-stack computational mechanics platform within the internship timeframe. The workflow is structured as follows:
+
+\begin{enumerate}
+    \item \textbf{Mathematical formulation:} Classical derivation of weak forms, discretization, and reduction operators, validated against reference textbooks~\cite{cottrell2009,hughes2005}.
+    
+    \item \textbf{Code generation:} AI tools assisted in translating mathematical formulations into optimized JavaScript implementations, particularly for repetitive tasks such as tensor-product assembly loops and matrix operations.
+    
+    \item \textbf{Debugging and validation:} Each computational module was validated against analytical solutions or reference implementations before integration.
+    
+    \item \textbf{Documentation:} Theory pages and interactive visualizations were co-developed alongside the simulation code, ensuring pedagogical consistency.
+\end{enumerate}
+
+\subsection{Quality Assurance}
+
+All AI-generated code underwent rigorous verification:
+\begin{itemize}
+    \item Benchmark comparison against analytical solutions (Kirsch plate, Euler--Bernoulli beam)
+    \item Convergence studies under $h$- and $p$-refinement
+    \item Cross-validation of ROM results against FOM reference solutions
+\end{itemize}
+
+% ──────────────────────────────────────────────────────────────
+\section{Presentation of the Project}
+\label{sec:project-presentation}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{Architecture Overview}
+
+The application follows a client-side architecture where all computations run natively in the browser, eliminating server dependencies and ensuring accessibility.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.5cm,
+    box/.style={rectangle, draw, rounded corners, minimum width=3.5cm, minimum height=1cm, align=center, fill=blue!5},
+    arrow/.style={-{Stealth[length=3mm]}, thick}
+]
+\node[box, fill=orange!10] (offline) {Offline Forge\\(Training Phase)};
+\node[box, fill=green!10, right=3cm of offline] (online) {Online Engine\\(Real-Time Phase)};
+\node[box, below=1cm of offline] (solver) {IGA Solver\\(Full Order)};
+\node[box, below=1cm of online] (rom) {ROM Query\\(Reduced Order)};
+\node[box, below=1cm of solver] (snapshots) {Snapshot\\Database};
+\node[box, below=1cm of rom] (viz) {Three.js\\Visualization};
+
+\draw[arrow] (offline) -- (solver);
+\draw[arrow] (solver) -- (snapshots);
+\draw[arrow] (snapshots) -- node[above, font=\small] {POD Basis $\mat{\Phi}$} (rom);
+\draw[arrow] (online) -- (rom);
+\draw[arrow] (rom) -- (viz);
+\end{tikzpicture}
+\caption{High-level architecture: Offline--Online workflow.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Front-End}
+
+The front-end is built with vanilla HTML, CSS, and JavaScript, enhanced with:
+\begin{itemize}
+    \item \textbf{Three.js:} WebGL-based 3D rendering for real-time deformation visualization at 60\,FPS
+    \item \textbf{Chart.js:} Interactive plots for convergence metrics, scree plots, stress--strain curves, and force--displacement diagrams
+    \item \textbf{KaTeX:} Client-side \LaTeX{} rendering for mathematical documentation integrated directly into the simulation pages
+    \item \textbf{Responsive design:} Glassmorphic UI with performance overlays tracking FPS and CPU transit time
+\end{itemize}
+
+\subsection{Back-End (Computational Core)}
+
+The computational core is implemented entirely in JavaScript, organized into modular engines:
+
+\begin{table}[H]
+\centering
+\caption{Core JavaScript modules.}
+\label{tab:modules}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Module} & \textbf{Description} \\
+\midrule
+\texttt{nurbs-2d.js} & NURBS basis evaluation, surface mapping, Jacobian computation, refinement utilities \\
+\texttt{iga-solver-2d.js} & Stiffness assembly, boundary conditions, stress recovery for 2D plane stress problems \\
+\texttt{iga-nonlinear.js} & Newton--Raphson solver with Green--Lagrange strain, tangent stiffness updates \\
+\texttt{rom-engine.js} & POD extraction (via ml-matrix SVD), Galerkin projection, online query loop \\
+\texttt{nurbs-presets.js} & Pre-defined geometries (cantilever plate, plate with hole, parametric shapes) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Simulation Hub}
+
+The project is deployed as a GitHub Pages site with a central simulation hub providing access to 26+ interactive simulation modules organized by phase:
+
+\begin{itemize}
+    \item \textbf{Phase 1 (1D Foundations):} B-spline/NURBS basis, 1D IGA solver, 1D ROM benchmark, nonlinear 1D
+    \item \textbf{Phase 2 (2D Core):} Surface mapping, stiffness assembly, Kirsch benchmark, snapshot generation, SVD/POD lab, Galerkin projection
+    \item \textbf{Phase 3 (Nonlinear 2D):} Geometric nonlinearity solver, interactive analytics, NL-ROM
+\end{itemize}
+
+% ──────────────────────────────────────────────────────────────
+\section{Benchmarks}
+\label{sec:benchmarks}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{Kirsch Plate with Hole}
+
+The classical infinite plate with a circular hole under uniaxial tension serves as the primary validation benchmark. The analytical stress concentration factor is $K_t = 3$.
+
+% TODO: Add figure comparing numerical vs analytical stress
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{figures/kirsch_benchmark.png}
+%     \caption{Stress field comparison: IGA solution vs.\ analytical Kirsch solution.}
+%     \label{fig:kirsch}
+% \end{figure}
+
+\subsection{ROM Accuracy}
+
+The ROM approximation error is measured in the relative $L^2$ norm:
+\begin{equation}
+    e_{\text{rel}} = \frac{\norm{\vect{u}_{\text{FOM}} - \mat{\Phi}\vect{q}_{\text{ROM}}}_2}{\norm{\vect{u}_{\text{FOM}}}_2}
+\end{equation}
+
+% TODO: Add table with benchmark results once final runs are complete
+
+\subsection{Computational Speedup}
+
+The speedup factor is defined as:
+\begin{equation}
+    \text{Speedup} = \frac{t_{\text{FOM}}}{t_{\text{ROM}}}
+\end{equation}
+
+Target: achieve speedup $> 200\times$ for the linear case and $> 50\times$ for the nonlinear case with hyper-reduction.
+
+% ──────────────────────────────────────────────────────────────
+\section{Examples of Use}
+\label{sec:examples}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{Interactive Parameter Exploration}
+
+Students can manipulate material properties ($E$, $\nu$), loading conditions ($F$), and geometric parameters ($\alpha$) via sliders and observe the structural response in real time. The platform visualizes:
+\begin{itemize}
+    \item Deformed shape with color-coded displacement/stress fields
+    \item Force--displacement curves showing nonlinear stiffening
+    \item Convergence history of Newton--Raphson iterations
+    \item POD mode shapes and energy capture (scree plots)
+\end{itemize}
+
+\subsection{Pedagogical Scenarios}
+
+\begin{enumerate}
+    \item \textbf{Linear vs.\ Nonlinear Comparison:} Students observe how geometric stiffening limits displacement under large loads, contrasting with the unbounded linear prediction.
+    
+    \item \textbf{ROM Fidelity Study:} By varying the number of retained POD modes, students visualize the trade-off between model reduction and approximation accuracy.
+    
+    \item \textbf{Refinement Studies:} Interactive $h$- and $p$-refinement labs demonstrate convergence behavior unique to IGA (higher regularity, $k$-refinement).
+    
+    \item \textbf{Digital Twin Concept:} The eventual coupling with a 3D-printed physical model demonstrates the correlation between theoretical predictions and physical measurements.
+\end{enumerate}

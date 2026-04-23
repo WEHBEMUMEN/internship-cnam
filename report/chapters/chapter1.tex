@@ -1,0 +1,177 @@
+% ════════════════════════════════════════════════════════════════
+%  CHAPTER 1 : STATE OF THE ART
+% ════════════════════════════════════════════════════════════════
+\chapter{State of the Art}
+\label{ch:state-of-art}
+
+This chapter reviews the theoretical foundations underpinning the three pillars of the project: Isogeometric Analysis, continuum mechanics for linear and nonlinear elasticity, and projection-based reduced order modelling.
+
+% ──────────────────────────────────────────────────────────────
+\section{Isogeometric Analysis (IGA)}
+\label{sec:iga}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{From FEM to IGA}
+
+The \acrfull{fem} has been the dominant discretization method in computational mechanics for over half a century. However, a fundamental inefficiency persists in the traditional FEM workflow: the geometry created in Computer-Aided Design (CAD) systems using \acrfull{nurbs} must be re-approximated by polynomial meshes before analysis can begin. This mesh generation step introduces geometric errors, is labor-intensive, and often constitutes a significant portion of the total simulation time.
+
+\acrfull{iga}, introduced by Hughes, Cottrell, and Bazilevs in 2005~\cite{hughes2005}, resolves this gap by using the same NURBS basis functions for both geometry representation and solution approximation. The key principle is:
+\begin{equation}
+    \vect{x}(\xi) = \sum_{i=1}^{n} R_{i,p}(\xi) \, \vect{P}_i
+    \label{eq:iga-mapping}
+\end{equation}
+where $R_{i,p}$ are the rational basis functions and $\vect{P}_i$ are the control points. The displacement field is approximated using the same basis:
+\begin{equation}
+    \vect{u}^h(\xi) = \sum_{i=1}^{n} R_{i,p}(\xi) \, \vect{d}_i
+\end{equation}
+where $\vect{d}_i$ are the unknown displacement coefficients at control points.
+
+\subsection{B-Splines and NURBS}
+
+A B-spline of degree $p$ is defined over a knot vector $\Xi = \{\xi_1, \xi_2, \ldots, \xi_{n+p+1}\}$ by the Cox--de Boor recursion:
+\begin{align}
+    N_{i,0}(\xi) &= \begin{cases} 1 & \text{if } \xi_i \leq \xi < \xi_{i+1} \\ 0 & \text{otherwise} \end{cases} \\[6pt]
+    N_{i,p}(\xi) &= \frac{\xi - \xi_i}{\xi_{i+p} - \xi_i} N_{i,p-1}(\xi) + \frac{\xi_{i+p+1} - \xi}{\xi_{i+p+1} - \xi_{i+1}} N_{i+1,p-1}(\xi)
+\end{align}
+
+NURBS basis functions are obtained by introducing weights $w_i > 0$:
+\begin{equation}
+    R_{i,p}(\xi) = \frac{N_{i,p}(\xi) \, w_i}{\sum_{j=1}^{n} N_{j,p}(\xi) \, w_j}
+    \label{eq:nurbs-basis}
+\end{equation}
+
+For 2D problems, tensor-product surfaces are constructed:
+\begin{equation}
+    \vect{S}(\xi, \eta) = \sum_{i=1}^{n} \sum_{j=1}^{m} R_{i,j}^{p,q}(\xi, \eta) \, \vect{P}_{i,j}
+\end{equation}
+
+\subsection{Refinement Strategies}
+
+IGA supports three refinement mechanisms that preserve the exact geometry:
+\begin{itemize}
+    \item \textbf{$h$-refinement (knot insertion):} Adds new knots to the knot vector, increasing the number of basis functions without changing the polynomial degree.
+    \item \textbf{$p$-refinement (order elevation):} Increases the polynomial degree while maintaining the knot vector structure.
+    \item \textbf{$k$-refinement:} A combination unique to IGA---order elevation followed by knot insertion---that produces basis functions with maximal continuity ($C^{p-1}$).
+\end{itemize}
+
+\subsection{Advantages of IGA for ROM}
+
+Several properties make IGA particularly well-suited for reduced order modelling:
+\begin{enumerate}
+    \item \textbf{Exact geometry:} No geometric approximation error, critical for parametric studies where the domain changes.
+    \item \textbf{Higher continuity:} $C^{p-1}$ inter-element continuity (vs.\ $C^0$ in FEM) produces smoother solution fields, leading to better snapshot quality.
+    \item \textbf{Natural parameterization:} The mapping from the master domain $\hat{\Omega}$ to the physical domain $\Omega(\mu)$ is built into the NURBS framework, enabling parametric ROM on a fixed reference configuration.
+\end{enumerate}
+
+% ──────────────────────────────────────────────────────────────
+\section{Linear and Nonlinear Elasticity}
+\label{sec:elasticity}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{Linear Elasticity}
+
+Under the assumption of infinitesimal strains, the linearized strain tensor is:
+\begin{equation}
+    \bm{\varepsilon} = \frac{1}{2}\left(\nabla\vect{u} + \nabla\vect{u}^T\right)
+\end{equation}
+
+The constitutive law for an isotropic material (generalized Hooke's law) in Voigt notation reads:
+\begin{equation}
+    \bm{\sigma} = \mat{C} \, \bm{\varepsilon}
+\end{equation}
+where $\mat{C}$ is the elasticity matrix depending on Young's modulus $E$ and Poisson's ratio $\nu$.
+
+The weak form of the equilibrium equation leads to the standard stiffness system:
+\begin{equation}
+    \mat{K} \, \vect{u} = \vect{F}
+    \label{eq:linear-system}
+\end{equation}
+
+\subsection{Geometric Nonlinearity}
+
+When displacements become large relative to the structural dimensions, the linear strain measure is no longer adequate. The deformation is described by the deformation gradient:
+\begin{equation}
+    \mat{F} = \pd{\vect{x}}{\vect{X}} = \mat{I} + \nabla_{\vect{X}} \vect{u}
+    \label{eq:deformation-gradient}
+\end{equation}
+
+The \textbf{Green--Lagrange strain tensor} captures finite deformations without contamination by rigid-body rotations:
+\begin{equation}
+    \mat{E} = \frac{1}{2}\left(\mat{F}^T \mat{F} - \mat{I}\right) = \frac{1}{2}\left(\nabla\vect{u} + \nabla\vect{u}^T + \nabla\vect{u}^T \nabla\vect{u}\right)
+    \label{eq:green-lagrange}
+\end{equation}
+
+The quadratic term $\nabla\vect{u}^T \nabla\vect{u}$ is the source of geometric nonlinearity, producing the \textbf{geometric stiffening} effect.
+
+\subsection{Constitutive Model: Saint Venant--Kirchhoff}
+
+For this work, we adopt the Saint Venant--Kirchhoff (SVK) hyperelastic model, which relates the second Piola--Kirchhoff stress tensor $\mat{S}$ to the Green--Lagrange strain:
+\begin{equation}
+    \mat{S} = \mat{C} : \mat{E}
+\end{equation}
+
+This is the simplest hyperelastic model and is appropriate for large displacements with moderate strains.
+
+\subsection{Newton--Raphson Solution Procedure}
+
+The nonlinear equilibrium is expressed as a residual equation:
+\begin{equation}
+    \vect{R}(\vect{u}) = \vect{F}_{\text{ext}} - \vect{F}_{\text{int}}(\vect{u}) = \vect{0}
+\end{equation}
+
+Linearization yields the iterative correction:
+\begin{equation}
+    \mat{K}_T(\vect{u}^{(k)}) \, \Delta\vect{u} = \vect{R}(\vect{u}^{(k)}), \qquad \vect{u}^{(k+1)} = \vect{u}^{(k)} + \Delta\vect{u}
+\end{equation}
+where the tangent stiffness $\mat{K}_T = \mat{K}_L + \mat{K}_G$ includes both the material (linear) and geometric contributions.
+
+% ──────────────────────────────────────────────────────────────
+\section{Projection-Based Reduced Order Modelling}
+\label{sec:rom}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{The Offline--Online Paradigm}
+
+ROM follows a two-phase strategy:
+\begin{itemize}
+    \item \textbf{Offline phase (expensive, done once):} Generate high-fidelity solutions (snapshots) for a training set of parameters, extract a reduced basis, and pre-compute projected operators.
+    \item \textbf{Online phase (fast, repeated):} For any new parameter value, solve the reduced system of size $r \ll N$ in real time.
+\end{itemize}
+
+\subsection{Proper Orthogonal Decomposition (POD)}
+
+Given a snapshot matrix $\mat{S} = [\vect{u}(\mu_1), \ldots, \vect{u}(\mu_{N_s})] \in \R^{N \times N_s}$, the POD basis is obtained via the Singular Value Decomposition:
+\begin{equation}
+    \mat{S} = \mat{U} \, \mat{\Sigma} \, \mat{V}^T
+\end{equation}
+
+The reduced basis $\mat{\Phi} \in \R^{N \times r}$ consists of the first $r$ columns of $\mat{U}$, chosen such that the cumulative energy criterion is satisfied:
+\begin{equation}
+    \eta(r) = \frac{\sum_{i=1}^{r} \sigma_i^2}{\sum_{i=1}^{N_s} \sigma_i^2} > 1 - \varepsilon, \qquad \text{typically } \varepsilon = 10^{-4}
+    \label{eq:energy-criterion}
+\end{equation}
+
+\subsection{Galerkin Projection}
+
+The displacement is approximated in the reduced subspace:
+\begin{equation}
+    \vect{u} \approx \mat{\Phi} \, \vect{q}, \qquad \vect{q} \in \R^r
+\end{equation}
+
+Substituting into the governing equations and enforcing orthogonality of the residual to the reduced space yields the projected system:
+\begin{equation}
+    \mat{K}_{\text{red}} \, \vect{q} = \vect{F}_{\text{red}}, \qquad \mat{K}_{\text{red}} = \mat{\Phi}^T \mat{K} \mat{\Phi}, \quad \vect{F}_{\text{red}} = \mat{\Phi}^T \vect{F}
+\end{equation}
+
+For affine parameter dependence $\mat{K}(\mu) = \sum_{i} \theta_i(\mu) \mat{K}_i$, the projected operators can be pre-computed offline, making the online phase independent of the full dimension $N$.
+
+\subsection{Hyper-Reduction}
+
+For nonlinear or non-affine problems, evaluating $\vect{F}_{\text{int}}(\mat{\Phi}\vect{q})$ still requires assembly over the full mesh. Hyper-reduction addresses this by approximating the internal forces using only a subset of integration points:
+
+\begin{itemize}
+    \item \textbf{DEIM (Discrete Empirical Interpolation Method):} Approximates nonlinear functions via interpolation at selected spatial indices.
+    \item \textbf{ECSW (Energy-Conserving Sampling and Weighting):} Selects a reduced set of elements with optimized weights to preserve the strain energy, ensuring stability of the reduced model.
+\end{itemize}
+
+The combination of Galerkin projection with hyper-reduction yields a fully reduced nonlinear ROM where both the system size and the assembly cost are independent of $N$.

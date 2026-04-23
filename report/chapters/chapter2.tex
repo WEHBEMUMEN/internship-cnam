@@ -1,0 +1,179 @@
+% ════════════════════════════════════════════════════════════════
+%  CHAPTER 2 : GEOMETRICAL PARAMETERS NL MECHANICS (2D)
+% ════════════════════════════════════════════════════════════════
+\chapter{Geometrically Parameterized Nonlinear Mechanics in 2D}
+\label{ch:nl-mechanics-2d}
+
+This chapter details the mathematical formulation and computational methodology for solving parametric, geometrically nonlinear elasticity problems in two dimensions using IGA and ROM.
+
+% ──────────────────────────────────────────────────────────────
+\section{Weak Formulation on a Reference Configuration}
+\label{sec:weak-form}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{Total Lagrangian Formulation}
+
+All quantities are referred to the undeformed reference configuration $\Omega_0$. The principle of virtual work states: find $\vect{u} \in \mathcal{V}$ such that for all $\delta\vect{u} \in \mathcal{V}_0$:
+\begin{equation}
+    \int_{\Omega_0} \mat{S}(\vect{u}) : \delta\mat{E}(\vect{u}, \delta\vect{u}) \, \dd\Omega_0 = \int_{\Gamma_N} \vect{t} \cdot \delta\vect{u} \, \dd\Gamma + \int_{\Omega_0} \vect{b} \cdot \delta\vect{u} \, \dd\Omega_0
+    \label{eq:weak-form}
+\end{equation}
+where $\mat{S}$ is the second Piola--Kirchhoff stress, $\delta\mat{E}$ is the variation of the Green--Lagrange strain, $\vect{t}$ represents prescribed tractions, and $\vect{b}$ body forces.
+
+\subsection{Variation of the Green--Lagrange Strain}
+
+The variation of $\mat{E}$ with respect to a virtual displacement $\delta\vect{u}$ is:
+\begin{equation}
+    \delta\mat{E} = \frac{1}{2}\left(\mat{F}^T \nabla\delta\vect{u} + (\nabla\delta\vect{u})^T \mat{F}\right)
+\end{equation}
+
+This expression is linear in $\delta\vect{u}$ but depends nonlinearly on the current displacement $\vect{u}$ through the deformation gradient $\mat{F}$.
+
+\subsection{Parameterized Reference Domain}
+
+When the geometry is parameterized by $\mu$ (e.g., aspect ratio, hole radius), the physical domain $\Omega(\mu)$ varies. In the IGA framework, this is handled naturally through parameter-dependent control points:
+\begin{equation}
+    \vect{x}(\xi, \mu) = \sum_{i=1}^{n} R_i(\xi) \, \vect{P}_i(\mu)
+\end{equation}
+
+All integrals are evaluated on the fixed master domain $\hat{\Omega} = [0,1]^2$, with the Jacobian $\mat{J}(\xi, \mu) = \partial\vect{x}/\partial\xi$ absorbing the parameter dependence:
+\begin{equation}
+    \int_{\Omega(\mu)} (\cdot) \, \dd\Omega = \int_{\hat{\Omega}} (\cdot) \, |\det\mat{J}(\xi, \mu)| \, \dd\hat{\Omega}
+\end{equation}
+
+% ──────────────────────────────────────────────────────────────
+\section{IGA Discretization}
+\label{sec:iga-discretization}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{2D NURBS Approximation}
+
+The displacement field is approximated using tensor-product NURBS:
+\begin{equation}
+    \vect{u}^h(\xi, \eta) = \sum_{A=1}^{N_{cp}} R_A(\xi, \eta) \, \vect{d}_A, \qquad R_A = \frac{N_i^p(\xi) \, M_j^q(\eta) \, w_{ij}}{W(\xi,\eta)}
+\end{equation}
+where $N_{cp} = n \times m$ is the total number of control points and $W(\xi,\eta)$ is the weighting function.
+
+\subsection{Stiffness Matrix Assembly}
+
+The tangent stiffness matrix is assembled element-by-element using Gauss quadrature on the master domain:
+\begin{equation}
+    K_{AB}^{IJ} = \int_{\hat{\Omega}} \pd{R_A}{x_I} \, C_{IJKL} \, \pd{R_B}{x_K} \, |\det\mat{J}| \, \dd\hat{\Omega}
+\end{equation}
+
+Physical derivatives are obtained through the Jacobian inverse:
+\begin{equation}
+    \begin{bmatrix} \partial R_A / \partial x \\ \partial R_A / \partial y \end{bmatrix} = \mat{J}^{-1} \begin{bmatrix} \partial R_A / \partial \xi \\ \partial R_A / \partial \eta \end{bmatrix}
+\end{equation}
+
+For plane stress conditions, the elasticity matrix is:
+\begin{equation}
+    \mat{C} = \frac{E}{1 - \nu^2} \begin{bmatrix} 1 & \nu & 0 \\ \nu & 1 & 0 \\ 0 & 0 & \frac{1-\nu}{2} \end{bmatrix}
+\end{equation}
+
+\subsection{Boundary Conditions}
+
+Dirichlet boundary conditions are applied using a penalty method with factor $\beta \approx 10^{12}$:
+\begin{equation}
+    \Pi_{\text{penalty}} = \frac{1}{2} \beta \, |u_i - \bar{u}_i|^2
+\end{equation}
+
+This approach is also used to enforce compatibility at degenerate NURBS points (e.g., collapsed corners in the plate-with-hole geometry).
+
+% ──────────────────────────────────────────────────────────────
+\section{Offline Simulations}
+\label{sec:offline}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{Parameter Space Definition}
+
+The parameter vector $\mu \in \mathcal{P}$ is defined as:
+
+\begin{table}[H]
+\centering
+\caption{Parameter space definition for the 2D test cases.}
+\label{tab:param-space}
+\begin{tabular}{llll}
+\toprule
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Description} & \textbf{Range} \\
+\midrule
+Young's Modulus & $E$ & Material stiffness & $[10^6, 2 \times 10^8]$\,Pa \\
+Poisson's Ratio & $\nu$ & Transverse strain ratio & $[0.25, 0.49]$ \\
+Load Intensity & $F$ & Applied force magnitude & $[0, 1000]$\,N \\
+Aspect Ratio & $\alpha = L/H$ & Geometry parameter & $[5, 20]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Latin Hypercube Sampling}
+
+The training set $\{\mu_1, \ldots, \mu_{N_s}\}$ is generated using \acrfull{lhs} to ensure uniform coverage of the parameter space. An initial set of 25 snapshots is used for POD validation, with 100+ snapshots for the final hyper-reduced model.
+
+\subsection{Snapshot Database Generation}
+
+For each parameter sample $\mu_k$, the full-order model is solved using Newton--Raphson iteration:
+\begin{equation}
+    \mat{S} = \left[\vect{u}(\mu_1), \, \vect{u}(\mu_2), \, \ldots, \, \vect{u}(\mu_{N_s})\right] \in \R^{2N_{cp} \times N_s}
+\end{equation}
+
+Each column contains the converged displacement field (both $u_x$ and $u_y$ components interleaved) for one parameter configuration.
+
+\subsection{POD Basis Extraction}
+
+The SVD of the snapshot matrix yields the reduced basis:
+\begin{equation}
+    \mat{S} = \mat{U} \mat{\Sigma} \mat{V}^T, \qquad \mat{\Phi} = \mat{U}_{[:, 1:r]}
+\end{equation}
+
+The number of retained modes $r$ is determined by the energy criterion (Eq.~\ref{eq:energy-criterion}). For the 2D plate benchmarks, typically $r \leq 5$ modes capture $>99.99\%$ of the system energy.
+
+% ──────────────────────────────────────────────────────────────
+\section{Online Simulations}
+\label{sec:online}
+% ──────────────────────────────────────────────────────────────
+
+\subsection{Galerkin-Projected Nonlinear ROM}
+
+For a new parameter $\mu^*$, the online phase solves the reduced nonlinear system iteratively:
+
+\begin{algorithm}[H]
+\caption{Online NL-ROM Query}
+\label{alg:nl-rom}
+\begin{algorithmic}[1]
+\REQUIRE Reduced basis $\mat{\Phi}$, parameter $\mu^*$, tolerance $\varepsilon$
+\STATE Initialize $\vect{q}^{(0)} = \vect{0}$
+\FOR{$k = 0, 1, 2, \ldots$}
+    \STATE Reconstruct: $\vect{u}^{(k)} = \mat{\Phi} \, \vect{q}^{(k)}$
+    \STATE Assemble $\mat{K}_T(\vect{u}^{(k)}, \mu^*)$ and $\vect{F}_{\text{int}}(\vect{u}^{(k)}, \mu^*)$
+    \STATE Project: $\mat{K}_{\text{red}} = \mat{\Phi}^T \mat{K}_T \mat{\Phi}$, \quad $\vect{R}_{\text{red}} = \mat{\Phi}^T (\vect{F}_{\text{ext}} - \vect{F}_{\text{int}})$
+    \STATE Solve: $\mat{K}_{\text{red}} \, \Delta\vect{q} = \vect{R}_{\text{red}}$
+    \STATE Update: $\vect{q}^{(k+1)} = \vect{q}^{(k)} + \Delta\vect{q}$
+    \IF{$\norm{\Delta\vect{q}} < \varepsilon$}
+        \STATE \textbf{break} (converged)
+    \ENDIF
+\ENDFOR
+\RETURN $\vect{u} = \mat{\Phi} \, \vect{q}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Performance Targets}
+
+\begin{table}[H]
+\centering
+\caption{Performance comparison: FOM vs.\ ROM.}
+\label{tab:performance}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{FOM} & \textbf{ROM} \\
+\midrule
+System size & $2000 \times 2000$ & $10 \times 10$ \\
+Solve time per query & $\sim 2$\,s & $< 10$\,ms \\
+Memory footprint & $\sim 50$\,MB & $\sim 10$\,KB \\
+Relative $L^2$ error & --- & $< 1\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Data Serialization}
+
+Offline results (reduced basis $\mat{\Phi}$, projected operators, mesh metadata) are serialized to portable JSON format for consumption by the web-based Digital Twin frontend.

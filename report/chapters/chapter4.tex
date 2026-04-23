@@ -1,0 +1,44 @@
+% ════════════════════════════════════════════════════════════════
+%  CHAPTER 4 : APPLICATION IN 3D
+% ════════════════════════════════════════════════════════════════
+\chapter{Extension to 3D Applications}
+\label{ch:3d-extension}
+
+\textit{This chapter outlines the planned extension of the methodology to three-dimensional problems. Content will be developed as the project progresses.}
+
+% ──────────────────────────────────────────────────────────────
+\section{3D NURBS Volume Parameterization}
+\label{sec:3d-nurbs}
+% ──────────────────────────────────────────────────────────────
+
+The extension to 3D requires trivariate NURBS volumes:
+\begin{equation}
+    \vect{x}(\xi, \eta, \zeta) = \sum_{i=1}^{n} \sum_{j=1}^{m} \sum_{k=1}^{l} R_{ijk}^{p,q,r}(\xi, \eta, \zeta) \, \vect{P}_{ijk}
+\end{equation}
+
+Key challenges include:
+\begin{itemize}
+    \item Increased dimensionality of the snapshot matrix ($3 \times N_{cp}$ DOFs per snapshot)
+    \item Volumetric Gauss quadrature with $n_g^3$ integration points
+    \item Multi-patch NURBS geometries requiring coupling conditions
+\end{itemize}
+
+% TODO: Develop sections as 3D implementation progresses
+
+% ──────────────────────────────────────────────────────────────
+\section{3D Nonlinear Assembly}
+\label{sec:3d-assembly}
+% ──────────────────────────────────────────────────────────────
+
+The 3D stiffness assembly follows the same structure as the 2D case, with the elasticity tensor for isotropic materials in full 3D (6$\times$6 Voigt matrix) and the deformation gradient becoming a $3 \times 3$ tensor.
+
+% Placeholder for future content
+
+% ──────────────────────────────────────────────────────────────
+\section{3D ROM and Visualization}
+\label{sec:3d-rom}
+% ──────────────────────────────────────────────────────────────
+
+The Three.js rendering pipeline already supports 3D WebGL visualization. The ROM framework generalizes directly, though hyper-reduction becomes even more critical due to the increased assembly cost.
+
+% Placeholder for future content

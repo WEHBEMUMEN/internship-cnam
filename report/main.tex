@@ -1,0 +1,151 @@
+\documentclass[12pt,a4paper,twoside]{report}
+
+% ─── Encoding & Language ───
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+% ─── Page Geometry ───
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+
+% ─── Fonts ───
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ─── Math ───
+\usepackage{amsmath,amssymb,amsfonts,mathtools}
+\usepackage{bm}
+
+% ─── Graphics & Figures ───
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage[dvipsnames,svgnames,x11names]{xcolor}
+
+% ─── Tables ───
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+% ─── Code Listings ───
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+}
+
+% ─── Algorithms ───
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% ─── Hyperlinks ───
+\usepackage[colorlinks=true, linkcolor=NavyBlue, citecolor=OliveGreen, urlcolor=BrickRed]{hyperref}
+
+% ─── Bibliography ───
+\usepackage[numbers,sort&compress]{natbib}
+
+% ─── Headers & Footers ───
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\leftmark}
+\fancyhead[RO]{\rightmark}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ─── TikZ for diagrams ───
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc}
+
+% ─── Theorem environments ───
+\usepackage{amsthm}
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{remark}{Remark}[chapter]
+
+% ─── Custom commands ───
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\norm}[1]{\left\| #1 \right\|}
+
+% ─── Spacing ───
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip}
+
+% ─── Glossary / Acronyms ───
+\usepackage[acronym,toc]{glossaries}
+\makeglossaries
+\newacronym{iga}{IGA}{Isogeometric Analysis}
+\newacronym{rom}{ROM}{Reduced Order Model}
+\newacronym{fom}{FOM}{Full Order Model}
+\newacronym{pod}{POD}{Proper Orthogonal Decomposition}
+\newacronym{svd}{SVD}{Singular Value Decomposition}
+\newacronym{nurbs}{NURBS}{Non-Uniform Rational B-Splines}
+\newacronym{fem}{FEM}{Finite Element Method}
+\newacronym{fsi}{FSI}{Fluid--Structure Interaction}
+\newacronym{lhs}{LHS}{Latin Hypercube Sampling}
+\newacronym{deim}{DEIM}{Discrete Empirical Interpolation Method}
+\newacronym{ecsw}{ECSW}{Energy-Conserving Sampling and Weighting}
+\newacronym{dt}{DT}{Digital Twin}
+\newacronym{cnam}{Cnam}{Conservatoire National des Arts et Métiers}
+
+\begin{document}
+
+% ════════════════════════════════════════════════════════════════
+%  FRONT MATTER
+% ════════════════════════════════════════════════════════════════
+\input{chapters/titlepage}
+
+\pagenumbering{roman}
+
+% Abstract
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+This report presents the work conducted during a six-month internship at the \acrfull{cnam}, within the Équipement pour la Performance et le Numérique (EPN04) department, under the supervision of Dr.\ Christophe Hoareau. The project addresses the development of a real-time pedagogical Digital Twin for nonlinear structural mechanics, combining \acrfull{iga} with projection-based \acrfull{rom} techniques.
+
+The methodology relies on \acrfull{nurbs} basis functions for exact geometric representation and employs \acrfull{pod} via \acrfull{svd} to extract dominant deformation modes from parametric snapshot databases. A Galerkin projection framework reduces the dimensionality of the governing equations, while hyper-reduction strategies (DEIM, ECSW) accelerate the evaluation of nonlinear terms.
+
+The resulting web-based application enables real-time simulation of geometrically nonlinear 2D structures with parametric control, achieving solve times under 10\,ms compared to several seconds for the full-order model. The platform serves as both a research validation tool and an interactive pedagogical environment for teaching advanced computational mechanics.
+
+\vspace{1cm}
+\noindent\textbf{Keywords:} Isogeometric Analysis, Reduced Order Modelling, Nonlinear Mechanics, Digital Twin, NURBS, Proper Orthogonal Decomposition, Hyper-reduction, Real-time Simulation.
+
+% Table of Contents
+\tableofcontents
+\listoffigures
+\listoftables
+\printglossary[type=\acronymtype, title=List of Acronyms]
+
+\cleardoublepage
+\pagenumbering{arabic}
+
+% ════════════════════════════════════════════════════════════════
+%  MAIN MATTER
+% ════════════════════════════════════════════════════════════════
+\input{chapters/introduction}
+\input{chapters/chapter1}
+\input{chapters/chapter2}
+\input{chapters/chapter3}
+\input{chapters/chapter4}
+\input{chapters/conclusion}
+
+% ════════════════════════════════════════════════════════════════
+%  BACK MATTER
+% ════════════════════════════════════════════════════════════════
+\appendix
+\input{chapters/appendix}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

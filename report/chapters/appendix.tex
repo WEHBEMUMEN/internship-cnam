@@ -1,0 +1,56 @@
+% ════════════════════════════════════════════════════════════════
+%  APPENDIX
+% ════════════════════════════════════════════════════════════════
+\chapter{Supplementary Material}
+\label{app:supplementary}
+
+\section{Cox--de Boor Recursion: Detailed Derivation}
+
+The B-spline basis functions of degree $p$ over a knot vector $\Xi = \{\xi_1, \ldots, \xi_{n+p+1}\}$ are defined recursively. The zeroth-order ($p=0$) basis functions are piecewise constants:
+\begin{equation}
+    N_{i,0}(\xi) = \begin{cases} 1 & \text{if } \xi_i \leq \xi < \xi_{i+1} \\ 0 & \text{otherwise} \end{cases}
+\end{equation}
+
+Higher-order functions are computed by the recursion:
+\begin{equation}
+    N_{i,p}(\xi) = \frac{\xi - \xi_i}{\xi_{i+p} - \xi_i} N_{i,p-1}(\xi) + \frac{\xi_{i+p+1} - \xi}{\xi_{i+p+1} - \xi_{i+1}} N_{i+1,p-1}(\xi)
+\end{equation}
+with the convention $0/0 = 0$.
+
+\section{Gauss Quadrature Rules}
+
+\begin{table}[H]
+\centering
+\caption{Gauss--Legendre quadrature points and weights for $n_g = 1, \ldots, 4$.}
+\begin{tabular}{ccc}
+\toprule
+$n_g$ & Points $\xi_i$ & Weights $w_i$ \\
+\midrule
+1 & 0.0 & 2.0 \\
+2 & $\pm 0.5774$ & 1.0 \\
+3 & $0.0, \pm 0.7746$ & $0.8889, 0.5556$ \\
+4 & $\pm 0.3400, \pm 0.8611$ & $0.6521, 0.3479$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Project Repository Structure}
+
+\begin{lstlisting}[language={}, caption={Repository file tree.}]
+internship-cnam/
+|-- app/
+|   |-- index.html              (Simulation Hub)
+|   |-- simulations/
+|       |-- iga-sim/             (Phase 1.0: B-Spline Basis)
+|       |-- iga-sim-1.7/         (Phase 1.7: 1D ROM Benchmark)
+|       |-- iga-sim-nl/          (Phase 1.NL: Nonlinear 1D)
+|       |-- iga-sim-2b2/         (Phase 2B: Kirsch Benchmark)
+|       |-- iga-sim-2d1/         (Phase 2D.1: SVD/POD Lab)
+|       |-- iga-sim-3a/          (Phase 3A: 2D Nonlinear)
+|       |-- phase-2-core/src/    (2D Engine Core)
+|       |-- phase-3-core/src/    (NL Engine Core)
+|-- theory/                      (Interactive Theory Pages)
+|-- docs/                        (Architecture, Logs)
+|-- report/                      (This LaTeX report)
+|-- README.md
+\end{lstlisting}

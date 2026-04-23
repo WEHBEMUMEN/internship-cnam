@@ -1,0 +1,48 @@
+% ════════════════════════════════════════════════════════════════
+%  CONCLUSION AND PERSPECTIVES
+% ════════════════════════════════════════════════════════════════
+\chapter*{Conclusion and Perspectives}
+\addcontentsline{toc}{chapter}{Conclusion and Perspectives}
+\markboth{Conclusion and Perspectives}{Conclusion and Perspectives}
+
+% ──────────────────────────────────────────────────────────────
+\section*{Conclusion}
+% ──────────────────────────────────────────────────────────────
+
+This internship has addressed the development of a real-time Digital Twin platform for nonlinear structural mechanics, combining Isogeometric Analysis with projection-based Reduced Order Modelling.
+
+The main contributions of this work are:
+
+\begin{enumerate}
+    \item \textbf{A complete IGA computational core in JavaScript}, capable of assembling 2D stiffness matrices, solving linear and geometrically nonlinear problems via Newton--Raphson iteration, and recovering stress fields---all running natively in the browser without server-side dependencies.
+    
+    \item \textbf{A ROM pipeline from snapshots to real-time queries}, implementing POD via SVD for basis extraction, Galerkin projection for operator reduction, and parametric online evaluation achieving solve times under 10\,ms.
+    
+    \item \textbf{An interactive pedagogical platform} with 26+ simulation modules, real-time 3D visualization via Three.js, and integrated mathematical documentation, providing students with hands-on experience in computational mechanics concepts.
+    
+    \item \textbf{Validation against analytical benchmarks}, including the Kirsch plate-with-hole problem and cantilever beam convergence studies, demonstrating the accuracy and robustness of the implementation.
+\end{enumerate}
+
+The project demonstrates that modern web technologies can deliver research-grade computational mechanics tools accessible to any user with a browser, lowering the barrier to entry for advanced simulation concepts.
+
+% ──────────────────────────────────────────────────────────────
+\section*{Perspectives}
+% ──────────────────────────────────────────────────────────────
+
+Several directions for future work emerge from this project:
+
+\begin{itemize}
+    \item \textbf{Hyper-reduction implementation:} Complete the DEIM and ECSW implementations to achieve full independence of the online phase from the full-order dimension, targeting 100$\times$ speedup for nonlinear problems.
+    
+    \item \textbf{3D extension:} Extend the methodology to trivariate NURBS volumes for industrially relevant three-dimensional geometries, leveraging WebAssembly for performance-critical assembly routines.
+    
+    \item \textbf{Physical Digital Twin coupling:} Connect the virtual simulation to a 3D-printed physical model instrumented with strain gauges or accelerometers, enabling real-time comparison between numerical predictions and experimental measurements.
+    
+    \item \textbf{Dynamic problems:} Extend the ROM framework to transient dynamics using Newmark-$\beta$ time integration, enabling the simulation of vibration and impact phenomena.
+    
+    \item \textbf{Advanced material models:} Incorporate hyperelastic models beyond Saint Venant--Kirchhoff (e.g., Neo-Hookean, Mooney--Rivlin) for more physically realistic large-strain behavior.
+    
+    \item \textbf{Machine learning integration:} Explore neural network-based surrogate models (e.g., DeepONet, physics-informed neural networks) as alternatives or complements to classical ROM for highly nonlinear parameter regimes.
+    
+    \item \textbf{Multi-physics:} Extend to fluid--structure interaction problems, building on the supervisor's prior work on sloshing applications~\cite{hoareau2025}.
+\end{itemize}
