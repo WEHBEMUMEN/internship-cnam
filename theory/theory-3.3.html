@@ -99,9 +99,23 @@
             </ul>
         </section>
 
-        <footer class="text-center mt-20 border-t border-slate-800 pt-10">
-            <a href="../app/simulations/iga-sim-3.3/index.html" class="px-8 py-3 bg-rose-600 rounded-xl font-bold hover:bg-rose-500 transition-all inline-flex items-center gap-2">
+        <!-- Section 4: Ground Truth Verification -->
+        <section class="content-section">
+            <h2 style="color: var(--secondary);"><i class="fa-solid fa-square-check"></i> 4. Analytical Verification</h2>
+            <p>To ensure the numerical stability of the 2D engine, we cross-validate results against <strong>Lamé's Torsion Solution</strong> at low load increments. While the nonlinear response will deviate (capturing the Poynting effect), the linear baseline provides a perfect sanity check for boundary conditions and nodal assembly.</p>
+            <div class="mt-6">
+                <a href="semi-analytical.html" class="text-secondary font-bold hover:underline flex items-center gap-2">
+                    <i class="fa-solid fa-calculator"></i> Open Ground Truth Calculator →
+                </a>
+            </div>
+        </section>
+
+        <footer class="text-center mt-20 border-t border-slate-800 pt-10 flex flex-col md:flex-row justify-center gap-4">
+            <a href="../app/simulations/iga-sim-3.3/index.html" class="px-8 py-3 bg-rose-600 rounded-xl font-bold hover:bg-rose-500 transition-all inline-flex items-center gap-2 justify-center">
                 <i class="fa-solid fa-rocket"></i> Launch Annulus Lab
+            </a>
+            <a href="semi-analytical.html" class="px-8 py-3 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 transition-all inline-flex items-center gap-2 justify-center border border-emerald-500/30 text-emerald-400">
+                <i class="fa-solid fa-calculator"></i> Analytical Ground Truth
             </a>
         </footer>
     </div>
