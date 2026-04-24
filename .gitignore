@@ -207,3 +207,4 @@ build/
 *.tdo
 *.run.xml
 *.bcf
+report/svg-inkscape/
