@@ -156,6 +156,18 @@ tasks:
     deadline: 2026-04-16
     description: "Generated multi-chart analytics and advanced 2D-specific theory documentation for the ROM pipeline."
 
+  - title: "Phase 3.2: NL-ROM Theory Documentation"
+    status: Done
+    priority: Medium
+    deadline: 2026-04-24
+    description: "Authored comprehensive theory page for Nonlinear Reduced Order Modeling, including POD/SVD and Galerkin Projection logic."
+
+  - title: "Phase 3.3: Annulus Theory Documentation"
+    status: Done
+    priority: Medium
+    deadline: 2026-04-24
+    description: "Authored theory documentation for Periodic Boundary Conditions and Follower Force mechanics for the Annulus benchmark."
+
   # ── IN PROGRESS ───────────────────────────────────────────────────────────
 
   # ── TO DO (Phase 2E — Hyper-reduction) ────────────────────────────────────

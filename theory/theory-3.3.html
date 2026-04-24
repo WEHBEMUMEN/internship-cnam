@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 3.3 | Annulus & Follower Forces</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --secondary: #10b981;
+            --bg: #020617;
+            --card: #0f172a;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 80px 30px; }
+        .math-card {
+            background: #020617;
+            padding: 30px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border-left: 4px solid var(--primary);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            overflow-x: auto;
+        }
+        .content-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 50px;
+            margin-bottom: 50px;
+            transition: border-color 0.3s ease;
+        }
+        .content-section:hover { border-color: var(--primary); }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 15px; }
+        .highlight { color: var(--primary); font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-20">
+            <span class="px-4 py-1.5 rounded-full bg-rose-500/10 text-rose-500 text-xs font-bold tracking-widest uppercase border border-rose-500/20 mb-6 inline-block">Phase 3.3 | Periodic Benchmarking</span>
+            <h1>Annulus Twisting &<br>Follower Forces</h1>
+            <p class="mt-6 text-xl text-slate-400 font-light">Testing the limits of geometric nonlinearity with periodic topologies and displacement-dependent loads.</p>
+        </header>
+
+        <!-- Section 1: Periodic Topologies -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-circle-notch"></i> 1. Periodic Boundary Conditions</h2>
+            <p>To simulate a closed annulus (a ring), we use a single NURBS patch where the start edge and end edge occupy the same physical space. However, in the stiffness matrix, they are independent degrees of freedom.</p>
+            
+            <p>We enforce <strong>Periodicity</strong> using the Penalty Method. We identify coincident control points at the boundary and "glue" them together by adding a massive stiffness term between them:</p>
+            
+            <div class="math-card">
+                <p class="text-xs text-rose-500 mb-2 font-mono uppercase tracking-tighter">Periodic Coupling</p>
+                $$\Pi_{period} = \frac{1}{2} \beta \sum (u_{start} - u_{end})^2$$
+            </div>
+            
+            <p>This ensures that as the annulus twists, the displacement and stress fields remain perfectly continuous across the "invisible" seam.</p>
+        </section>
+
+        <!-- Section 2: Follower Forces -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-arrows-spin"></i> 2. Follower Force Logic</h2>
+            <p>In standard structural mechanics, loads are often fixed in space (e.g., gravity). However, in many Digital Twin applications (like pressure in a tank or torque on a shaft), the load vector <strong>rotates with the material</strong>.</p>
+
+            <div class="math-card">
+                <p class="text-xs text-rose-500 mb-2 font-mono uppercase tracking-tighter">Follower Traction</p>
+                $$\mathbf{f}(\mathbf{u}) = t \cdot \mathbf{n}(\mathbf{u})$$
+            </div>
+            
+            <p>The load vector is updated in every iteration of the Newton-Raphson loop to stay tangential to the deformed boundary. This creates an additional source of nonlinearity, as the external force $\mathbf{F}_{ext}$ is no longer constant.</p>
+        </section>
+
+        <!-- Section 3: Large Rotation Benchmark -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-rotate-right"></i> 3. Large Rotation Stability</h2>
+            <p>Phase 3.3 serves as a stress-test for our solver's stability. By applying a large follower torque to the annulus, we can observe rotations exceeding $180^\circ$. This validates:</p>
+            <ul class="list-disc list-inside text-slate-400 space-y-2 mt-4">
+                <li>The robustness of the <span class="highlight">Green-Lagrange</span> strain tensor under extreme rotation.</li>
+                <li>The convergence of the <span class="highlight">Newton-Raphson</span> loop with dynamic external loads.</li>
+                <li>The visual accuracy of our <span class="highlight">Three.js</span> deformation pipeline.</li>
+            </ul>
+        </section>
+
+        <footer class="text-center mt-20 border-t border-slate-800 pt-10">
+            <a href="../app/simulations/iga-sim-3.3/index.html" class="px-8 py-3 bg-rose-600 rounded-xl font-bold hover:bg-rose-500 transition-all inline-flex items-center gap-2">
+                <i class="fa-solid fa-rocket"></i> Launch Annulus Lab
+            </a>
+        </footer>
+    </div>
+</body>
+</html>
