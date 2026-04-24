@@ -69,13 +69,18 @@
                     <label class="block text-xs text-slate-400">Outer R (Ro)</label>
                     <input type="number" id="inp-ro" value="4.0">
                 </div>
+                <div>
+                    <label class="block text-xs text-slate-400 font-bold text-rose-400">Numerical Result ($u_\theta$)</label>
+                    <input type="number" id="inp-num" value="0.1552" class="border-rose-500/50">
+                </div>
             </div>
             
             <button class="btn w-full bg-emerald-500 hover:bg-emerald-600 border-none" onclick="runSolver()">Calculate Exact Baseline</button>
             
             <div id="results" class="mt-6 p-4 bg-slate-900 rounded-lg hidden border border-slate-700">
                 <h4 class="text-emerald-400 font-bold mb-2">Linear Ground Truth at Outer Boundary</h4>
-                <p>Tangential Disp $u_\theta(R_o)$: <span id="res-utheta" class="font-mono text-white text-lg"></span> mm</p>
+                <p>Analytical $u_\theta(R_o)$: <span id="res-utheta" class="font-mono text-white text-lg"></span> mm</p>
+                <p>Calculated Error: <span id="res-error" class="font-bold text-emerald-400 text-lg"></span></p>
                 <p>Twist Angle $\phi(R_o)$: <span id="res-phi" class="font-mono text-white"></span> radians</p>
                 <p>Radial Disp $u(R_o)$: <span id="res-u" class="font-mono text-slate-400">0.0000 (Ignored in Linear Theory)</span></p>
                 
@@ -107,8 +112,12 @@
             const u_theta = (T_ext / (4 * Math.PI * G)) * (Ro / (Ri * Ri) - 1 / Ro);
             const phi = u_theta / Ro;
 
+            const u_num = parseFloat(document.getElementById('inp-num').value);
+            const error = Math.abs(u_theta - u_num) / u_theta * 100;
+
             document.getElementById('res-utheta').textContent = u_theta.toFixed(5);
             document.getElementById('res-phi').textContent = phi.toFixed(5);
+            document.getElementById('res-error').textContent = error.toFixed(4) + "%";
             
             document.getElementById('results').classList.remove('hidden');
         }
