@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3.4 | Hyper-Reduction Benchmark</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Shared Engines -->
+    <script src="../phase-2-core/src/nurbs-2d.js?v=3"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js?v=3"></script>
+    <script src="../phase-2-core/src/refine-utils.js?v=3"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js?v=3"></script>
+    <script src="../phase-3-core/src/iga-nonlinear.js?v=2"></script>
+    <script src="../phase-3-core/src/rom-engine.js?v=2"></script>
+    <!-- New HR Modules -->
+    <script src="../phase-3-core/src/hr-elements.js"></script>
+    <script src="../phase-3-core/src/hr-trainer.js"></script>
+    <script src="../phase-3-core/src/hr-solver.js"></script>
+
+    <style>
+        :root { --primary:#8b5cf6; --secondary:#3b82f6; --accent:#10b981; --bg:#ffffff; --card:rgba(255,255,255,0.85); --border:rgba(148,163,184,0.3); }
+        *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+        body { background:var(--bg); color:#0f172a; font-family:'Inter',sans-serif; overflow:hidden; }
+        #canvas-container { position:absolute; inset:0; }
+        .glass-panel { background:var(--card); backdrop-filter:blur(14px); border:1px solid var(--border); border-radius:20px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.1); }
+        #ui-panel { position:absolute; top:16px; left:16px; width:320px; padding:20px; z-index:10; max-height:calc(100vh - 32px); overflow-y:auto; }
+        #stats-panel { position:absolute; top:16px; right:16px; width:380px; padding:18px; z-index:10; max-height:calc(100vh - 32px); overflow-y:auto; }
+        #chart-panel { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); width:700px; padding:18px; z-index:10; }
+        .panel-title { font-size:1.15rem; font-weight:700; letter-spacing:-0.02em; }
+        .panel-sub { font-size:0.7rem; color:#64748b; margin-top:2px; }
+        .section-label { font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#475569; margin-bottom:8px; display:block; }
+        .control-group { margin-bottom:16px; }
+        .label-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .label-row .lbl { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#475569; }
+        .label-row .val { font-size:0.78rem; font-weight:700; color:var(--primary); font-family:'JetBrains Mono',monospace; }
+        input[type="range"] { width:100%; height:3px; background:#e2e8f0; border-radius:2px; appearance:none; cursor:pointer; }
+        input[type="range"]::-webkit-slider-thumb { appearance:none; width:14px; height:14px; background:var(--primary); border-radius:50%; box-shadow:0 0 8px rgba(139,92,246,0.5); cursor:pointer; }
+        .btn-grid { display:grid; gap:5px; }
+        .btn-grid-2 { grid-template-columns:1fr 1fr; }
+        .btn-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+        .btn-pill { padding:7px 4px; border-radius:10px; font-size:0.58rem; font-weight:700; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; border:1px solid var(--border); color:#94a3b8; background:transparent; white-space:nowrap; }
+        .btn-pill:hover { background:rgba(0,0,0,.04); color:#1e293b; }
+        .btn-pill.active { border-color:var(--primary); color:var(--primary); background:rgba(139,92,246,.12); box-shadow:0 0 12px rgba(139,92,246,.2); }
+        .btn-train-full { width:100%; padding:11px; border-radius:12px; font-size:0.76rem; font-weight:700; letter-spacing:.5px; cursor:pointer; background:linear-gradient(135deg,var(--primary),#6d28d9); color:white; border:none; box-shadow:0 4px 14px rgba(139,92,246,.35); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+        .btn-train-full:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(139,92,246,.45); }
+        .btn-train-full:disabled { opacity:.5; transform:none; cursor:not-allowed; }
+        .btn-compare { width:100%; padding:10px; border-radius:12px; font-size:0.72rem; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; box-shadow:0 4px 14px rgba(16,185,129,.35); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; }
+        .btn-compare:hover { transform:translateY(-1px); }
+        .btn-compare:disabled { opacity:.5; transform:none; cursor:not-allowed; }
+        .stat-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+        .stat-card { background:rgba(241,245,249,.6); border-radius:12px; padding:10px; border:1px solid var(--border); }
+        .stat-card .lbl { font-size:0.55rem; color:#64748b; text-transform:uppercase; letter-spacing:.8px; display:block; margin-bottom:3px; }
+        .stat-num { font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:#1e293b; }
+        .divider { border-color:rgba(51,65,85,.2); margin:14px 0; }
+        #train-status { font-size:0.65rem; font-family:'JetBrains Mono',monospace; color:#8b5cf6; margin-top:6px; min-height:14px; }
+        .hidden { display:none !important; }
+        .back-link { font-size:0.6rem; text-transform:uppercase; letter-spacing:1px; color:#475569; display:flex; align-items:center; gap:6px; text-decoration:none; margin-bottom:14px; transition:color .2s; }
+        .back-link:hover { color:#94a3b8; }
+        .live-dot { width:6px; height:6px; background:#10b981; border-radius:50%; animation:pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+        .chart-tabs { display:flex; gap:4px; margin-bottom:10px; }
+        .chart-tab { padding:5px 12px; border-radius:8px; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; cursor:pointer; border:1px solid var(--border); color:#94a3b8; background:transparent; transition:all .2s; }
+        .chart-tab.active { border-color:var(--primary); color:var(--primary); background:rgba(139,92,246,.1); }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- Left Panel -->
+    <div id="ui-panel" class="glass-panel">
+        <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
+        <div class="panel-title">Phase 3.4 <span style="color:var(--primary)">HR-ROM</span></div>
+        <div class="panel-sub">Hyper-Reduction Benchmark · Cantilever Beam</div>
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">1 · Offline Training</span>
+            <p style="font-size:.64rem;color:#64748b;margin-bottom:8px;line-height:1.5">Generates FOM snapshots, extracts POD basis, and trains all 6 hyper-reduction operators.</p>
+            <button id="btn-train" class="btn-train-full"><i class="fa-solid fa-brain"></i> Train All Methods</button>
+            <div id="train-status" class="hidden"></div>
+        </div>
+
+        <div class="control-group">
+            <div class="label-row"><span class="lbl">POD Modes k</span><span class="val" id="k-val">5</span></div>
+            <input type="range" id="input-k" min="1" max="15" value="5" disabled>
+            <div style="font-size:.58rem;color:#475569;margin-top:4px" id="energy-val">Energy: —</div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">2 · Method</span>
+            <div class="btn-grid btn-grid-2">
+                <button class="btn-pill active" data-method="fom">FOM</button>
+                <button class="btn-pill" data-method="galerkin">Galerkin ROM</button>
+                <button class="btn-pill" data-method="deim">DEIM</button>
+                <button class="btn-pill" data-method="udeim">UDEIM</button>
+                <button class="btn-pill" data-method="gappy">Gappy POD</button>
+                <button class="btn-pill" data-method="ecsw">ECSW</button>
+                <button class="btn-pill" data-method="ecm">ECM</button>
+                <button class="btn-pill" data-method="collocation">LSPG</button>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">3 · Mesh & Physics</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">Mesh Level (h)</span><span class="val" id="mesh-val">1</span></div>
+                    <input type="range" id="input-mesh" min="1" max="4" value="1">
+                </div>
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">Load Mag</span><span class="val" id="load-val">200</span></div>
+                    <input type="range" id="input-load" min="10" max="600" step="10" value="200">
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <select id="input-load-type" style="width:60%; background:transparent; border:1px solid var(--border); border-radius:6px; font-size:0.7rem; padding:4px; color:#475569; outline:none; cursor:pointer;">
+                    <option value="tip">Tip Shear Load</option>
+                    <option value="top">Top Distributed Load</option>
+                </select>
+                <label style="font-size:0.7rem; color:#475569; display:flex; align-items:center; gap:4px; cursor:pointer; font-weight:600;">
+                    <input type="checkbox" id="input-show-dofs" checked> Show DOFs
+                </label>
+            </div>
+        </div>
+
+        <button id="btn-compare" class="btn-compare" disabled><i class="fa-solid fa-chart-bar"></i> Run All & Compare</button>
+    </div>
+
+    <!-- Right Stats Panel -->
+    <div id="stats-panel" class="glass-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b">Analysis Metrics</span>
+            <div style="display:flex;align-items:center;gap:6px"><div class="live-dot"></div><span style="font-size:.55rem;color:#10b981;font-weight:700;text-transform:uppercase">Live</span></div>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card"><span class="lbl">Method</span><div class="stat-num" id="method-name" style="font-size:.85rem">FOM</div></div>
+            <div class="stat-card"><span class="lbl">Time</span><div style="display:flex;align-items:baseline;gap:3px"><span class="stat-num" id="time-val">—</span><span style="font-size:.6rem;color:#475569">ms</span></div></div>
+            <div class="stat-card"><span class="lbl">Speedup</span><div style="display:flex;align-items:baseline;gap:3px"><span class="stat-num" id="speedup-val" style="color:#10b981">—</span><span style="font-size:.6rem;color:#475569">×</span></div></div>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card"><span class="lbl">Sampled</span><div class="stat-num" id="sampled-val" style="font-size:.85rem">—</div></div>
+            <div class="stat-card"><span class="lbl">Tip Disp</span><div class="stat-num" id="tip-val" style="font-size:.85rem">—</div></div>
+            <div class="stat-card"><span class="lbl">L² Error</span><div class="stat-num" id="error-val" style="font-size:.85rem;color:#f59e0b">—</div></div>
+        </div>
+
+        <div style="font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#475569;margin-bottom:6px">Convergence History</div>
+        <canvas id="sparkline-canvas" width="340" height="90" style="width:100%;height:90px;display:block;border-radius:8px"></canvas>
+    </div>
+
+    <!-- Bottom Chart Panel -->
+    <div id="chart-panel" class="glass-panel">
+        <div class="chart-tabs">
+            <button class="chart-tab active" data-chart="speedup"><i class="fa-solid fa-bolt"></i> Speedup</button>
+            <button class="chart-tab" data-chart="fd"><i class="fa-solid fa-chart-line"></i> Force-Displacement</button>
+        </div>
+        <div id="chart-speedup-wrap"><canvas id="chart-speedup" height="140"></canvas></div>
+        <div id="chart-fd-wrap" class="hidden"><canvas id="chart-fd" height="140"></canvas></div>
+    </div>
+
+    <script src="../../shared/performance.js"></script>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>

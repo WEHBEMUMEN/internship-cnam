@@ -168,6 +168,12 @@ tasks:
     deadline: 2026-04-24
     description: "Authored theory documentation for Periodic Boundary Conditions and Follower Force mechanics for the Annulus benchmark."
 
+  - title: "Phase 3.4: Hyper-Reduction Benchmark (Cantilever Beam)"
+    status: In Progress
+    priority: High
+    deadline: 2026-05-12
+    description: "FOM vs Galerkin ROM vs HR-ROM comparison on nonlinear cantilever beam using six hyper-reduction methods: DEIM, UDEIM, Gappy POD, ECSW, ECM, Collocation (LSPG). Report section drafted."
+
   # ── IN PROGRESS ───────────────────────────────────────────────────────────
 
   # ── TO DO (Phase 2E — Hyper-reduction) ────────────────────────────────────

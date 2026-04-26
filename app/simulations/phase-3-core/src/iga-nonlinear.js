@@ -52,6 +52,7 @@ class IGANonlinearSolver {
         
         const W = deriv.W, Wu = deriv.Wu, Wv = deriv.Wv;
         const grads = Array(nU * nV).fill(0).map(() => [0, 0]);
+        const activeIndices = [];
 
         const spanU = this.engine.findSpan(nU - 1, p, u, U);
         const spanV = this.engine.findSpan(nV - 1, q, v, V);
@@ -71,10 +72,12 @@ class IGANonlinearSolver {
                 const dRdx = J_inv[0][0] * dRdu + J_inv[1][0] * dRdv;
                 const dRdy = J_inv[0][1] * dRdu + J_inv[1][1] * dRdv;
                 
-                grads[cpI * nV + cpJ] = [dRdx, dRdy];
+                const idx = cpI * nV + cpJ;
+                grads[idx] = [dRdx, dRdy];
+                activeIndices.push(idx);
             }
         }
-        return { grads, detJ: detJ_2D };
+        return { grads, detJ: detJ_2D, activeIndices };
     }
 
     calculateInternalForce(patch, u_disp) {
@@ -103,10 +106,11 @@ class IGANonlinearSolver {
 
                         // Consistency: use same J calculations
                         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
-                        const { grads: B_param, detJ } = this.getBParametric(patch, u, v, deriv);
+                        const { grads: B_param, detJ, activeIndices } = this.getBParametric(patch, u, v, deriv);
                         
                         let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
-                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                        for (let a = 0; a < activeIndices.length; a++) {
+                            const k = activeIndices[a];
                             const dRdx = B_param[k][0], dRdy = B_param[k][1];
                             dudx += dRdx * u_disp[k * 2];
                             dudy += dRdy * u_disp[k * 2];
@@ -125,7 +129,8 @@ class IGANonlinearSolver {
 
                         const factor = detJ * wu * wv * this.thickness;
 
-                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                        for (let a = 0; a < activeIndices.length; a++) {
+                            const k = activeIndices[a];
                             const dRdx = B_param[k][0], dRdy = B_param[k][1];
                             const bexx_u = (1 + dudx) * dRdx;
                             const bexx_v = (dvdx) * dRdx;
@@ -172,10 +177,11 @@ class IGANonlinearSolver {
                         const wv = gRule.weights[gv] * (vMax - vMin) / 2;
 
                         const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
-                        const { grads: B_param, detJ } = this.getBParametric(patch, u, v, deriv);
+                        const { grads: B_param, detJ, activeIndices } = this.getBParametric(patch, u, v, deriv);
 
                         let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
-                        for (let k = 0; k < nBasisU * nBasisV; k++) {
+                        for (let a = 0; a < activeIndices.length; a++) {
+                            const k = activeIndices[a];
                             dudx += B_param[k][0] * u_disp[k * 2];
                             dudy += B_param[k][1] * u_disp[k * 2];
                             dvdx += B_param[k][0] * u_disp[k * 2 + 1];
@@ -186,15 +192,16 @@ class IGANonlinearSolver {
                         const factor = detJ * wu * wv * this.thickness;
                         
                         // Assemble Linear & Material Nonlinear
-                        const nPoints = nBasisU * nBasisV;
-                        for (let a = 0; a < nPoints; a++) {
+                        for (let aIdx = 0; aIdx < activeIndices.length; aIdx++) {
+                            const a = activeIndices[aIdx];
                             const dRdx_a = B_param[a][0], dRdy_a = B_param[a][1];
                             const B_a = [
                                 [(1 + dudx) * dRdx_a, (dvdx) * dRdx_a],
                                 [(dudy) * dRdy_a, (1 + dvdy) * dRdy_a],
                                 [(1 + dudx) * dRdy_a + dudy * dRdx_a, (1 + dvdy) * dRdx_a + dvdx * dRdy_a]
                             ];
-                            for (let b = 0; b < nPoints; b++) {
+                            for (let bIdx = 0; bIdx < activeIndices.length; bIdx++) {
+                                const b = activeIndices[bIdx];
                                 const dRdx_b = B_param[b][0], dRdy_b = B_param[b][1];
                                 const B_b = [
                                     [(1 + dudx) * dRdx_b, (dvdx) * dRdx_b],
@@ -224,8 +231,10 @@ class IGANonlinearSolver {
                         const Syy = D[1][0]*Exx + D[1][1]*Eyy;
                         const Sxy = D[2][2]*Exy2;
 
-                        for (let a = 0; a < nPoints; a++) {
-                            for (let b = 0; b < nPoints; b++) {
+                        for (let aIdx = 0; aIdx < activeIndices.length; aIdx++) {
+                            const a = activeIndices[aIdx];
+                            for (let bIdx = 0; bIdx < activeIndices.length; bIdx++) {
+                                const b = activeIndices[bIdx];
                                 const dRdx_a = B_param[a][0], dRdy_a = B_param[a][1];
                                 const dRdx_b = B_param[b][0], dRdy_b = B_param[b][1];
                                 

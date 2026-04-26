@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 3.4 | Hyper-Reduction Methods</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary:#8b5cf6; --secondary:#10b981; --bg:#020617; --card:#0f172a; --text:#f8fafc; --text-dim:#94a3b8; --border:#334155; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.8; }
+        .container { max-width:1000px; margin:0 auto; padding:80px 30px; }
+        .math-card { background:#020617; padding:30px; border-radius:20px; margin:30px 0; border-left:4px solid var(--primary); box-shadow:inset 0 2px 10px rgba(0,0,0,0.5); overflow-x:auto; }
+        .content-section { background:var(--card); border:1px solid var(--border); border-radius:32px; padding:50px; margin-bottom:50px; transition:border-color 0.3s; }
+        .content-section:hover { border-color:var(--primary); }
+        h1 { font-family:'Outfit',sans-serif; font-size:3.5rem; font-weight:800; background:linear-gradient(to right,#fff,#94a3b8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        h2 { font-family:'Outfit',sans-serif; font-size:2.2rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:15px; }
+        h3 { font-family:'Outfit',sans-serif; font-size:1.4rem; font-weight:600; color:#e2e8f0; margin:20px 0 10px; }
+        .highlight { color:var(--primary); font-weight:700; }
+        .method-badge { display:inline-block; padding:4px 14px; border-radius:8px; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-right:6px; }
+        .grid-methods { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+        .method-card { background:rgba(139,92,246,.06); border:1px solid rgba(139,92,246,.2); border-radius:16px; padding:20px; }
+        .method-card h4 { font-weight:700; font-size:.95rem; margin-bottom:6px; }
+        .method-card p { font-size:.85rem; color:var(--text-dim); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-20">
+            <span class="px-4 py-1.5 rounded-full bg-purple-500/10 text-purple-400 text-xs font-bold tracking-widest uppercase border border-purple-500/20 mb-6 inline-block">Phase 3.4 | Hyper-Reduction</span>
+            <h1>Hyper-Reduction<br>for Nonlinear ROM</h1>
+            <p class="mt-6 text-xl text-slate-400 font-light">Breaking the Galerkin bottleneck: six methods to achieve true real-time performance.</p>
+        </header>
+
+        <!-- Section 1: The Bottleneck -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-hourglass-half"></i> 1. The Galerkin Bottleneck</h2>
+            <p>In a standard Galerkin ROM, each Newton-Raphson iteration requires computing the <strong>full internal force</strong> $\mathbf{F}_{int}(\mathbf{\Phi q})$ and <strong>full tangent stiffness</strong> $\mathbf{K}_T(\mathbf{\Phi q})$ by looping over <em>all</em> elements. Only after this expensive assembly is the result projected into the $k$-dimensional reduced space:</p>
+
+            <div class="math-card">
+                <p class="text-xs text-purple-400 mb-2 font-mono uppercase tracking-tighter">The Galerkin Bottleneck</p>
+                $$\underbrace{\mathbf{\Phi}^T}_{\text{cheap}} \cdot \underbrace{\mathbf{F}_{int}(\mathbf{\Phi q})}_{\text{EXPENSIVE: } \mathcal{O}(N_{el})} \implies \text{Cost } \propto N_{el}, \text{ not } k$$
+            </div>
+
+            <p><strong>Hyper-reduction</strong> breaks this bottleneck by approximating $\mathbf{F}_{int}$ using only a small subset of elements or DOFs, reducing the assembly cost from $\mathcal{O}(N_{el})$ to $\mathcal{O}(m)$ where $m \ll N_{el}$.</p>
+        </section>
+
+        <!-- Section 2: Overview -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-sitemap"></i> 2. Two Families of Approaches</h2>
+            <p>Hyper-reduction methods fall into two main families:</p>
+
+            <div class="grid-methods">
+                <div class="method-card" style="border-color:rgba(239,68,68,.4)">
+                    <h4 style="color:#ef4444"><i class="fa-solid fa-vector-square mr-2"></i>Interpolation-Based</h4>
+                    <p>Approximate $\mathbf{F}_{int}$ by evaluating only a subset of <strong>DOF entries</strong>, then reconstructing the full vector using a nonlinear basis.</p>
+                    <p class="mt-2 text-xs text-slate-500">Methods: <strong>DEIM, UDEIM, Gappy POD</strong></p>
+                </div>
+                <div class="method-card" style="border-color:rgba(16,185,129,.4)">
+                    <h4 style="color:#10b981"><i class="fa-solid fa-cubes mr-2"></i>Element Sampling</h4>
+                    <p>Select a weighted subset of <strong>elements</strong> and assemble the projected operators directly from this reduced mesh.</p>
+                    <p class="mt-2 text-xs text-slate-500">Methods: <strong>ECSW, ECM, Collocation (LSPG)</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: DEIM -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-crosshairs"></i> 3. DEIM</h2>
+            <p>The <strong>Discrete Empirical Interpolation Method</strong> (Chaturantabut & Sorensen, 2010) constructs a low-rank approximation of the nonlinear function $\mathbf{F}_{int}(\mathbf{u})$.</p>
+
+            <h3>Offline: Greedy Index Selection</h3>
+            <p>Apply POD/SVD to snapshots of $\mathbf{F}_{int}$ to obtain a nonlinear basis $\mathbf{U}_f \in \mathbb{R}^{N \times m}$. Then greedily select $m$ interpolation indices $\mathcal{P}$ such that the interpolation problem is well-conditioned:</p>
+
+            <div class="math-card">
+                <p class="text-xs text-red-400 mb-2 font-mono uppercase tracking-tighter">DEIM Approximation</p>
+                $$\mathbf{F}_{int} \approx \mathbf{U}_f (\mathbf{P}^T \mathbf{U}_f)^{-1} \mathbf{P}^T \mathbf{F}_{int}$$
+            </div>
+
+            <h3>Online: Partial Evaluation</h3>
+            <p>Only the $m$ rows of $\mathbf{F}_{int}$ at indices $\mathcal{P}$ need to be computed. The full vector is then reconstructed via the precomputed operator.</p>
+        </section>
+
+        <!-- Section 4: UDEIM -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-layer-group"></i> 4. UDEIM</h2>
+            <p>The <strong>Unassembled DEIM</strong> (Tiso & Rixen, 2013) applies DEIM to the <em>unassembled</em> element-level force vectors rather than the assembled global vector.</p>
+
+            <div class="math-card">
+                <p class="text-xs text-orange-400 mb-2 font-mono uppercase tracking-tighter">Unassembled Stacking</p>
+                $$\tilde{\mathbf{f}} = \begin{bmatrix} \mathbf{f}_{e_1} \\ \mathbf{f}_{e_2} \\ \vdots \\ \mathbf{f}_{e_{N_{el}}} \end{bmatrix} \in \mathbb{R}^{N_{el} \cdot N_{dof}}, \quad \mathbf{F}_{int} = \sum_{e=1}^{N_{el}} \mathbf{L}_e^T \mathbf{f}_e$$
+            </div>
+
+            <p>DEIM is applied to the stacked vector $\tilde{\mathbf{f}}$, which naturally selects <strong>specific elements</strong> rather than arbitrary DOFs. This avoids the inconsistency issue of DEIM where selected DOFs may span many elements.</p>
+        </section>
+
+        <!-- Section 5: Gappy POD -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-puzzle-piece"></i> 5. Gappy POD</h2>
+            <p>Gappy POD (Everson & Sirovich, 1995) uses the same nonlinear basis $\mathbf{U}_f$ as DEIM but employs <strong>oversampled indices</strong> and <strong>least-squares reconstruction</strong> instead of interpolation:</p>
+
+            <div class="math-card">
+                <p class="text-xs text-yellow-400 mb-2 font-mono uppercase tracking-tighter">Gappy POD Reconstruction</p>
+                $$\mathbf{c} = (\mathbf{P}^T \mathbf{U}_f)^{\dagger} \mathbf{P}^T \mathbf{F}_{int}, \quad \mathbf{F}_{int} \approx \mathbf{U}_f \mathbf{c}$$
+            </div>
+
+            <p>Using $m_{over} > m$ sampling indices makes the reconstruction overdetermined and more robust to noise, at the cost of slightly more evaluations.</p>
+        </section>
+
+        <!-- Section 6: ECSW -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-scale-balanced"></i> 6. ECSW</h2>
+            <p>The <strong>Energy-Conserving Sampling and Weighting</strong> method (Farhat et al., 2015) directly approximates the <em>projected</em> internal force as a weighted sum over a subset of elements:</p>
+
+            <div class="math-card">
+                <p class="text-xs text-green-400 mb-2 font-mono uppercase tracking-tighter">ECSW Approximation</p>
+                $$\mathbf{\Phi}^T \mathbf{F}_{int} \approx \sum_{e \in \mathcal{E}_r} w_e \cdot \mathbf{\Phi}_e^T \mathbf{f}_e, \quad w_e \geq 0$$
+            </div>
+
+            <p>The weights $w_e$ are found by solving a <strong>Non-Negative Least Squares (NNLS)</strong> problem over the training snapshots. Elements with $w_e > 0$ form the reduced mesh. ECSW naturally preserves energy conservation since all weights are non-negative.</p>
+        </section>
+
+        <!-- Section 7: ECM -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-magnifying-glass-chart"></i> 7. ECM</h2>
+            <p>The <strong>Empirical Cubature Method</strong> (Hernández et al., 2017) selects integration points via a <strong>greedy column-pivoting</strong> strategy on the contribution matrix:</p>
+
+            <div class="math-card">
+                <p class="text-xs text-cyan-400 mb-2 font-mono uppercase tracking-tighter">ECM Greedy Selection</p>
+                $$\text{Select } e^* = \arg\max_{e \notin \mathcal{E}_r} |\mathbf{c}_e^T \mathbf{r}|, \quad \mathbf{r} = \mathbf{b} - \mathbf{G}_{\mathcal{E}_r} \mathbf{w}$$
+            </div>
+
+            <p>ECM iteratively adds the element whose contribution has the largest correlation with the current residual, then re-solves for optimal weights. It typically selects fewer elements than ECSW for comparable accuracy.</p>
+        </section>
+
+        <!-- Section 8: Collocation (LSPG) -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-bullseye"></i> 8. Collocation (LSPG)</h2>
+            <p>The <strong>Least-Squares Petrov-Galerkin</strong> method (Carlberg et al., 2011) replaces the Galerkin projection with a <strong>least-squares minimization</strong> of the residual at selected collocation DOFs:</p>
+
+            <div class="math-card">
+                <p class="text-xs text-purple-400 mb-2 font-mono uppercase tracking-tighter">LSPG Formulation</p>
+                $$\Delta \mathbf{q} = \arg\min_{\delta} \| \mathbf{P}^T \mathbf{R}(\mathbf{\Phi}(\mathbf{q} + \delta)) \|^2$$
+                $$\implies (\mathbf{J}_P^T \mathbf{J}_P) \Delta\mathbf{q} = \mathbf{J}_P^T \mathbf{R}_P$$
+            </div>
+
+            <p>where $\mathbf{J}_P = \mathbf{P}^T \mathbf{K}_T \mathbf{\Phi}$ is the sampled Jacobian. This Petrov-Galerkin formulation provides better stability for convection-dominated problems and non-symmetric systems.</p>
+        </section>
+
+        <!-- Summary Comparison -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-chart-bar"></i> 9. Comparison Summary</h2>
+            <table class="w-full text-sm mt-6" style="border-collapse:separate; border-spacing:0 8px;">
+                <thead>
+                    <tr class="text-left text-xs uppercase tracking-wider text-slate-500">
+                        <th class="pb-4">Method</th><th class="pb-4">Sampling</th><th class="pb-4">Reconstruction</th><th class="pb-4">Key Advantage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td class="py-2 font-bold" style="color:#ef4444">DEIM</td><td>DOFs</td><td>Interpolation</td><td class="text-slate-400">Simple, fast</td></tr>
+                    <tr><td class="py-2 font-bold" style="color:#f97316">UDEIM</td><td>Elements</td><td>Interpolation</td><td class="text-slate-400">Element-consistent</td></tr>
+                    <tr><td class="py-2 font-bold" style="color:#eab308">Gappy POD</td><td>DOFs (oversampled)</td><td>Least-squares</td><td class="text-slate-400">Noise-robust</td></tr>
+                    <tr><td class="py-2 font-bold" style="color:#10b981">ECSW</td><td>Elements</td><td>Weighted sum</td><td class="text-slate-400">Energy-conserving</td></tr>
+                    <tr><td class="py-2 font-bold" style="color:#06b6d4">ECM</td><td>Elements (greedy)</td><td>Weighted sum</td><td class="text-slate-400">Fewer points</td></tr>
+                    <tr><td class="py-2 font-bold" style="color:#8b5cf6">LSPG</td><td>DOFs</td><td>Petrov-Galerkin</td><td class="text-slate-400">Stability</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <footer class="text-center mt-20 border-t border-slate-800 pt-10">
+            <a href="../app/simulations/iga-sim-3.4/index.html" class="px-8 py-3 bg-purple-600 rounded-xl font-bold hover:bg-purple-500 transition-all inline-flex items-center gap-2">
+                <i class="fa-solid fa-play"></i> Launch HR-ROM Benchmark Lab
+            </a>
+            <div class="mt-6">
+                <a href="theory-3.2.html" class="text-slate-500 hover:text-slate-300 text-sm mr-6"><i class="fa-solid fa-arrow-left mr-1"></i> 3.2 NL-ROM</a>
+                <a href="theory-3.3.html" class="text-slate-500 hover:text-slate-300 text-sm">3.3 Follower Forces <i class="fa-solid fa-arrow-right ml-1"></i></a>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
