@@ -322,45 +322,133 @@ class DEIMBenchmarkApp {
         status.classList.remove('hidden');
         this.romEngine.clearSnapshots();
 
+        const strategy = document.getElementById('input-sampling-strategy').value;
         const bcs = this.getBCs();
-        const E_vals = [50000, 100000, 150000];
-        const nu_vals = [0.25, 0.4];
-        const load_fracs = [0.25, 0.50, 0.75, 1.00];
-        const nSnaps = E_vals.length * nu_vals.length * load_fracs.length;
         const forceSnaps = [];
         const snapDisp = [];  // Store displacement snapshots for tangent pre-computation
 
-        console.group("DEIM Training: 3D Parametric Sweep");
-        console.log(`Generating ${nSnaps} snapshots across E, nu, and Load (F_max=${this.loadMag})`);
+        // 1. Generate Candidate Pool
+        const E_vals = [50000, 100000, 150000];
+        const nu_vals = [0.25, 0.4];
+        const load_fracs = [0.25, 0.50, 0.75, 1.00];
+        const allCandidates = [];
+        for (const E of E_vals) for (const nu of nu_vals) for (const frac of load_fracs) {
+            allCandidates.push({ E, nu, f: this.loadMag * frac });
+        }
 
-        let snapIdx = 1;
-        for (const E of E_vals) {
-            for (const nu of nu_vals) {
-                this.solverFOM.E = E;
-                this.solverFOM.nu = nu;
+        this.testSet8020 = null;
+        this.samplingStrategy = strategy;
+
+        if (strategy === '8020') {
+            console.group("DEIM Training: 80/20 Train/Test Split");
+            // Shuffle
+            for (let i = allCandidates.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allCandidates[i], allCandidates[j]] = [allCandidates[j], allCandidates[i]];
+            }
+            const trainCount = Math.floor(allCandidates.length * 0.8);
+            this.testSet8020 = allCandidates.slice(trainCount);
+            const trainSet = allCandidates.slice(0, trainCount);
+
+            console.log(`Pool: ${allCandidates.length} | Train: ${trainSet.length} | Test: ${this.testSet8020.length}`);
+
+            let snapIdx = 1;
+            for (const state of trainSet) {
+                this.solverFOM.E = state.E;
+                this.solverFOM.nu = state.nu;
+                status.textContent = `FOM snapshot ${snapIdx}/${trainSet.length} (E=${state.E/1000}k, nu=${state.nu}, F=${state.f.toFixed(0)})...`;
                 
-                for (const frac of load_fracs) {
-                    const f = this.loadMag * frac;
-                    status.textContent = `FOM snapshot ${snapIdx}/${nSnaps} (E=${E/1000}k, nu=${nu}, F=${f.toFixed(0)})...`;
+                const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {steps:3, iterations:12});
+                this.romEngine.addSnapshot(res.u);
+                snapDisp.push(new Float64Array(res.u));
+
+                const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
+                this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
+                forceSnaps.push(Fint);
+                
+                const tipIdx = ((this.patch.controlPoints.length-1)*this.patch.controlPoints[0].length + Math.floor(this.patch.controlPoints[0].length/2)) * 2 + 1;
+                console.log(`Train ${snapIdx}: E=${state.E}, nu=${state.nu.toFixed(2)}, F=${state.f.toFixed(0)} | Tip=${Math.abs(res.u[tipIdx]).toFixed(4)}`);
+                snapIdx++;
+                await new Promise(r => setTimeout(r, 5));
+            }
+            console.groupEnd();
+        } else {
+            console.group("DEIM Training: Greedy Parametric Sampling");
+            const trainSet = [allCandidates[0], allCandidates[allCandidates.length-1]]; // Edges
+            const candidatePool = allCandidates.slice(1, allCandidates.length-1);
+            const targetSnapshots = 12;
+
+            for(let i=0; i<trainSet.length; i++) {
+                const state = trainSet[i];
+                this.solverFOM.E = state.E;
+                this.solverFOM.nu = state.nu;
+                status.textContent = `Greedy Init ${i+1}/2...`;
+                const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {steps:3, iterations:12});
+                this.romEngine.addSnapshot(res.u);
+                snapDisp.push(new Float64Array(res.u));
+                const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
+                this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
+                forceSnaps.push(Fint);
+                console.log(`Init ${i+1}: E=${state.E}, nu=${state.nu}, F=${state.f.toFixed(0)}`);
+                await new Promise(r => setTimeout(r, 5));
+            }
+
+            for(let step = trainSet.length; step < targetSnapshots; step++) {
+                status.textContent = `Greedy Selection Step ${step+1}/${targetSnapshots}...`;
+                await new Promise(r => setTimeout(r, 10));
+
+                this.romEngine.computePOD(this.k);
+                const tempDeim = new DEIMEngine();
+                tempDeim.train(forceSnaps, this.deimM, this.k);
+                tempDeim.computeActiveElements(this.patch);
+                tempDeim.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
+
+                let maxError = -1, worstIdx = -1;
+
+                for (let i = 0; i < candidatePool.length; i++) {
+                    const cand = candidatePool[i];
+                    this.solverFOM.E = cand.E;
+                    this.solverFOM.nu = cand.nu;
+                    try {
+                        const loads = this.getLoads(cand.f);
+                        const res = tempDeim.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {iterations:10, steps:1});
+                        
+                        const Fint_exact = this.solverFOM.calculateInternalForce(this.patch, res.u);
+                        this.solverFOM.applyPenaltyConstraints(null, Fint_exact, res.u, this.patch);
+                        
+                        const Fext = new Float64Array(Fint_exact.length);
+                        loads.forEach(l => {
+                            const idx = (l.i * this.patch.controlPoints[0].length + l.j) * 2;
+                            Fext[idx] += l.fx; Fext[idx+1] += l.fy;
+                        });
+
+                        let err2 = 0;
+                        for(let j=0; j<Fext.length; j++) err2 += Math.pow(Fext[j] - Fint_exact[j], 2);
+                        const err = Math.sqrt(err2);
+                        
+                        if (err > maxError) { maxError = err; worstIdx = i; }
+                    } catch(e) {
+                        maxError = Infinity; worstIdx = i; break;
+                    }
+                }
+
+                if (worstIdx !== -1) {
+                    const worst = candidatePool[worstIdx];
+                    candidatePool.splice(worstIdx, 1);
+                    console.log(`Selected: E=${worst.E}, nu=${worst.nu}, F=${worst.f.toFixed(0)} | Max Err: ${maxError === Infinity ? 'DIVERGED' : maxError.toExponential(2)}`);
                     
-                    const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(f), {steps:3, iterations:12});
-                    
+                    this.solverFOM.E = worst.E;
+                    this.solverFOM.nu = worst.nu;
+                    const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(worst.f), {steps:3, iterations:12});
                     this.romEngine.addSnapshot(res.u);
                     snapDisp.push(new Float64Array(res.u));
-
                     const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
                     this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
                     forceSnaps.push(Fint);
-                    
-                    const tipIdx = ((this.patch.controlPoints.length-1)*this.patch.controlPoints[0].length + Math.floor(this.patch.controlPoints[0].length/2)) * 2 + 1;
-                    console.log(`Snapshot ${snapIdx}: E=${E}, nu=${nu.toFixed(2)}, F=${f.toFixed(0)} | Tip Disp=${Math.abs(res.u[tipIdx]).toFixed(4)} | Fint Norm=${Math.sqrt(Fint.reduce((a,b)=>a+b*b,0)).toExponential(2)}`);
-
-                    snapIdx++;
-                    await new Promise(r => setTimeout(r, 5));
                 }
             }
+            console.groupEnd();
         }
-        console.groupEnd();
         
         // Restore default properties
         this.solverFOM.E = 100000;
@@ -371,7 +459,7 @@ class DEIMBenchmarkApp {
         const podInfo = this.romEngine.computePOD(this.k);
         document.getElementById('energy-val').textContent = `Energy: ${(podInfo.energy*100).toFixed(2)}%`;
         document.getElementById('input-k').disabled = false;
-        document.getElementById('input-k').max = nSnaps;
+        document.getElementById('input-k').max = forceSnaps.length;
 
         status.textContent = `Training DEIM (m=${this.deimM}, kf=${this.k})...`;
         await new Promise(r => setTimeout(r, 10));
@@ -419,16 +507,52 @@ class DEIMBenchmarkApp {
         this.updateSpeedupChart(data);
         document.getElementById('btn-compare').disabled = false;
 
+        // Evaluate 80/20 Test Set if applicable
+        const testErrors = [];
+        if (this.samplingStrategy === '8020' && this.testSet8020) {
+            console.group("Evaluating 80/20 Test Set (Unseen Parameters)");
+            const bcs = this.getBCs();
+            for (const state of this.testSet8020) {
+                this.solverFOM.E = state.E;
+                this.solverFOM.nu = state.nu;
+                try {
+                    const loads = this.getLoads(state.f);
+                    const resFOM = this.solverFOM.solveNonlinear(this.patch, bcs, loads, {steps:3, iterations:12});
+                    const resROM = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {steps:3, iterations:12});
+                    
+                    let err2 = 0, norm2 = 0;
+                    for(let i=0; i<resFOM.u.length; i++) {
+                        err2 += Math.pow(resFOM.u[i] - resROM.u[i], 2);
+                        norm2 += Math.pow(resFOM.u[i], 2);
+                    }
+                    const relErr = Math.sqrt(err2) / Math.max(Math.sqrt(norm2), 1e-12);
+                    testErrors.push({ state, relErr });
+                    console.log(`Test State (E=${state.E}, nu=${state.nu}, F=${state.f.toFixed(0)}) -> Rel Error: ${(relErr*100).toFixed(2)}%`);
+                } catch(e) {
+                    testErrors.push({ state, error: e.message });
+                    console.log(`Test State (E=${state.E}, nu=${state.nu}, F=${state.f.toFixed(0)}) -> DIVERGED`);
+                }
+            }
+            console.groupEnd();
+            // Restore defaults
+            this.solverFOM.E = 100000;
+            this.solverFOM.nu = 0.3;
+        }
+
         // --- Generate Copy-Paste Feedback Dump ---
         const feedback = {
             parameters: {
                 meshLevel: this.meshLevel,
                 load: this.loadMag,
                 POD_k: this.k,
-                DEIM_m: this.deimM
+                DEIM_m: this.deimM,
+                samplingStrategy: this.samplingStrategy
             },
             results: data
         };
+        if (this.samplingStrategy === '8020') {
+            feedback.testSetEvaluation = testErrors;
+        }
         console.log("\n================ FEEDBACK SUMMARY ================\n" + JSON.stringify(feedback, null, 2) + "\n==================================================\n");
     }
 
@@ -452,9 +576,10 @@ class DEIMBenchmarkApp {
                 t.classList.add('active');
                 document.getElementById('chart-speedup-wrap').classList.toggle('hidden', t.dataset.chart !== 'speedup');
                 document.getElementById('chart-fd-wrap').classList.toggle('hidden', t.dataset.chart !== 'fd');
+                document.getElementById('chart-error-wrap').classList.toggle('hidden', t.dataset.chart !== 'error');
                 document.getElementById('explorer-wrap').classList.toggle('hidden', t.dataset.chart !== 'explorer');
                 
-                if (t.dataset.chart === 'fd' && this.isTrained) this.runFDCurves();
+                if ((t.dataset.chart === 'fd' || t.dataset.chart === 'error') && this.isTrained) this.runFDCurves();
                 if (t.dataset.chart === 'explorer') {
                     this.isExplorerActive = true;
                     this.runDEIMExplorer(this.explorerStep);
@@ -466,6 +591,13 @@ class DEIMBenchmarkApp {
                     this._render();
                 }
             };
+        });
+
+        this.errorChart = new Chart(document.getElementById('chart-error'), {
+            type: 'line', data: { labels: [], datasets: [] },
+            options: { responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{position:'top', labels:{font:{size:9}}}},
+                scales:{x:{title:{display:true, text:'Load F', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error', font:{size:10}}}}}
         });
 
         // Initialize DEIM Residual Chart
@@ -498,21 +630,61 @@ class DEIMBenchmarkApp {
     async runFDCurves() {
         if (!this.isTrained) return;
         const loads = [20, 50, 100, 150, 200, 300, 400, 500];
-        const datasets = {};
+        const datasets_fd = {};
+        const datasets_err = {};
+        
+        // Ground truth FOM results for each load step
+        const fom_results = [];
+        for (const f of loads) {
+            try { const { result } = this.solve('fom', f); fom_results.push(result.u); }
+            catch(e) { fom_results.push(null); }
+        }
+
         for (const m of Object.keys(METHODS)) {
-            datasets[m] = [];
-            for (const f of loads) {
-                try { const { meta } = this.solve(m, f); datasets[m].push(Math.abs(meta.tipDisp || 0)); }
-                catch(e) { datasets[m].push(0); }
+            datasets_fd[m] = [];
+            datasets_err[m] = [];
+            for (let i = 0; i < loads.length; i++) {
+                const f = loads[i];
+                try { 
+                    const { result, meta } = this.solve(m, f); 
+                    datasets_fd[m].push(Math.abs(meta.tipDisp || 0));
+                    
+                    if (m === 'fom') {
+                        datasets_err[m].push(1e-12); // almost 0 for log scale
+                    } else if (fom_results[i]) {
+                        let err2 = 0, norm2 = 0;
+                        for(let j=0; j<result.u.length; j++) {
+                            err2 += Math.pow(result.u[j] - fom_results[i][j], 2);
+                            norm2 += Math.pow(fom_results[i][j], 2);
+                        }
+                        const relErr = Math.sqrt(err2) / Math.max(Math.sqrt(norm2), 1e-12);
+                        datasets_err[m].push(relErr);
+                    } else {
+                        datasets_err[m].push(null);
+                    }
+                }
+                catch(e) { 
+                    datasets_fd[m].push(0); 
+                    datasets_err[m].push(null); 
+                }
             }
         }
+
         this.fdChart.data.labels = loads;
         this.fdChart.data.datasets = Object.keys(METHODS).map(m => ({
-            label: METHODS[m].label, data: datasets[m],
+            label: METHODS[m].label, data: datasets_fd[m],
             borderColor: METHODS[m].color, backgroundColor: METHODS[m].color + '33',
             borderWidth: 2, pointRadius: 3, tension: 0.3
         }));
         this.fdChart.update();
+
+        this.errorChart.data.labels = loads;
+        this.errorChart.data.datasets = Object.keys(METHODS).filter(m => m !== 'fom').map(m => ({
+            label: METHODS[m].label, data: datasets_err[m],
+            borderColor: METHODS[m].color, backgroundColor: METHODS[m].color + '33',
+            borderWidth: 2, pointRadius: 3, tension: 0.3
+        }));
+        this.errorChart.update();
     }
 
     runDEIMExplorer(step) {

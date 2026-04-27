@@ -18,13 +18,13 @@ class DEIMBenchmarkApp {
         this.engine = new NURBS2D();
         this.solverFOM = new IGANonlinearSolver(this.engine);
         this.romEngine = new ROMEngine(this.solverFOM);
-        this.deimEngine = new QDEIMEngine();
+        this.ecswEngine = new ECSWEngine();
 
         this.patch = null;
         this.method = 'fom';
         this.loadMag = 200;
         this.k = 5;
-        this.deimM = 8;
+        this.ecswTolValue = 4; // Represents 1e-4
         this.meshLevel = 1;
         this.loadType = 'tip';
         this.showDOFs = true;
@@ -137,8 +137,8 @@ class DEIMBenchmarkApp {
         } else if (method === 'galerkin') {
             result = this.romEngine.solveReduced(this.patch, bcs, loads, {iterations:15});
         } else if (method === 'deim') {
-            result = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {iterations:15, steps:1});
-            meta.sampled = `${result.sampledCount} / ${result.totalDofs} dofs`;
+            result = this.ecswEngine.solveReduced(this.solverFOM, this.patch, loads, {iterations:15, steps:1});
+            meta.sampled = `${this.ecswEngine.sampleElements.length} elements`;
         }
 
         const dt = performance.now() - t0;
@@ -398,10 +398,8 @@ class DEIMBenchmarkApp {
                 await new Promise(r => setTimeout(r, 10));
 
                 this.romEngine.computePOD(this.k);
-                const tempDeim = new QDEIMEngine();
-                tempDeim.train(forceSnaps, this.deimM, this.k);
-                tempDeim.computeActiveElements(this.patch);
-                tempDeim.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
+                const tempEcsw = new ECSWEngine();
+                await tempEcsw.train(this.solverFOM, this.romEngine, this.patch, snapDisp, Math.pow(10, -this.ecswTolValue));
 
                 let maxError = -1, worstIdx = -1;
 
@@ -411,7 +409,7 @@ class DEIMBenchmarkApp {
                     this.solverFOM.nu = cand.nu;
                     try {
                         const loads = this.getLoads(cand.f);
-                        const res = tempDeim.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {iterations:10, steps:1});
+                        const res = tempEcsw.solveReduced(this.solverFOM, this.patch, loads, {iterations:10, steps:1});
                         
                         const Fint_exact = this.solverFOM.calculateInternalForce(this.patch, res.u);
                         this.solverFOM.applyPenaltyConstraints(null, Fint_exact, res.u, this.patch);
@@ -461,16 +459,13 @@ class DEIMBenchmarkApp {
         document.getElementById('input-k').disabled = false;
         document.getElementById('input-k').max = forceSnaps.length;
 
-        status.textContent = `Training DEIM (m=${this.deimM}, kf=${this.k})...`;
+        status.textContent = `Training ECSW (tol=1e-${this.ecswTolValue}, k=${this.k})...`;
         await new Promise(r => setTimeout(r, 10));
-        // Use k force modes, but m interpolation points for Least-Squares stability
-        const deimInfo = this.deimEngine.train(forceSnaps, this.deimM, this.k);
+        
+        const ecswInfo = await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, snapDisp, Math.pow(10, -this.ecswTolValue));
+        
         document.getElementById('input-m').disabled = false;
-        document.getElementById('deim-info').textContent = `${deimInfo.m} interpolation points selected`;
-
-        // Compute active elements for speedup
-        status.textContent = 'Mapping active elements...';
-        this.deimEngine.computeActiveElements(this.patch);
+        document.getElementById('deim-info').textContent = `${ecswInfo.elementCount} / ${ecswInfo.totalElements} elements selected`;
 
         // Pre-compute reduced tangent from snapshot displacements (key for speedup)
         status.textContent = 'Pre-computing reduced tangent...';
@@ -482,8 +477,9 @@ class DEIMBenchmarkApp {
         this.snapDisp = snapDisp;  // Keep for retrain on k change
         btn.disabled = false;
         document.getElementById('btn-compare').disabled = false;
-        document.getElementById('btn-explorer').disabled = false;
-        status.textContent = `Training complete ✓ — POD: ${(podInfo.energy*100).toFixed(1)}% energy, DEIM: ${deimInfo.m} pts, K_r pre-computed`;
+        // ECSW explorer not supported yet
+        document.getElementById('btn-explorer').disabled = true;
+        status.textContent = `Training complete ✓ — POD: ${(podInfo.energy*100).toFixed(1)}% energy, ECSW: ${ecswInfo.elementCount} elements`;
         setTimeout(() => status.classList.add('hidden'), 5000);
         this.updatePhysics();
     }
@@ -518,7 +514,7 @@ class DEIMBenchmarkApp {
                 try {
                     const loads = this.getLoads(state.f);
                     const resFOM = this.solverFOM.solveNonlinear(this.patch, bcs, loads, {steps:3, iterations:12});
-                    const resROM = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {steps:3, iterations:12});
+                    const resROM = this.ecswEngine.solveReduced(this.solverFOM, this.patch, loads, {steps:3, iterations:12});
                     
                     let err2 = 0, norm2 = 0;
                     for(let i=0; i<resFOM.u.length; i++) {
@@ -545,7 +541,7 @@ class DEIMBenchmarkApp {
                 meshLevel: this.meshLevel,
                 load: this.loadMag,
                 POD_k: this.k,
-                DEIM_m: this.deimM,
+                ECSW_Tolerance: `1e-${this.ecswTolValue}`,
                 samplingStrategy: this.samplingStrategy
             },
             results: data
@@ -688,6 +684,7 @@ class DEIMBenchmarkApp {
     }
 
     runDEIMExplorer(step) {
+        return; // Disabled for ECSW
         if (!this.deimEngine.history || this.deimEngine.history.length === 0) return;
         const h = this.deimEngine.history[step - 1];
         
@@ -807,12 +804,12 @@ class DEIMBenchmarkApp {
             }
         };
 
-        document.getElementById('input-m').oninput = e => {
-            this.deimM = parseInt(e.target.value);
-            document.getElementById('m-val').textContent = this.deimM;
-            if (this.isTrained && this.forceSnaps) {
-                const info = this.deimEngine.train(this.forceSnaps, this.deimM);
-                document.getElementById('deim-info').textContent = `${info.m} interpolation points`;
+        document.getElementById('input-m').oninput = async e => {
+            this.ecswTolValue = parseInt(e.target.value);
+            document.getElementById('m-val').textContent = `1e-${this.ecswTolValue}`;
+            if (this.isTrained && this.snapDisp) {
+                const info = await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, Math.pow(10, -this.ecswTolValue));
+                document.getElementById('deim-info').textContent = `${info.elementCount} elements`;
                 this._scheduleUpdate();
             }
         };
