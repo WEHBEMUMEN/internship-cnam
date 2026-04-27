@@ -1,0 +1,290 @@
+name: test
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/*
+defaults:
+  run:
+    shell: bash
+env:
+  official_container_repository: ghcr.io/evalf/nutils
+jobs:
+  build-python-package:
+    name: Build Python package
+    runs-on: ubuntu-latest
+    outputs:
+      wheel: ${{ steps.build.outputs.wheel }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install build dependencies
+        run: python -um pip install flit
+      - name: Build package
+        id: build
+        run: |
+          # To make the wheels reproducible, set the timestamp of the (files in
+          # the) generated wheels to the date of the commit.
+          export SOURCE_DATE_EPOCH=`git show -s --format=%ct`
+          python -um flit build
+          echo wheel=`echo dist/*.whl` >> $GITHUB_OUTPUT
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+          if-no-files-found: error
+  test:
+    needs: build-python-package
+    name: 'Test ${{ matrix.name }}'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - {name: "baseline", os: ubuntu-latest, python-version: "3.14", matrix-backend: numpy, nprocs: 1}
+          - {name: "windows", os: windows-latest, python-version: "3.14", matrix-backend: numpy, nprocs: 1}
+          - {name: "macos", os: macos-latest, python-version: "3.14", matrix-backend: numpy, nprocs: 1}
+          - {name: "python 3.10", os: ubuntu-latest, python-version: "3.10", matrix-backend: numpy, nprocs: 1}
+          - {name: "python 3.11", os: ubuntu-latest, python-version: "3.11", matrix-backend: numpy, nprocs: 1}
+          - {name: "python 3.12", os: ubuntu-latest, python-version: "3.12", matrix-backend: numpy, nprocs: 1}
+          - {name: "python 3.13", os: ubuntu-latest, python-version: "3.13", matrix-backend: numpy, nprocs: 1}
+          - {name: "scipy matrix", os: ubuntu-latest, python-version: "3.14", matrix-backend: scipy, nprocs: 1}
+          - {name: "mkl linux", os: ubuntu-latest, python-version: "3.14", matrix-backend: mkl, nprocs: 1}
+          - {name: "mkl linux parallel", os: ubuntu-latest, python-version: "3.14", matrix-backend: mkl, nprocs: 2}
+          - {name: "mkl windows", os: windows-latest, python-version: "3.14", matrix-backend: mkl, nprocs: 1}
+          - {name: "parallel", os: ubuntu-latest, python-version: "3.14", matrix-backend: numpy, nprocs: 2}
+          - {name: "numpy 2.0", os: ubuntu-latest, python-version: "3.14", matrix-backend: numpy, nprocs: 1, numpy-version: ==2.0.1}
+          - {name: "tensorial", os: ubuntu-latest, python-version: "3.14", matrix-backend: numpy, nprocs: 1, tensorial: test}
+      fail-fast: false
+    env:
+      _wheel: ${{ needs.build-python-package.outputs.wheel }}
+      NUTILS_MATRIX: ${{ matrix.matrix-backend }}
+      NUTILS_NPROCS: ${{ matrix.nprocs }}
+      NUTILS_DEBUG: all
+      OMP_NUM_THREADS: 1
+      VECLIB_MAXIMUM_THREADS: 1
+      MKL_DYNAMIC: FALSE
+      MKL_NUM_THREADS: 1
+      PYTHONHASHSEED: 0
+      NUTILS_TENSORIAL: ${{ matrix.tensorial }}
+      NUTILS_TESTING_REQUIRES: "mod:matplotlib mod:meshio mod:PIL"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download Python package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+      - name: Install Graphviz
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt install -y graphviz
+          echo "NUTILS_TESTING_REQUIRES=$NUTILS_TESTING_REQUIRES app:dot" >> $GITHUB_ENV
+      - name: Install Gmsh
+        # install gmsh via pip on windows and macos and via apt on linux, as
+        # the latter version is dynamically linked and requires libgl etc.
+        run: |
+          ${{ matrix.os == 'ubuntu-latest' && 'sudo apt install gmsh' || 'python -um pip install gmsh' }}
+          echo "NUTILS_TESTING_REQUIRES=$NUTILS_TESTING_REQUIRES app:gmsh" >> $GITHUB_ENV
+      - name: Install Nutils and dependencies
+        id: install
+        env:
+          _numpy_version: ${{ matrix.numpy-version }}
+        run: |
+          python -um pip install --upgrade --upgrade-strategy eager wheel
+          # Install Nutils from `dist` dir created in job `build-python-package`.
+          python -um pip install --upgrade --upgrade-strategy eager "$_wheel[import-gmsh,export-mpl]" numpy$_numpy_version
+      - name: Install Scipy
+        if: ${{ matrix.matrix-backend == 'scipy' }}
+        run: |
+          python -um pip install --upgrade scipy
+          echo "NUTILS_TESTING_REQUIRES=$NUTILS_TESTING_REQUIRES mod:scipy" >> $GITHUB_ENV
+      - name: Configure MKL
+        if: ${{ matrix.matrix-backend == 'mkl' }}
+        run: |
+          python -um pip install --upgrade --upgrade-strategy eager mkl
+          echo "NUTILS_TESTING_REQUIRES=$NUTILS_TESTING_REQUIRES lib:mkl_rt" >> $GITHUB_ENV
+      - name: Test
+        env:
+          COVERAGE_ID: ${{ matrix.name }}
+        run: python -um devtools.gha.unittest
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: _coverage_${{ matrix.name }}
+          path: target/coverage/
+          if-no-files-found: error
+  process-coverage:
+    if: ${{ always() }}
+    needs: test
+    name: 'Test coverage'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: _coverage_*
+          path: target/coverage
+          merge-multiple: true
+      - name: Generate summary
+        run: python -um devtools.gha.report_coverage
+      - name: Upload lcov artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: target/coverage/coverage.info
+      - name: Delete temporary coverage artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -um devtools.gha.delete_coverage_artifacts
+  test-examples:
+    needs: build-python-package
+    name: 'Test ${{ matrix.example }} on ${{ matrix.os }}'
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      matrix:
+        example:
+          - adaptivity
+          - burgers
+          - cahnhilliard
+          - coil
+          - cylinderflow
+          - drivencavity
+          - elasticity
+          - finitestrain
+          - laplace
+          - platewithhole
+          - poisson
+          - torsion
+          - turek
+        os: [ubuntu, macos, windows]
+      fail-fast: false
+    env:
+      _wheel: ${{ needs.build-python-package.outputs.wheel }}
+      NUTILS_NPROCS: 1
+      NUTILS_DEBUG: all
+      OMP_NUM_THREADS: 1
+      VECLIB_MAXIMUM_THREADS: 1
+      PYTHONHASHSEED: 0
+      PYTHONUTF8: 1 # pending https://github.com/pypa/pip/pull/13862
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Download Python package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+      - name: Install Gmsh
+        if: ${{ matrix.os == 'ubuntu' }}
+        # install gmsh dependencies on ubuntu as the pip package is dynamically linked
+        run: sudo apt install libglu1-mesa
+      - name: Install Nutils and dependencies
+        id: install
+        run: |
+          python -um pip install --upgrade --upgrade-strategy eager pip
+          # Install Nutils from `dist` dir created in job `build-python-package`.
+          python -um pip install "$_wheel" --requirements-from-script examples/${{ matrix.example }}.py
+      - name: Test
+        run: python -um unittest -bv examples.${{ matrix.example }}
+  test-sphinx:
+    name: Test building docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: |
+          python -um pip install setuptools wheel
+          python -um pip install --upgrade --upgrade-strategy eager .[docs]
+      - name: Build docs
+        run: python -um sphinx -n -W --keep-going docs build/sphinx/html
+  build-and-test-container-image:
+    name: Build container image
+    needs: build-python-package
+    runs-on: ubuntu-latest
+    env:
+      # Fixes https://github.com/actions/virtual-environments/issues/3080
+      STORAGE_OPTS: overlay.mount_program=/usr/bin/fuse-overlayfs
+      _wheel: ${{ needs.build-python-package.outputs.wheel }}
+      NUTILS_TESTING_REQUIRES: "mod:matplotlib mod:meshio mod:PIL lib:mkl_rt"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download Python package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+      - name: Get base and image tags
+        id: tags
+        run: python3 -um devtools.gha.get_base_and_image_tags
+      - name: Pull container base image
+        env:
+          _base: ${{ env.official_container_repository }}:${{ steps.tags.outputs.base }}
+        run: podman pull "docker://$_base"
+      - name: Build container image
+        id: build
+        env:
+          _base: ${{ env.official_container_repository }}:${{ steps.tags.outputs.base }}
+          _name: ${{ env.official_container_repository }}:${{ steps.tags.outputs.image }}
+        run: python3 -um devtools.container.build --revision "$GITHUB_SHA" --wheel "$_wheel" --examples examples --name "$_name" --base "$_base"
+      - name: Test examples/laplace.py
+        env:
+          _image: ${{ steps.build.outputs.id }}
+        run: |
+          mkdir /tmp/log
+          podman run --pull=never --rm -v /tmp/log:/log:rw "$_image" laplace
+          if [ ! -e /tmp/log/log.html ]; then
+            echo ::error ::"log file not generated"
+            exit 1
+          fi
+      - name: Run unit tests
+        env:
+          _image: ${{ steps.build.outputs.id }}
+        run: podman run --pull=never --rm -v "$PWD/tests:/app/tests:ro" -v "$PWD/examples:/app/examples:ro" --env NUTILS_DEBUG=all "$_image" -m unittest -bq
+      - name: Push image to container registry
+        if: ${{ github.event_name == 'push' }}
+        env:
+          _username: ${{ secrets.DOCKER_USERNAME }}
+          _password: ${{ secrets.DOCKER_PASSWORD }}
+          _repository: ${{ secrets.DOCKER_REPOSITORY }}
+          _image_id: ${{ steps.build.outputs.id }}
+          _tag: ${{ steps.tags.outputs.image }}
+        run: |
+          # Push the image to the official container repository if this
+          # workflow is triggered from the official git repository, otherwise
+          # use the `DOCKER_REPOSITORY` secret.
+          case "$GITHUB_REPOSITORY" in
+            evalf/nutils)
+              _repository="$official_container_repository"
+              ;;
+            *)
+              if [ -z "$_repository" ]; then
+                echo ::error ::"Github secret DOCKER_REPOSITORY is empty"
+                exit 1
+              fi
+              ;;
+          esac
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login --username ${{ github.actor }} --password-stdin "${_repository%%/*}"
+          podman push "$_image_id" "docker://$_repository:$_tag"
