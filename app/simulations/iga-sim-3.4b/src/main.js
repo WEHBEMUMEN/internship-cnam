@@ -1,49 +1,37 @@
-// Phase 3.4: Hyper-Reduction Benchmark — Main Application
-// All engines loaded as globals via index.html
+// Phase 3.4b: ECSW Benchmark — Main Application
 
-// ── Colormaps ──
 const JET = [{t:0,r:.23,g:.51,b:.96},{t:.2,r:.02,g:.71,b:.83},{t:.4,r:.06,g:.73,b:.51},{t:.6,r:.98,g:.8,b:.08},{t:.8,r:.98,g:.45,b:.09},{t:1,r:.94,g:.27,b:.27}];
 function jet(t){t=Math.max(0,Math.min(1,t));for(let i=0;i<JET.length-1;i++){const a=JET[i],b=JET[i+1];if(t>=a.t&&t<=b.t){const f=(t-a.t)/(b.t-a.t);return[a.r+f*(b.r-a.r),a.g+f*(b.g-a.g),a.b+f*(b.b-a.b)];}}return[.94,.27,.27];}
 
-// ── Sparkline ──
 class Sparkline{constructor(c){this.c=c;this.ctx=c.getContext('2d');this.data=[];}
 update(d){this.data=d;this.draw();}
-draw(){const{c,ctx,data}=this;const W=c.width,H=c.height;ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(241,245,249,0.8)';ctx.fillRect(0,0,W,H);if(!data.length)return;const vals=data.map(d=>Math.max(d.norm,1e-14));const mn=Math.log10(Math.min(...vals)),mx=Math.log10(Math.max(...vals))+.5;const toY=v=>H-((Math.log10(Math.max(v,1e-14))-mn)/(mx-mn))*H;const step=W/Math.max(data.length-1,1);ctx.strokeStyle='rgba(0,0,0,0.05)';ctx.lineWidth=1;for(let e=Math.floor(mn);e<=Math.ceil(mx);e++){const y=toY(Math.pow(10,e));if(y<0||y>H)continue;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();ctx.fillStyle='#64748b';ctx.font='8px monospace';ctx.fillText(`10^${e}`,2,y-2);}ctx.strokeStyle='#8b5cf6';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.beginPath();data.forEach((d,i)=>{const x=i*step,y=toY(d.norm);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();data.forEach((d,i)=>{ctx.fillStyle='#8b5cf6';ctx.beginPath();ctx.arc(i*step,toY(d.norm),2,0,Math.PI*2);ctx.fill();});if(data.length){const last=data[data.length-1].norm;ctx.fillStyle=last<1e-4?'#10b981':'#f59e0b';ctx.font='bold 9px monospace';ctx.fillText(`Res: ${last.toExponential(2)}`,4,H-6);}}}
+draw(){const{c,ctx,data}=this;const W=c.width,H=c.height;ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(241,245,249,0.8)';ctx.fillRect(0,0,W,H);if(!data.length)return;const vals=data.map(d=>Math.max(d.norm,1e-14));const mn=Math.log10(Math.min(...vals)),mx=Math.log10(Math.max(...vals))+.5;const toY=v=>H-((Math.log10(Math.max(v,1e-14))-mn)/(mx-mn))*H;const step=W/Math.max(data.length-1,1);ctx.strokeStyle='rgba(0,0,0,0.05)';ctx.lineWidth=1;for(let e=Math.floor(mn);e<=Math.ceil(mx);e++){const y=toY(Math.pow(10,e));if(y<0||y>H)continue;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();ctx.fillStyle='#64748b';ctx.font='8px monospace';ctx.fillText(`10^${e}`,2,y-2);}ctx.strokeStyle='#10b981';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.beginPath();data.forEach((d,i)=>{const x=i*step,y=toY(d.norm);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();data.forEach((d,i)=>{ctx.fillStyle='#10b981';ctx.beginPath();ctx.arc(i*step,toY(d.norm),2,0,Math.PI*2);ctx.fill();});if(data.length){const last=data[data.length-1].norm;ctx.fillStyle=last<1e-4?'#059669':'#f59e0b';ctx.font='bold 9px monospace';ctx.fillText(`Res: ${last.toExponential(2)}`,4,H-6);}}}
 
-// ── Method metadata ──
 const METHODS = {
-    fom:         {label:'FOM',        color:'#334155', needsHR:false, needsROM:false},
-    galerkin:    {label:'Galerkin',    color:'#3b82f6', needsHR:false, needsROM:true},
-    deim:        {label:'DEIM',        color:'#ef4444', needsHR:true,  needsROM:true, family:'interp'},
-    udeim:       {label:'UDEIM',       color:'#f97316', needsHR:true,  needsROM:true, family:'interp'},
-    gappy:       {label:'Gappy POD',   color:'#eab308', needsHR:true,  needsROM:true, family:'interp'},
-    ecsw:        {label:'ECSW',        color:'#10b981', needsHR:true,  needsROM:true, family:'elem'},
-    ecm:         {label:'ECM',         color:'#06b6d4', needsHR:true,  needsROM:true, family:'elem'},
-    collocation: {label:'LSPG',        color:'#8b5cf6', needsHR:true,  needsROM:true, family:'colloc'},
+    fom:      {label:'FOM',      color:'#334155'},
+    galerkin: {label:'Galerkin', color:'#3b82f6'},
+    ecsw:     {label:'ECSW',     color:'#10b981'}
 };
 
-// ── Main App ──
-class HRBenchmarkApp {
+class ECSWBenchmarkApp {
     constructor() {
         this.engine = new NURBS2D();
         this.solverFOM = new IGANonlinearSolver(this.engine);
         this.romEngine = new ROMEngine(this.solverFOM);
-        this.hrElements = new HRElements(this.solverFOM, this.engine);
-        this.hrSolver = new HRSolver(this.solverFOM, this.romEngine, this.hrElements);
+        this.ecswEngine = new ECSWEngine();
 
         this.patch = null;
         this.method = 'fom';
         this.loadMag = 200;
         this.k = 5;
+        this.ecswM = 20;
         this.meshLevel = 1;
         this.loadType = 'tip';
         this.showDOFs = true;
         this.isTrained = false;
-        this.hrOps = {};
         this.lastResult = null;
         this.lastFomTime = null;
         this.lastFomResult = null;
-        this.comparisonData = null;
         this._timer = null;
 
         this.scene = new THREE.Scene();
@@ -61,7 +49,6 @@ class HRBenchmarkApp {
         this.loadBenchmark();
     }
 
-    // ── Three.js ──
     initThree() {
         this.scene.background = new THREE.Color(0xffffff);
         this.camera.position.set(5, 1, 14);
@@ -95,7 +82,7 @@ class HRBenchmarkApp {
         this.solverFOM.E = 100000;
         this.solverFOM.nu = 0.3;
         this.solverFOM.thickness = 1.0;
-        
+
         this.isTrained = false;
         this.method = 'fom';
         this.lastFomResult = null;
@@ -106,9 +93,7 @@ class HRBenchmarkApp {
         });
         document.getElementById('btn-compare').disabled = true;
         document.getElementById('input-k').disabled = true;
-        
-        if (this.lastResult) this.lastResult = null;
-        
+        document.getElementById('input-m').disabled = true;
         this.updateMesh(null);
         this._render();
     }
@@ -118,7 +103,6 @@ class HRBenchmarkApp {
         this.deformedMesh = this.ghostMesh = null;
     }
 
-    // ── Physics ──
     getBCs() {
         const nV = this.patch.controlPoints[0].length;
         const bcs = [];
@@ -146,26 +130,18 @@ class HRBenchmarkApp {
             result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, {iterations:15, steps:3});
         } else if (method === 'galerkin') {
             result = this.romEngine.solveReduced(this.patch, bcs, loads, {iterations:15});
-        } else if (['ecsw','ecm'].includes(method)) {
-            result = this.hrSolver.solveElementSampling(this.patch, bcs, loads, this.hrOps[method], {iterations:15, steps:1});
-            meta.sampled = `${result.sampledElements}/${result.totalElements} el`;
-        } else if (['deim','udeim','gappy'].includes(method)) {
-            result = this.hrSolver.solveInterpolation(this.patch, bcs, loads, this.hrOps[method], method, {iterations:15, steps:1});
-            meta.sampled = `${result.sampledIndices} idx`;
-        } else if (method === 'collocation') {
-            result = this.hrSolver.solveCollocation(this.patch, bcs, loads, this.hrOps[method], {iterations:15, steps:1});
-            meta.sampled = `${result.collocationPoints} pts`;
+        } else if (method === 'ecsw') {
+            result = this.ecswEngine.solveReduced(this.solverFOM, this.patch, loads, {iterations:15, steps:3});
+            meta.sampled = `${this.ecswEngine.sampleElements.length} / ${this.ecswEngine.weights.length} elems`;
         }
 
         const dt = performance.now() - t0;
         meta.time = dt;
 
-        // Tip displacement
         const nU = this.patch.controlPoints.length, nV = this.patch.controlPoints[0].length;
         const tipIdx = ((nU-1)*nV + Math.floor(nV/2)) * 2 + 1;
         meta.tipDisp = result.u[tipIdx];
 
-        // L2 error vs FOM
         if (this.lastFomResult && method !== 'fom') {
             let num = 0, den = 0;
             for (let i = 0; i < result.u.length; i++) {
@@ -174,16 +150,14 @@ class HRBenchmarkApp {
             }
             meta.error = den > 0 ? Math.sqrt(num/den) : 0;
         }
-
         return { result, meta };
     }
 
     updatePhysics() {
         if (!this.patch) return;
         const m = METHODS[this.method];
-        if (m.needsROM && !this.isTrained) { alert('Train first!'); return; }
+        if (this.method !== 'fom' && !this.isTrained) { alert('Train first!'); return; }
 
-        // Always run FOM for reference
         if (this.method === 'fom' || !this.lastFomResult) {
             const fom = this.solve('fom', this.loadMag);
             this.lastFomTime = fom.meta.time;
@@ -202,10 +176,7 @@ class HRBenchmarkApp {
         this.lastResult = result;
         this._updateStats(this.method, meta);
         this.sparkline.update(result.residualHistory);
-
-        if (!result.u.some(v => !isFinite(v))) {
-            this.updateMesh(result.u);
-        }
+        if (!result.u.some(v => !isFinite(v))) this.updateMesh(result.u);
         this._render();
     }
 
@@ -219,10 +190,10 @@ class HRBenchmarkApp {
         document.getElementById('error-val').textContent = meta.error !== undefined ? (meta.error*100).toFixed(2)+'%' : '—';
     }
 
-    // ── Mesh ──
     updateMesh(uDisp) {
         const res = 32;
         const posDef = [], posUnd = [], colors = [];
+        let maxF = 0;
 
         for (let i = 0; i <= res; i++) {
             const u = Math.min(i/res, 0.9999);
@@ -231,47 +202,30 @@ class HRBenchmarkApp {
                 const st = this.engine.getSurfaceState(this.patch, u, v);
                 let px = st.position.x, py = st.position.y;
                 posUnd.push(px, py, 0);
-
                 let field = 0;
                 if (uDisp) {
                     const d = this._interpDisp(u, v, st.denominator, uDisp);
                     if (isFinite(d.x) && isFinite(d.y)) { px += d.x; py += d.y; }
                     field = Math.sqrt(d.x*d.x + d.y*d.y);
+                    maxF = Math.max(maxF, field);
                 }
                 posDef.push(px, py, 0);
-
-                const methodColor = METHODS[this.method]?.color || '#3b82f6';
-                if (uDisp) {
-                    const [r,g,b] = jet(field / (0.5 || 1));
-                    colors.push(r, g, b);
-                } else {
-                    colors.push(0.23, 0.51, 0.96);
-                }
             }
         }
 
-        // Normalize colors by max field
-        if (uDisp) {
-            let maxF = 0;
-            for (let i = 0; i <= res; i++)
-                for (let j = 0; j <= res; j++) {
-                    const idx = i*(res+1)+j;
-                    const u = Math.min(i/res, 0.9999), v = Math.min(j/res, 0.9999);
+        for (let i = 0; i <= res; i++) {
+            const u = Math.min(i/res, 0.9999);
+            for (let j = 0; j <= res; j++) {
+                const v = Math.min(j/res, 0.9999);
+                if (uDisp && maxF > 0) {
                     const st = this.engine.getSurfaceState(this.patch, u, v);
                     const d = this._interpDisp(u, v, st.denominator, uDisp);
-                    maxF = Math.max(maxF, Math.sqrt(d.x*d.x + d.y*d.y));
+                    const f = Math.sqrt(d.x*d.x + d.y*d.y) / maxF;
+                    const [r,g,b] = jet(f);
+                    colors.push(r, g, b);
+                } else {
+                    colors.push(0.06, 0.73, 0.51); // ECSW Greenish
                 }
-            if (maxF > 0) {
-                for (let i = 0; i <= res; i++)
-                    for (let j = 0; j <= res; j++) {
-                        const idx = i*(res+1)+j;
-                        const u = Math.min(i/res, 0.9999), v = Math.min(j/res, 0.9999);
-                        const st = this.engine.getSurfaceState(this.patch, u, v);
-                        const d = this._interpDisp(u, v, st.denominator, uDisp);
-                        const f = Math.sqrt(d.x*d.x + d.y*d.y) / maxF;
-                        const [r,g,b] = jet(f);
-                        colors[idx*3] = r; colors[idx*3+1] = g; colors[idx*3+2] = b;
-                    }
             }
         }
 
@@ -288,10 +242,9 @@ class HRBenchmarkApp {
             this.deformedMesh.geometry.computeVertexNormals();
 
             const gG = new THREE.BufferGeometry(); gG.setIndex(idx);
-            gG.setAttribute('position', new THREE.Float32BufferAttribute(posUnd, 3));
+            gG.setAttribute('position', new THREE.BufferAttribute(new Float32Array(posUnd), 3));
             this.ghostMesh = new THREE.Mesh(gG, new THREE.MeshPhongMaterial({color:0xcbd5e1, transparent:true, opacity:0.3, side:THREE.DoubleSide}));
             this.ghostMesh.position.z = -0.05;
-
             this.scene.add(this.ghostMesh);
             this.scene.add(this.deformedMesh);
         } else {
@@ -303,10 +256,7 @@ class HRBenchmarkApp {
             this.deformedMesh.geometry.computeVertexNormals();
         }
 
-        // Draw loads
-        while(this.loadArrows.children.length > 0) {
-            this.loadArrows.remove(this.loadArrows.children[0]);
-        }
+        while(this.loadArrows.children.length > 0) this.loadArrows.remove(this.loadArrows.children[0]);
         const loads = this.getLoads(this.loadMag);
         const dir = new THREE.Vector3(0, -1, 0);
         loads.forEach(load => {
@@ -315,42 +265,25 @@ class HRBenchmarkApp {
             let py = this.patch.controlPoints[load.i][load.j].y;
             if (uDisp) {
                 const idx = (load.i * this.patch.controlPoints[0].length + load.j) * 2;
-                px += uDisp[idx];
-                py += uDisp[idx+1];
+                px += uDisp[idx]; py += uDisp[idx+1];
             }
-            // Length of arrow scales with magnitude
             const length = Math.min(2.0, Math.max(0.5, Math.abs(load.fy) * 0.05));
-            const origin = new THREE.Vector3(px, py + length, 0.1); 
-            const hex = 0xef4444; 
-            const arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex, 0.3, 0.2);
-            this.loadArrows.add(arrowHelper);
+            const origin = new THREE.Vector3(px, py + length, 0.1);
+            this.loadArrows.add(new THREE.ArrowHelper(dir, origin, length, 0xef4444, 0.3, 0.2));
         });
 
-        // Draw DOFs
-        if (this.dofPoints) {
-            this.scene.remove(this.dofPoints);
-            this.dofPoints.geometry.dispose();
-            this.dofPoints = null;
-        }
-
+        if (this.dofPoints) { this.scene.remove(this.dofPoints); this.dofPoints.geometry.dispose(); this.dofPoints = null; }
         if (this.showDOFs) {
             const dofGeo = new THREE.BufferGeometry();
             const dofPos = [];
-            for (let i = 0; i < this.patch.controlPoints.length; i++) {
+            for (let i = 0; i < this.patch.controlPoints.length; i++)
                 for (let j = 0; j < this.patch.controlPoints[0].length; j++) {
-                    let px = this.patch.controlPoints[i][j].x;
-                    let py = this.patch.controlPoints[i][j].y;
-                    if (uDisp) {
-                        const idx = (i * this.patch.controlPoints[0].length + j) * 2;
-                        px += uDisp[idx];
-                        py += uDisp[idx+1];
-                    }
+                    let px = this.patch.controlPoints[i][j].x, py = this.patch.controlPoints[i][j].y;
+                    if (uDisp) { const idx = (i * this.patch.controlPoints[0].length + j) * 2; px += uDisp[idx]; py += uDisp[idx+1]; }
                     dofPos.push(px, py, 0.1);
                 }
-            }
             dofGeo.setAttribute('position', new THREE.Float32BufferAttribute(dofPos, 3));
-            const dofMat = new THREE.PointsMaterial({ color: 0x10b981, size: 0.15 });
-            this.dofPoints = new THREE.Points(dofGeo, dofMat);
+            this.dofPoints = new THREE.Points(dofGeo, new THREE.PointsMaterial({ color: 0x10b981, size: 0.15 }));
             this.scene.add(this.dofPoints);
         }
     }
@@ -372,7 +305,6 @@ class HRBenchmarkApp {
         return {x: dx, y: dy};
     }
 
-    // ── Training ──
     async trainAll() {
         const btn = document.getElementById('btn-train');
         const status = document.getElementById('train-status');
@@ -381,107 +313,69 @@ class HRBenchmarkApp {
         this.romEngine.clearSnapshots();
 
         const bcs = this.getBCs();
-        const nSnaps = 12;
-        const forceSnaps = [], elemForceSnaps = [];
+        const nSnaps = 15;
+        const snapDisp = [];
 
         for (let i = 1; i <= nSnaps; i++) {
-            const f = (i/nSnaps) * this.loadMag * 2;
-            status.textContent = `FOM ${i}/${nSnaps} F=${f.toFixed(0)}...`;
+            const f = (i/nSnaps) * this.loadMag * 1.5;
+            status.textContent = `FOM Snapshot ${i}/${nSnaps} (F=${f.toFixed(0)})...`;
             const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(f), {steps:3, iterations:12});
             this.romEngine.addSnapshot(res.u);
-
-            const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-            this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
-            forceSnaps.push(Fint);
-            elemForceSnaps.push(this.hrElements.allElementForces(this.patch, res.u));
+            snapDisp.push(res.u);
             await new Promise(r => setTimeout(r, 5));
         }
 
-        status.textContent = 'Computing POD...';
+        status.textContent = 'Computing POD basis...';
         await new Promise(r => setTimeout(r, 10));
         const podInfo = this.romEngine.computePOD(this.k);
         document.getElementById('energy-val').textContent = `Energy: ${(podInfo.energy*100).toFixed(2)}%`;
         document.getElementById('input-k').disabled = false;
         document.getElementById('input-k').max = nSnaps;
 
-        const Phi = this.romEngine.Phi;
-        const nElems = this.hrElements.getElements(this.patch).length;
-        const nDofs = Phi.rows;
-        const m = Math.min(this.k + 3, 12);
-
-        status.textContent = 'Training DEIM...';
-        await new Promise(r => setTimeout(r, 5));
-        this.hrOps.deim = HRTrainer.trainDEIM(forceSnaps, m);
-
-        status.textContent = 'Training UDEIM...';
-        await new Promise(r => setTimeout(r, 5));
-        this.hrOps.udeim = HRTrainer.trainUDEIM(elemForceSnaps, nElems, nDofs, m);
-
-        status.textContent = 'Training Gappy POD...';
-        await new Promise(r => setTimeout(r, 5));
-        this.hrOps.gappy = HRTrainer.trainGappyPOD(forceSnaps, m);
-
-        status.textContent = 'Training ECSW (NNLS)...';
-        await new Promise(r => setTimeout(r, 5));
-        this.hrOps.ecsw = HRTrainer.trainECSW(Phi, elemForceSnaps, nElems);
-
-        status.textContent = 'Training ECM (Greedy)...';
-        await new Promise(r => setTimeout(r, 5));
-        this.hrOps.ecm = HRTrainer.trainECM(Phi, elemForceSnaps, nElems);
-
-        status.textContent = 'Training Collocation...';
-        await new Promise(r => setTimeout(r, 5));
-        this.hrOps.collocation = HRTrainer.trainCollocation(forceSnaps, Phi, m);
+        status.textContent = `Training ECSW Weights...`;
+        await new Promise(r => setTimeout(r, 10));
+        const ecswInfo = await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, snapDisp);
+        document.getElementById('input-m').disabled = false;
+        document.getElementById('ecsw-info').textContent = `${ecswInfo.elementCount} elements active`;
 
         this.isTrained = true;
+        this.snapDisp = snapDisp;
         btn.disabled = false;
         document.getElementById('btn-compare').disabled = false;
-        status.textContent = `All 6 methods trained ✓ (ECSW: ${this.hrOps.ecsw.elements.length}el, ECM: ${this.hrOps.ecm.elements.length}el, DEIM: ${m}idx)`;
+        status.textContent = `Training complete ✓ — ${ecswInfo.elementCount} elements, POD: ${(podInfo.energy*100).toFixed(1)}% energy`;
         setTimeout(() => status.classList.add('hidden'), 5000);
         this.updatePhysics();
     }
 
-    // ── Comparison ──
     async runComparison() {
         if (!this.isTrained) return;
         document.getElementById('btn-compare').disabled = true;
         const data = {};
         for (const m of Object.keys(METHODS)) {
-            if (METHODS[m].needsROM && !this.isTrained) continue;
             try {
                 const { result, meta } = this.solve(m, this.loadMag);
                 data[m] = meta;
-                data[m].tipDisp = meta.tipDisp;
             } catch(e) { console.warn(`${m} failed:`, e); }
             await new Promise(r => setTimeout(r, 5));
         }
-        this.comparisonData = data;
         this.updateSpeedupChart(data);
         document.getElementById('btn-compare').disabled = false;
     }
 
-    // ── Charts ──
     initCharts() {
         this.sparkline = new Sparkline(document.getElementById('sparkline-canvas'));
-
         this.speedupChart = new Chart(document.getElementById('chart-speedup'), {
             type: 'bar',
             data: { labels: [], datasets: [{ label: 'Speedup (×)', data: [], backgroundColor: [] }] },
             options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-                scales:{y:{beginAtZero:true, title:{display:true, text:'Speedup (×)', font:{size:10}}},
-                        x:{ticks:{font:{size:9}}}}}
+                scales:{y:{beginAtZero:true, title:{display:true, text:'Speedup (×)', font:{size:10}}}, x:{ticks:{font:{size:9}}}}}
         });
-
         this.fdChart = new Chart(document.getElementById('chart-fd'), {
-            type: 'line',
-            data: { labels: [], datasets: [] },
+            type: 'line', data: { labels: [], datasets: [] },
             options: { responsive:true, maintainAspectRatio:false,
                 plugins:{legend:{position:'top', labels:{font:{size:9}}}},
-                scales:{x:{title:{display:true, text:'Load F', font:{size:10}}},
-                        y:{title:{display:true, text:'Tip Displacement', font:{size:10}}}}}
+                scales:{x:{title:{display:true, text:'Load F', font:{size:10}}}, y:{title:{display:true, text:'Tip Displacement', font:{size:10}}}}}
         });
-
-        // Chart tab switching
         document.querySelectorAll('.chart-tab').forEach(t => {
             t.onclick = () => {
                 document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'));
@@ -511,20 +405,15 @@ class HRBenchmarkApp {
         if (!this.isTrained) return;
         const loads = [20, 50, 100, 150, 200, 300, 400, 500];
         const datasets = {};
-        const methodsToPlot = ['fom', 'galerkin', 'ecsw', 'deim'];
-
-        for (const m of methodsToPlot) {
+        for (const m of Object.keys(METHODS)) {
             datasets[m] = [];
             for (const f of loads) {
-                try {
-                    const { meta } = this.solve(m, f);
-                    datasets[m].push(Math.abs(meta.tipDisp || 0));
-                } catch(e) { datasets[m].push(0); }
+                try { const { meta } = this.solve(m, f); datasets[m].push(Math.abs(meta.tipDisp || 0)); }
+                catch(e) { datasets[m].push(0); }
             }
         }
-
         this.fdChart.data.labels = loads;
-        this.fdChart.data.datasets = methodsToPlot.map(m => ({
+        this.fdChart.data.datasets = Object.keys(METHODS).map(m => ({
             label: METHODS[m].label, data: datasets[m],
             borderColor: METHODS[m].color, backgroundColor: METHODS[m].color + '33',
             borderWidth: 2, pointRadius: 3, tension: 0.3
@@ -532,25 +421,26 @@ class HRBenchmarkApp {
         this.fdChart.update();
     }
 
-    // ── UI ──
     initUI() {
         document.getElementById('btn-train').onclick = () => this.trainAll();
         document.getElementById('btn-compare').onclick = () => this.runComparison();
 
-        // Method buttons
         document.querySelectorAll('[data-method]').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('[data-method]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.method = btn.dataset.method;
-                if (!METHODS[this.method].needsROM || this.isTrained) this.updatePhysics();
+                if (this.method === 'fom' || this.isTrained) this.updatePhysics();
             };
         });
 
         document.getElementById('input-k').oninput = e => {
             this.k = parseInt(e.target.value);
             document.getElementById('k-val').textContent = this.k;
-            if (this.isTrained) { this.romEngine.computePOD(this.k); this._scheduleUpdate(); }
+            if (this.isTrained) {
+                this.romEngine.computePOD(this.k);
+                this._scheduleUpdate();
+            }
         };
 
         document.getElementById('input-mesh').oninput = e => {
@@ -561,24 +451,21 @@ class HRBenchmarkApp {
 
         document.getElementById('input-load-type').onchange = e => {
             this.loadType = e.target.value;
-            this.lastFomResult = null; // Force FOM recompute
+            this.lastFomResult = null;
             this._scheduleUpdate();
         };
 
         document.getElementById('input-show-dofs').onchange = e => {
             this.showDOFs = e.target.checked;
-            if (this.lastResult) {
-                this.updateMesh(this.lastResult.u);
-            } else {
-                this.updateMesh(null);
-            }
+            if (this.lastResult) this.updateMesh(this.lastResult.u);
+            else this.updateMesh(null);
             this._render();
         };
 
         document.getElementById('input-load').oninput = e => {
             this.loadMag = parseFloat(e.target.value);
             document.getElementById('load-val').textContent = this.loadMag;
-            this.lastFomResult = null; // Force FOM recompute
+            this.lastFomResult = null;
             this._scheduleUpdate();
         };
     }
@@ -589,4 +476,4 @@ class HRBenchmarkApp {
     }
 }
 
-new HRBenchmarkApp();
+new ECSWBenchmarkApp();

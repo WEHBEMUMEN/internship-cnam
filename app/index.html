@@ -649,18 +649,31 @@
               </div>
             </div>
           </div>
-
-          <!-- Phase 3.4: Hyper-Reduction Benchmark -->
+          <!-- Phase 3.4a: DEIM Hyper-Reduction -->
           <div class="card reveal reveal-up delay-4" data-phase="3">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                <i class="fa-solid fa-gauge-high" style="font-size: 2rem; color: #8b5cf6;"></i>
-                <span class="badge" style="font-size: 0.7rem; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2);">PHASE 3.4</span>
+                <i class="fa-solid fa-crosshairs" style="font-size: 2rem; color: #8b5cf6;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2);">PHASE 3.4a</span>
             </div>
-            <h3>Hyper-Reduction Benchmark</h3>
-            <p>Comparing FOM, Galerkin ROM, and 6 hyper-reduction methods (DEIM, ECSW, ECM, etc.) to achieve true real-time performance.</p>
+            <h3>DEIM Hyper-Reduction</h3>
+            <p>Discrete Empirical Interpolation for nonlinear force approximation. Sampling only $m$ DOFs to reconstruct internal forces in reduced space.</p>
             <div class="app-actions">
-              <a href="simulations/iga-sim-3.4/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #8b5cf6; box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);">Launch HR-ROM Lab <i class="fa-solid fa-bolt" style="margin-left: 8px;"></i></a>
-              <a href="../theory/theory-3.4.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+              <a href="simulations/iga-sim-3.4a/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #8b5cf6; box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);">Launch DEIM Lab <i class="fa-solid fa-bolt" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-3.4a.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+
+          <!-- Phase 3.4b: ECSW Hyper-Reduction -->
+          <div class="card reveal reveal-up delay-4" data-phase="3">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-weight-hanging" style="font-size: 2rem; color: #10b981;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">PHASE 3.4b</span>
+            </div>
+            <h3>ECSW Hyper-Reduction</h3>
+            <p>Energy-Conserving Sampling & Weighting. Stable element-wise reduction for severe nonlinearity in IGA.</p>
+            <div class="app-actions">
+              <a href="simulations/iga-sim-3.4b/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">Launch ECSW Lab <i class="fa-solid fa-bolt" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-3.4b.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase 3.4 | Hyper-Reduction Benchmark</title>
+    <title>Phase 3.4a | DEIM Hyper-Reduction</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,12 +19,10 @@
     <script src="../phase-2-core/src/nurbs-presets.js?v=3"></script>
     <script src="../phase-2-core/src/refine-utils.js?v=3"></script>
     <script src="../phase-2-core/src/iga-solver-2d.js?v=3"></script>
-    <script src="../phase-3-core/src/iga-nonlinear.js?v=2"></script>
-    <script src="../phase-3-core/src/rom-engine.js?v=2"></script>
-    <!-- New HR Modules -->
-    <script src="../phase-3-core/src/hr-elements.js"></script>
-    <script src="../phase-3-core/src/hr-trainer.js"></script>
-    <script src="../phase-3-core/src/hr-solver.js"></script>
+    <script src="../phase-3-core/src/iga-nonlinear.js?v=3"></script>
+    <script src="../phase-3-core/src/rom-engine.js?v=3"></script>
+    <!-- DEIM Engine -->
+    <script src="src/deim-engine.js"></script>
 
     <style>
         :root { --primary:#8b5cf6; --secondary:#3b82f6; --accent:#10b981; --bg:#ffffff; --card:rgba(255,255,255,0.85); --border:rgba(148,163,184,0.3); }
@@ -45,7 +43,6 @@
         input[type="range"] { width:100%; height:3px; background:#e2e8f0; border-radius:2px; appearance:none; cursor:pointer; }
         input[type="range"]::-webkit-slider-thumb { appearance:none; width:14px; height:14px; background:var(--primary); border-radius:50%; box-shadow:0 0 8px rgba(139,92,246,0.5); cursor:pointer; }
         .btn-grid { display:grid; gap:5px; }
-        .btn-grid-2 { grid-template-columns:1fr 1fr; }
         .btn-grid-3 { grid-template-columns:1fr 1fr 1fr; }
         .btn-pill { padding:7px 4px; border-radius:10px; font-size:0.58rem; font-weight:700; letter-spacing:.6px; text-transform:uppercase; cursor:pointer; transition:all .2s; border:1px solid var(--border); color:#94a3b8; background:transparent; white-space:nowrap; }
         .btn-pill:hover { background:rgba(0,0,0,.04); color:#1e293b; }
@@ -70,6 +67,8 @@
         .chart-tabs { display:flex; gap:4px; margin-bottom:10px; }
         .chart-tab { padding:5px 12px; border-radius:8px; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; cursor:pointer; border:1px solid var(--border); color:#94a3b8; background:transparent; transition:all .2s; }
         .chart-tab.active { border-color:var(--primary); color:var(--primary); background:rgba(139,92,246,.1); }
+        .fps-badge { position:absolute; top:18px; right:18px; display:flex; gap:6px; align-items:center; }
+        .fps-pill { padding:3px 8px; border-radius:6px; font-size:0.55rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
     </style>
 </head>
 <body>
@@ -78,14 +77,17 @@
     <!-- Left Panel -->
     <div id="ui-panel" class="glass-panel">
         <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-        <div class="panel-title">Phase 3.4 <span style="color:var(--primary)">HR-ROM</span></div>
-        <div class="panel-sub">Hyper-Reduction Benchmark · Cantilever Beam</div>
+        <div class="panel-title">Phase 3.4a <span style="color:var(--primary)">DEIM</span></div>
+        <div class="panel-sub">Discrete Empirical Interpolation · Cantilever Beam</div>
         <hr class="divider">
 
         <div class="control-group">
             <span class="section-label">1 · Offline Training</span>
-            <p style="font-size:.64rem;color:#64748b;margin-bottom:8px;line-height:1.5">Generates FOM snapshots, extracts POD basis, and trains all 6 hyper-reduction operators.</p>
-            <button id="btn-train" class="btn-train-full"><i class="fa-solid fa-brain"></i> Train All Methods</button>
+            <p style="font-size:.64rem;color:#64748b;margin-bottom:8px;line-height:1.5">Generates FOM snapshots, extracts POD basis, and trains DEIM interpolation indices.</p>
+            <div style="display:flex; gap:6px;">
+                <button id="btn-train" class="btn-train-full" style="flex:2;"><i class="fa-solid fa-brain"></i> Train DEIM</button>
+                <button id="btn-explorer" class="btn-train-full" style="flex:1; background:linear-gradient(135deg,#f59e0b,#d97706); font-size:0.65rem;" disabled><i class="fa-solid fa-magnifying-glass"></i> Explorer</button>
+            </div>
             <div id="train-status" class="hidden"></div>
         </div>
 
@@ -95,33 +97,34 @@
             <div style="font-size:.58rem;color:#475569;margin-top:4px" id="energy-val">Energy: —</div>
         </div>
 
+        <div class="control-group">
+            <div class="label-row"><span class="lbl">DEIM Points m</span><span class="val" id="m-val">8</span></div>
+            <input type="range" id="input-m" min="2" max="20" value="8" disabled>
+            <div style="font-size:.58rem;color:#475569;margin-top:4px" id="deim-info">Indices: —</div>
+        </div>
+
         <hr class="divider">
 
         <div class="control-group">
             <span class="section-label">2 · Method</span>
-            <div class="btn-grid btn-grid-2">
+            <div class="btn-grid btn-grid-3">
                 <button class="btn-pill active" data-method="fom">FOM</button>
-                <button class="btn-pill" data-method="galerkin">Galerkin ROM</button>
+                <button class="btn-pill" data-method="galerkin">Galerkin</button>
                 <button class="btn-pill" data-method="deim">DEIM</button>
-                <button class="btn-pill" data-method="udeim">UDEIM</button>
-                <button class="btn-pill" data-method="gappy">Gappy POD</button>
-                <button class="btn-pill" data-method="ecsw">ECSW</button>
-                <button class="btn-pill" data-method="ecm">ECM</button>
-                <button class="btn-pill" data-method="collocation">LSPG</button>
             </div>
         </div>
 
         <hr class="divider">
 
         <div class="control-group">
-            <span class="section-label">3 · Mesh & Physics</span>
+            <span class="section-label">3 · Physics</span>
             <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
                 <div style="width:48%">
-                    <div class="label-row"><span class="lbl">Mesh Level (h)</span><span class="val" id="mesh-val">1</span></div>
+                    <div class="label-row"><span class="lbl">Mesh (h)</span><span class="val" id="mesh-val">1</span></div>
                     <input type="range" id="input-mesh" min="1" max="4" value="1">
                 </div>
                 <div style="width:48%">
-                    <div class="label-row"><span class="lbl">Load Mag</span><span class="val" id="load-val">200</span></div>
+                    <div class="label-row"><span class="lbl">Load</span><span class="val" id="load-val">200</span></div>
                     <input type="range" id="input-load" min="10" max="600" step="10" value="200">
                 </div>
             </div>
@@ -131,7 +134,7 @@
                     <option value="top">Top Distributed Load</option>
                 </select>
                 <label style="font-size:0.7rem; color:#475569; display:flex; align-items:center; gap:4px; cursor:pointer; font-weight:600;">
-                    <input type="checkbox" id="input-show-dofs" checked> Show DOFs
+                    <input type="checkbox" id="input-show-dofs" checked> DOFs
                 </label>
             </div>
         </div>
@@ -165,9 +168,30 @@
         <div class="chart-tabs">
             <button class="chart-tab active" data-chart="speedup"><i class="fa-solid fa-bolt"></i> Speedup</button>
             <button class="chart-tab" data-chart="fd"><i class="fa-solid fa-chart-line"></i> Force-Displacement</button>
+            <button class="chart-tab" id="tab-explorer" data-chart="explorer" style="border-color:#f59e0b; color:#f59e0b; display:none;"><i class="fa-solid fa-microscope"></i> DEIM Explorer</button>
         </div>
         <div id="chart-speedup-wrap"><canvas id="chart-speedup" height="140"></canvas></div>
         <div id="chart-fd-wrap" class="hidden"><canvas id="chart-fd" height="140"></canvas></div>
+        
+        <!-- DEIM Explorer UI -->
+        <div id="explorer-wrap" class="hidden" style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:8px 12px; border-radius:10px;">
+                <button id="btn-exp-prev" class="btn-pill" style="padding:6px 12px;"><i class="fa-solid fa-backward-step"></i> Prev</button>
+                <div style="text-align:center;">
+                    <div style="font-size:0.65rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1px;">Greedy Selection Step</div>
+                    <div id="exp-step-label" style="font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--primary);">1 / 8</div>
+                </div>
+                <button id="btn-exp-next" class="btn-pill active" style="padding:6px 12px;">Next <i class="fa-solid fa-forward-step"></i></button>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1; background:#fff; border-radius:8px; padding:10px; border:1px solid var(--border); position:relative; height:160px;">
+                    <div style="font-size:0.6rem; font-weight:700; color:#64748b; margin-bottom:4px; text-transform:uppercase;">Interpolation Residual |r|</div>
+                    <div style="position:absolute; top:30px; left:10px; right:10px; bottom:10px;">
+                        <canvas id="chart-residual"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="../../shared/performance.js"></script>

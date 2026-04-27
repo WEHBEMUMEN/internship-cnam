@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 3.4a | DEIM Hyper-Reduction</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark', fontFamily: 'Inter' });
+    </script>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #10b981;
+            --bg: #020617;
+            --card: #0f172a;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 80px 30px; }
+        .math-card {
+            background: #020617; padding: 30px; border-radius: 20px; margin: 30px 0;
+            border-left: 4px solid var(--primary); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); overflow-x: auto;
+        }
+        .content-section {
+            background: var(--card); border: 1px solid var(--border); border-radius: 32px;
+            padding: 50px; margin-bottom: 50px; transition: border-color 0.3s ease;
+        }
+        .content-section:hover { border-color: var(--primary); }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 15px; }
+        .highlight { color: var(--primary); font-weight: 700; }
+        .algo-step { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 16px 20px; margin: 10px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #e2e8f0; }
+        .algo-step strong { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-20">
+            <span class="px-4 py-1.5 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold tracking-widest uppercase border border-violet-500/20 mb-6 inline-block">Phase 3.4a | Hyper-Reduction</span>
+            <h1>DEIM<br>Hyper-Reduction</h1>
+            <p class="mt-6 text-xl text-slate-400 font-light">Discrete Empirical Interpolation Method for efficient nonlinear force approximation.</p>
+        </header>
+
+        <!-- Section 1: The Bottleneck -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-hourglass-half"></i> 1. The Nonlinear Bottleneck</h2>
+            <p>In Galerkin ROM, we project the full-order system onto a small POD basis $\Phi \in \mathbb{R}^{N \times k}$ where $k \ll N$. The reduced system becomes:</p>
+            
+            <div class="math-card">
+                <p class="text-xs text-violet-400 mb-2 font-mono uppercase tracking-tighter">Galerkin Projection</p>
+                $$\Phi^T K_T(\mathbf{u}) \Phi \, \Delta \mathbf{u}_r = \Phi^T \left( \mathbf{F}_{ext} - \mathbf{F}_{int}(\mathbf{u}) \right)$$
+            </div>
+            
+            <p>The solve is now $k \times k$ — fast! But the <span class="highlight">assembly of $\mathbf{F}_{int}(\mathbf{u})$</span> still requires looping over all $N$ DOFs. This is the <strong>nonlinear bottleneck</strong>: even though we solve a tiny system, we still pay $\mathcal{O}(N)$ to evaluate the internal forces at every Newton iteration.</p>
+        </section>
+
+        <!-- Section 2: DEIM Idea -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-crosshairs"></i> 2. The DEIM Idea</h2>
+            <p>DEIM (Chaturantabut & Sorensen, 2010) approximates the nonlinear function $\mathbf{F}_{int}$ by sampling it at only $m$ carefully chosen DOF indices:</p>
+            
+            <div class="math-card">
+                <p class="text-xs text-violet-400 mb-2 font-mono uppercase tracking-tighter">DEIM Approximation</p>
+                $$\mathbf{F}_{int} \approx \tilde{\mathbf{F}}_{int} = U_f \, \mathbf{c}$$
+            </div>
+            
+            <p>where $U_f \in \mathbb{R}^{N \times m}$ is a POD basis of the force snapshots, and the coefficient vector $\mathbf{c} \in \mathbb{R}^m$ is determined by <strong>interpolation</strong> at the selected indices:</p>
+            
+            <div class="math-card">
+                <p class="text-xs text-violet-400 mb-2 font-mono uppercase tracking-tighter">Interpolation Condition</p>
+                $$P^T U_f \, \mathbf{c} = P^T \mathbf{F}_{int}$$
+            </div>
+            
+            <p>Here $P \in \mathbb{R}^{N \times m}$ is a selector matrix — column $i$ of $P$ is $\mathbf{e}_{p_i}$, the unit vector corresponding to the $i$-th DEIM interpolation index.</p>
+        </section>
+
+        <!-- Section 3: Algorithm -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-list-ol"></i> 3. DEIM Greedy Algorithm</h2>
+            <p>The interpolation indices $\{p_1, \ldots, p_m\}$ are selected greedily to maximize the captured information:</p>
+            <div class="mt-8 mb-12 p-6 bg-[#020617] rounded-2xl border border-[#334155] shadow-lg overflow-x-auto">
+                <p class="text-xs text-violet-400 mb-4 font-mono uppercase tracking-tighter"><i class="fa-solid fa-code-branch mr-2"></i> Greedy Selection Logic</p>
+                <div class="mermaid flex justify-center">
+graph TD
+    classDef default fill:#0f172a,stroke:#334155,stroke-width:2px,color:#f8fafc,font-family:Inter;
+    classDef io fill:#020617,stroke:#10b981,stroke-width:2px,color:#ecfdf5,font-weight:bold;
+    classDef loop fill:#1e1b4b,stroke:#8b5cf6,stroke-width:2px,color:#e2e8f0,font-family:monospace;
+    classDef action fill:#0f172a,stroke:#475569,stroke-width:2px,color:#f8fafc,font-family:monospace;
+    classDef decision fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
+
+    Start(["Input: Basis U = [u_1, ..., u_m]"]):::io --> Init
+    
+    subgraph Initialization
+        Init["p_1 = argmax |u_1|"]:::action
+        Init --> InitP["P = {p_1}"]:::action
+    end
+    
+    InitP --> LoopCheck
+    
+    subgraph "Greedy Loop (l = 2 to m)"
+        LoopCheck{"l &le; m?"}:::decision
+        LoopCheck -->|Yes| Interpolate["Solve: (P^T U_{1:l-1}) c = P^T u_l"]:::loop
+        Interpolate --> Residual["Residual: r = u_l - U_{1:l-1} c"]:::loop
+        Residual --> Select["p_l = argmax |r|"]:::loop
+        Select --> Update["P = P U {p_l}"]:::action
+        Update --> Increment["l = l + 1"]:::action
+        Increment --> LoopCheck
+    end
+    
+    LoopCheck -->|No| Done(["Output: Indices P"]):::io
+                </div>
+            </div>
+            
+            <p class="mt-6">Each new index is chosen where the current basis has the <strong>largest interpolation error</strong>, ensuring optimal coverage of the force field structure.</p>
+
+            <div class="mt-10 p-6 bg-[#020617] rounded-2xl border border-[#334155] shadow-lg overflow-x-auto">
+                <p class="text-xs text-violet-400 mb-4 font-mono uppercase tracking-tighter"><i class="fa-solid fa-sitemap mr-2"></i> DEIM Architecture Flowchart</p>
+                <div class="mermaid flex justify-center">
+graph TD
+    classDef default fill:#0f172a,stroke:#334155,stroke-width:2px,color:#f8fafc,font-family:Inter;
+    classDef title fill:none,stroke:none,color:#8b5cf6,font-weight:bold,font-size:18px;
+    classDef math fill:#1e1b4b,stroke:#8b5cf6,stroke-width:2px,color:#e2e8f0,font-family:monospace;
+    classDef highlight fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ecfdf5,font-weight:bold;
+
+    subgraph Offline["Offline Phase (Training)"]
+        A["Generate FOM Snapshots"] --> B["Compute Internal Forces F_int"]
+        B --> C["SVD: Extract POD Basis U_f"]
+        C --> D{"Greedy Index Selection"}
+        
+        D --> E["Step 1: p_1 = argmax |u_1|"]:::math
+        E --> F{"For l = 2 to m"}
+        F --> G["Solve: (P^T U) c = P^T u_l"]:::math
+        G --> H["Residual: r = u_l - U c"]:::math
+        H --> I["Next Point: p_l = argmax |r|"]:::math
+        I -->|Repeat| F
+        
+        I --> J["Precompute PtU_inv = (P^T U_f)^-1"]:::highlight
+    end
+
+    subgraph Online["Online Phase (Newton-Raphson)"]
+        K["Start NR Iteration"] --> L["Expand: u = Phi * u_r"]:::math
+        L --> M["Evaluate F_int ONLY at DEIM points (m)"]:::highlight
+        M --> N["Reconstruct: F_int ≈ U_f * PtU_inv * F_m"]:::math
+        N --> O["Project: R_r = Phi^T (F_ext - F_int)"]
+        O --> P["Solve for Δu_r"]
+    end
+    
+    J ==>|Passes Precomputed Matrix| Online
+    style Offline fill:#020617,stroke:#334155,stroke-width:1px,rx:10,ry:10
+    style Online fill:#020617,stroke:#334155,stroke-width:1px,rx:10,ry:10
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Online Phase -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-bolt"></i> 4. Online Phase</h2>
+            <p>During each Newton-Raphson iteration of the online solve:</p>
+            
+            <ol class="list-decimal list-inside text-slate-400 space-y-3 mt-4">
+                <li>Expand reduced coordinates: $\mathbf{u} = \Phi \, \mathbf{u}_r$</li>
+                <li>Evaluate $\mathbf{F}_{int}(\mathbf{u})$ — full assembly (still $\mathcal{O}(N)$ in this basic formulation)</li>
+                <li>Extract sampled entries: $\mathbf{f}_p = P^T \mathbf{F}_{int}$ — only $m$ values</li>
+                <li>Reconstruct: $\tilde{\mathbf{F}}_{int} = U_f (P^T U_f)^{-1} \mathbf{f}_p$</li>
+                <li>Reduced residual: $\mathbf{R}_r = \Phi^T(\mathbf{F}_{ext} - \tilde{\mathbf{F}}_{int})$</li>
+                <li>Reduced tangent: $K_r = \Phi^T K_T \Phi$ (still Galerkin for tangent)</li>
+                <li>Solve $K_r \, \Delta\mathbf{u}_r = \mathbf{R}_r$</li>
+            </ol>
+
+            <div class="math-card mt-8">
+                <p class="text-xs text-emerald-400 mb-2 font-mono uppercase tracking-tighter">Key Insight</p>
+                <p class="text-slate-300">In this first implementation, DEIM approximates $\mathbf{F}_{int}$ but the tangent $K_T$ is still fully assembled. True computational savings require <strong>element-level sampling</strong> (ECSW, ECM) — covered in Phases 3.4b–3.4c.</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Error Bound -->
+        <section class="content-section">
+            <h2><i class="fa-solid fa-chart-line"></i> 5. Error Bound</h2>
+            <p>The DEIM approximation error satisfies:</p>
+            
+            <div class="math-card">
+                <p class="text-xs text-violet-400 mb-2 font-mono uppercase tracking-tighter">DEIM Error Bound</p>
+                $$\|\mathbf{F}_{int} - \tilde{\mathbf{F}}_{int}\| \leq \|(P^T U_f)^{-1}\| \cdot \|\mathbf{F}_{int} - U_f U_f^T \mathbf{F}_{int}\|$$
+            </div>
+            
+            <p>The first factor depends on the conditioning of the interpolation matrix (controlled by the greedy selection). The second factor is the <strong>POD truncation error</strong> — it decays with the singular values of the force snapshot matrix.</p>
+        </section>
+
+        <div class="text-center mt-16">
+            <a href="../app/simulations/iga-sim-3.4a/index.html" class="inline-block px-8 py-3 bg-violet-600 text-white rounded-full font-bold hover:bg-violet-500 transition-all shadow-lg shadow-violet-600/30">
+                <i class="fa-solid fa-rocket mr-2"></i> Launch DEIM Lab
+            </a>
+        </div>
+    </div>
+</body>
+</html>
