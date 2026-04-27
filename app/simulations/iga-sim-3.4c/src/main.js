@@ -467,10 +467,10 @@ class DEIMBenchmarkApp {
         document.getElementById('input-m').disabled = false;
         document.getElementById('deim-info').textContent = `${ecswInfo.elementCount} / ${ecswInfo.totalElements} elements selected`;
 
-        // Pre-compute reduced tangent from snapshot displacements (key for speedup)
-        status.textContent = 'Pre-computing reduced tangent...';
-        await new Promise(r => setTimeout(r, 10));
-        this.deimEngine.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
+        // Pre-compute reduced tangent is not yet implemented for ECSW
+        // status.textContent = 'Pre-computing reduced tangent...';
+        // await new Promise(r => setTimeout(r, 10));
+        // this.deimEngine.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
 
         this.isTrained = true;
         this.forceSnaps = forceSnaps;
@@ -684,9 +684,10 @@ class DEIMBenchmarkApp {
     }
 
     runDEIMExplorer(step) {
-        return; // Disabled for ECSW
-        if (!this.deimEngine.history || this.deimEngine.history.length === 0) return;
-        const h = this.deimEngine.history[step - 1];
+        /*
+        // ECSW doesn't support the DEIM-style greedy history explorer yet
+        if (!this.ecswEngine || !this.ecswEngine.sampleElements) return;
+        // const h = this.deimEngine.history[step - 1];
         
         // Update UI
         document.getElementById('exp-step-label').textContent = `${step} / ${this.deimEngine.history.length}`;
@@ -764,6 +765,7 @@ class DEIMBenchmarkApp {
         }
         
         this._render();
+        */
     }
 
     initUI() {
@@ -781,7 +783,8 @@ class DEIMBenchmarkApp {
             if (this.explorerStep > 1) { this.explorerStep--; this.runDEIMExplorer(this.explorerStep); }
         };
         document.getElementById('btn-exp-next').onclick = () => {
-            if (this.explorerStep < this.deimEngine.history.length) { this.explorerStep++; this.runDEIMExplorer(this.explorerStep); }
+            // Explorer not supported for ECSW yet
+            // if (this.explorerStep < this.deimEngine.history.length) { this.explorerStep++; this.runDEIMExplorer(this.explorerStep); }
         };
 
         document.querySelectorAll('[data-method]').forEach(btn => {
@@ -798,8 +801,7 @@ class DEIMBenchmarkApp {
             document.getElementById('k-val').textContent = this.k;
             if (this.isTrained) {
                 this.romEngine.computePOD(this.k);
-                // Retrain DEIM with new basis
-                if (this.forceSnaps) this.deimEngine.train(this.forceSnaps, this.deimM);
+                // Retrain not needed for POD change alone in ECSW online
                 this._scheduleUpdate();
             }
         };
