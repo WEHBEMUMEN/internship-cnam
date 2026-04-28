@@ -482,7 +482,7 @@ class DEIMBenchmarkApp {
         // Build constrained DOF list from BCs — exclude these from DEIM selection
         const constrainedDofs = this._getConstrainedDofs();
         // Use k force modes, but m interpolation points for Least-Squares stability
-        const deimInfo = this.deimEngine.train(forceSnaps, this.deimM, this.k);
+        const deimInfo = this.deimEngine.train(forceSnaps, this.deimM, this.k, constrainedDofs);
         document.getElementById('input-m').disabled = false;
         document.getElementById('deim-info').textContent = `${deimInfo.m} interpolation points selected`;
 
