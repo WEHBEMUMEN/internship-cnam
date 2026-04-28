@@ -116,6 +116,22 @@ class DEIMBenchmarkApp {
         return bcs;
     }
 
+    /**
+     * Returns an array of DOF indices that are constrained by boundary conditions.
+     * These DOFs should be excluded from DEIM greedy selection.
+     */
+    _getConstrainedDofs() {
+        const nV = this.patch.controlPoints[0].length;
+        const bcs = this.getBCs();
+        const dofs = [];
+        bcs.forEach(bc => {
+            const base = (bc.i * nV + bc.j) * 2;
+            if (bc.axis === 'x' || bc.axis === 'both') dofs.push(base);
+            if (bc.axis === 'y' || bc.axis === 'both') dofs.push(base + 1);
+        });
+        return dofs;
+    }
+
     getLoads(mag) {
         const nU = this.patch.controlPoints.length, nV = this.patch.controlPoints[0].length;
         const loads = [];
@@ -363,7 +379,8 @@ class DEIMBenchmarkApp {
                 snapDisp.push(new Float64Array(res.u));
 
                 const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-                this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
+                // Do NOT include penalty forces — they would dominate the basis
+                // and cause all DEIM points to cluster at boundary DOFs.
                 forceSnaps.push(Fint);
                 
                 const tipIdx = ((this.patch.controlPoints.length-1)*this.patch.controlPoints[0].length + Math.floor(this.patch.controlPoints[0].length/2)) * 2 + 1;
@@ -387,7 +404,6 @@ class DEIMBenchmarkApp {
                 this.romEngine.addSnapshot(res.u);
                 snapDisp.push(new Float64Array(res.u));
                 const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-                this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
                 forceSnaps.push(Fint);
                 console.log(`Init ${i+1}: E=${state.E}, nu=${state.nu}, F=${state.f.toFixed(0)}`);
                 await new Promise(r => setTimeout(r, 5));
@@ -402,6 +418,7 @@ class DEIMBenchmarkApp {
                 tempDeim.train(forceSnaps, this.deimM, this.k);
                 tempDeim.computeActiveElements(this.patch);
                 tempDeim.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
+                tempDeim.precomputeReducedPenalty(this.solverFOM, this.romEngine, this.patch);
 
                 let maxError = -1, worstIdx = -1;
 
@@ -443,7 +460,6 @@ class DEIMBenchmarkApp {
                     this.romEngine.addSnapshot(res.u);
                     snapDisp.push(new Float64Array(res.u));
                     const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-                    this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
                     forceSnaps.push(Fint);
                 }
             }
@@ -463,6 +479,8 @@ class DEIMBenchmarkApp {
 
         status.textContent = `Training DEIM (m=${this.deimM}, kf=${this.k})...`;
         await new Promise(r => setTimeout(r, 10));
+        // Build constrained DOF list from BCs — exclude these from DEIM selection
+        const constrainedDofs = this._getConstrainedDofs();
         // Use k force modes, but m interpolation points for Least-Squares stability
         const deimInfo = this.deimEngine.train(forceSnaps, this.deimM, this.k);
         document.getElementById('input-m').disabled = false;
@@ -473,9 +491,10 @@ class DEIMBenchmarkApp {
         this.deimEngine.computeActiveElements(this.patch);
 
         // Pre-compute reduced tangent from snapshot displacements (key for speedup)
-        status.textContent = 'Pre-computing reduced tangent...';
+        status.textContent = 'Pre-computing reduced tangent & penalty...';
         await new Promise(r => setTimeout(r, 10));
         this.deimEngine.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
+        this.deimEngine.precomputeReducedPenalty(this.solverFOM, this.romEngine, this.patch);
 
         this.isTrained = true;
         this.forceSnaps = forceSnaps;
@@ -485,6 +504,12 @@ class DEIMBenchmarkApp {
         document.getElementById('btn-explorer').disabled = false;
         status.textContent = `Training complete ✓ — POD: ${(podInfo.energy*100).toFixed(1)}% energy, DEIM: ${deimInfo.m} pts, K_r pre-computed`;
         setTimeout(() => status.classList.add('hidden'), 5000);
+
+        // ── Auto-run DEIM Audit ──
+        console.log("");
+        this.deimEngine.audit(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.forceSnaps, this._getConstrainedDofs());
+        console.log('\n(Copy the block above and paste it as feedback)\n');
+
         this.updatePhysics();
     }
 
@@ -802,7 +827,11 @@ class DEIMBenchmarkApp {
             if (this.isTrained) {
                 this.romEngine.computePOD(this.k);
                 // Retrain DEIM with new basis
-                if (this.forceSnaps) this.deimEngine.train(this.forceSnaps, this.deimM);
+                if (this.forceSnaps) {
+                    this.deimEngine.train(this.forceSnaps, this.deimM, this.k, this._getConstrainedDofs());
+                    this.deimEngine.computeActiveElements(this.patch);
+                    this.deimEngine.precomputeReducedPenalty(this.solverFOM, this.romEngine, this.patch);
+                }
                 this._scheduleUpdate();
             }
         };
@@ -811,7 +840,9 @@ class DEIMBenchmarkApp {
             this.deimM = parseInt(e.target.value);
             document.getElementById('m-val').textContent = this.deimM;
             if (this.isTrained && this.forceSnaps) {
-                const info = this.deimEngine.train(this.forceSnaps, this.deimM);
+                const info = this.deimEngine.train(this.forceSnaps, this.deimM, this.k, this._getConstrainedDofs());
+                this.deimEngine.computeActiveElements(this.patch);
+                this.deimEngine.precomputeReducedPenalty(this.solverFOM, this.romEngine, this.patch);
                 document.getElementById('deim-info').textContent = `${info.m} interpolation points`;
                 this._scheduleUpdate();
             }
@@ -850,4 +881,4 @@ class DEIMBenchmarkApp {
     }
 }
 
-new DEIMBenchmarkApp();
+window.app = new DEIMBenchmarkApp();

@@ -1,4 +1,4 @@
-// Phase 3.4a: DEIM Benchmark — Main Application
+// Phase 3.4c: ECSW Benchmark — Main Application
 
 const JET = [{t:0,r:.23,g:.51,b:.96},{t:.2,r:.02,g:.71,b:.83},{t:.4,r:.06,g:.73,b:.51},{t:.6,r:.98,g:.8,b:.08},{t:.8,r:.98,g:.45,b:.09},{t:1,r:.94,g:.27,b:.27}];
 function jet(t){t=Math.max(0,Math.min(1,t));for(let i=0;i<JET.length-1;i++){const a=JET[i],b=JET[i+1];if(t>=a.t&&t<=b.t){const f=(t-a.t)/(b.t-a.t);return[a.r+f*(b.r-a.r),a.g+f*(b.g-a.g),a.b+f*(b.b-a.b)];}}return[.94,.27,.27];}
@@ -10,7 +10,7 @@ draw(){const{c,ctx,data}=this;const W=c.width,H=c.height;ctx.clearRect(0,0,W,H);
 const METHODS = {
     fom:      {label:'FOM',      color:'#334155'},
     galerkin: {label:'Galerkin', color:'#3b82f6'},
-    deim:     {label:'DEIM',     color:'#8b5cf6'}
+    deim:     {label:'ECSW',     color:'#8b5cf6'}
 };
 
 class DEIMBenchmarkApp {
@@ -340,7 +340,7 @@ class DEIMBenchmarkApp {
         this.samplingStrategy = strategy;
 
         if (strategy === '8020') {
-            console.group("DEIM Training: 80/20 Train/Test Split");
+            console.group("ECSW Training: 80/20 Train/Test Split");
             // Shuffle
             for (let i = allCandidates.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -373,7 +373,7 @@ class DEIMBenchmarkApp {
             }
             console.groupEnd();
         } else {
-            console.group("DEIM Training: Greedy Parametric Sampling");
+            console.group("ECSW Training: Greedy Parametric Sampling");
             const trainSet = [allCandidates[0], allCandidates[allCandidates.length-1]]; // Edges
             const candidatePool = allCandidates.slice(1, allCandidates.length-1);
             const targetSnapshots = 12;

@@ -131,47 +131,71 @@ class ECSWEngine {
 
     /**
      * Weighted Assembly Online.
+     * Assembles BOTH reduced force and reduced tangent stiffness directly.
      */
-    assembleReducedForce(fomSolver, patch, ur) {
+    assembleReducedSystem(fomSolver, patch, ur) {
         const F_red_assembly = new Float64Array(this.k).fill(0);
-        const F_red_penalty = new Float64Array(this.k).fill(0);
+        const Kt_red_assembly = Array.from({ length: this.k }, () => new Float64Array(this.k).fill(0));
+        
         const { p, q } = patch;
         const gRule = window.GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
 
+        // Pre-expand ur to full displacement ONLY ONCE per assembly
         const u_full = new Float64Array(this.nDofs);
-        for (let d = 0; d < this.nDofs; d++) 
-            for (let j = 0; j < this.k; j++) u_full[d] += this.phi.get(d, j) * ur[j];
+        for (let j = 0; j < this.k; j++) {
+            const val = ur[j];
+            if (val === 0) continue;
+            for (let d = 0; d < this.nDofs; d++) u_full[d] += this.phi.get(d, j) * val;
+        }
 
         this.sampleElements.forEach(el => {
-            const f_e_full = new Float64Array(this.nDofs).fill(0);
-            this._assembleSingleElement(fomSolver, patch, el, u_full, f_e_full, gRule);
+            const { f_e, k_e, activeDofs } = this._assembleElementPhysics(fomSolver, patch, el, u_full, gRule);
             
+            const nLocal = activeDofs.length;
+            const weight = el.weight;
+
+            // F_red += w * Phi_e^T * f_e
             for (let i = 0; i < this.k; i++) {
                 let dot = 0;
-                for (let d = 0; d < this.nDofs; d++) {
-                    if (f_e_full[d] !== 0) dot += this.phi.get(d, i) * f_e_full[d];
+                for (let a = 0; a < nLocal; a++) {
+                    dot += this.phi.get(activeDofs[a], i) * f_e[a];
                 }
-                F_red_assembly[i] += el.weight * dot;
+                F_red_assembly[i] += weight * dot;
+            }
+
+            // Kt_red += w * Phi_e^T * k_e * Phi_e
+            const Phi_e = Array.from({ length: nLocal }, () => new Float64Array(this.k));
+            for (let a = 0; a < nLocal; a++) {
+                for (let i = 0; i < this.k; i++) Phi_e[a][i] = this.phi.get(activeDofs[a], i);
+            }
+
+            const temp = Array.from({ length: nLocal }, () => new Float64Array(this.k));
+            for (let a = 0; a < nLocal; a++) {
+                for (let i = 0; i < this.k; i++) {
+                    let val = 0;
+                    for (let b = 0; b < nLocal; b++) val += k_e[a][b] * Phi_e[b][i];
+                    temp[a][i] = val;
+                }
+            }
+
+            for (let i = 0; i < this.k; i++) {
+                for (let j = 0; j < this.k; j++) {
+                    let val = 0;
+                    for (let a = 0; a < nLocal; a++) val += Phi_e[a][i] * temp[a][j];
+                    Kt_red_assembly[i][j] += weight * val;
+                }
             }
         });
 
+        // Add precomputed Reduced Penalty
         for (let i = 0; i < this.k; i++) {
             for (let j = 0; j < this.k; j++) {
-                F_red_penalty[i] += this.Kp_red[i][j] * ur[j];
+                F_red_assembly[i] += this.Kp_red[i][j] * ur[j];
+                Kt_red_assembly[i][j] += this.Kp_red[i][j];
             }
         }
 
-        const normA = Math.sqrt(F_red_assembly.reduce((a, b) => a + b*b, 0));
-        const normP = Math.sqrt(F_red_penalty.reduce((a, b) => a + b*b, 0));
-        if (normA > 1e12 || normP > 1e12) {
-            console.warn(`ECSW: Large forces detected! Assembly=${normA.toExponential(2)}, Penalty=${normP.toExponential(2)}`);
-        }
-
-        return { 
-            F_red: F_red_assembly.map((f, i) => f + F_red_penalty[i]),
-            normAssembly: normA,
-            normPenalty: normP
-        };
+        return { F_red: F_red_assembly, Kt_red: Kt_red_assembly };
     }
 
     solveReduced(fomSolver, patch, loads, options = {}) {
@@ -183,7 +207,7 @@ class ECSWEngine {
         let ur = new Float64Array(k);
         const residualHistory = [];
 
-        // Build projected external force
+        // Precompute projected external force (Linear)
         const F_ext_total = new Float64Array(nDofs);
         loads.forEach(l => {
             const idx = (l.i * nV + l.j) * 2;
@@ -195,87 +219,50 @@ class ECSWEngine {
             for (let d = 0; d < nDofs; d++) F_ext_red[i] += this.phi.get(d, i) * F_ext_total[d];
         }
 
-        const PhiT = this.phi.transpose();
+        // Timing diagnostics
+        let totalAssemblyTime = 0, totalSolveTime = 0, totalIters = 0;
 
         for (let s = 1; s <= steps; s++) {
             const frac = s / steps;
             
             for (let iter = 0; iter < iterations; iter++) {
-                // --- Tangent Update (Full Newton-Raphson) ---
-                const u_full_curr = new Float64Array(nDofs);
-                for (let d = 0; d < nDofs; d++) 
-                    for (let j = 0; j < k; j++) u_full_curr[d] += this.phi.get(d, j) * ur[j];
+                // 1. Online Assembly (Reduced only!)
+                const t0 = performance.now();
+                const { F_red, Kt_red } = this.assembleReducedSystem(fomSolver, patch, ur);
+                totalAssemblyTime += performance.now() - t0;
                 
-                const Kt_full = fomSolver.calculateTangentStiffness(patch, u_full_curr);
-                fomSolver.applyPenaltyConstraints(Kt_full, null, u_full_curr, patch);
-                
-                const nV = patch.controlPoints[0].length;
-                const penalty = 1e12;
-                for (let j = 0; j < nV; j++) {
-                    const idx = (0 * nV + j) * 2;
-                    Kt_full[idx][idx] += penalty;
-                    Kt_full[idx+1][idx+1] += penalty;
-                }
-
-                const Kt_red_mat = PhiT.mmul(new window.mlMatrix.Matrix(Kt_full)).mmul(this.phi);
-                const Kt_red = Kt_red_mat.to2DArray();
-
-                // 1. Current state evaluation
-                const state = this.assembleReducedForce(fomSolver, patch, ur);
-                let R_red = F_ext_red.map((f, i) => f * frac - state.F_red[i]);
-                let norm = Math.sqrt(R_red.reduce((a, b) => a + b*b, 0));
-                
-                if (iter === 0 || iter % 5 === 0) {
-                    console.log(`Step ${s} Iter ${iter}: Res=${norm.toExponential(2)}, F_asm=${state.normAssembly.toExponential(2)}`);
-                }
+                // 2. Residual
+                const R_red = F_ext_red.map((f, i) => f * frac - F_red[i]);
+                const norm = Math.sqrt(R_red.reduce((a, b) => a + b*b, 0));
 
                 if (norm < tolerance && iter > 0) break;
                 if (isNaN(norm) || norm > 1e25) break;
 
-                // 2. Solve for increment
-                const Kt_copy = Kt_red.map(row => new Float64Array(row));
-                let dur = fomSolver.gaussianElimination(Kt_copy, Array.from(R_red));
+                // 3. Solve for increment dur = Kt_red^-1 * R_red [k x k]
+                const t1 = performance.now();
+                const dur = fomSolver.gaussianElimination(Kt_red, Array.from(R_red));
+                totalSolveTime += performance.now() - t1;
                 
-                // 3. BACKTRACKING LINE SEARCH
-                let damping = 0.8;
-                let stepAccepted = false;
-                
-                for (let backtrack = 0; backtrack < 5; backtrack++) {
-                    const next_ur = new Float64Array(k);
-                    for (let i = 0; i < k; i++) next_ur[i] = ur[i] + dur[i] * damping;
-                    
-                    const next_state = this.assembleReducedForce(fomSolver, patch, next_ur);
-                    const next_R = F_ext_red.map((f, i) => f * frac - next_state.F_red[i]);
-                    const next_norm = Math.sqrt(next_R.reduce((a, b) => a + b*b, 0));
-                    
-                    if (next_norm < norm || iter === 0) {
-                        // Step improves residual (or it's the very first step)
-                        ur = next_ur;
-                        stepAccepted = true;
-                        break;
-                    } else {
-                        // Step made it worse! Backtrack.
-                        damping *= 0.5;
-                        if (damping < 0.05) break;
-                    }
-                }
-
-                if (!stepAccepted) {
-                    console.warn(`ECSW: Line search failed to find descent direction at Step ${s} Iter ${iter}`);
-                    // Still take a tiny step to try and escape
-                    for (let i = 0; i < k; i++) ur[i] += dur[i] * 0.01;
-                }
+                // 4. Update
+                for (let i = 0; i < k; i++) ur[i] += dur[i];
 
                 residualHistory.push({ step: s, iter, norm });
+                totalIters++;
             }
         }
 
+        // Performance Report
+        console.log(`%cECSW Online Performance: ${totalIters} iters | Assembly: ${totalAssemblyTime.toFixed(1)}ms | Solve(${k}x${k}): ${totalSolveTime.toFixed(1)}ms | Elements: ${this.sampleElements.length}`, 'color:#10b981;font-weight:bold');
+
         const u = new Float64Array(nDofs);
-        for (let d = 0; d < nDofs; d++) 
-            for (let j = 0; j < k; j++) u[d] += this.phi.get(d, j) * ur[j];
+        for (let j = 0; j < k; j++) {
+            const val = ur[j];
+            for (let d = 0; d < nDofs; d++) u[d] += this.phi.get(d, j) * val;
+        }
 
         return { u, ur, residualHistory };
     }
+
 
     _getAllElements(patch) {
         const { U, V } = patch;
@@ -299,13 +286,12 @@ class ECSWEngine {
         const gRule = window.GaussQuadrature2D.getPoints(Math.max(patch.p, patch.q) + 1);
 
         for (let s = 0; s < nSnaps; s++) {
-            const f_e_full = new Float64Array(this.nDofs);
-            this._assembleSingleElement(fomSolver, patch, el, snapshotDisplacements[s], f_e_full, gRule);
+            const { f_e, activeDofs } = this._assembleElementPhysics(fomSolver, patch, el, snapshotDisplacements[s], gRule);
             
             for (let i = 0; i < this.k; i++) {
                 let dot = 0;
-                for (let d = 0; d < this.nDofs; d++) {
-                    if (f_e_full[d] !== 0) dot += this.phi.get(d, i) * f_e_full[d];
+                for (let a = 0; a < activeDofs.length; a++) {
+                    dot += this.phi.get(activeDofs[a], i) * f_e[a];
                 }
                 Ge[s * this.k + i] = dot;
             }
@@ -313,8 +299,25 @@ class ECSWEngine {
         return Ge;
     }
 
-    _assembleSingleElement(fomSolver, patch, el, u_disp, f_out, gRule) {
+    _assembleElementPhysics(fomSolver, patch, el, u_disp, gRule) {
         const { uMin, uMax, vMin, vMax } = el;
+        
+        // Find local active DOFs for this element using a center-point probe
+        const derivCenter = fomSolver.engine.getSurfaceDerivatives(patch, (uMin+uMax)/2, (vMin+vMax)/2);
+        const { activeIndices } = fomSolver.getBParametric(patch, (uMin+uMax)/2, (vMin+vMax)/2, derivCenter);
+        
+        const nLocalBasis = activeIndices.length;
+        const nLocalDof = nLocalBasis * 2;
+        const f_e = new Float64Array(nLocalDof);
+        const k_e = Array.from({ length: nLocalDof }, () => new Float64Array(nLocalDof));
+        const globalDofMap = new Uint32Array(nLocalDof);
+        for(let i=0; i<nLocalBasis; i++) {
+            globalDofMap[i*2] = activeIndices[i] * 2;
+            globalDofMap[i*2+1] = activeIndices[i] * 2 + 1;
+        }
+
+        const D = fomSolver.getPlaneStressD();
+
         for (let gu = 0; gu < gRule.points.length; gu++) {
             const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
             const wu = gRule.weights[gu] * (uMax - uMin) / 2;
@@ -323,41 +326,70 @@ class ECSWEngine {
                 const wv = gRule.weights[gv] * (vMax - vMin) / 2;
 
                 const deriv = fomSolver.engine.getSurfaceDerivatives(patch, u, v);
-                const { grads: B_param, detJ, activeIndices } = fomSolver.getBParametric(patch, u, v, deriv);
+                const { grads: B_param, detJ } = fomSolver.getBParametric(patch, u, v, deriv);
                 
                 let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
-                for (let a = 0; a < activeIndices.length; a++) {
+                for (let a = 0; a < nLocalBasis; a++) {
                     const k = activeIndices[a];
-                    dudx += B_param[k][0] * u_disp[k * 2];
-                    dudy += B_param[k][1] * u_disp[k * 2];
-                    dvdx += B_param[k][0] * u_disp[k * 2 + 1];
-                    dvdy += B_param[k][1] * u_disp[k * 2 + 1];
+                    const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                    dudx += dRdx * u_disp[k * 2];
+                    dudy += dRdy * u_disp[k * 2];
+                    dvdx += dRdx * u_disp[k * 2 + 1];
+                    dvdy += dRdy * u_disp[k * 2 + 1];
                 }
 
                 const Exx = dudx + 0.5 * (dudx*dudx + dvdx*dvdx);
                 const Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
                 const Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy);
                 
-                const D = fomSolver.getPlaneStressD();
                 const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
                 const Syy = D[1][0]*Exx + D[1][1]*Eyy;
                 const Sxy = D[2][2]*Exy2;
 
                 const factor = detJ * wu * wv * fomSolver.thickness;
 
-                for (let a = 0; a < activeIndices.length; a++) {
+                const B_NL = Array.from({ length: nLocalBasis }, () => [new Float64Array(2), new Float64Array(2), new Float64Array(2)]);
+                for (let a = 0; a < nLocalBasis; a++) {
                     const k = activeIndices[a];
                     const dRdx = B_param[k][0], dRdy = B_param[k][1];
-                    
                     const bexx_u = (1 + dudx) * dRdx, bexx_v = (dvdx) * dRdx;
                     const beyy_u = (dudy) * dRdy, beyy_v = (1 + dvdy) * dRdy;
                     const bexy_u = (1 + dudx)*dRdy + dudy*dRdx, bexy_v = (1 + dvdy)*dRdx + dvdx*dRdy;
 
-                    f_out[k * 2] += (bexx_u * Sxx + beyy_u * Syy + bexy_u * Sxy) * factor;
-                    f_out[k * 2 + 1] += (bexx_v * Sxx + beyy_v * Syy + bexy_v * Sxy) * factor;
+                    f_e[a * 2] += (bexx_u * Sxx + beyy_u * Syy + bexy_u * Sxy) * factor;
+                    f_e[a * 2 + 1] += (bexx_v * Sxx + beyy_v * Syy + bexy_v * Sxy) * factor;
+
+                    B_NL[a][0][0] = bexx_u; B_NL[a][0][1] = bexx_v;
+                    B_NL[a][1][0] = beyy_u; B_NL[a][1][1] = beyy_v;
+                    B_NL[a][2][0] = bexy_u; B_NL[a][2][1] = bexy_v;
+                }
+
+                for (let a = 0; a < nLocalBasis; a++) {
+                    for (let b = 0; b < nLocalBasis; b++) {
+                        for (let i = 0; i < 2; i++) {
+                            for (let j = 0; j < 2; j++) {
+                                let kab = 0;
+                                for (let r = 0; r < 3; r++) {
+                                    for (let c = 0; c < 3; c++) kab += B_NL[a][r][i] * D[r][c] * B_NL[b][c][j];
+                                }
+                                k_e[a * 2 + i][b * 2 + j] += kab * factor;
+                            }
+                        }
+                    }
+                }
+
+                for (let a = 0; a < nLocalBasis; a++) {
+                    for (let b = 0; b < nLocalBasis; b++) {
+                        const dRdx_a = B_param[activeIndices[a]][0], dRdy_a = B_param[activeIndices[a]][1];
+                        const dRdx_b = B_param[activeIndices[b]][0], dRdy_b = B_param[activeIndices[b]][1];
+                        const k_geo = (dRdx_a * Sxx * dRdx_b + dRdy_a * Syy * dRdy_b + dRdx_a * Sxy * dRdy_b + dRdy_a * Sxy * dRdx_b) * factor;
+                        k_e[a * 2][b * 2] += k_geo;
+                        k_e[a * 2 + 1][b * 2 + 1] += k_geo;
+                    }
                 }
             }
         }
+        return { f_e, k_e, activeDofs: globalDofMap };
     }
 }
 

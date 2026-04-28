@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECSW Theory | Phase 3.4c</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+    <style>
+        :root {
+            --bg: #0c0e14;
+            --surface: #13161f;
+            --card: #1a1e2e;
+            --border: rgba(139,92,246,0.15);
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139,92,246,0.25);
+            --secondary: #3b82f6;
+            --accent: #10b981;
+            --orange: #f59e0b;
+            --red: #ef4444;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* Hero */
+        .hero {
+            position: relative;
+            padding: 80px 0 60px;
+            text-align: center;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border);
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 600px 400px at 50% 30%, var(--primary-glow), transparent);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(139,92,246,0.12);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 6px 18px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--primary) 50%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        .hero p {
+            font-size: 1rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .back-link {
+            position: absolute;
+            top: 24px;
+            left: 32px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--primary); }
+
+        /* Layout */
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Sections */
+        .section {
+            padding: 48px 0;
+            border-bottom: 1px solid rgba(148,163,184,0.08);
+        }
+        .section:last-child { border-bottom: none; }
+        .section-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .section h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin: 28px 0 12px;
+        }
+        p { margin-bottom: 14px; color: var(--text-dim); font-size: 0.92rem; }
+        strong { color: var(--text); }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+        .card.highlight {
+            border-color: rgba(16,185,129,0.3);
+            background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(59,130,246,0.05));
+        }
+        .card.warn {
+            border-color: rgba(245,158,11,0.3);
+            background: rgba(245,158,11,0.04);
+        }
+        .card-label {
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-label.green { color: var(--accent); }
+        .card-label.orange { color: var(--orange); }
+        .card-label.purple { color: var(--primary); }
+
+        /* Math */
+        .math-block {
+            background: rgba(139,92,246,0.06);
+            border: 1px solid rgba(139,92,246,0.12);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 18px 0;
+            text-align: center;
+            overflow-x: auto;
+        }
+        .katex { font-size: 1.05em; }
+
+        /* Code */
+        pre {
+            background: #0d1017;
+            border: 1px solid rgba(148,163,184,0.1);
+            border-radius: 12px;
+            padding: 18px 20px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.7;
+            color: #a5b4c8;
+            margin: 14px 0;
+        }
+        .kw { color: #c792ea; }
+        .fn { color: #82aaff; }
+        .cm { color: #546e7a; }
+        .str { color: #c3e88d; }
+        .num { color: #f78c6c; }
+
+        /* Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.82rem;
+        }
+        .comparison-table th {
+            background: rgba(139,92,246,0.1);
+            color: var(--primary);
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .comparison-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(148,163,184,0.06);
+            color: var(--text-dim);
+        }
+        .comparison-table tr:hover td { background: rgba(139,92,246,0.03); }
+        .check { color: var(--accent); }
+        .cross { color: var(--red); }
+        .warn-icon { color: var(--orange); }
+
+        /* Flow diagram */
+        .flow {
+            display: flex;
+            gap: 12px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+        }
+        .flow-step {
+            flex: 1;
+            min-width: 180px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            position: relative;
+        }
+        .flow-step::after {
+            content: '→';
+            position: absolute;
+            right: -18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .flow-step:last-child::after { display: none; }
+        .flow-num {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 auto 10px;
+        }
+        .flow-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .flow-desc {
+            font-size: 0.62rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-dim);
+            font-size: 0.7rem;
+        }
+        .footer a { color: var(--primary); text-decoration: none; }
+
+        @media (max-width: 700px) {
+            .flow { flex-direction: column; }
+            .flow-step::after { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+    <a href="../app/simulations/iga-sim-3.4c/index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Simulation</a>
+    <div class="container">
+        <div class="hero-badge"><i class="fa-solid fa-atom"></i> Phase 3.4c · Theory</div>
+        <h1>Energy-Conserving Sampling<br>& Weighting (ECSW)</h1>
+        <p>A hyper-reduction method that guarantees energy conservation through non-negative element weighting — replacing node-based DEIM interpolation.</p>
+    </div>
+</div>
+
+<div class="container">
+
+<!-- Section 1: Motivation -->
+<div class="section">
+    <div class="section-num">§1 · Motivation</div>
+    <h2>Why ECSW Instead of DEIM?</h2>
+
+    <p>In <strong>DEIM</strong> (Phase 3.4a), the nonlinear internal force is reconstructed via node-based interpolation:</p>
+    <div class="math-block">
+        $$F_{int} \approx \Phi_F \left(P^T \Phi_F\right)^{-1} F_{sampled}$$
+    </div>
+
+    <div class="card warn">
+        <div class="card-label orange"><i class="fa-solid fa-triangle-exclamation"></i> DEIM's Two Weaknesses</div>
+        <p style="margin-bottom:8px">1. The interpolation matrix $(P^T \Phi_F)$ can become <strong>ill-conditioned</strong>, causing divergence and 15%+ errors.</p>
+        <p style="margin-bottom:0">2. DEIM does <strong>not conserve energy</strong> — the approximated force field may violate the work-energy theorem.</p>
+    </div>
+
+    <p><strong>ECSW</strong> takes a fundamentally different approach. Instead of interpolating forces at selected <em>nodes</em>, it approximates the <strong>element integral</strong> using a weighted sum over selected <em>elements</em>:</p>
+    <div class="math-block">
+        $$\int_\Omega f(\mathbf{u}) \, d\Omega \;\approx\; \sum_{e \in \mathcal{Z}} w_e \int_{\Omega_e} f(\mathbf{u}) \, d\Omega_e$$
+    </div>
+    <p>where $\mathcal{Z}$ is a sparse subset of elements and $w_e \geq 0$ are non-negative weights. The non-negativity constraint is what <strong>guarantees energy conservation</strong>.</p>
+</div>
+
+<!-- Section 2: Offline Pipeline -->
+<div class="section">
+    <div class="section-num">§2 · Offline Pipeline</div>
+    <h2>Three-Stage Training</h2>
+    <p>The ECSW offline training pipeline consists of three stages, all implemented in <code>ecsw-engine.js</code>:</p>
+
+    <div class="flow">
+        <div class="flow-step">
+            <div class="flow-num">1</div>
+            <div class="flow-title">Snapshots + POD</div>
+            <div class="flow-desc">Collect FOM displacements,<br>extract basis $\Phi$ via SVD</div>
+        </div>
+        <div class="flow-step">
+            <div class="flow-num">2</div>
+            <div class="flow-title">Build Matrix $G$</div>
+            <div class="flow-desc">Project each element's force<br>onto reduced basis $\Phi$</div>
+        </div>
+        <div class="flow-step">
+            <div class="flow-num">3</div>
+            <div class="flow-title">NNLS Solve</div>
+            <div class="flow-desc">Find non-negative weights<br>$w_e \geq 0$ via NNLS</div>
+        </div>
+    </div>
+
+    <h3>Stage 1: Snapshot Collection & POD Basis</h3>
+    <p>Identical to DEIM — compute the SVD of displacement snapshots to get the reduced basis $\Phi \in \mathbb{R}^{n \times k}$.</p>
+    <pre><span class="cm">// romEngine.computePOD(k) extracts Φ [nDofs × k]</span>
+<span class="kw">const</span> podInfo = <span class="kw">this</span>.<span class="fn">romEngine</span>.<span class="fn">computePOD</span>(<span class="kw">this</span>.k);</pre>
+
+    <h3>Stage 2: Element-wise Projected Force Matrix $G$</h3>
+    <p>For each element $e$ and snapshot $s$, compute the <strong>projected element internal force</strong>:</p>
+    <div class="math-block">
+        $$G_e^{(s)} = \Phi^T \cdot f_e^{int}(\mathbf{u}_s)$$
+    </div>
+    <p>This produces a matrix $G \in \mathbb{R}^{(k \cdot n_{snap}) \times n_{elem}}$ — each column represents one element's contribution across all snapshots.</p>
+    <pre><span class="cm">// Each column of G is built by _computeElementProjectedForce()</span>
+<span class="kw">const</span> Ge = <span class="kw">this</span>.<span class="fn">_computeElementProjectedForce</span>(fomSolver, patch, el, snapDisp);</pre>
+
+    <h3>Stage 3: Non-Negative Least Squares (NNLS)</h3>
+    <p>The key innovation: find weights $\mathbf{w} \geq 0$ such that:</p>
+    <div class="math-block">
+        $$G \mathbf{w} \approx \mathbf{b}, \quad w_e \geq 0 \;\;\forall\, e$$
+    </div>
+    <p>where $\mathbf{b} = \sum_e G_e$ is the total projected force. Elements with $w_e = 0$ are discarded, creating the sparse set $\mathcal{Z}$.</p>
+    <pre><span class="cm">// NNLS solver finds optimal non-negative weights</span>
+<span class="kw">const</span> result = <span class="kw">this</span>.<span class="fn">_solveNNLS</span>(G, b, tolerance);</pre>
+</div>
+
+<!-- Section 3: Comparison -->
+<div class="section">
+    <div class="section-num">§3 · DEIM vs ECSW</div>
+    <h2>No Ill-Conditioning!</h2>
+
+    <table class="comparison-table">
+        <thead>
+            <tr><th>Property</th><th>DEIM</th><th>ECSW</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Approximation Target</strong></td><td>Force vector $F_{int}$</td><td>Element energy integral</td></tr>
+            <tr><td><strong>Selection Unit</strong></td><td>Individual DOF nodes</td><td>Entire elements</td></tr>
+            <tr><td><strong>Selection Algorithm</strong></td><td>Greedy (or Q-DEIM QR)</td><td>NNLS optimization</td></tr>
+            <tr><td><strong>Weights</strong></td><td>Implicit (via interpolation)</td><td>Explicit non-negative $w_e$</td></tr>
+            <tr><td><strong>Energy Conservation</strong></td><td><span class="cross"><i class="fa-solid fa-xmark"></i></span> Not guaranteed</td><td><span class="check"><i class="fa-solid fa-check"></i></span> Guaranteed</td></tr>
+            <tr><td><strong>Ill-Conditioning Risk</strong></td><td><span class="warn-icon"><i class="fa-solid fa-triangle-exclamation"></i></span> High</td><td><span class="check"><i class="fa-solid fa-check"></i></span> None</td></tr>
+            <tr><td><strong>Bases Required</strong></td><td>Two SVDs (disp + force)</td><td>One SVD (disp only)</td></tr>
+        </tbody>
+    </table>
+
+    <div class="card highlight">
+        <div class="card-label green"><i class="fa-solid fa-shield-halved"></i> Key Insight</div>
+        <p style="margin-bottom:0">ECSW avoids the $(P^T \Phi_F)^{-1}$ inversion entirely. There is <strong>no interpolation matrix</strong> to become ill-conditioned. The NNLS problem is always well-posed because the non-negativity constraint acts as an automatic regularizer.</p>
+    </div>
+</div>
+
+<!-- Section 4: Online Phase -->
+<div class="section">
+    <div class="section-num">§4 · Online Phase</div>
+    <h2>Reduced Newton-Raphson</h2>
+
+    <p>During the online solve, the reduced internal force and tangent stiffness are assembled <strong>only over sampled elements</strong>:</p>
+
+    <div class="math-block">
+        $$F_{int}^{red}(\mathbf{u}_r) = \sum_{e \in \mathcal{Z}} w_e \cdot \Phi_e^T \, f_e^{int}(\Phi \, \mathbf{u}_r)$$
+    </div>
+    <div class="math-block">
+        $$K_t^{red}(\mathbf{u}_r) = \sum_{e \in \mathcal{Z}} w_e \cdot \Phi_e^T \, K_e^t(\Phi \, \mathbf{u}_r) \, \Phi_e$$
+    </div>
+
+    <p>where $\Phi_e$ denotes the rows of $\Phi$ corresponding to the DOFs of element $e$. This is the <strong>hyper-reduction</strong>: instead of looping over all $n_{elem}$ elements, we loop over $|\mathcal{Z}| \ll n_{elem}$ elements.</p>
+
+    <p>The Newton-Raphson update in reduced coordinates becomes:</p>
+    <div class="math-block">
+        $$K_t^{red} \,\Delta \mathbf{u}_r = F_{ext}^{red} - F_{int}^{red}$$
+    </div>
+    <p>This is a $k \times k$ linear system (typically $k = 5\text{–}20$), trivially cheap to solve.</p>
+
+    <div class="card">
+        <div class="card-label purple"><i class="fa-solid fa-bolt"></i> Complexity Comparison</div>
+        <table class="comparison-table" style="margin:0">
+            <thead><tr><th>Operation</th><th>FOM</th><th>Galerkin ROM</th><th>ECSW ROM</th></tr></thead>
+            <tbody>
+                <tr><td>Element Integration</td><td>$n_{elem}$</td><td>$n_{elem}$</td><td>$|\mathcal{Z}| \ll n_{elem}$</td></tr>
+                <tr><td>Tangent Assembly</td><td>$O(n^2)$</td><td>$O(n^2)$</td><td>$O(|\mathcal{Z}| \cdot n_{loc}^2)$</td></tr>
+                <tr><td>Projection</td><td>—</td><td>$O(n^2 k)$</td><td>$O(|\mathcal{Z}| \cdot n_{loc} \cdot k)$</td></tr>
+                <tr><td>Linear Solve</td><td>$O(n^3)$</td><td>$O(k^3)$</td><td>$O(k^3)$</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Section 5: References -->
+<div class="section">
+    <div class="section-num">§5 · References</div>
+    <h2>Literature</h2>
+    <p>1. An, S.S., Kim, T., James, D.L. (2008). <em>Optimizing cubature for efficient integration of subspace deformations.</em> ACM TOG.</p>
+    <p>2. Farhat, C., Avery, P., Chapman, T., Cortial, J. (2014). <em>Dimensional reduction of nonlinear finite element dynamic models with finite rotations and energy-based mesh sampling and weighting.</em> IJNME.</p>
+    <p>3. Farhat, C., Chapman, T., Avery, P. (2015). <em>Structure-preserving, stability, and accuracy properties of the ECSW method.</em> IJNME.</p>
+</div>
+
+</div>
+
+<div class="footer">
+    Phase 3.4c · ECSW Hyper-Reduction · <a href="../app/simulations/iga-sim-3.4c/index.html">Back to Simulation</a>
+</div>
+
+</body>
+</html>
