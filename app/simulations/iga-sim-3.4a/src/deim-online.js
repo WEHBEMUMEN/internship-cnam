@@ -5,7 +5,7 @@
 /**
  * ONLINE: DEIM Force Reconstruction (from sampled entries only)
  */
-DEIMEngine.prototype.reconstruct = function(F_partial) {
+DEIMEngine.prototype.reconstruct = function (F_partial) {
     const m = this.m;
     const N = this.U_f.rows;
 
@@ -26,7 +26,7 @@ DEIMEngine.prototype.reconstruct = function(F_partial) {
 /**
  * ONLINE: DEIM-Accelerated Newton-Raphson Solver
  */
-DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, loads, options = {}) {
+DEIMEngine.prototype.solveReduced = function (fomSolver, romEngine, patch, bcs, loads, options = {}) {
     const { iterations = 15, tolerance = 1e-6, steps = 1 } = options;
     const Phi = romEngine.Phi;
     if (!Phi) throw new Error('POD basis not computed');
@@ -63,8 +63,6 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
         for (let j = 0; j < this.m; j++) {
             let sum = 0;
             for (let l = 0; l < this.kf; l++) {
-                // PhiT_Uf[i][l] is (Phi^T * U_f)_il
-                // PtU_pinv[l][j] is ((P^T * U_f)^-1)_lj
                 let val_PhiT_Uf = 0;
                 for (let d = 0; d < nDofs; d++) val_PhiT_Uf += PhiT.get(i, d) * this.U_f.get(d, l);
                 sum += val_PhiT_Uf * this.PtU_pinv[l][j];
@@ -83,21 +81,19 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
                 for (let j = 0; j < k; j++) u_full[d] += Phi.get(d, j) * ur[j];
             }
 
-            // FIX: Compute tangent from structural stiffness ONLY.
-            // Boundary conditions are intrinsically enforced by the sanitized basis (Phi=0 at fixed DOFs).
-            // Adding penalty springs here would create phantom stiffness that corrupts convergence.
+            // FIX: We MUST apply the penalty springs to anchor the structure!
+            // Even a sanitized basis has O(10^-12) displacements at boundaries.
+            // Without these springs, the tangent becomes near-singular (rigid body motion).
             const Kt_full = fomSolver.calculateTangentStiffness(patch, u_full);
+            fomSolver.applyPenaltyConstraints(Kt_full, null, u_full, patch, bcs); 
             const Kt_mat = new Matrix(Kt_full);
             const Kt_red = PhiT.mmul(Kt_mat).mmul(Phi).to2DArray();
 
             // 2. Compute F_int using the PROVEN FOM assembly, then sample at DEIM indices.
-            // This matches exactly what the offline audit does (0.0000% error).
             const F_int_full = fomSolver.calculateInternalForce(patch, u_full);
-            // Mask constrained DOFs (same as training sanitization)
             if (this.constrainedDofs) {
                 this.constrainedDofs.forEach(d => F_int_full[d] = 0);
             }
-            // Sample at DEIM indices
             const F_partial = new Float64Array(this.m);
             for (let i = 0; i < this.m; i++) {
                 F_partial[i] = F_int_full[this.indices[i]];
@@ -111,10 +107,15 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
                 }
             }
 
-            // 4. Compute reduced residual: R_r = Φ^T F_ext - f_red
+            // 4. Compute reduced residual: R_r = Φ^T F_ext - f_red - Φ^T F_penalty
             const R_red = new Float64Array(k);
             for (let i = 0; i < k; i++) {
-                R_red[i] = F_ext_red_total[i] * loadFraction - f_red[i];
+                // Restore exact penalty contribution (pushes against the wall)
+                let penalty_proj = 0;
+                if (this.Kp_red) {
+                    for (let j = 0; j < k; j++) penalty_proj += this.Kp_red[i][j] * ur[j];
+                }
+                R_red[i] = F_ext_red_total[i] * loadFraction - f_red[i] - penalty_proj;
             }
 
             // 5. Check convergence
@@ -157,7 +158,7 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
  * Specialized assembly that ONLY computes the values at DEIM indices.
  * This is the core of the speedup.
  */
-DEIMEngine.prototype.calculateSampledInternalForce = function(fomSolver, patch, u_disp) {
+DEIMEngine.prototype.calculateSampledInternalForce = function (fomSolver, patch, u_disp) {
     // Reset only active DOFs in the buffer (O(m) instead of O(N))
     this.activeDofs.forEach(d => this._fBuf[d] = 0);
 
@@ -231,11 +232,11 @@ DEIMEngine.prototype.calculateSampledInternalForce = function(fomSolver, patch, 
  * Reconstructs the full N-dimensional force vector from the sampled M-dimensional vector.
  * F_full = U_f * (P^T U_f)^-1 * F_sampled
  */
-DEIMEngine.prototype.reconstructFullForce = function(f_sampled) {
+DEIMEngine.prototype.reconstructFullForce = function (f_sampled) {
     const N = this.U_f.rows;
     const kf = this.kf;
     const m = this.m;
-    
+
     // 1. Solve for interpolation coefficients: c = (P^T U_f)^-1 * F_sampled
     const c = new Float64Array(kf);
     for (let i = 0; i < kf; i++) {
@@ -243,7 +244,7 @@ DEIMEngine.prototype.reconstructFullForce = function(f_sampled) {
             c[i] += this.PtU_pinv[i][j] * f_sampled[j];
         }
     }
-    
+
     // 2. Expand back to full space: F_full = U_f * c
     const F_full = new Float64Array(N);
     for (let i = 0; i < N; i++) {
