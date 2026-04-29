@@ -89,11 +89,13 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
 
                 if (isNew) colors.push(1.0, 0.84, 0.0);       // Bright Gold
                 else if (isPrev) colors.push(0.96, 0.5, 0.15); // Deep Orange
-                else colors.push(0.94, 0.94, 0.94);           // Light Grey
+                else colors.push(0.85, 0.88, 0.9);           // Darker Slate Grey for contrast
             }
         }
         this.deformedMesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
         this.deformedMesh.geometry.attributes.color.needsUpdate = true;
+        this.deformedMesh.visible = true;
+        if (this.wireframe) this.wireframe.visible = true;
     }
     this._render();
 };

@@ -119,8 +119,16 @@ DEIMBenchmarkApp.prototype.updateMesh = function(uDisp) {
         gD.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
         this.deformedMesh = new THREE.Mesh(gD, new THREE.MeshStandardMaterial({vertexColors:true, side:THREE.DoubleSide, roughness:0.5, metalness:0.1}));
         this.ghostMesh = new THREE.Mesh(gD, new THREE.MeshPhongMaterial({color:0xcbd5e1, transparent:true, opacity:0.3, side:THREE.DoubleSide}));
+        
+        // Add Wireframe for element visibility
+        this.wireframe = new THREE.LineSegments(
+            new THREE.WireframeGeometry(gD),
+            new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.2 })
+        );
+        
         this.scene.add(this.ghostMesh);
         this.scene.add(this.deformedMesh);
+        this.scene.add(this.wireframe);
     } else {
         const pa = this.deformedMesh.geometry.getAttribute('position');
         const ca = this.deformedMesh.geometry.getAttribute('color');
@@ -128,6 +136,10 @@ DEIMBenchmarkApp.prototype.updateMesh = function(uDisp) {
         for (let i = 0; i < colors.length; i++) ca.array[i] = colors[i];
         pa.needsUpdate = true; ca.needsUpdate = true;
         this.deformedMesh.geometry.computeVertexNormals();
+        
+        // Update wireframe geometry too
+        this.wireframe.geometry.dispose();
+        this.wireframe.geometry = new THREE.WireframeGeometry(this.deformedMesh.geometry);
     }
 };
 
