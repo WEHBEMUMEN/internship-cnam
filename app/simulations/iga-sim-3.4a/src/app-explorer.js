@@ -52,11 +52,11 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
         
         for (let i = 0; i < uniqueU.length - 1; i++) {
             const uMid = (uniqueU[i] + uniqueU[i+1])/2;
-            const spanU = window.nurbsUtils.findSpan(this.patch.controlPoints.length - 1, this.patch.p, uMid, this.patch.U);
+            const spanU = this.engine.findSpan(this.patch.controlPoints.length - 1, this.patch.p, uMid, this.patch.U);
             if (cpI >= spanU - this.patch.p && cpI <= spanU) {
                 for (let j = 0; j < uniqueV.length - 1; j++) {
                     const vMid = (uniqueV[j] + uniqueV[j+1])/2;
-                    const spanV = window.nurbsUtils.findSpan(this.patch.controlPoints[0].length - 1, this.patch.q, vMid, this.patch.V);
+                    const spanV = this.engine.findSpan(this.patch.controlPoints[0].length - 1, this.patch.q, vMid, this.patch.V);
                     if (cpJ >= spanV - this.patch.q && cpJ <= spanV) {
                         const span = { uMin: uniqueU[i], uMax: uniqueU[i+1], vMin: uniqueV[j], vMax: uniqueV[j+1] };
                         if (isNewest) newestSpans.push(span);
