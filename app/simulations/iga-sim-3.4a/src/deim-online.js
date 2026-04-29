@@ -76,9 +76,10 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
                 for (let j = 0; j < k; j++) u_full[d] += Phi.get(d, j) * ur[j];
             }
 
-            // FIX: Update tangent EVERY iteration (Full Newton-Raphson) to prevent divergence
+            // FIX: Compute tangent from structural stiffness ONLY.
+            // Boundary conditions are intrinsically enforced by the sanitized basis (Phi=0 at fixed DOFs).
+            // Adding penalty springs here would create phantom stiffness that corrupts convergence.
             const Kt_full = fomSolver.calculateTangentStiffness(patch, u_full);
-            fomSolver.applyPenaltyConstraints(Kt_full, null, u_full, patch, bcs);
             const Kt_mat = new Matrix(Kt_full);
             const Kt_red = PhiT.mmul(Kt_mat).mmul(Phi).to2DArray();
 
@@ -93,17 +94,14 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
                 c[i] = sum;
             }
 
-            // 4. Compute reduced residual: R_r = Φ^T F_ext - (Φ^T U_f · c) - Kp_red · u_r
+            // 4. Compute reduced residual: R_r = Φ^T F_ext - (Φ^T U_f · c)
+            // Note: No penalty term needed — the sanitized basis (Phi=0 at fixed DOFs) 
+            // ensures u_full is zero at boundaries by construction.
             const R_red = new Float64Array(k);
             for (let i = 0; i < k; i++) {
                 let fint_proj = 0;
                 for (let j = 0; j < this.kf; j++) fint_proj += PhiT_Uf[i][j] * c[j];
-                // Add exact penalty contribution
-                let penalty_proj = 0;
-                if (this.Kp_red) {
-                    for (let j = 0; j < k; j++) penalty_proj += this.Kp_red[i][j] * ur[j];
-                }
-                R_red[i] = F_ext_red_total[i] * loadFraction - fint_proj - penalty_proj;
+                R_red[i] = F_ext_red_total[i] * loadFraction - fint_proj;
             }
 
             // 5. Check convergence
