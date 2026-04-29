@@ -81,23 +81,14 @@ DEIMEngine.prototype.solveReduced = function (fomSolver, romEngine, patch, bcs, 
                 for (let j = 0; j < k; j++) u_full[d] += Phi.get(d, j) * ur[j];
             }
 
-            // FIX: We MUST apply the penalty springs to anchor the structure!
-            // Even a sanitized basis has O(10^-12) displacements at boundaries.
-            // Without these springs, the tangent becomes near-singular (rigid body motion).
+            // 2. Assemble Full Tangent (required for nonlinear stability)
             const Kt_full = fomSolver.calculateTangentStiffness(patch, u_full);
-            fomSolver.applyPenaltyConstraints(Kt_full, null, u_full, patch, bcs); 
-            const Kt_mat = new Matrix(Kt_full);
-            const Kt_red = PhiT.mmul(Kt_mat).mmul(Phi).to2DArray();
+            fomSolver.applyPenaltyConstraints(Kt_full, null, u_full, patch, bcs);
+            const Kt_red = PhiT.mmul(new Matrix(Kt_full)).mmul(Phi).to2DArray();
 
-            // 2. Compute F_int using the PROVEN FOM assembly, then sample at DEIM indices.
-            const F_int_full = fomSolver.calculateInternalForce(patch, u_full);
-            if (this.constrainedDofs) {
-                this.constrainedDofs.forEach(d => F_int_full[d] = 0);
-            }
-            const F_partial = new Float64Array(this.m);
-            for (let i = 0; i < this.m; i++) {
-                F_partial[i] = F_int_full[this.indices[i]];
-            }
+            // 2. Compute F_int using the specialized HYPER-REDUCED assembly.
+            // This is O(m) instead of O(N).
+            const F_partial = this.calculateSampledInternalForce(fomSolver, patch, u_full);
 
             // 3. Compute reduced internal force directly: f_red = M_deim * F_partial
             const f_red = new Float64Array(k);
@@ -163,7 +154,12 @@ DEIMEngine.prototype.calculateSampledInternalForce = function (fomSolver, patch,
     this.activeDofs.forEach(d => this._fBuf[d] = 0);
 
     const { p, q } = patch;
-    const gRule = window.GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
+    const gRule = window.GaussQuadrature2D.getPoints(Math.max(patch.p, patch.q) + 1);
+
+    // CRITICAL: Reset ONLY the active DOFs in the buffer to ensure O(m) performance
+    if (this.activeDofs) {
+        for (let i = 0; i < this.activeDofs.length; i++) this._fBuf[this.activeDofs[i]] = 0;
+    }
 
     this.activeElements.forEach(el => {
         const { uMin, uMax, vMin, vMax } = el;

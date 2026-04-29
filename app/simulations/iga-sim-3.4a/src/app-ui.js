@@ -26,7 +26,7 @@ DEIMBenchmarkApp.prototype.initUI = function() {
         this.k = parseInt(e.target.value);
         document.getElementById('k-val').textContent = this.k;
         if (this.isTrained) {
-            this.deimEngine.train(this.forceSnaps, this.deimM, this.k);
+            this.deimEngine.train(this.forceSnaps, this.deimM, this.k, this._getConstrainedDofs());
             this.deimEngine.computeActiveElements(this.patch);
             this.deimEngine.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
             this.deimEngine.precomputeReducedPenalty(this.solverFOM, this.romEngine, this.patch, this.getBCs());
@@ -38,7 +38,7 @@ DEIMBenchmarkApp.prototype.initUI = function() {
         this.deimM = parseInt(e.target.value);
         document.getElementById('m-val').textContent = this.deimM;
         if (this.isTrained) {
-            this.deimEngine.train(this.forceSnaps, this.deimM, this.k);
+            this.deimEngine.train(this.forceSnaps, this.deimM, this.k, this._getConstrainedDofs());
             this.deimEngine.computeActiveElements(this.patch);
             this.deimEngine.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
             this.deimEngine.precomputeReducedPenalty(this.solverFOM, this.romEngine, this.patch, this.getBCs());

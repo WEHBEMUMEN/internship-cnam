@@ -76,9 +76,20 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
             this.romEngine.addSnapshot(res.u);
             snapDisp.push(new Float64Array(res.u));
 
-            const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-            this._getConstrainedDofs().forEach(dof => Fint[dof] = 0);
-            forceSnaps.push(Fint);
+            // 1. Exact Equilibrium Snapshot
+            const Fint_eq = this.solverFOM.calculateInternalForce(this.patch, res.u);
+            const constrained = this._getConstrainedDofs();
+            constrained.forEach(dof => Fint_eq[dof] = 0);
+            forceSnaps.push(Fint_eq);
+
+            // 2. UNBALANCED SNAPSHOTS (The Fix for Null-Space Trap)
+            // We scale by 0.9 and 1.1 to teach the basis about non-equilibrium states.
+            [0.9, 1.1].forEach(scale => {
+                const u_pert = res.u.map(v => v * scale);
+                const Fint_pert = this.solverFOM.calculateInternalForce(this.patch, u_pert);
+                constrained.forEach(dof => Fint_pert[dof] = 0);
+                forceSnaps.push(Fint_pert);
+            });
             
             snapIdx++;
             await new Promise(r => setTimeout(r, 5));
@@ -142,8 +153,19 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
                 const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(worst.f), {steps:3, iterations:12});
                 this.romEngine.addSnapshot(res.u);
                 snapDisp.push(new Float64Array(res.u));
-                const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-                forceSnaps.push(Fint);
+
+                // Add Equilibrium and Perturbed forces for Greedy loop too
+                const Fint_eq = this.solverFOM.calculateInternalForce(this.patch, res.u);
+                const constrained = this._getConstrainedDofs();
+                constrained.forEach(dof => Fint_eq[dof] = 0);
+                forceSnaps.push(Fint_eq);
+
+                [0.9, 1.1].forEach(scale => {
+                    const u_pert = res.u.map(v => v * scale);
+                    const Fint_pert = this.solverFOM.calculateInternalForce(this.patch, u_pert);
+                    constrained.forEach(dof => Fint_pert[dof] = 0);
+                    forceSnaps.push(Fint_pert);
+                });
             }
         }
         console.groupEnd();
@@ -153,9 +175,27 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     status.textContent = 'Computing POD basis...';
     await new Promise(r => setTimeout(r, 10));
     const podInfo = this.romEngine.computePOD(this.k);
-    document.getElementById('energy-val').textContent = `Energy: ${(podInfo.energy*100).toFixed(2)}%`;
+    document.getElementById('energy-val').textContent = `Energy: ${(podInfo.energy * 100).toFixed(2)}%`;
     document.getElementById('input-k').disabled = false;
     document.getElementById('input-k').max = forceSnaps.length;
+
+    // --- POD-DRIVEN FORCE ENRICHMENT ---
+    console.log("Enriching Force Basis with POD Modes...");
+    const Phi = this.romEngine.Phi;
+    const bcs_dofs = this._getConstrainedDofs();
+    for (let j = 0; j < Phi.columns; j++) {
+        const u_mode = new Float64Array(Phi.rows);
+        for (let d = 0; d < Phi.rows; d++) u_mode[d] = Phi.get(d, j);
+        
+        // Large perturbations guarantee the basis learns the out-of-balance manifold
+        [2.0, -2.0].forEach(scale => {
+            const u_pert = u_mode.map(v => v * scale);
+            const f_pert = this.solverFOM.calculateInternalForce(this.patch, u_pert);
+            bcs_dofs.forEach(d => f_pert[d] = 0);
+            forceSnaps.push(f_pert);
+        });
+    }
+    // ------------------------------------
 
     status.textContent = `Training DEIM (m=${this.deimM}, kf=${this.k})...`;
     await new Promise(r => setTimeout(r, 10));

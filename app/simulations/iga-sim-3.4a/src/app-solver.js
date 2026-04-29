@@ -21,16 +21,22 @@ DEIMBenchmarkApp.prototype.solve = function(method, mag) {
 
     const nU = this.patch.controlPoints.length, nV = this.patch.controlPoints[0].length;
     const tipIdx = ((nU-1)*nV + Math.floor(nV/2)) * 2 + 1;
-    meta.tipDisp = result.u[tipIdx];
-
-    if (this.lastFomResult && method !== 'fom') {
-        let num = 0, den = 0;
-        for (let i = 0; i < result.u.length; i++) {
-            num += (result.u[i] - this.lastFomResult.u[i])**2;
-            den += this.lastFomResult.u[i]**2;
+    
+    if (result && result.u) {
+        meta.tipDisp = result.u[tipIdx];
+        if (this.lastFomResult && method !== 'fom') {
+            let num = 0, den = 0;
+            for (let i = 0; i < result.u.length; i++) {
+                num += (result.u[i] - this.lastFomResult.u[i])**2;
+                den += this.lastFomResult.u[i]**2;
+            }
+            meta.error = den > 0 ? Math.sqrt(num/den) : 0;
         }
-        meta.error = den > 0 ? Math.sqrt(num/den) : 0;
+    } else {
+        meta.tipDisp = null;
+        meta.error = null;
     }
+    
     return { result, meta };
 };
 

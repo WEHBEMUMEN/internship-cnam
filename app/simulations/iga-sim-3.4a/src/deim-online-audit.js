@@ -111,9 +111,13 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
     
     // 1. Get the exact internal force at the DEIM converged state
     const f_true = this.solverFOM.calculateInternalForce(this.patch, deim.u);
+    // FIX: To be fair, zero out the constrained DOFs in the true force,
+    // since the DEIM basis U_f was trained on 'clean' forces.
+    fixedDofs.forEach(d => f_true[d] = 0);
     
     // 2. Get the DEIM-sampled force at the same state
     const f_sampled = this.deimEngine.calculateSampledInternalForce(this.solverFOM, this.patch, deim.u);
+    // calculateSampledInternalForce already zeroes out its internal buffer before extracting indices.
     
     // 3. Reconstruct the full N-dimensional force from those M samples
     const f_deim_full = this.deimEngine.reconstructFullForce(f_sampled);
@@ -137,6 +141,54 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
 
         const forcePass = forceRecError < 0.05;
         console.log(`\n   VERDICT: ${forcePass ? "✓ PASS" : "⚠ WARNING"} — ${forcePass ? "Physically consistent" : "High interpolation error"}.`);
+        
+        // 4. NEW: Projection Consistency Check (Is Φ^T F_true ≈ M_deim * f_sampled?)
+        const PhiT = this.romEngine.Phi.transpose();
+        const f_proj_exact = new Float64Array(this.k);
+        for(let i=0; i<this.k; i++) {
+            for(let d=0; d<f_true.length; d++) f_proj_exact[i] += PhiT.get(i, d) * f_true[d];
+        }
+
+        // DEIM reduced force using precomputed M_deim matrix (exactly as solveReduced does)
+        const U_f = this.deimEngine.U_f;
+        const PtU_pinv = this.deimEngine.PtU_pinv;
+        const m = this.deimEngine.m;
+        const f_proj_deim = new Float64Array(this.k);
+        
+        // Reconstruct c first (coefficients in U_f space)
+        const c = new Float64Array(U_f.columns);
+        for(let i=0; i<U_f.columns; i++) {
+            for(let j=0; j<m; j++) {
+                const val = f_sampled[j];
+                if (isFinite(val)) c[i] += PtU_pinv[i][j] * val;
+            }
+        }
+        // Project U_f * c
+        const PhiT_Uf = PhiT.mmul(U_f);
+        for(let i=0; i<this.k; i++) {
+            for(let j=0; j<U_f.columns; j++) f_proj_deim[i] += PhiT_Uf.get(i, j) * c[j];
+        }
+
+        let pNum = 0, pDen = 0;
+        for(let i=0; i<this.k; i++) {
+            const err = f_proj_exact[i] - f_proj_deim[i];
+            pNum += err * err;
+            pDen += f_proj_exact[i] * f_proj_exact[i];
+        }
+        const projError = Math.sqrt(pNum / Math.max(pDen, 1e-30));
+        console.log(`\n   DEIM Projection Error : ${(projError * 100).toFixed(6)}%`);
+        console.log(`   (Compares ΦᵀF_true vs M_deim * f_sampled)`);
+
+        // 5. DIAGNOSTIC: Direct Sample Comparison
+        console.log(`\n   DIAGNOSTIC: First 5 Samples`);
+        console.log(`   Idx | DOF | FOM Value | Sampled Value | Match?`);
+        console.log(`   ────┼─────┼───────────┼───────────────┼───────`);
+        for(let i=0; i<Math.min(5, m); i++) {
+            const dof = this.deimEngine.indices[i];
+            const v1 = f_true[dof], v2 = f_sampled[i];
+            const match = Math.abs(v1 - v2) < 1e-8 ? "YES" : "NO!!";
+            console.log(`   ${i+1} | ${dof.toString().padStart(3)} | ${v1.toExponential(4)} | ${v2.toExponential(4)} | ${match}`);
+        }
     }
 
     // --- STEP 4: REDUCED SPACE DIAGNOSTICS ---

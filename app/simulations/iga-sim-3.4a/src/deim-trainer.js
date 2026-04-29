@@ -5,10 +5,20 @@
 DEIMEngine.prototype.train = function (forceSnapshots, m, kf = m, excludeDofs = []) {
     this.constrainedDofs = excludeDofs;
     
-    // FIX: Clean the snapshots! Strip penalty reactions before SVD
+    // FIX: Clean the snapshots AND Normalize them!
+    // Large perturbations have massive force norms (2000N+) which dominate the SVD,
+    // causing the equilibrium forces (200N) to be discarded as "noise" when truncated to kf modes.
     const pureForceSnaps = forceSnapshots.map(snap => {
         const cleanSnap = new Float64Array(snap);
         excludeDofs.forEach(d => cleanSnap[d] = 0);
+        
+        let norm = 0;
+        for(let i = 0; i < cleanSnap.length; i++) norm += cleanSnap[i] * cleanSnap[i];
+        norm = Math.sqrt(norm);
+        
+        if (norm > 1e-12) {
+            for(let i = 0; i < cleanSnap.length; i++) cleanSnap[i] /= norm;
+        }
         return cleanSnap;
     });
 

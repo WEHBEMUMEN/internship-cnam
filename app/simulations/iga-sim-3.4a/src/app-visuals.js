@@ -6,7 +6,11 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
     this.sparkline = new Sparkline(document.getElementById('sparkline-canvas'));
     this.speedupChart = new Chart(document.getElementById('chart-speedup'), {
         type: 'bar',
-        data: { labels: [], datasets: [{ label: 'Speedup (×)', data: [], backgroundColor: [] }] },
+        data: { labels: [], datasets: [{ label: 'Speedup (×)', data: [], backgroundColor: [
+            'rgba(148, 163, 184, 0.5)', // FOM
+            'rgba(14, 165, 233, 0.5)',  // Galerkin
+            'rgba(139, 92, 246, 0.5)'   // DEIM
+        ], borderColor: ['#64748b', '#0ea5e9', '#8b5cf6'], borderWidth: 1 }] },
         options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
             scales:{y:{beginAtZero:true, title:{display:true, text:'Speedup (×)', font:{size:10}}}, x:{ticks:{font:{size:9}}}}}
     });
@@ -57,6 +61,25 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
             scales:{x:{display:false}, y:{type:'logarithmic', title:{display:true, text:'Magnitude', font:{size:9}}}}
         }
     });
+};
+
+DEIMBenchmarkApp.prototype.updateSpeedupChart = function(data) {
+    const labels = ['FOM', 'Galerkin', 'DEIM'];
+    const values = [1.0];
+    
+    // Galerkin
+    if (data.galerkin && this.lastFomTime) {
+        values.push(this.lastFomTime / data.galerkin.time);
+    } else values.push(0);
+
+    // DEIM
+    if (data.deim && this.lastFomTime) {
+        values.push(this.lastFomTime / data.deim.time);
+    } else values.push(0);
+
+    this.speedupChart.data.labels = labels;
+    this.speedupChart.data.datasets[0].data = values;
+    this.speedupChart.update();
 };
 
 DEIMBenchmarkApp.prototype._updateStats = function(method, meta) {
