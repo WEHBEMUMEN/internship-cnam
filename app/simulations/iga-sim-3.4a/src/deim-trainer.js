@@ -15,10 +15,10 @@ DEIMEngine.prototype.train = function (forceSnapshots, m, kf = m, excludeDofs = 
     const pod = DEIMEngine.podVectors(pureForceSnaps, m);
     const sigmas = pod.sigmas;
 
-    // Auto-truncate based on energy drop
+    // Auto-truncate only based on extreme numerical noise
     let effective_modes = 0;
     for (let i = 0; i < sigmas.length; i++) {
-        if (sigmas[i] / sigmas[0] > 1e-12) effective_modes++;
+        if (sigmas[i] / sigmas[0] > 1e-15) effective_modes++;
     }
     if (effective_modes === 0) effective_modes = 1;
 
