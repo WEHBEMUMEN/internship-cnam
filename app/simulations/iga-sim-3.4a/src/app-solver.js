@@ -78,3 +78,61 @@ DEIMBenchmarkApp.prototype.runComparison = async function() {
     this.updateSpeedupChart(data);
     document.getElementById('btn-compare').disabled = false;
 };
+
+DEIMBenchmarkApp.prototype.runFDCurves = async function() {
+    if (!this.isTrained) return;
+    document.getElementById('btn-compare').disabled = true;
+    const loads = [];
+    for (let f = 10; f <= 600; f += 20) loads.push(f);
+    
+    const results = { fom: { d: [], e: [] }, galerkin: { d: [], e: [] }, deim: { d: [], e: [] } };
+    const originalFom = this.lastFomResult; // Save to prevent UI state pollution
+    
+    for (const f of loads) {
+        // Run FOM
+        try {
+            const fom = this.solve('fom', f);
+            this.lastFomResult = fom.result; // Set temporarily for error calc
+            results.fom.d.push(fom.meta.tipDisp);
+            results.fom.e.push(0);
+        } catch (e) { results.fom.d.push(NaN); results.fom.e.push(NaN); }
+
+        // Run Galerkin
+        try {
+            const gal = this.solve('galerkin', f);
+            results.galerkin.d.push(gal.meta.tipDisp);
+            results.galerkin.e.push(gal.meta.error);
+        } catch (e) { results.galerkin.d.push(NaN); results.galerkin.e.push(NaN); }
+
+        // Run DEIM
+        try {
+            const deim = this.solve('deim', f);
+            results.deim.d.push(deim.meta.tipDisp);
+            results.deim.e.push(deim.meta.error);
+        } catch (e) { results.deim.d.push(NaN); results.deim.e.push(NaN); }
+        
+        await new Promise(r => setTimeout(r, 1)); // Yield UI
+    }
+    
+    this.lastFomResult = originalFom; // Restore original FOM result for the current UI load
+
+    // Update FD Chart
+    this.fdChart.data.labels = loads;
+    this.fdChart.data.datasets = [
+        { label: 'FOM', data: results.fom.d, borderColor: '#64748b', tension: 0.1 },
+        { label: 'Galerkin', data: results.galerkin.d, borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.1 },
+        { label: 'DEIM', data: results.deim.d, borderColor: '#8b5cf6', tension: 0.1 }
+    ];
+    this.fdChart.update();
+
+    // Update Error Chart
+    this.errorChart.data.labels = loads;
+    this.errorChart.data.datasets = [
+        { label: 'Galerkin Error', data: results.galerkin.e, borderColor: '#0ea5e9', tension: 0.1 },
+        { label: 'DEIM Error', data: results.deim.e, borderColor: '#8b5cf6', tension: 0.1 }
+    ];
+    this.errorChart.update();
+
+    document.getElementById('btn-compare').disabled = false;
+    this.updatePhysics(); // Refresh the UI stats to clear the 64% artifact
+};

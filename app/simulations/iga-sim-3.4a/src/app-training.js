@@ -47,9 +47,10 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     const E_vals = [50000, 100000, 150000];
     const nu_vals = [0.25, 0.4];
     const load_fracs = [0.25, 0.50, 0.75, 1.00];
+    const maxTrainLoad = Math.max(600, this.loadMag);
     const allCandidates = [];
     for (const E of E_vals) for (const nu of nu_vals) for (const frac of load_fracs) {
-        allCandidates.push({ E, nu, f: this.loadMag * frac });
+        allCandidates.push({ E, nu, f: maxTrainLoad * frac });
     }
 
     this.testSet8020 = null;

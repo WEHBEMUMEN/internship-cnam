@@ -4,8 +4,15 @@
 
 DEIMEngine.prototype.train = function (forceSnapshots, m, kf = m, excludeDofs = []) {
     this.constrainedDofs = excludeDofs;
-    // Use full snapshots as requested to capture reaction forces
-    const pod = DEIMEngine.podVectors(forceSnapshots, m);
+    
+    // FIX: Clean the snapshots! Strip penalty reactions before SVD
+    const pureForceSnaps = forceSnapshots.map(snap => {
+        const cleanSnap = new Float64Array(snap);
+        excludeDofs.forEach(d => cleanSnap[d] = 0);
+        return cleanSnap;
+    });
+
+    const pod = DEIMEngine.podVectors(pureForceSnaps, m);
     const sigmas = pod.sigmas;
 
     // Auto-truncate based on energy drop
