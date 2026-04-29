@@ -78,7 +78,7 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
 
             // FIX: Update tangent EVERY iteration (Full Newton-Raphson) to prevent divergence
             const Kt_full = fomSolver.calculateTangentStiffness(patch, u_full);
-            fomSolver.applyPenaltyConstraints(Kt_full, null, u_full, patch);
+            fomSolver.applyPenaltyConstraints(Kt_full, null, u_full, patch, bcs);
             const Kt_mat = new Matrix(Kt_full);
             const Kt_red = PhiT.mmul(Kt_mat).mmul(Phi).to2DArray();
 
@@ -202,6 +202,11 @@ DEIMEngine.prototype.calculateSampledInternalForce = function(fomSolver, patch, 
             }
         }
     });
+
+    // Apply Mask: Zero out constrained DOFs (reactions) to match training basis
+    if (this.constrainedDofs) {
+        this.constrainedDofs.forEach(d => this._fBuf[d] = 0);
+    }
 
     // Extract ONLY the DEIM indices
     const F_partial = new Float64Array(this.m);

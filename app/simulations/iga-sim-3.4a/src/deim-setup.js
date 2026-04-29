@@ -106,7 +106,7 @@ DEIMEngine.prototype.precomputeReducedTangent = function(fomSolver, romEngine, p
  * Penalty is a linear operator — no DEIM approximation needed.
  * Kp_red = Φ^T * K_penalty * Φ  (exact, precomputed once)
  */
-DEIMEngine.prototype.precomputeReducedPenalty = function(fomSolver, romEngine, patch) {
+DEIMEngine.prototype.precomputeReducedPenalty = function(fomSolver, romEngine, patch, bcs = []) {
     const { Matrix } = window.mlMatrix;
     const Phi = romEngine.Phi;
     const k = Phi.columns;
@@ -115,7 +115,7 @@ DEIMEngine.prototype.precomputeReducedPenalty = function(fomSolver, romEngine, p
 
     // Build penalty-only stiffness (pass zero displacement → pure penalty structure)
     const Kp = Array.from({ length: nDofs }, () => new Float64Array(nDofs));
-    fomSolver.applyPenaltyConstraints(Kp, null, new Float64Array(nDofs), patch);
+    fomSolver.applyPenaltyConstraints(Kp, null, new Float64Array(nDofs), patch, bcs);
 
     // Project to reduced space
     const Kp_mat = new Matrix(Kp.map(r => Array.from(r)));

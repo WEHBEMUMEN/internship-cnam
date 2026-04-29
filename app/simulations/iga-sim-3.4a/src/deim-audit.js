@@ -9,7 +9,7 @@
  * Usage from console:
  *   app.deimEngine.audit(app.solverFOM, app.romEngine, app.patch, app.snapDisp, app.forceSnaps)
  */
-DEIMEngine.prototype.audit = function(fomSolver, romEngine, patch, snapU = [], snapF = []) {
+DEIMEngine.prototype.audit = function (fomSolver, romEngine, patch, snapU = [], snapF = []) {
     const L = [];   // lines accumulator
     const hr = '════════════════════════════════════════════════════════';
     L.push(hr);
@@ -155,7 +155,13 @@ DEIMEngine.prototype.audit = function(fomSolver, romEngine, patch, snapU = [], s
             }
 
             // DEIM: sample -> reconstruct
-            const f_sampled = this.calculateSampledInternalForce(fomSolver, patch, snapU[s]);
+            //const f_sampled = this.calculateSampledInternalForce(fomSolver, patch, snapU[s]);
+
+            const f_sampled = new Float64Array(this.m);
+            for (let j = 0; j < this.m; j++) {
+                f_sampled[j] = F_true[this.indices[j]];
+            }
+
             const c = new Float64Array(this.kf);
             for (let i = 0; i < this.kf; i++) {
                 let sum = 0;

@@ -2,7 +2,8 @@
  * DEIM Engine — Offline Training Component
  */
 
-DEIMEngine.prototype.train = function(forceSnapshots, m, kf = m, excludeDofs = []) {
+DEIMEngine.prototype.train = function (forceSnapshots, m, kf = m, excludeDofs = []) {
+    this.constrainedDofs = excludeDofs;
     // Use full snapshots as requested to capture reaction forces
     const pod = DEIMEngine.podVectors(forceSnapshots, m);
     const sigmas = pod.sigmas;
@@ -15,7 +16,7 @@ DEIMEngine.prototype.train = function(forceSnapshots, m, kf = m, excludeDofs = [
     if (effective_modes === 0) effective_modes = 1;
 
     this.m = Math.min(m, effective_modes);
-    this.kf = Math.min(kf, this.m); 
+    this.kf = Math.min(kf, this.m);
 
     const U_greedy = pod.basis.subMatrix(0, pod.basis.rows - 1, 0, this.m - 1);
     const N = U_greedy.rows;
@@ -60,9 +61,9 @@ DEIMEngine.prototype.train = function(forceSnapshots, m, kf = m, excludeDofs = [
         }
 
         indices.push(pivot);
-        this.history.push({ 
-            step: l + 1, 
-            point: pivot, 
+        this.history.push({
+            step: l + 1,
+            point: pivot,
             maxVal: Math.sqrt(maxNorm),
             residual: Array.from(norms).map(n => Math.sqrt(Math.max(0, n)))
         });
@@ -100,12 +101,10 @@ DEIMEngine.prototype.train = function(forceSnapshots, m, kf = m, excludeDofs = [
     };
 };
 
-DEIMEngine.prototype._precomputeInterpolation = function() {
-    // In Oversampled DEIM, PtU is m x kf. 
-    // We precompute the pseudo-inverse: PtU_inv = (PtU^T PtU)^{-1} PtU^T   [kf x m]
+DEIMEngine.prototype._precomputeInterpolation = function () {
     const m = this.m;
     const kf = this.kf;
-    const { Matrix } = window.mlMatrix;
+    const { Matrix, SVD } = window.mlMatrix;
 
     const PtU_arr = Array.from({ length: m }, () => new Float64Array(kf));
     for (let i = 0; i < m; i++)
@@ -113,22 +112,27 @@ DEIMEngine.prototype._precomputeInterpolation = function() {
             PtU_arr[i][j] = this.U_f.get(this.indices[i], j);
 
     const PtU_mat = new Matrix(PtU_arr);
-    const PtU_T = PtU_mat.transpose();
 
-    // (PtU^T PtU)
-    let M = PtU_T.mmul(PtU_mat);
-    // Dynamic Tikhonov regularization to strictly cap the condition number at ~10^8
-    let max_diag = 0;
-    for (let i = 0; i < kf; i++) max_diag = Math.max(max_diag, M.get(i, i));
-    const reg = Math.max(max_diag * 1e-8, 1e-14);
-    for (let i = 0; i < kf; i++) M.set(i, i, M.get(i, i) + reg);
+    // Compute SVD directly on PtU to avoid squaring the condition number
+    const svd = new SVD(PtU_mat, {
+        computeLeftSingularVectors: true,
+        computeRightSingularVectors: true
+    });
 
-    // M_inv = (PtU^T PtU)^{-1}
-    const M_inv = window.mlMatrix.inverse(M);
+    const U = svd.leftSingularVectors;
+    const V = svd.rightSingularVectors;
+    const sigmas = svd.diagonal;
 
-    // PtU_pinv = M_inv * PtU^T
-    const PtU_pinv_mat = M_inv.mmul(PtU_T);
+    // Create S_inv
+    const Sinv = new Matrix(V.columns, U.columns);
+    const tol = sigmas[0] * 1e-12; // Standard threshold
+    for (let i = 0; i < sigmas.length; i++) {
+        if (sigmas[i] > tol) {
+            Sinv.set(i, i, 1.0 / sigmas[i]);
+        }
+    }
 
-    // Store as regular array for fast access
+    // PtU_pinv = V * S_inv * U^T
+    const PtU_pinv_mat = V.mmul(Sinv).mmul(U.transpose());
     this.PtU_pinv = PtU_pinv_mat.to2DArray();
 };

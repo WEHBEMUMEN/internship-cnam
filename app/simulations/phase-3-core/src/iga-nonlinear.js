@@ -252,7 +252,7 @@ class IGANonlinearSolver {
         return Kt;
     }
 
-    applyPenaltyConstraints(Kt, F_int, u, patch) {
+    applyPenaltyConstraints(Kt, F_int, u, patch, bcs = []) {
         const { controlPoints } = patch;
         const nU = controlPoints.length;
         const nV = controlPoints[0].length;
@@ -264,13 +264,14 @@ class IGANonlinearSolver {
             }
         }
         
-        const penalty = 1e9; // Fixed penalty for C0 coupling
+        const penalty = 1e11; // Increased penalty for robustness
+        
+        // 1. C0 Coupling / Degenerate Nodes
         for (let i = 0; i < pts.length; i++) {
             for (let j = i + 1; j < pts.length; j++) {
                 const p1 = pts[i].cp, p2 = pts[j].cp;
                 const d2 = (p1.x - p2.x)**2 + (p1.y - p2.y)**2;
-                
-                if (d2 < 1e-18) { // Overlapping periodic or degenerate nodes
+                if (d2 < 1e-18) { 
                     const id1 = pts[i].id, id2 = pts[j].id;
                     if (Kt) {
                         Kt[id1][id1] += penalty; Kt[id2][id2] += penalty;
@@ -286,6 +287,22 @@ class IGANonlinearSolver {
                 }
             }
         }
+
+        // 2. Dirichlet BCs (Fixed displacements)
+        bcs.forEach(bc => {
+            const idx = (bc.i * nV + bc.j) * 2;
+            const axes = [];
+            if (bc.axis === 'x' || bc.axis === 'both') axes.push(idx);
+            if (bc.axis === 'y' || bc.axis === 'both') axes.push(idx + 1);
+            
+            axes.forEach(dof => {
+                if (Kt) Kt[dof][dof] += penalty;
+                if (F_int && u) {
+                    const error = u[dof] - (bc.value || 0);
+                    F_int[dof] += penalty * error;
+                }
+            });
+        });
     }
 
     /**
