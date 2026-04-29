@@ -57,14 +57,21 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
         F_ext_red_total[i] = dot;
     }
 
-    // Pre-compute Φ^T U_f [k × kf] for fast projected reconstruction
-    const PhiT_Uf = Array.from({ length: k }, () => new Float64Array(this.kf));
-    for (let i = 0; i < k; i++)
-        for (let j = 0; j < this.kf; j++) {
-            let dot = 0;
-            for (let d = 0; d < nDofs; d++) dot += PhiT.get(i, d) * this.U_f.get(d, j);
-            PhiT_Uf[i][j] = dot;
+    // Pre-compute M_deim = Φ^T U_f (P^T U_f)^-1 [k × m] for ultra-fast direct projection
+    const M_deim = Array.from({ length: k }, () => new Float64Array(this.m));
+    for (let i = 0; i < k; i++) {
+        for (let j = 0; j < this.m; j++) {
+            let sum = 0;
+            for (let l = 0; l < this.kf; l++) {
+                // PhiT_Uf[i][l] is (Phi^T * U_f)_il
+                // PtU_pinv[l][j] is ((P^T * U_f)^-1)_lj
+                let val_PhiT_Uf = 0;
+                for (let d = 0; d < nDofs; d++) val_PhiT_Uf += PhiT.get(i, d) * this.U_f.get(d, l);
+                sum += val_PhiT_Uf * this.PtU_pinv[l][j];
+            }
+            M_deim[i][j] = sum;
         }
+    }
 
     for (let s = 1; s <= steps; s++) {
         const loadFraction = s / steps;
@@ -96,22 +103,18 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
                 F_partial[i] = F_int_full[this.indices[i]];
             }
 
-            // 3. Solve c = PtU_pinv * F_partial (Matrix-Vector multiply, extremely fast!)
-            const c = new Float64Array(this.kf);
-            for (let i = 0; i < this.kf; i++) {
-                let sum = 0;
-                for (let j = 0; j < this.m; j++) sum += this.PtU_pinv[i][j] * F_partial[j];
-                c[i] = sum;
+            // 3. Compute reduced internal force directly: f_red = M_deim * F_partial
+            const f_red = new Float64Array(k);
+            for (let i = 0; i < k; i++) {
+                for (let j = 0; j < this.m; j++) {
+                    f_red[i] += M_deim[i][j] * F_partial[j];
+                }
             }
 
-            // 4. Compute reduced residual: R_r = Φ^T F_ext - (Φ^T U_f · c)
-            // Note: No penalty term needed — the sanitized basis (Phi=0 at fixed DOFs) 
-            // ensures u_full is zero at boundaries by construction.
+            // 4. Compute reduced residual: R_r = Φ^T F_ext - f_red
             const R_red = new Float64Array(k);
             for (let i = 0; i < k; i++) {
-                let fint_proj = 0;
-                for (let j = 0; j < this.kf; j++) fint_proj += PhiT_Uf[i][j] * c[j];
-                R_red[i] = F_ext_red_total[i] * loadFraction - fint_proj;
+                R_red[i] = F_ext_red_total[i] * loadFraction - f_red[i];
             }
 
             // 5. Check convergence
