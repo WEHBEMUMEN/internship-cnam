@@ -110,7 +110,7 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
     console.log(subLine);
     
     // 1. Get the exact internal force at the DEIM converged state
-    const f_true = this.solverFOM.assembleInternalForce(this.patch, deim.u);
+    const f_true = this.solverFOM.calculateInternalForce(this.patch, deim.u);
     
     // 2. Get the DEIM-sampled force at the same state
     const f_sampled = this.deimEngine.calculateSampledInternalForce(this.solverFOM, this.patch, deim.u);
