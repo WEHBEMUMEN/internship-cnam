@@ -83,8 +83,18 @@ DEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, l
             const Kt_mat = new Matrix(Kt_full);
             const Kt_red = PhiT.mmul(Kt_mat).mmul(Phi).to2DArray();
 
-            // 2. Compute F_int ONLY for active elements
-            const F_partial = this.calculateSampledInternalForce(fomSolver, patch, u_full);
+            // 2. Compute F_int using the PROVEN FOM assembly, then sample at DEIM indices.
+            // This matches exactly what the offline audit does (0.0000% error).
+            const F_int_full = fomSolver.calculateInternalForce(patch, u_full);
+            // Mask constrained DOFs (same as training sanitization)
+            if (this.constrainedDofs) {
+                this.constrainedDofs.forEach(d => F_int_full[d] = 0);
+            }
+            // Sample at DEIM indices
+            const F_partial = new Float64Array(this.m);
+            for (let i = 0; i < this.m; i++) {
+                F_partial[i] = F_int_full[this.indices[i]];
+            }
 
             // 3. Solve c = PtU_pinv * F_partial (Matrix-Vector multiply, extremely fast!)
             const c = new Float64Array(this.kf);
