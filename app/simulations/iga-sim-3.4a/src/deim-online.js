@@ -215,3 +215,30 @@ DEIMEngine.prototype.calculateSampledInternalForce = function(fomSolver, patch, 
     }
     return F_partial;
 };
+
+/**
+ * Reconstructs the full N-dimensional force vector from the sampled M-dimensional vector.
+ * F_full = U_f * (P^T U_f)^-1 * F_sampled
+ */
+DEIMEngine.prototype.reconstructFullForce = function(f_sampled) {
+    const N = this.U_f.rows;
+    const kf = this.kf;
+    const m = this.m;
+    
+    // 1. Solve for interpolation coefficients: c = (P^T U_f)^-1 * F_sampled
+    const c = new Float64Array(kf);
+    for (let i = 0; i < kf; i++) {
+        for (let j = 0; j < m; j++) {
+            c[i] += this.PtU_pinv[i][j] * f_sampled[j];
+        }
+    }
+    
+    // 2. Expand back to full space: F_full = U_f * c
+    const F_full = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+        for (let j = 0; j < kf; j++) {
+            F_full[i] += this.U_f.get(i, j) * c[j];
+        }
+    }
+    return F_full;
+};
