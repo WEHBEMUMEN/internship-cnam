@@ -48,6 +48,17 @@ class ROMEngine {
         // Truncate to k modes
         this.Phi = fullModes.subMatrix(0, fullModes.rows - 1, 0, Math.min(k, fullModes.columns) - 1);
         
+        // Boundary Sanitization: Ensure basis is strictly ZERO at constrained DOFs
+        const bcs = this.fom.getBCs ? this.fom.getBCs() : [];
+        const fixedDofs = [];
+        bcs.forEach(bc => { if (bc.type === 'dirichlet') fixedDofs.push(bc.dof); });
+        
+        for (let i = 0; i < this.Phi.rows; i++) {
+            if (fixedDofs.includes(i)) {
+                for (let j = 0; j < this.Phi.columns; j++) this.Phi.set(i, j, 0);
+            }
+        }
+        
         const totalEnergy = this.singularValues.reduce((s, v) => s + v*v, 0);
         const retainedEnergy = this.singularValues.slice(0, k).reduce((s, v) => s + v*v, 0);
         
