@@ -47,10 +47,18 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
         const cpIdx = Math.floor(dofIdx / 2);
         const cpI = Math.floor(cpIdx / nV);
         const cpJ = cpIdx % nV;
-        for (let eI = cpI; eI <= cpI + this.patch.p; eI++) {
-            for (let eJ = cpJ; eJ <= cpJ + this.patch.q; eJ++) {
-                if (eI >= 0 && eI < uniqueU.length - 1 && eJ >= 0 && eJ < uniqueV.length - 1) {
-                    activeSpans.push({ uMin: uniqueU[eI], uMax: uniqueU[eI+1], vMin: uniqueV[eJ], vMax: uniqueV[eJ+1] });
+        
+        // Find all unique spans where this basis function is non-zero
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            const uMid = (uniqueU[i] + uniqueU[i+1])/2;
+            const spanU = window.nurbsUtils.findSpan(this.patch.controlPoints.length - 1, this.patch.p, uMid, this.patch.U);
+            if (cpI >= spanU - this.patch.p && cpI <= spanU) {
+                for (let j = 0; j < uniqueV.length - 1; j++) {
+                    const vMid = (uniqueV[j] + uniqueV[j+1])/2;
+                    const spanV = window.nurbsUtils.findSpan(this.patch.controlPoints[0].length - 1, this.patch.q, vMid, this.patch.V);
+                    if (cpJ >= spanV - this.patch.q && cpJ <= spanV) {
+                        activeSpans.push({ uMin: uniqueU[i], uMax: uniqueU[i+1], vMin: uniqueV[j], vMax: uniqueV[j+1] });
+                    }
                 }
             }
         }
@@ -59,6 +67,9 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
     if (this.deformedMesh) {
         const colors = [];
         const res = 32;
+        // Also reset to undeformed view for better clarity
+        this.updateMesh(null);
+        
         for (let i = 0; i <= res; i++) {
             const u = Math.min(i/res, 0.9999);
             for (let j = 0; j <= res; j++) {
@@ -67,7 +78,8 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
                 for (const span of activeSpans) {
                     if (u >= span.uMin && u < span.uMax + 1e-6 && v >= span.vMin && v < span.vMax + 1e-6) { isActive = true; break; }
                 }
-                colors.push(isActive ? 0.98 : 0.9, isActive ? 0.8 : 0.9, isActive ? 0.1 : 0.9);
+                // Gold for active, Light Grey for inactive
+                colors.push(isActive ? 0.98 : 0.95, isActive ? 0.8 : 0.95, isActive ? 0.1 : 0.95);
             }
         }
         this.deformedMesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
