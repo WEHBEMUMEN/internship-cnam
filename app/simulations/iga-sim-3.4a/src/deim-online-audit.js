@@ -28,13 +28,13 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
     console.log(`\n1. CONVERGENCE AUDIT`);
     console.log(subLine);
     
-    const t0 = performance.now();
-    const fom = this.solverFOM.solve(this.patch, loadMag, this.getBCs());
-    const dt_fom = performance.now() - t0;
+    const fomWrap = this.solve('fom', loadMag);
+    const fom = fomWrap.result;
+    const dt_fom = fomWrap.meta.time;
 
-    const t1 = performance.now();
-    const deim = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, loadMag, this.getBCs());
-    const dt_deim = performance.now() - t1;
+    const deimWrap = this.solve('deim', loadMag);
+    const deim = deimWrap.result;
+    const dt_deim = deimWrap.meta.time;
 
     console.log(`   Method   | Iterations | Final Residual | Time (ms)`);
     console.log(`   ─────────┼────────────┼────────────────┼──────────`);
