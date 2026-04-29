@@ -182,4 +182,5 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
 
     this.deimEngine.audit(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.forceSnaps, this._getConstrainedDofs());
     this.updatePhysics();
+    this.runOnlineAudit();
 };
