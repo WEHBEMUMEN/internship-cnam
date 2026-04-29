@@ -44,8 +44,8 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     const forceSnaps = [];
     const snapDisp = [];
 
-    const E_vals = [50000, 100000, 150000];
-    const nu_vals = [0.25, 0.4];
+    const E_vals = [50000, 75000, 100000, 125000, 150000];
+    const nu_vals = [0.25, 0.3, 0.4];
     const load_fracs = [0.25, 0.50, 0.75, 1.00];
     const maxTrainLoad = Math.max(600, this.loadMag);
     const allCandidates = [];
@@ -187,8 +187,9 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
         const u_mode = new Float64Array(Phi.rows);
         for (let d = 0; d < Phi.rows; d++) u_mode[d] = Phi.get(d, j);
         
-        // Large perturbations guarantee the basis learns the out-of-balance manifold
-        [2.0, -2.0].forEach(scale => {
+        // Large perturbations guarantee the basis learns the out-of-balance manifold.
+        // We use +/- 15.0 to reach displacements comparable to the ~1.0 tip deflection.
+        [15.0, -15.0].forEach(scale => {
             const u_pert = u_mode.map(v => v * scale);
             const f_pert = this.solverFOM.calculateInternalForce(this.patch, u_pert);
             bcs_dofs.forEach(d => f_pert[d] = 0);

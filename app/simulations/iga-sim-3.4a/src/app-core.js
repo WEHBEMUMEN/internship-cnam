@@ -26,8 +26,8 @@ class DEIMBenchmarkApp {
         this.patch = null;
         this.method = 'fom';
         this.loadMag = 200;
-        this.k = 15;
-        this.deimM = 25;
+        this.k = 25;
+        this.deimM = 40;
         this.meshLevel = 1;
         this.loadType = 'tip';
         this.showDOFs = true;

@@ -143,9 +143,11 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
         console.log(`\n   VERDICT: ${forcePass ? "✓ PASS" : "⚠ WARNING"} — ${forcePass ? "Physically consistent" : "High interpolation error"}.`);
         
         // 4. NEW: Projection Consistency Check (Is Φ^T F_true ≈ M_deim * f_sampled?)
-        const PhiT = this.romEngine.Phi.transpose();
-        const f_proj_exact = new Float64Array(this.k);
-        for(let i=0; i<this.k; i++) {
+        const Phi = this.romEngine.Phi;
+        const PhiT = Phi.transpose();
+        const k_safe = Math.min(this.k, Phi.columns);
+        const f_proj_exact = new Float64Array(k_safe);
+        for(let i=0; i<k_safe; i++) {
             for(let d=0; d<f_true.length; d++) f_proj_exact[i] += PhiT.get(i, d) * f_true[d];
         }
 

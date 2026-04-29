@@ -33,8 +33,8 @@ DEIMEngine.prototype.train = function (forceSnapshots, m, kf = m, excludeDofs = 
     if (effective_modes === 0) effective_modes = 1;
 
     this.m = Math.min(m, effective_modes);
-    this.kf = kf;
-    this.constrainedDofs = excludeDofs; // <--- Save for online phase
+    this.kf = Math.min(kf, this.m); // kf cannot exceed m for a square/tall interpolation system
+    this.constrainedDofs = excludeDofs;
 
     const U_greedy = pod.basis.subMatrix(0, pod.basis.rows - 1, 0, this.m - 1);
     const N = U_greedy.rows;
