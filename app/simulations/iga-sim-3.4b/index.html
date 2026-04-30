@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+
 
     <!-- Shared Engines -->
     <script src="../phase-2-core/src/nurbs-2d.js?v=3"></script>
@@ -20,9 +20,14 @@
     <script src="../phase-2-core/src/refine-utils.js?v=3"></script>
     <script src="../phase-2-core/src/iga-solver-2d.js?v=3"></script>
     <script src="../phase-3-core/src/iga-nonlinear.js?v=3"></script>
-    <script src="../phase-3-core/src/rom-engine.js?v=3"></script>
-    <!-- U-DEIM Engine -->
-    <script src="src/udeim-engine.js"></script>
+    <script src="src/rom-engine.js"></script>
+
+    <!-- U-DEIM Engine (Modular) -->
+    <script src="src/udeim-core.js"></script>
+    <script src="src/udeim-trainer.js"></script>
+    <script src="src/udeim-setup.js"></script>
+    <script src="src/udeim-online.js"></script>
+    <script src="src/udeim-audit.js"></script>
 
     <style>
         :root { --primary:#8b5cf6; --secondary:#3b82f6; --accent:#10b981; --bg:#ffffff; --card:rgba(255,255,255,0.85); --border:rgba(148,163,184,0.3); }
@@ -203,6 +208,18 @@
     </div>
 
     <script src="../../shared/performance.js"></script>
-    <script type="module" src="src/main.js"></script>
+    
+    <!-- App Modular Scripts -->
+    <script src="src/app-core.js"></script>
+    <script src="src/app-solver.js"></script>
+    <script src="src/app-ui.js"></script>
+    <script src="src/app-training.js"></script>
+    <script src="src/app-visuals.js"></script>
+
+    <script>
+        window.onload = () => {
+            window.app = new UDEIMBenchmarkApp();
+        };
+    </script>
 </body>
 </html>
