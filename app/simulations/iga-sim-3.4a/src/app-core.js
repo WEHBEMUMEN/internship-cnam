@@ -67,6 +67,12 @@ class DEIMBenchmarkApp {
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableRotate = false;
+        this.controls.screenSpacePanning = true;
+        this.controls.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE
+        };
         this.controls.target.set(5, 1, 0);
         this.controls.update();
         this.controls.addEventListener('change', () => this._render());
