@@ -9,32 +9,32 @@ UDEIMBenchmarkApp.prototype.trainAll = async function() {
     status.classList.remove('hidden');
     this.romEngine.clearSnapshots();
 
-    // --- DYNAMIC SCALING LOGIC ---
+    // --- DYNAMIC SCALING LOGIC (DISABLED TO ALLOW MANUAL TUNING) ---
     const nTotalDOFs = this.patch.controlPoints.length * this.patch.controlPoints[0].length * 2;
     const nConstrained = this._getConstrainedDofs().length;
     const nActive = nTotalDOFs - nConstrained;
-    this.deimM = Math.min(100, Math.max(10, Math.floor(nActive * 0.20))); 
-    this.k = Math.max(5, Math.floor(this.deimM * 0.80)); 
 
     const uiM = document.getElementById('input-m');
     const uiK = document.getElementById('input-k');
     if (uiM && uiK) {
         uiM.max = nActive;
-        uiM.value = this.deimM;
-        document.getElementById('m-val').textContent = this.deimM;
-        uiK.max = this.deimM;
-        uiK.value = this.k;
-        document.getElementById('k-val').textContent = this.k;
+        // Respect current UI values instead of overriding them
+        this.deimM = parseInt(uiM.value);
+        this.k = parseInt(uiK.value);
+        uiK.max = this.deimM; 
     }
-    // ----------------------------
+
+    // ----------------------------------------------------------------
+
 
     const strategy = document.getElementById('input-sampling-strategy').value;
     const bcs = this.getBCs();
     const snapDisp = [];
 
     const E_vals = [50000, 100000, 150000];
-    const nu_vals = [0.25, 0.4];
-    const load_fracs = [0.25, 0.50, 0.75, 1.00];
+    const nu_vals = [0.3, 0.4];
+    const load_fracs = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+
     const allCandidates = [];
     for (const E of E_vals) for (const nu of nu_vals) for (const frac of load_fracs) {
         allCandidates.push({ E, nu, f: this.loadMag * frac });
@@ -67,7 +67,8 @@ UDEIMBenchmarkApp.prototype.trainAll = async function() {
     } else {
         const trainSet = [allCandidates[0], allCandidates[allCandidates.length-1]];
         const candidatePool = allCandidates.slice(1, allCandidates.length-1);
-        const targetSnapshots = 12;
+        const targetSnapshots = 25;
+
 
         for(let i=0; i<trainSet.length; i++) {
             const state = trainSet[i];
@@ -187,7 +188,7 @@ UDEIMBenchmarkApp.prototype.runFDCurves = async function() {
                         err2 += Math.pow(result.u[j] - fom_results[i][j], 2);
                         norm2 += Math.pow(fom_results[i][j], 2);
                     }
-                    datasets_err[m].push(Math.sqrt(err2) / Math.max(Math.sqrt(norm2), 1e-12));
+                    datasets_err[m].push((Math.sqrt(err2) / Math.max(Math.sqrt(norm2), 1e-12)) * 100);
                 } else datasets_err[m].push(null);
             } catch(e) { datasets_fd[m].push(0); datasets_err[m].push(null); }
         }

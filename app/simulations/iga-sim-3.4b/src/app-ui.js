@@ -41,7 +41,11 @@ UDEIMBenchmarkApp.prototype.initUI = function() {
         if (this.isTrained) {
             this.romEngine.computePOD(this.k, this.patch, this.getBCs());
 
-            if (this.snapDisp) this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(() => this._scheduleUpdate());
+            if (this.snapDisp) this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(() => {
+                this._scheduleUpdate();
+                this.deimEngine.audit(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
+            });
+
         }
     };
 
@@ -49,8 +53,12 @@ UDEIMBenchmarkApp.prototype.initUI = function() {
         this.deimM = parseInt(e.target.value);
         document.getElementById('m-val').textContent = this.deimM;
         if (this.isTrained && this.snapDisp) {
-            this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(() => this._scheduleUpdate());
+            this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(() => {
+                this._scheduleUpdate();
+                this.deimEngine.audit(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
+            });
         }
+
     };
 
     document.getElementById('input-mesh').onchange = e => {
@@ -71,8 +79,14 @@ UDEIMBenchmarkApp.prototype.initUI = function() {
 
 UDEIMBenchmarkApp.prototype._scheduleUpdate = function() {
     if (this._timer) clearTimeout(this._timer);
-    this._timer = setTimeout(() => this.updatePhysics(), 100);
+    this._timer = setTimeout(() => {
+        this.updatePhysics();
+        if ((this.currentChartTab === 'fd' || this.currentChartTab === 'error') && this.isTrained) {
+            this.runFDCurves();
+        }
+    }, 100);
 };
+
 
 UDEIMBenchmarkApp.prototype._updateStats = function(method, meta) {
     document.getElementById('method-name').textContent = METHODS[method].label;
@@ -107,7 +121,9 @@ UDEIMBenchmarkApp.prototype.initCharts = function() {
             document.getElementById('chart-error-wrap').classList.toggle('hidden', t.dataset.chart !== 'error');
             document.getElementById('explorer-wrap').classList.toggle('hidden', t.dataset.chart !== 'explorer');
             
+            this.currentChartTab = t.dataset.chart;
             if ((t.dataset.chart === 'fd' || t.dataset.chart === 'error') && this.isTrained) this.runFDCurves();
+
             if (t.dataset.chart === 'explorer') {
                 this.isExplorerActive = true;
                 this.runDEIMExplorer(this.explorerStep);
@@ -125,7 +141,9 @@ UDEIMBenchmarkApp.prototype.initCharts = function() {
         type: 'line', data: { labels: [], datasets: [] },
         options: { responsive:true, maintainAspectRatio:false,
             plugins:{legend:{position:'top', labels:{font:{size:9}}}},
-            scales:{x:{title:{display:true, text:'Load F', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error', font:{size:10}}}}}
+            scales:{x:{title:{display:true, text:'Load F', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error (%)', font:{size:10}}, ticks:{callback: (val) => val.toFixed(4) + '%' }}}}
+
+
     });
 
     this.residualChart = new Chart(document.getElementById('chart-residual'), {
