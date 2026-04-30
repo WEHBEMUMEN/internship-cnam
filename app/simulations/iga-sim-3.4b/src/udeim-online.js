@@ -87,6 +87,21 @@ UDEIMEngine.prototype.solveReduced = function(fomSolver, romEngine, patch, bcs, 
                 norm += R_red[i] * R_red[i];
             }
             norm = Math.sqrt(norm);
+            
+            // DIAGNOSTIC: Compare F_red_int vs True Galerkin Projection
+            if (s === steps && iter === 0) {
+                const F_int_true = fomSolver.calculateInternalForce(patch, u_full);
+                const F_red_int_true = new Float64Array(k);
+                let diffNorm = 0, trueNorm = 0;
+                for (let i = 0; i < k; i++) {
+                    for (let d = 0; d < nDofs; d++) F_red_int_true[i] += PhiT.get(i, d) * F_int_true[d];
+                    const diff = F_red_int_true[i] - F_red_int[i];
+                    diffNorm += diff * diff;
+                    trueNorm += F_red_int_true[i] * F_red_int_true[i];
+                }
+                console.log(`[Diagnostic] Load Step ${s}, Iter ${iter} | U-DEIM Force vs Galerkin Force Error: ${(Math.sqrt(diffNorm) / Math.sqrt(trueNorm) * 100).toFixed(4)}%`);
+            }
+
             residualHistory.push({ step: s, iter, norm });
 
             if (norm < tolerance && iter > 0) break;

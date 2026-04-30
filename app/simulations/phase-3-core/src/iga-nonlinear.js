@@ -463,7 +463,7 @@ class IGANonlinearSolver {
                 }
                 
                 residualHistory.push({step: s, iter, norm});
-                if (onProgress) onProgress({ step: s, iter, norm });
+                if (onProgress) onProgress({ step: s, iter, norm, u: new Float64Array(u) });
                 if (norm < tolerance && iter > 0) break;
                 if (isLinear && iter > 0) break;
 

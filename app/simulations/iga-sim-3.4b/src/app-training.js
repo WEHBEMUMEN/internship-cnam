@@ -58,7 +58,16 @@ UDEIMBenchmarkApp.prototype.trainAll = async function() {
             this.solverFOM.nu = state.nu;
             status.textContent = `FOM snapshot ${snapIdx}/${trainSet.length} (E=${state.E/1000}k, nu=${state.nu}, F=${state.f.toFixed(0)})...`;
             
-            const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {steps:3, iterations:12});
+            const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {
+                steps: 3, 
+                iterations: 12,
+                onProgress: (info) => {
+                    if (info.u) {
+                        this.romEngine.addSnapshot(info.u);
+                        snapDisp.push(info.u);
+                    }
+                }
+            });
             this.romEngine.addSnapshot(res.u);
             snapDisp.push(new Float64Array(res.u));
             snapIdx++;
@@ -74,7 +83,16 @@ UDEIMBenchmarkApp.prototype.trainAll = async function() {
             const state = trainSet[i];
             this.solverFOM.E = state.E; this.solverFOM.nu = state.nu;
             status.textContent = `Greedy Init ${i+1}/2...`;
-            const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {steps:3, iterations:12});
+            const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {
+                steps: 3, 
+                iterations: 12,
+                onProgress: (info) => {
+                    if (info.u) {
+                        this.romEngine.addSnapshot(info.u);
+                        snapDisp.push(info.u);
+                    }
+                }
+            });
             this.romEngine.addSnapshot(res.u);
             snapDisp.push(new Float64Array(res.u));
             await new Promise(r => setTimeout(r, 5));

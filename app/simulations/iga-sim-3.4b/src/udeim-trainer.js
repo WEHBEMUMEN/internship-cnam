@@ -143,15 +143,27 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
     // M = Phi^T * A * U_f * (P^T U_f)^+
     console.log("U-DEIM: Precomputing projection operators...");
     
-    // P^T U_f
+    // P^T U_f (Interpolation matrix)
     const PtU_arr = Array.from({ length: this.m }, () => new Float64Array(this.kf));
     for (let i = 0; i < this.m; i++) {
         for (let j = 0; j < this.kf; j++) PtU_arr[i][j] = this.U_f.get(this.indices[i], j);
     }
     const PtU_mat = new Matrix(PtU_arr.map(r => Array.from(r)));
-    let M_inv = PtU_mat.transpose().mmul(PtU_mat);
-    for(let i=0; i<this.kf; i++) M_inv.set(i, i, M_inv.get(i, i) + 1e-8); // Regularization
-    const PtU_pinv = window.mlMatrix.inverse(M_inv).mmul(PtU_mat.transpose());
+    
+    // Robust Pseudo-Inverse using SVD ( (P^T U_f)^+ )
+    const svd_interp = new SVD(PtU_mat, { computeLeftSingularVectors: true, computeRightSingularVectors: true });
+    const U_interp = svd_interp.leftSingularVectors;
+    const S_interp = svd_interp.diagonal;
+    const V_interp = svd_interp.rightSingularVectors;
+    
+    // S_inv = diag(1/sigma) with threshold
+    const S_inv_mat = Matrix.zeros(V_interp.columns, U_interp.columns);
+    const threshold = Math.max(...S_interp) * 1e-12;
+    for (let i = 0; i < S_interp.length; i++) {
+        if (S_interp[i] > threshold) S_inv_mat.set(i, i, 1.0 / S_interp[i]);
+    }
+    const PtU_pinv = V_interp.mmul(S_inv_mat).mmul(U_interp.transpose());
+
 
     // A * U_f (Assemble U_f into global space)
     const Phi = romEngine.Phi;

@@ -70,9 +70,10 @@ UDEIMBenchmarkApp.prototype.solve = function(method, mag) {
     } else if (method === 'galerkin') {
         result = this.romEngine.solveReduced(this.patch, bcs, loads, {iterations:15});
     } else if (method === 'deim') {
-        result = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {iterations:15, steps:1});
+        result = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {iterations:15, steps:3});
         meta.sampled = `${result.sampledCount} elements`;
     }
+
 
     const dt = performance.now() - t0;
     meta.time = dt;
