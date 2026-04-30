@@ -238,7 +238,12 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
     console.log(`   FOM Assembly Time  : ${dt_fom.toFixed(1)} ms`);
     console.log(`   DEIM Solve Time    : ${dt_deim.toFixed(1)} ms`);
     console.log(`   Speedup            : ${speedup.toFixed(2)}x`);
-    console.log(`   Active Elements    : ${this.deimEngine.activeElements ? this.deimEngine.activeElements.length : 'N/A'} / ${this.patch.elements ? this.patch.elements.length : 'N/A'}`);
+    // Calculate total elements from knot vectors
+    const uniqueU = [...new Set(this.patch.U)], uniqueV = [...new Set(this.patch.V)];
+    const totalElements = (uniqueU.length - 1) * (uniqueV.length - 1);
+    const activeCount = this.deimEngine.activeElements ? this.deimEngine.activeElements.length : 0;
+
+    console.log(`   Active Elements    : ${activeCount} / ${totalElements}`);
     console.log(`   Status: ${speedup > 1.0 ? "🚀 ACCELERATED" : "🐢 OVERHEAD-DOMINATED (expected at low mesh levels)"}`);
 
     // --- OVERALL ---

@@ -358,14 +358,15 @@ class DEIMBenchmarkApp {
                 this.solverFOM.nu = state.nu;
                 status.textContent = `FOM snapshot ${snapIdx}/${trainSet.length} (E=${state.E/1000}k, nu=${state.nu}, F=${state.f.toFixed(0)})...`;
                 
-                const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {steps:3, iterations:12});
-                this.romEngine.addSnapshot(res.u);
-                snapDisp.push(new Float64Array(res.u));
-
-                const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-                this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
-                forceSnaps.push(Fint);
-                
+                const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {
+                    steps: 3, 
+                    iterations: 12,
+                    onProgress: (info) => {
+                        // Capture EVERY iteration to enrich the basis
+                        this.romEngine.addSnapshot(info.u);
+                        snapDisp.push(new Float64Array(info.u));
+                    }
+                });
                 const tipIdx = ((this.patch.controlPoints.length-1)*this.patch.controlPoints[0].length + Math.floor(this.patch.controlPoints[0].length/2)) * 2 + 1;
                 console.log(`Train ${snapIdx}: E=${state.E}, nu=${state.nu.toFixed(2)}, F=${state.f.toFixed(0)} | Tip=${Math.abs(res.u[tipIdx]).toFixed(4)}`);
                 snapIdx++;
@@ -383,12 +384,14 @@ class DEIMBenchmarkApp {
                 this.solverFOM.E = state.E;
                 this.solverFOM.nu = state.nu;
                 status.textContent = `Greedy Init ${i+1}/2...`;
-                const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {steps:3, iterations:12});
-                this.romEngine.addSnapshot(res.u);
-                snapDisp.push(new Float64Array(res.u));
-                const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-                this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
-                forceSnaps.push(Fint);
+                const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(state.f), {
+                    steps: 3, 
+                    iterations: 12,
+                    onProgress: (info) => {
+                        this.romEngine.addSnapshot(info.u);
+                        snapDisp.push(new Float64Array(info.u));
+                    }
+                });
                 console.log(`Init ${i+1}: E=${state.E}, nu=${state.nu}, F=${state.f.toFixed(0)}`);
                 await new Promise(r => setTimeout(r, 5));
             }
@@ -437,12 +440,14 @@ class DEIMBenchmarkApp {
                     
                     this.solverFOM.E = worst.E;
                     this.solverFOM.nu = worst.nu;
-                    const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(worst.f), {steps:3, iterations:12});
-                    this.romEngine.addSnapshot(res.u);
-                    snapDisp.push(new Float64Array(res.u));
-                    const Fint = this.solverFOM.calculateInternalForce(this.patch, res.u);
-                    this.solverFOM.applyPenaltyConstraints(null, Fint, res.u, this.patch);
-                    forceSnaps.push(Fint);
+                    const res = this.solverFOM.solveNonlinear(this.patch, bcs, this.getLoads(worst.f), {
+                        steps: 3, 
+                        iterations: 12,
+                        onProgress: (info) => {
+                            this.romEngine.addSnapshot(info.u);
+                            snapDisp.push(new Float64Array(info.u));
+                        }
+                    });
                 }
             }
             console.groupEnd();
