@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase 3.4b Q-DEIM | IGA Hub</title>
+    <title>Phase 3.4b | U-DEIM Hyper-Reduction</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,8 +21,8 @@
     <script src="../phase-2-core/src/iga-solver-2d.js?v=3"></script>
     <script src="../phase-3-core/src/iga-nonlinear.js?v=3"></script>
     <script src="../phase-3-core/src/rom-engine.js?v=3"></script>
-    <!-- Q-DEIM Engine -->
-    <script src="src/qdeim-engine.js"></script>
+    <!-- U-DEIM Engine -->
+    <script src="src/udeim-engine.js"></script>
 
     <style>
         :root { --primary:#8b5cf6; --secondary:#3b82f6; --accent:#10b981; --bg:#ffffff; --card:rgba(255,255,255,0.85); --border:rgba(148,163,184,0.3); }
@@ -77,13 +77,13 @@
     <!-- Left Panel -->
     <div id="ui-panel" class="glass-panel">
         <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-        <div class="panel-title">Phase 3.4b <span style="color:var(--primary)">Q-DEIM</span></div>
-        <div class="panel-sub">Discrete Empirical Interpolation · Cantilever Beam</div>
+        <div class="panel-title">Phase 3.4b <span style="color:var(--primary)">U-DEIM</span></div>
+        <div class="panel-sub">Unassembled DEIM · Cantilever Beam</div>
         <hr class="divider">
 
         <div class="control-group">
             <span class="section-label">1 · Offline Training</span>
-            <p style="font-size:.64rem;color:#64748b;margin-bottom:8px;line-height:1.5">Generates FOM snapshots, extracts POD basis, and trains DEIM interpolation indices.</p>
+            <p style="font-size:.64rem;color:#64748b;margin-bottom:8px;line-height:1.5">Generates FOM snapshots, extracts POD basis, and trains U-DEIM interpolation indices on element forces.</p>
             <div style="margin-bottom: 8px;">
                 <select id="input-sampling-strategy" style="width:100%; background:rgba(255,255,255,0.8); border:1px solid var(--border); border-radius:6px; font-size:0.65rem; padding:6px; color:#334155; outline:none; cursor:pointer; font-weight:600;">
                     <option value="8020">80/20 Train/Test Grid Split</option>
@@ -91,7 +91,7 @@
                 </select>
             </div>
             <div style="display:flex; gap:6px;">
-                <button id="btn-train" class="btn-train-full" style="flex:2;"><i class="fa-solid fa-brain"></i> Train DEIM</button>
+                <button id="btn-train" class="btn-train-full" style="flex:2;"><i class="fa-solid fa-brain"></i> Train U-DEIM</button>
                 <button id="btn-explorer" class="btn-train-full" style="flex:1; background:linear-gradient(135deg,#f59e0b,#d97706); font-size:0.65rem;" disabled><i class="fa-solid fa-magnifying-glass"></i> Explorer</button>
             </div>
             <div id="train-status" class="hidden"></div>
@@ -104,7 +104,7 @@
         </div>
 
         <div class="control-group">
-            <div class="label-row"><span class="lbl">DEIM Points m</span><span class="val" id="m-val">8</span></div>
+            <div class="label-row"><span class="lbl">U-DEIM Points m</span><span class="val" id="m-val">8</span></div>
             <input type="range" id="input-m" min="2" max="20" value="8" disabled>
             <div style="font-size:.58rem;color:#475569;margin-top:4px" id="deim-info">Indices: —</div>
         </div>
@@ -116,7 +116,7 @@
             <div class="btn-grid btn-grid-3">
                 <button class="btn-pill active" data-method="fom">FOM</button>
                 <button class="btn-pill" data-method="galerkin">Galerkin</button>
-                <button class="btn-pill" data-method="deim">Q-DEIM</button>
+                <button class="btn-pill" data-method="deim">U-DEIM</button>
             </div>
         </div>
 
@@ -175,13 +175,13 @@
             <button class="chart-tab active" data-chart="speedup"><i class="fa-solid fa-bolt"></i> Speedup</button>
             <button class="chart-tab" data-chart="fd"><i class="fa-solid fa-chart-line"></i> Force-Displacement</button>
             <button class="chart-tab" data-chart="error"><i class="fa-solid fa-percent"></i> Load vs Error</button>
-            <button class="chart-tab" id="tab-explorer" data-chart="explorer" style="border-color:#f59e0b; color:#f59e0b; display:none;"><i class="fa-solid fa-microscope"></i> DEIM Explorer</button>
+            <button class="chart-tab" id="tab-explorer" data-chart="explorer" style="border-color:#f59e0b; color:#f59e0b; display:none;"><i class="fa-solid fa-microscope"></i> U-DEIM Explorer</button>
         </div>
         <div id="chart-speedup-wrap"><canvas id="chart-speedup" height="140"></canvas></div>
         <div id="chart-fd-wrap" class="hidden"><canvas id="chart-fd" height="140"></canvas></div>
         <div id="chart-error-wrap" class="hidden"><canvas id="chart-error" height="140"></canvas></div>
         
-        <!-- DEIM Explorer UI -->
+        <!-- U-DEIM Explorer UI -->
         <div id="explorer-wrap" class="hidden" style="display:flex; flex-direction:column; gap:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:8px 12px; border-radius:10px;">
                 <button id="btn-exp-prev" class="btn-pill" style="padding:6px 12px;"><i class="fa-solid fa-backward-step"></i> Prev</button>

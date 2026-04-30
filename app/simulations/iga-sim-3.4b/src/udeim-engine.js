@@ -1,5 +1,5 @@
 /**
- * Phase 3.4d: U-DEIM (Unassembled Discrete Empirical Interpolation Method)
+ * Phase 3.4b: U-DEIM (Unassembled Discrete Empirical Interpolation Method)
  * 
  * U-DEIM interpolates the unassembled element-level internal forces.
  * This avoids global assembly entirely and achieves higher accuracy/speedup

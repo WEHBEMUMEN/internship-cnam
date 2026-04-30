@@ -1,4 +1,4 @@
-// Phase 3.4a: DEIM Benchmark — Main Application
+// Phase 3.4b: U-DEIM Benchmark — Main Application
 
 const JET = [{t:0,r:.23,g:.51,b:.96},{t:.2,r:.02,g:.71,b:.83},{t:.4,r:.06,g:.73,b:.51},{t:.6,r:.98,g:.8,b:.08},{t:.8,r:.98,g:.45,b:.09},{t:1,r:.94,g:.27,b:.27}];
 function jet(t){t=Math.max(0,Math.min(1,t));for(let i=0;i<JET.length-1;i++){const a=JET[i],b=JET[i+1];if(t>=a.t&&t<=b.t){const f=(t-a.t)/(b.t-a.t);return[a.r+f*(b.r-a.r),a.g+f*(b.g-a.g),a.b+f*(b.b-a.b)];}}return[.94,.27,.27];}
@@ -13,12 +13,12 @@ const METHODS = {
     deim:     {label:'DEIM',     color:'#8b5cf6'}
 };
 
-class DEIMBenchmarkApp {
+class UDEIMBenchmarkApp {
     constructor() {
         this.engine = new NURBS2D();
         this.solverFOM = new IGANonlinearSolver(this.engine);
         this.romEngine = new ROMEngine(this.solverFOM);
-        this.deimEngine = new QDEIMEngine();
+        this.deimEngine = new UDEIMEngine();
 
         this.patch = null;
         this.method = 'fom';
@@ -64,6 +64,12 @@ class DEIMBenchmarkApp {
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableRotate = false;
+        this.controls.screenSpacePanning = true;
+        this.controls.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE
+        };
         this.controls.target.set(5, 1, 0);
         this.controls.update();
         this.controls.addEventListener('change', () => this._render());
@@ -398,10 +404,8 @@ class DEIMBenchmarkApp {
                 await new Promise(r => setTimeout(r, 10));
 
                 this.romEngine.computePOD(this.k);
-                const tempDeim = new QDEIMEngine();
-                tempDeim.train(forceSnaps, this.deimM, this.k);
-                tempDeim.computeActiveElements(this.patch);
-                tempDeim.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
+                const tempDeim = new UDEIMEngine();
+                await tempDeim.train(this.solverFOM, this.romEngine, this.patch, snapDisp, this.deimM, this.k);
 
                 let maxError = -1, worstIdx = -1;
 
@@ -461,21 +465,12 @@ class DEIMBenchmarkApp {
         document.getElementById('input-k').disabled = false;
         document.getElementById('input-k').max = forceSnaps.length;
 
-        status.textContent = `Training DEIM (m=${this.deimM}, kf=${this.k})...`;
+        status.textContent = `Training U-DEIM (m=${this.deimM}, kf=${this.k})...`;
         await new Promise(r => setTimeout(r, 10));
         // Use k force modes, but m interpolation points for Least-Squares stability
-        const deimInfo = this.deimEngine.train(forceSnaps, this.deimM, this.k);
+        const deimInfo = await this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, snapDisp, this.deimM, this.k);
         document.getElementById('input-m').disabled = false;
         document.getElementById('deim-info').textContent = `${deimInfo.m} interpolation points selected`;
-
-        // Compute active elements for speedup
-        status.textContent = 'Mapping active elements...';
-        this.deimEngine.computeActiveElements(this.patch);
-
-        // Pre-compute reduced tangent from snapshot displacements (key for speedup)
-        status.textContent = 'Pre-computing reduced tangent...';
-        await new Promise(r => setTimeout(r, 10));
-        this.deimEngine.precomputeReducedTangent(this.solverFOM, this.romEngine, this.patch, snapDisp);
 
         this.isTrained = true;
         this.forceSnaps = forceSnaps;
@@ -712,9 +707,14 @@ class DEIMBenchmarkApp {
         
         const nV = this.patch.controlPoints[0].length;
         const currentIndices = this.deimEngine.history.slice(0, step).map(s => s.point);
-        
         currentIndices.forEach((dofIdx, idx) => {
-            const cpIdx = Math.floor(dofIdx / 2);
+            const eIdx = Math.floor(dofIdx / this.deimEngine.numLocalDofs);
+            const ld = dofIdx % this.deimEngine.numLocalDofs;
+            const el = this.deimEngine.activeElements.find(e => e.index === eIdx);
+            if (!el) return;
+            const map = this.deimEngine.elementDofMap[eIdx];
+            const globalDof = map[ld];
+            const cpIdx = Math.floor(globalDof / 2);
             const cpI = Math.floor(cpIdx / nV);
             const cpJ = cpIdx % nV;
             const u = this.patch.U[cpI + this.patch.p];
@@ -735,15 +735,10 @@ class DEIMBenchmarkApp {
         const activeSpans = [];
         
         currentIndices.forEach((dofIdx) => {
-            const cpIdx = Math.floor(dofIdx / 2);
-            const cpI = Math.floor(cpIdx / nV);
-            const cpJ = cpIdx % nV;
-            for (let eI = cpI; eI <= cpI + this.patch.p; eI++) {
-                for (let eJ = cpJ; eJ <= cpJ + this.patch.q; eJ++) {
-                    if (eI >= 0 && eI < uniqueU.length - 1 && eJ >= 0 && eJ < uniqueV.length - 1) {
-                        activeSpans.push({ uMin: uniqueU[eI], uMax: uniqueU[eI+1], vMin: uniqueV[eJ], vMax: uniqueV[eJ+1] });
-                    }
-                }
+            const eIdx = Math.floor(dofIdx / this.deimEngine.numLocalDofs);
+            const el = this.deimEngine.activeElements.find(e => e.index === eIdx);
+            if (el) {
+                activeSpans.push(el);
             }
         });
 
@@ -801,19 +796,19 @@ class DEIMBenchmarkApp {
             document.getElementById('k-val').textContent = this.k;
             if (this.isTrained) {
                 this.romEngine.computePOD(this.k);
-                // Retrain DEIM with new basis
-                if (this.forceSnaps) this.deimEngine.train(this.forceSnaps, this.deimM);
-                this._scheduleUpdate();
+                // Retrain U-DEIM with new basis
+                if (this.snapDisp) this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(() => this._scheduleUpdate());
             }
         };
 
         document.getElementById('input-m').oninput = e => {
             this.deimM = parseInt(e.target.value);
             document.getElementById('m-val').textContent = this.deimM;
-            if (this.isTrained && this.forceSnaps) {
-                const info = this.deimEngine.train(this.forceSnaps, this.deimM);
-                document.getElementById('deim-info').textContent = `${info.m} interpolation points`;
-                this._scheduleUpdate();
+            if (this.isTrained && this.snapDisp) {
+                this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(info => {
+                    document.getElementById('deim-info').textContent = `${info.m} interpolation points`;
+                    this._scheduleUpdate();
+                });
             }
         };
 
@@ -850,4 +845,4 @@ class DEIMBenchmarkApp {
     }
 }
 
-new DEIMBenchmarkApp();
+new UDEIMBenchmarkApp();
