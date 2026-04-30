@@ -39,6 +39,33 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     status.classList.remove('hidden');
     this.romEngine.clearSnapshots();
 
+    // --- NEW: DYNAMIC SCALING LOGIC ---
+    // 1. Calculate active system size
+    const nTotalDOFs = this.patch.controlPoints.length * this.patch.controlPoints[0].length * 2;
+    const nConstrained = this._getConstrainedDofs().length;
+    const nActive = nTotalDOFs - nConstrained;
+
+    // 2. Scale DEIM points (m) to observe ~20% of the active domain
+    //    We enforce a minimum of 10 points, and cap it at 100 to prevent extreme slowdowns
+    this.deimM = Math.min(100, Math.max(10, Math.floor(nActive * 0.20))); 
+    
+    // 3. Scale POD modes (k) to be slightly less than or equal to m
+    this.k = Math.max(5, Math.floor(this.deimM * 0.80)); 
+
+    // 4. Safely update the UI to reflect reality
+    const uiM = document.getElementById('input-m');
+    const uiK = document.getElementById('input-k');
+    if (uiM && uiK) {
+        uiM.max = nActive;
+        uiM.value = this.deimM;
+        document.getElementById('m-val').textContent = this.deimM;
+        
+        uiK.max = this.deimM;
+        uiK.value = this.k;
+        document.getElementById('k-val').textContent = this.k;
+    }
+    // ----------------------------------
+
     const strategy = document.getElementById('input-sampling-strategy').value;
     const bcs = this.getBCs();
     const forceSnaps = [];
