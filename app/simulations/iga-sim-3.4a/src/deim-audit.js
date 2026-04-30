@@ -52,7 +52,7 @@ DEIMEngine.prototype.audit = function (fomSolver, romEngine, patch, snapU = [], 
             PtU_arr[i][j] = this.U_f.get(this.indices[i], j);
 
     const PtU_mat = new Matrix(PtU_arr);
-    const svd = new SVD(PtU_mat, { autoTranspose: true });
+    const svd = new SVD(PtU_mat);
     const sigmas = svd.diagonal;
     const s_max = sigmas[0];
     const s_min = sigmas[sigmas.length - 1];

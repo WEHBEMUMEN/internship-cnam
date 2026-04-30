@@ -32,8 +32,7 @@ class DEIMEngine {
         const S = new Matrix(snapshots.map(s => Array.from(s))).transpose();
         const svd = new SVD(S, {
             computeLeftSingularVectors: true,
-            computeRightSingularVectors: false,
-            autoTranspose: true
+            computeRightSingularVectors: false
         });
         const U = svd.leftSingularVectors;
         const trunc = Math.min(m, U.columns);

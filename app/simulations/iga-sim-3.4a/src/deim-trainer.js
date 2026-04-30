@@ -132,7 +132,10 @@ DEIMEngine.prototype._precomputeInterpolation = function () {
     const PtU_mat = new Matrix(PtU_arr);
 
     // Compute SVD directly on PtU to avoid squaring the condition number
-    const svd = new SVD(PtU_mat, { autoTranspose: true });
+    const svd = new SVD(PtU_mat, {
+        computeLeftSingularVectors: true,
+        computeRightSingularVectors: true
+    });
 
     const U = svd.leftSingularVectors;
     const V = svd.rightSingularVectors;
