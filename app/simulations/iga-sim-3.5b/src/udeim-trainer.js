@@ -86,14 +86,29 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
     
     // 4. Greedy DEIM selection on Unassembled Basis
     console.log(`U-DEIM: Running greedy selection for ${this.m} indices...`);
+    
+    const constrainedDofs_init = new Set();
+    const nV_global_init = patch.controlPoints[0].length;
+    if (Array.isArray(this.bcs)) {
+        this.bcs.forEach(bc => {
+            const base = (bc.i * nV_global_init + bc.j) * 2;
+            if (bc.axis === 'x' || bc.axis === 'both') constrainedDofs_init.add(base);
+            if (bc.axis === 'y' || bc.axis === 'both') constrainedDofs_init.add(base + 1);
+        });
+    }
+
     const indices = [];
-    let maxVal = -1, maxIdx = 0;
+    let maxVal = -1, maxIdx = -1;
     const r0 = new Float64Array(N_u);
     for (let i = 0; i < N_u; i++) {
         const val = Math.abs(U_greedy.get(i, 0));
         r0[i] = val;
+        
+        if (constrainedDofs_init.has(this.elementDofMap[Math.floor(i / this.numLocalDofs)][i % this.numLocalDofs])) continue;
+        
         if (val > maxVal) { maxVal = val; maxIdx = i; }
     }
+    if (maxIdx === -1) maxIdx = 0; // Fallback
     indices.push(maxIdx);
     this.history = [{ step: 1, residual: Array.from(r0), point: maxIdx, maxVal }];
 
@@ -116,8 +131,21 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
             for (let j = 0; j < l; j++) r[i] -= U_greedy.get(i, j) * c[j];
         }
 
-        let maxR = -1, bestIdx = 0;
+        // 4a. Identify constrained unassembled DOFs to exclude
+        const constrainedDofs = new Set();
+        const nV_global = patch.controlPoints[0].length;
+        if (Array.isArray(this.bcs)) {
+            this.bcs.forEach(bc => {
+                const base = (bc.i * nV_global + bc.j) * 2;
+                if (bc.axis === 'x' || bc.axis === 'both') constrainedDofs.add(base);
+                if (bc.axis === 'y' || bc.axis === 'both') constrainedDofs.add(base + 1);
+            });
+        }
+
+        let maxR = -1, bestIdx = -1;
         for (let i = 0; i < N_u; i++) {
+            if (constrainedDofs.has(this.elementDofMap[Math.floor(i / this.numLocalDofs)][i % this.numLocalDofs])) continue;
+
             const rMag = Math.abs(r[i]);
             if (!indices.includes(i) && rMag > maxR) {
                 maxR = rMag;

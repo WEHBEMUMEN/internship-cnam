@@ -61,11 +61,15 @@ DEIMEngine.prototype.train = function (forceSnapshots, m, kf = m, excludeDofs = 
         norms[i] = sum;
     }
 
+    const excludeSet = new Set(excludeDofs.map(d => Number(d)));
+
     for (let l = 0; l < this.m; l++) {
         // Find row with max norm (Pivoting)
         let maxNorm = -1, pivot = -1;
         for (let i = 0; i < N; i++) {
-            if (!indices.includes(i) && norms[i] > maxNorm && !excludeDofs.includes(i)) {
+            if (excludeSet.has(i) || indices.includes(i)) continue;
+            
+            if (norms[i] > maxNorm) {
                 maxNorm = norms[i];
                 pivot = i;
             }
