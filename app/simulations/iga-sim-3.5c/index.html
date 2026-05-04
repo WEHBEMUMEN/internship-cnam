@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3.5c | Equidistant ECSW</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Shared Engines -->
+    <script src="../phase-2-core/src/nurbs-2d.js?v=3"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js?v=3"></script>
+    <script src="../phase-2-core/src/refine-utils.js?v=3"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js?v=3"></script>
+    <script src="../phase-3-core/src/iga-nonlinear.js?v=3"></script>
+    <script src="../phase-3-core/src/rom-engine.js?v=3"></script>
+    
+    <!-- ECSW Engine (Local Copy) -->
+    <script src="src/ecsw-core.js"></script>
+    <script src="src/ecsw-trainer.js"></script>
+    <script src="src/ecsw-engine.js"></script>
+    <script src="src/ecsw-online.js"></script>
+    <script src="src/ecsw-audit.js"></script>
+    <script src="src/ecsw-setup.js"></script>
+
+    <style>
+        :root { --primary:#6366f1; --secondary:#3b82f6; --accent:#10b981; --bg:#f8fafc; --card:rgba(255,255,255,0.9); --border:rgba(148,163,184,0.2); }
+        *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+        body { background:var(--bg); color:#0f172a; font-family:'Inter',sans-serif; overflow:hidden; }
+        #canvas-container { position:absolute; inset:0; background: radial-gradient(circle at 50% 50%, #ffffff 0%, #e2e8f0 100%); }
+        .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.08); }
+        #ui-panel { position:absolute; top:20px; left:20px; width:340px; padding:24px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
+        #stats-panel { position:absolute; top:20px; right:20px; width:380px; padding:20px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
+        #chart-panel { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); width:720px; padding:20px; z-index:10; }
+        .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #4f46e5, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .panel-sub { font-size:0.75rem; color:#64748b; margin-top:4px; font-weight:500; }
+        .section-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#475569; margin-bottom:12px; display:block; }
+        .control-group { margin-bottom:20px; }
+        .label-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .label-row .lbl { font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#64748b; }
+        .label-row .val { font-size:0.85rem; font-weight:700; color:var(--primary); font-family:'JetBrains Mono',monospace; }
+        input[type="range"] { width:100%; height:4px; background:#e2e8f0; border-radius:2px; appearance:none; cursor:pointer; }
+        input[type="range"]::-webkit-slider-thumb { appearance:none; width:16px; height:16px; background:var(--primary); border-radius:50%; border:3px solid #fff; box-shadow:0 2px 6px rgba(99,102,241,0.4); cursor:pointer; }
+        .btn-grid { display:grid; gap:6px; }
+        .btn-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+        .btn-pill { padding:8px 6px; border-radius:12px; font-size:0.62rem; font-weight:700; letter-spacing:.8px; text-transform:uppercase; cursor:pointer; transition:all .2s; border:1px solid var(--border); color:#94a3b8; background:transparent; }
+        .btn-pill:hover { background:rgba(99,102,241,0.05); color:#4f46e5; }
+        .btn-pill.active { border-color:var(--primary); color:var(--primary); background:rgba(99,102,241,0.1); box-shadow:0 0 10px rgba(99,102,241,0.1); }
+        .btn-train-full { width:100%; padding:14px; border-radius:16px; font-size:0.8rem; font-weight:700; letter-spacing:.5px; cursor:pointer; background:linear-gradient(135deg,#4f46e5,#6366f1); color:white; border:none; box-shadow:0 8px 20px -6px rgba(99,102,241,0.5); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+        .btn-train-full:hover { transform:translateY(-2px); box-shadow:0 12px 24px -6px rgba(99,102,241,0.6); }
+        .btn-train-full:disabled { opacity:.5; transform:none; cursor:not-allowed; }
+        .btn-compare { width:100%; padding:12px; border-radius:14px; font-size:0.75rem; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; box-shadow:0 8px 20px -6px rgba(16,185,129,0.4); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:10px; margin-top:10px; }
+        .btn-compare:hover { transform:translateY(-2px); }
+        .btn-compare:disabled { opacity:.5; transform:none; cursor:not-allowed; }
+        .stat-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:15px; }
+        .stat-card { background:rgba(241,245,249,0.5); border-radius:16px; padding:12px; border:1px solid var(--border); transition:all .3s; }
+        .stat-card:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .stat-card .lbl { font-size:0.58rem; color:#64748b; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px; }
+        .stat-num { font-size:1.15rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:#1e293b; }
+        .divider { border: 0; border-top: 1px solid rgba(148,163,184,0.1); margin:20px 0; }
+        #train-status { font-size:0.68rem; font-family:'JetBrains Mono',monospace; color:#6366f1; margin-top:10px; min-height:16px; text-align:center; }
+        .hidden { display:none !important; }
+        .back-link { font-size:0.65rem; text-transform:uppercase; letter-spacing:1.2px; color:#64748b; display:flex; align-items:center; gap:8px; text-decoration:none; margin-bottom:16px; transition:color .2s; font-weight:600; }
+        .back-link:hover { color:#4f46e5; }
+        .live-dot { width:8px; height:8px; background:#10b981; border-radius:50%; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.4; transform:scale(0.8);} }
+        .chart-tabs { display:flex; gap:6px; margin-bottom:12px; }
+        .chart-tab { padding:6px 14px; border-radius:10px; font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; cursor:pointer; border:1px solid var(--border); color:#94a3b8; background:transparent; transition:all .2s; }
+        .chart-tab.active { border-color:var(--primary); color:var(--primary); background:rgba(99,102,241,0.08); }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- Left Panel -->
+    <div id="ui-panel" class="glass-panel">
+        <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
+        <div class="panel-title">Phase 3.5c <span style="color:#10b981">ECSW</span></div>
+        <div class="panel-sub">Energy-Conserving Sampling · Parametric Force Sweep</div>
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">1 · Offline Training</span>
+            <p style="font-size:.68rem;color:#64748b;margin-bottom:12px;line-height:1.6">Generates snapshots at equidistant intervals along the force range. Fixed E=100k, &nu;=0.3.</p>
+            
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Snapshots (N)</span><span class="val" id="samples-val">12</span></div>
+                <input type="range" id="input-samples" min="2" max="60" value="12">
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Max Force (Fmax)</span><span class="val" id="max-force-val">800</span></div>
+                <input type="range" id="input-max-force" min="100" max="2000" step="50" value="800">
+            </div>
+
+            <div style="display:flex; gap:8px;">
+                <button id="btn-train" class="btn-train-full" style="flex:2; background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 8px 20px -6px rgba(16,185,129,0.5);"><i class="fa-solid fa-bolt"></i> Train ECSW</button>
+                <button id="btn-explorer" class="btn-train-full" style="flex:1; background:linear-gradient(135deg,#f59e0b,#d97706); font-size:0.65rem;" disabled><i class="fa-solid fa-magnifying-glass"></i> Explorer</button>
+            </div>
+            <div id="train-status" class="hidden"></div>
+        </div>
+
+        <div class="control-group">
+            <div class="label-row"><span class="lbl">POD Modes k</span><span class="val" id="k-val">6</span></div>
+            <input type="range" id="input-k" min="1" max="15" value="6" disabled>
+            <div style="font-size:.6rem;color:#475569;margin-top:4px" id="energy-val">Energy: —</div>
+        </div>
+
+        <div class="control-group">
+            <div class="label-row"><span class="lbl">ECSW Tolerance &tau;</span><span class="val" id="m-val">1e-4</span></div>
+            <input type="range" id="input-m" min="1" max="7" value="4" disabled>
+            <div style="font-size:.6rem;color:#475569;margin-top:4px" id="deim-info">Elements: —</div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">2 · Online Evaluation</span>
+            <div class="btn-grid btn-grid-3">
+                <button class="btn-pill active" data-method="fom">FOM</button>
+                <button class="btn-pill" data-method="galerkin">Galerkin</button>
+                <button class="btn-pill" data-method="deim">DEIM</button>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">3 · Physics</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom:14px;">
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">Mesh (h)</span><span class="val" id="mesh-val">1</span></div>
+                    <input type="range" id="input-mesh" min="1" max="4" value="1">
+                </div>
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">Live Load</span><span class="val" id="load-val">200</span></div>
+                    <input type="range" id="input-load" min="10" max="2000" step="10" value="200">
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <select id="input-load-type" style="width:60%; background:transparent; border:1px solid var(--border); border-radius:8px; font-size:0.75rem; padding:6px; color:#475569; outline:none; cursor:pointer; font-weight:600;">
+                    <option value="tip">Tip Shear Load</option>
+                    <option value="top">Top Distributed Load</option>
+                </select>
+                <label style="font-size:0.75rem; color:#475569; display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600;">
+                    <input type="checkbox" id="input-show-dofs" checked> DOFs
+                </label>
+            </div>
+        </div>
+
+        <button id="btn-compare" class="btn-compare" disabled><i class="fa-solid fa-chart-bar"></i> Benchmark Comparison</button>
+    </div>
+
+    <!-- Right Stats Panel -->
+    <div id="stats-panel" class="glass-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <span style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#64748b">Real-time Metrics</span>
+            <div style="display:flex;align-items:center;gap:8px"><div class="live-dot"></div><span style="font-size:.6rem;color:#10b981;font-weight:800;text-transform:uppercase">Active</span></div>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card"><span class="lbl">Method</span><div class="stat-num" id="method-name" style="font-size:.9rem">FOM</div></div>
+            <div class="stat-card"><span class="lbl">Time</span><div style="display:flex;align-items:baseline;gap:3px"><span class="stat-num" id="time-val">—</span><span style="font-size:.6rem;color:#475569">ms</span></div></div>
+            <div class="stat-card"><span class="lbl">Speedup</span><div style="display:flex;align-items:baseline;gap:3px"><span class="stat-num" id="speedup-val" style="color:#10b981">—</span><span style="font-size:.6rem;color:#475569">×</span></div></div>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card"><span class="lbl">Snapshots</span><div class="stat-num" id="sampled-val" style="font-size:.9rem">—</div></div>
+            <div class="stat-card"><span class="lbl">Tip Disp</span><div class="stat-num" id="tip-val" style="font-size:.9rem">—</div></div>
+            <div class="stat-card"><span class="lbl">L² Error</span><div class="stat-num" id="error-val" style="font-size:.9rem;color:#f59e0b">—</div></div>
+        </div>
+
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#475569;margin-bottom:8px">Convergence History</div>
+        <canvas id="sparkline-canvas" width="340" height="90" style="width:100%;height:90px;display:block;border-radius:12px; background:rgba(0,0,0,0.02)"></canvas>
+    </div>
+
+    <!-- Bottom Chart Panel -->
+    <div id="chart-panel" class="glass-panel">
+        <div class="chart-tabs">
+            <button class="chart-tab active" data-chart="speedup"><i class="fa-solid fa-bolt"></i> Speedup</button>
+            <button class="chart-tab" data-chart="fd"><i class="fa-solid fa-chart-line"></i> Force-Displacement</button>
+            <button class="chart-tab" data-chart="error"><i class="fa-solid fa-percent"></i> Load vs Error</button>
+            <button class="chart-tab" id="tab-explorer" data-chart="explorer" style="border-color:#f59e0b; color:#f59e0b; display:none;"><i class="fa-solid fa-microscope"></i> ECSW Explorer</button>
+        </div>
+        <div id="chart-speedup-wrap"><canvas id="chart-speedup" height="140"></canvas></div>
+        <div id="chart-fd-wrap" class="hidden"><canvas id="chart-fd" height="140"></canvas></div>
+        <div id="chart-error-wrap" class="hidden"><canvas id="chart-error" height="140"></canvas></div>
+        
+        <!-- DEIM Explorer UI -->
+        <div id="explorer-wrap" class="hidden" style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:8px 12px; border-radius:12px;">
+                <button id="btn-exp-prev" class="btn-pill" style="padding:6px 16px;"><i class="fa-solid fa-backward-step"></i> Prev</button>
+                <div style="text-align:center;">
+                    <div style="font-size:0.65rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1px;">Greedy Selection Step</div>
+                    <div id="exp-step-label" style="font-size:1.15rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--primary);">1 / 10</div>
+                </div>
+                <button id="btn-exp-next" class="btn-pill active" style="padding:6px 16px;">Next <i class="fa-solid fa-forward-step"></i></button>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1; background:#fff; border-radius:12px; padding:12px; border:1px solid var(--border); position:relative; height:160px;">
+                    <div style="font-size:0.6rem; font-weight:800; color:#64748b; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Interpolation Residual |r|</div>
+                    <div style="position:absolute; top:35px; left:10px; right:10px; bottom:10px;">
+                        <canvas id="chart-residual"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Logic (Local Copy) -->
+    <script src="../../shared/performance.js"></script>
+    <script src="src/app-core.js"></script>
+    <script src="src/app-solver.js"></script>
+    <script src="src/app-training.js"></script>
+    <script src="src/app-visuals.js"></script>
+    <script src="src/app-explorer.js"></script>
+    <script src="src/app-ui.js"></script>
+    <script src="src/force-mirror-test.js"></script>
+    <script src="src/deim-online-audit.js"></script>
+</body>
+</html>
