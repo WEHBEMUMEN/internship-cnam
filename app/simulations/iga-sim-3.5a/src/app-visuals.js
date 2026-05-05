@@ -62,7 +62,10 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
             { label: 'Max Interpolation Error', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.2)', borderWidth: 2, tension: 0.1, fill: true, pointRadius: 3 }
         ]},
         options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top', labels:{font:{size:9}}}},
-            scales:{x:{title:{display:true, text:'Number of DEIM Points (m)', font:{size:10}}}, y:{type:'logarithmic', title:{display:true, text:'Max Error', font:{size:10}}}}
+            scales:{
+                x:{min: 0, max: 50, title:{display:true, text:'Number of DEIM Points (m)', font:{size:10}}}, 
+                y:{type:'logarithmic', title:{display:true, text:'Max Error (%)', font:{size:10}}}
+            }
         }
     });
 

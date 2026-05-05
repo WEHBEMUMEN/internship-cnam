@@ -165,7 +165,7 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
         const maxErrors = [];
         this.deimEngine.history.forEach((h, idx) => {
             labels.push(idx + 1);
-            maxErrors.push(h.maxVal);
+            maxErrors.push(h.maxVal * 100);
         });
         this.pointsChart.data.labels = labels;
         this.pointsChart.data.datasets[0].data = maxErrors;
