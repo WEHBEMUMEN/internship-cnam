@@ -747,15 +747,42 @@
         
 
         <div id="tab-flowcharts" class="tab-pane">
-          <div class="section-head reveal reveal-up">
+          <div class="section-head">
             <span class="badge">METHODOLOGY</span>
             <h2 class="section-title">Logic Flowcharts</h2>
             <p class="section-sub">Visualizing the mathematical and algorithmic pipelines for each project phase.</p>
           </div>
 
           <div class="flow-container container">
+            <!-- New: Technical Flowchart Folder Links -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 50px;" data-phase="all">
+                <div class="card" style="background: rgba(99, 102, 241, 0.05); border: 1px dashed rgba(99, 102, 241, 0.3);" data-phase="1">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                        <i class="fa-solid fa-file-code" style="color: #6366f1;"></i>
+                        <span style="font-size: 0.7rem; font-weight: 700; color: #6366f1; text-transform: uppercase;">Technical Doc</span>
+                    </div>
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem;">Phase 1.0 Pipeline</h4>
+                    <a href="flowcharts/phase-1-flow.html" class="btn btn-outline" style="font-size: 0.65rem; padding: 8px 12px; width: auto;">Detailed Analysis <i class="fa-solid fa-arrow-up-right-from-square" style="margin-left: 6px;"></i></a>
+                </div>
+                <div class="card" style="background: rgba(245, 158, 11, 0.05); border: 1px dashed rgba(245, 158, 11, 0.3);" data-phase="2">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                        <i class="fa-solid fa-file-code" style="color: #f59e0b;"></i>
+                        <span style="font-size: 0.7rem; font-weight: 700; color: #f59e0b; text-transform: uppercase;">Technical Doc</span>
+                    </div>
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem;">Phase 2.0 Pipeline</h4>
+                    <a href="flowcharts/phase-2-flow.html" class="btn btn-outline" style="font-size: 0.65rem; padding: 8px 12px; width: auto;">Detailed Analysis <i class="fa-solid fa-arrow-up-right-from-square" style="margin-left: 6px;"></i></a>
+                </div>
+                <div class="card" style="background: rgba(16, 185, 129, 0.05); border: 1px dashed rgba(16, 185, 129, 0.3);" data-phase="3">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                        <i class="fa-solid fa-file-code" style="color: #10b981;"></i>
+                        <span style="font-size: 0.7rem; font-weight: 700; color: #10b981; text-transform: uppercase;">Technical Doc</span>
+                    </div>
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem;">Phase 3.0 Pipeline</h4>
+                    <a href="flowcharts/phase-3-flow.html" class="btn btn-outline" style="font-size: 0.65rem; padding: 8px 12px; width: auto;">Detailed Analysis <i class="fa-solid fa-arrow-up-right-from-square" style="margin-left: 6px;"></i></a>
+                </div>
+            </div>
 
-            <div class="flow-section reveal reveal-up" data-phase="1">
+            <div class="flow-section" data-phase="1">
               <span class="badge" style="background: rgba(96, 165, 250, 0.12); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3);">PHASE 1.0</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">1D Core (Performance) Pipeline</h3>
               <div class="flow-grid">
@@ -804,7 +831,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">PHASE 1.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">1D Core Essentials Pipeline</h3>
               <div class="flow-grid">
@@ -853,7 +880,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(37, 99, 235, 0.12); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.3);">PHASE 1.2</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Degree Elevation (p-Refinement) Pipeline</h3>
               <div class="flow-grid">
@@ -902,7 +929,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(29, 78, 216, 0.12); color: #1d4ed8; border: 1px solid rgba(29, 78, 216, 0.3);">PHASE 1.3</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Knot Insertion (h-Refinement) Pipeline</h3>
               <div class="flow-grid">
@@ -951,7 +978,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">PHASE 1.4</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Vector Calculus — Tangents Pipeline</h3>
               <div class="flow-grid">
@@ -1000,7 +1027,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(124, 58, 237, 0.12); color: #7c3aed; border: 1px solid rgba(124, 58, 237, 0.3);">PHASE 1.5</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">k-Refinement Optimization Pipeline</h3>
               <div class="flow-grid">
@@ -1055,7 +1082,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">PHASE 1.6</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Structural Mechanics — 1D IGA Pipeline</h3>
               <div class="flow-grid">
@@ -1110,7 +1137,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(5, 150, 105, 0.12); color: #059669; border: 1px solid rgba(5, 150, 105, 0.3);">PHASE 1.7</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">ROM Benchmark — 1D Pipeline</h3>
               <div class="flow-grid">
@@ -1165,7 +1192,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(168, 85, 247, 0.12); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3);">PHASE 1.8</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Circle Geometry & Refinement Pipeline</h3>
               <div class="flow-grid">
@@ -1220,7 +1247,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);">PHASE NL App</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Non-Linear IGA & ROM Pipeline</h3>
               <div class="flow-grid">
@@ -1275,7 +1302,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">PHASE 2.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Bivariate NURBS — Foundations Pipeline</h3>
               <div class="flow-grid">
@@ -1324,7 +1351,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(96, 165, 250, 0.12); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3);">PHASE 2.2</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Surface p-Refinement Lab Pipeline</h3>
               <div class="flow-grid">
@@ -1379,7 +1406,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">PHASE 2.3</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Surface h-Refinement Lab Pipeline</h3>
               <div class="flow-grid">
@@ -1434,7 +1461,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">PHASE 2.4</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">k-Refinement & Exact Sphere Pipeline</h3>
               <div class="flow-grid">
@@ -1489,7 +1516,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up">
+            <div class="flow-section">
               <span class="badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">PHASE 2.5</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Jacobian & Metric Mapping Pipeline</h3>
               <div class="flow-grid">
@@ -1544,7 +1571,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up" data-phase="2">
+            <div class="flow-section" data-phase="2">
               <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">PHASE 2B.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">2D IGA Stiffness Assembly Pipeline</h3>
               <div class="flow-grid">
@@ -1605,7 +1632,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up" data-phase="2">
+            <div class="flow-section" data-phase="2">
               <span class="badge" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3);">PHASE 2B.2</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Stress & Displacement Validation Pipeline</h3>
               <div class="flow-grid">
@@ -1666,7 +1693,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up" data-phase="2">
+            <div class="flow-section" data-phase="2">
               <span class="badge" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3);">PHASE 2C</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Snapshot Database Generator Pipeline</h3>
               <div class="flow-grid">
@@ -1727,7 +1754,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up" data-phase="2">
+            <div class="flow-section" data-phase="2">
               <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3);">PHASE 2C.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Snapshot Lab & ROM Trainer Pipeline</h3>
               <div class="flow-grid">
@@ -1770,7 +1797,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up" data-phase="2">
+            <div class="flow-section" data-phase="2">
               <span class="badge" style="background: rgba(236, 72, 153, 0.12); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.3);">PHASE 2D.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">SVD Reduction & POD Basis</h3>
               <div class="flow-grid">
@@ -1801,7 +1828,7 @@
               </div>
             </div>
 
-            <div class="flow-section reveal reveal-up" data-phase="2">
+            <div class="flow-section" data-phase="2">
               <span class="badge" style="background: rgba(217, 70, 239, 0.12); color: #d946ef; border: 1px solid rgba(217, 70, 239, 0.3);">PHASE 2D.2</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">ROM Operator Projection</h3>
               <div class="flow-grid">
@@ -1831,7 +1858,7 @@
                 </div>
               </div>
             </div>
-            <div class="flow-section reveal reveal-up" data-phase="2">
+            <div class="flow-section" data-phase="2">
               <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">PHASE 2D.3</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Online Solver (Digital Twin) Pipeline</h3>
               <div class="flow-grid">
@@ -1870,7 +1897,7 @@
 
             <hr data-phase="3" class="grid-separator">
 
-            <div class="flow-section reveal reveal-up" data-phase="3">
+            <div class="flow-section" data-phase="3">
               <span class="badge" style="background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3);">PHASE 3.1</span>
               <h3 style="margin-top: 10px; color: var(--text-primary);">Nonlinear Newton-Raphson Pipeline</h3>
               <div class="flow-grid">

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1.0 Flowchart | IGA Hyper-Reduction Lab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-dim: #94a3b8;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .badge {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        h1 { font-size: 2.5rem; margin: 15px 0; }
+        .mermaid {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            width: 100%;
+            max-width: 1000px;
+        }
+        .back-link {
+            margin-top: 40px;
+            color: var(--text-dim);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="badge">METHODOLOGY</span>
+        <h1>Phase 1.0 Logic Flow</h1>
+        <p style="color: var(--text-dim)">Visualizing the 1D Core Performance Pipeline</p>
+    </div>
+
+    <div class="mermaid">
+        graph TD
+            A[Start: Define Parametric Domain] --> B[Resolution Slider Input]
+            B --> C[Cox-de Boor Basis Evaluation]
+            C --> D[Start CPU Timer]
+            D --> E[Curve Construction Loop]
+            E --> F[Stop CPU Timer]
+            F --> G[Report FPS & Metrics]
+            G --> H[End: Visual Display]
+
+            style A fill:#6366f1,stroke:#fff,stroke-width:2px,color:#fff
+            style H fill:#10b981,stroke:#fff,stroke-width:2px,color:#fff
+    </div>
+
+    <a href="../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+
+    <script>
+        mermaid.initialize({ 
+            theme: 'dark',
+            startOnLoad: true,
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+        });
+    </script>
+</body>
+</html>
