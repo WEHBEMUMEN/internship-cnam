@@ -159,6 +159,19 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     document.getElementById('btn-explorer').disabled = false;
     status.textContent = `Training complete ✓`;
     
+    // Update Points vs Error chart
+    if (this.pointsChart && this.deimEngine && this.deimEngine.history) {
+        const labels = [];
+        const maxErrors = [];
+        this.deimEngine.history.forEach((h, idx) => {
+            labels.push(idx + 1);
+            maxErrors.push(h.maxVal);
+        });
+        this.pointsChart.data.labels = labels;
+        this.pointsChart.data.datasets[0].data = maxErrors;
+        this.pointsChart.update();
+    }
+    
     this.updatePhysics();
     this.runOnlineAudit();
 };

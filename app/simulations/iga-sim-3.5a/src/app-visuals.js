@@ -28,6 +28,7 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
             document.getElementById('chart-speedup-wrap').classList.toggle('hidden', t.dataset.chart !== 'speedup');
             document.getElementById('chart-fd-wrap').classList.toggle('hidden', t.dataset.chart !== 'fd');
             document.getElementById('chart-error-wrap').classList.toggle('hidden', t.dataset.chart !== 'error');
+            document.getElementById('chart-points-wrap').classList.toggle('hidden', t.dataset.chart !== 'points');
             document.getElementById('explorer-wrap').classList.toggle('hidden', t.dataset.chart !== 'explorer');
             
             if ((t.dataset.chart === 'fd' || t.dataset.chart === 'error') && this.isTrained) this.runFDCurves();
@@ -53,6 +54,16 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
         options: { responsive:true, maintainAspectRatio:false,
             plugins:{legend:{position:'top', labels:{font:{size:9}}}},
             scales:{x:{title:{display:true, text:'Load F', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error', font:{size:10}}}}}
+    });
+
+    this.pointsChart = new Chart(document.getElementById('chart-points'), {
+        type: 'line',
+        data: { labels: [], datasets: [
+            { label: 'Max Interpolation Error', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.2)', borderWidth: 2, tension: 0.1, fill: true, pointRadius: 3 }
+        ]},
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top', labels:{font:{size:9}}}},
+            scales:{x:{title:{display:true, text:'Number of DEIM Points (m)', font:{size:10}}}, y:{type:'logarithmic', title:{display:true, text:'Max Error', font:{size:10}}}}
+        }
     });
 
     this.residualChart = new Chart(document.getElementById('chart-residual'), {
