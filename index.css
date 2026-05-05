@@ -19,6 +19,32 @@
   --card-hover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+/* Premium Math Blocks */
+.math-block {
+  background: #0f172a;
+  padding: 2rem;
+  border-radius: 16px;
+  margin: 2.5rem 0;
+  overflow-x: auto;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-left: 4px solid var(--accent);
+  color: #f8fafc;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  font-size: 1.1rem;
+}
+
+.math-block::after {
+  content: 'MATH';
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: rgba(148, 163, 184, 0.4);
+  letter-spacing: 2px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

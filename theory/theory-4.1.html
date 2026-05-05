@@ -54,9 +54,9 @@
           </div>
 
           <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-gears"></i> 1. The Dynamic Semi-Discrete Equation</h3>
-          <p>In the static phases, we solved for equilibrium: $F_{int}(u) = F_{ext}$. In Phase 4, we introduce <strong>Inertia</strong> and <strong>Damping</strong>:</p>
+          <p>In the static phases, we solved for equilibrium: $\mathbf{F}_{int}(\mathbf{u}) = \mathbf{F}_{ext}$. In Phase 4, we introduce <strong>Inertia</strong> and <strong>Damping</strong>:</p>
           
-          <div class="math-block" style="background: #0f172a; padding: 30px; border-radius: 16px; border: 1px solid rgba(244, 63, 94, 0.3); margin: 30px 0; color: white;">
+          <div class="math-block">
             $$\mathbf{M} \ddot{\mathbf{u}} + \mathbf{C} \dot{\mathbf{u}} + \mathbf{F}_{int}(\mathbf{u}) = \mathbf{F}_{ext}(t)$$
           </div>
           
@@ -71,25 +71,25 @@
           <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-clock"></i> 2. Time Integration (The Newmark-&beta; Scheme)</h3>
           <p>To solve the second-order ODE, we discretize time into increments $\Delta t$. We use the <strong>Newmark-&beta; method</strong> (implicit) for its stability in structural mechanics:</p>
           
-          <div class="math-block" style="background: #0f172a; padding: 25px; border-radius: 12px; margin: 20px 0; color: white;">
-            $$\dot{u}_{n+1} = \dot{u}_n + [(1-\gamma)\ddot{u}_n + \gamma \ddot{u}_{n+1}]\Delta t$$
-            $$u_{n+1} = u_n + \dot{u}_n \Delta t + [(\frac{1}{2}-\beta)\ddot{u}_n + \beta \ddot{u}_{n+1}]\Delta t^2$$
+          <div class="math-block">
+            $$\dot{\mathbf{u}}_{n+1} = \dot{\mathbf{u}}_n + [(1-\gamma)\ddot{\mathbf{u}}_n + \gamma \ddot{\mathbf{u}}_{n+1}]\Delta t$$
+            $$\mathbf{u}_{n+1} = \mathbf{u}_n + \dot{\mathbf{u}}_n \Delta t + [(\frac{1}{2}-\beta)\ddot{\mathbf{u}}_n + \beta \ddot{\mathbf{u}}_{n+1}]\Delta t^2$$
           </div>
           
           <p>For unconditional stability (Average Acceleration Method), we set $\gamma = 0.5$ and $\beta = 0.25$. This transforms the dynamic problem into a series of "pseudo-static" nonlinear problems at each time step.</p>
 
           <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-compress-arrows-alt"></i> 3. Projected Dynamics (ROM)</h3>
-          <p>By substituting $u \approx \Phi q$ and projecting onto the POD basis, we obtain the reduced dynamic system:</p>
+          <p>By substituting $\mathbf{u} \approx \mathbf{\Phi} \mathbf{q}$ and projecting onto the POD basis, we obtain the reduced dynamic system:</p>
 
-          <div class="math-block" style="background: #0f172a; padding: 30px; border-radius: 16px; border: 1px solid rgba(244, 63, 94, 0.3); margin: 30px 0; color: white;">
-            $$\mathbf{M}_r \ddot{\mathbf{q}} + \mathbf{C}_r \dot{\mathbf{q}} + \Phi^T \mathbf{F}_{int}(\Phi \mathbf{q}) = \Phi^T \mathbf{F}_{ext}(t)$$
+          <div class="math-block">
+            $$\mathbf{M}_r \ddot{\mathbf{q}} + \mathbf{C}_r \dot{\mathbf{q}} + \mathbf{\Phi}^T \mathbf{F}_{int}(\mathbf{\Phi} \mathbf{q}) = \mathbf{\Phi}^T \mathbf{F}_{ext}(t)$$
           </div>
 
-          <p>Where <strong>$\mathbf{M}_r = \Phi^T \mathbf{M} \Phi$</strong> and <strong>$\mathbf{C}_r = \Phi^T \mathbf{C} \Phi$</strong> are $k \times k$ matrices (typically $k < 20$).</p>
+          <p>Where <strong>$\mathbf{M}_r = \mathbf{\Phi}^T \mathbf{M} \mathbf{\Phi}$</strong> and <strong>$\mathbf{C}_r = \mathbf{\Phi}^T \mathbf{C} \mathbf{\Phi}$</strong> are $k \times k$ matrices (typically $k < 20$).</p>
           
           <div style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid #10b981; padding: 20px; border-radius: 0 12px 12px 0; margin-top: 40px;">
             <h4 style="color: #10b981; margin: 0 0 10px 0;"><i class="fa-solid fa-rocket"></i> The Hyper-Reduction Synergy</h4>
-            <p style="margin: 0;">The term $\Phi^T \mathbf{F}_{int}(\Phi \mathbf{q})$ is still expensive. In Phase 4, we will apply our <strong>ECSW weights</strong> $w_e$ from the static training to evaluate this term at a fraction of the cost, enabling **real-time transient structural feedback**.</p>
+            <p style="margin: 0;">The term $\mathbf{\Phi}^T \mathbf{F}_{int}(\mathbf{\Phi} \mathbf{q})$ is still expensive. In Phase 4, we will apply our <strong>ECSW weights</strong> $w_e$ from the static training to evaluate this term at a fraction of the cost, enabling **real-time transient structural feedback**.</p>
           </div>
         </div>
 
