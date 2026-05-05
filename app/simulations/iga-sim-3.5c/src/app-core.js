@@ -13,7 +13,7 @@ draw(){const{c,ctx,data}=this;const W=c.width,H=c.height;ctx.clearRect(0,0,W,H);
 const METHODS = {
     fom:      {label:'FOM',      color:'#334155'},
     galerkin: {label:'Galerkin', color:'#3b82f6'},
-    deim:     {label:'ECSW',     color:'#10b981'}
+    ecsw:     {label:'ECSW',     color:'#10b981'}
 };
 
 class DEIMBenchmarkApp {
@@ -21,7 +21,7 @@ class DEIMBenchmarkApp {
         this.engine = new NURBS2D();
         this.solverFOM = new IGANonlinearSolver(this.engine);
         this.romEngine = new ROMEngine(this.solverFOM);
-        this.deimEngine = new ECSWEngine();
+        this.ecswEngine = new ECSWEngine();
 
         this.patch = null;
         this.method = 'fom';

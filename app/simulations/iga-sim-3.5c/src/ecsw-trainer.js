@@ -31,9 +31,14 @@ class ECSWTrainer {
         // 2. Construct Target Matrix B [k*nSnaps x 1]
         // B contains projected assembly forces F_red,s = Phi^T * F_int,s
         const B = new Float64Array(k * nSnaps);
+        const constrainedDofs = fomSolver._getConstrainedDofs ? fomSolver._getConstrainedDofs() : [];
+
         for (let s = 0; s < nSnaps; s++) {
             const F_int_assembly = fomSolver.calculateInternalForce(patch, snapshots[s]);
             
+            // Zero out constrained DOFs to match snapshot training
+            constrainedDofs.forEach(d => F_int_assembly[d] = 0);
+
             // Project to reduced space
             for (let i = 0; i < k; i++) {
                 let dot = 0;

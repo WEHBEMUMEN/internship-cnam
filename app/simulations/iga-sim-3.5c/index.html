@@ -126,7 +126,7 @@
             <div class="btn-grid btn-grid-3">
                 <button class="btn-pill active" data-method="fom">FOM</button>
                 <button class="btn-pill" data-method="galerkin">Galerkin</button>
-                <button class="btn-pill" data-method="deim">DEIM</button>
+                <button class="btn-pill" data-method="ecsw">ECSW</button>
             </div>
         </div>
 
@@ -185,11 +185,13 @@
             <button class="chart-tab active" data-chart="speedup"><i class="fa-solid fa-bolt"></i> Speedup</button>
             <button class="chart-tab" data-chart="fd"><i class="fa-solid fa-chart-line"></i> Force-Displacement</button>
             <button class="chart-tab" data-chart="error"><i class="fa-solid fa-percent"></i> Load vs Error</button>
+            <button class="chart-tab" data-chart="convergence" id="tab-convergence"><i class="fa-solid fa-stairs"></i> Convergence (m)</button>
             <button class="chart-tab" id="tab-explorer" data-chart="explorer" style="border-color:#f59e0b; color:#f59e0b; display:none;"><i class="fa-solid fa-microscope"></i> ECSW Explorer</button>
         </div>
         <div id="chart-speedup-wrap"><canvas id="chart-speedup" height="140"></canvas></div>
         <div id="chart-fd-wrap" class="hidden"><canvas id="chart-fd" height="140"></canvas></div>
         <div id="chart-error-wrap" class="hidden"><canvas id="chart-error" height="140"></canvas></div>
+        <div id="chart-convergence-wrap" class="hidden"><canvas id="chart-convergence" height="140"></canvas></div>
         
         <!-- DEIM Explorer UI -->
         <div id="explorer-wrap" class="hidden" style="display:flex; flex-direction:column; gap:10px;">

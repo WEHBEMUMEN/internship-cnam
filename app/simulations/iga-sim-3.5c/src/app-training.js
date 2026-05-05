@@ -52,21 +52,15 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
 
     // System size logic
     const nTotalDOFs = this.patch.controlPoints.length * this.patch.controlPoints[0].length * 2;
-    const nConstrained = this._getConstrainedDofs().length;
-    const nActive = nTotalDOFs - nConstrained;
+    const bcs_indices = this._getConstrainedDofs();
+    const nActive = nTotalDOFs - bcs_indices.length;
 
-    // Scale defaults based on active system size
-    this.deimM = Math.min(Math.max(10, Math.floor(nActive * 0.15)), 80); 
-    this.k = Math.min(Math.max(5, Math.floor(this.deimM * 0.7)), 50); 
-
-    // UI Updates
-    const uiM = document.getElementById('input-m');
+    // In ECSW (Phase 3.5c), 'm' represents -log10(tolerance)
+    // We don't want to auto-scale it like DEIM points.
     const uiK = document.getElementById('input-k');
-    if (uiM && uiK) {
-        uiM.max = nActive;
-        uiM.value = this.deimM;
-        document.getElementById('m-val').textContent = this.deimM;
-        uiK.max = this.deimM;
+    if (uiK) {
+        this.k = Math.min(Math.max(5, Math.floor(nActive * 0.1)), 50);
+        uiK.max = nActive;
         uiK.value = this.k;
         document.getElementById('k-val').textContent = this.k;
     }
@@ -141,9 +135,9 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     status.textContent = `Training ECSW...`;
     await new Promise(r => setTimeout(r, 10));
     const tol = Math.pow(10, -parseInt(document.getElementById('input-m').value));
-    const deimInfo = await this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, snapDisp, tol);
+    const ecswInfo = await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, snapDisp, tol);
     document.getElementById('input-m').disabled = true; // ECSW uses internal tolerance
-    document.getElementById('deim-info').textContent = `${deimInfo.elementCount} active elements / ${deimInfo.totalElements}`;
+    document.getElementById('deim-info').textContent = `${ecswInfo.elementCount} active elements / ${ecswInfo.totalElements}`;
 
     this.isTrained = true;
     this.forceSnaps = forceSnaps;

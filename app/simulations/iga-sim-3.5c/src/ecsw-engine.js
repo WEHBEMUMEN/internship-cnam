@@ -44,8 +44,10 @@ class ECSWEngine {
         // 1. Construct the Target Matrix B [k*nSnaps x 1]
         // B contains the projected assembly internal forces (EXCLUDING penalty)
         const B = new Float64Array(this.k * nSnaps);
+        const constrainedDofs = fomSolver._getConstrainedDofs ? fomSolver._getConstrainedDofs() : [];
         for (let s = 0; s < nSnaps; s++) {
             const F_int_assembly = fomSolver.calculateInternalForce(patch, snapshotDisplacements[s]);
+            constrainedDofs.forEach(d => F_int_assembly[d] = 0);
             
             // Project to reduced space: F_red = Phi^T * F_int
             for (let i = 0; i < this.k; i++) {
@@ -71,20 +73,75 @@ class ECSWEngine {
 
         const AT_A = A_mat.transpose().mmul(A_mat);
         const AT_B = A_mat.transpose().mmul(B_mat);
+
+        // --- NEW AUDIT LOGS ---
+        let normB = 0;
+        for (let r=0; r<B_mat.rows; r++) normB += B_mat.get(r,0)**2;
+        normB = Math.sqrt(normB);
+        console.log(`   [ECSW Audit] Target ||B||: ${normB.toExponential(4)}`);
+        console.log(`   [ECSW Audit] Matrix A    : ${this.k * nSnaps}x${nElements}`);
+        // ----------------------
+
+        // Greedy ECSW (Non-Negative Orthogonal Matching Pursuit)
+        const w = new Float64Array(nElements).fill(0.0);
+        const activeSet = new Set();
+        const residual = new Float64Array(B); // Initially B
         
-        const w = new Float64Array(nElements).fill(1.0); 
-        for (let iter = 0; iter < 400; iter++) {
-            let maxChange = 0;
-            for (let i = 0; i < nElements; i++) {
-                let grad = AT_B.get(i, 0);
-                for (let j = 0; j < nElements; j++) grad -= AT_A.get(i, j) * w[j];
-                const oldW = w[i];
-                const diag = AT_A.get(i, i);
-                if (diag > 1e-12) w[i] = Math.max(0, w[i] + grad / diag);
-                maxChange = Math.max(maxChange, Math.abs(w[i] - oldW));
+        for (let step = 0; step < nElements; step++) {
+            // 1. Find element that maximizes projection of residual
+            let best_e = -1;
+            let max_proj = -1e-12;
+            for (let e = 0; e < nElements; e++) {
+                if (activeSet.has(e)) continue;
+                let proj = 0;
+                for (let r = 0; r < this.k * nSnaps; r++) proj += A_mat.get(r, e) * residual[r];
+                if (proj > max_proj) {
+                    max_proj = proj;
+                    best_e = e;
+                }
             }
-            // Use user-defined tolerance to determine when NNLS has converged enough!
-            if (maxChange < tolerance) break;
+            
+            if (best_e === -1) {
+                console.log(`[Greedy ECSW] Stopping: No more elements improve the residual.`);
+                break;
+            }
+            
+            activeSet.add(best_e);
+            const activeArr = Array.from(activeSet);
+            
+            // 2. Solve unconstrained NNLS on active set using tight coordinate descent
+            for (let inner = 0; inner < 500; inner++) {
+                let maxChange = 0;
+                for (let i = 0; i < activeArr.length; i++) {
+                    const e = activeArr[i];
+                    let pred = 0;
+                    for (let j = 0; j < activeArr.length; j++) pred += AT_A.get(e, activeArr[j]) * w[activeArr[j]];
+                    const grad = AT_B.get(e, 0) - pred;
+                    const diag = AT_A.get(e, e);
+                    const oldW = w[e];
+                    if (diag > 1e-12) w[e] = Math.max(0, oldW + grad / diag);
+                    maxChange = Math.max(maxChange, Math.abs(w[e] - oldW));
+                }
+                if (maxChange < 1e-8) break; // Converged inner loop
+            }
+            
+            // 3. Update global residual
+            let resNorm = 0;
+            for (let r = 0; r < this.k * nSnaps; r++) {
+                let p = 0;
+                for (let i = 0; i < activeArr.length; i++) p += A_mat.get(r, activeArr[i]) * w[activeArr[i]];
+                residual[r] = B[r] - p;
+                resNorm += residual[r]*residual[r];
+            }
+            resNorm = Math.sqrt(resNorm);
+            const relError = resNorm / normB;
+            
+            console.log(`   [Greedy Step ${step+1}] Added El: ${best_e}, Active: ${activeSet.size}, RelError: ${(relError*100).toFixed(4)}%`);
+            
+            if (relError < tolerance) {
+                console.log(`[Greedy ECSW] Converged to tolerance ${tolerance} with ${activeSet.size} elements.`);
+                break;
+            }
         }
 
         const activeIndices = [];

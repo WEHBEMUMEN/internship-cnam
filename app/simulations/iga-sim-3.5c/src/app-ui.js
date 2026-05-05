@@ -72,13 +72,16 @@ DEIMBenchmarkApp.prototype.initUI = function() {
     document.getElementById('btn-exp-prev').onclick = () => {
         if (this.explorerStep > 1) {
             this.explorerStep--;
-            this.runDEIMExplorer(this.explorerStep);
+            if (this.method === 'ecsw') this.runECSWExplorer(this.explorerStep);
+            else this.runDEIMExplorer(this.explorerStep);
         }
     };
     document.getElementById('btn-exp-next').onclick = () => {
-        if (this.explorerStep < this.deimEngine.history.length) {
+        const historyLen = this.method === 'ecsw' ? 1 : (this.deimEngine ? this.deimEngine.history.length : 0);
+        if (this.explorerStep < historyLen) {
             this.explorerStep++;
-            this.runDEIMExplorer(this.explorerStep);
+            if (this.method === 'ecsw') this.runECSWExplorer(this.explorerStep);
+            else this.runDEIMExplorer(this.explorerStep);
         }
     };
 };

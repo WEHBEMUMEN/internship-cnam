@@ -9,41 +9,81 @@ window.ECSWCore = {
      * uses an iterative active-set / gradient descent hybrid for browser performance.
      */
     solveNNLS: function(A_mat, B_mat, options = {}) {
-        const { tolerance = 1e-4, maxIters = 500 } = options;
+        const { tolerance = 1e-4, maxIters = 1000 } = options;
         const nElements = A_mat.columns;
+        const nConstraints = A_mat.rows;
         const { Matrix } = window.mlMatrix;
 
-        console.log(`ECSW Core: Solving NNLS for ${nElements} elements...`);
+        console.log(`ECSW Core: Solving Sparse NNLS (${nElements} elements, ${nConstraints} constraints)...`);
 
-        // Compute AT_A and AT_B for the normal equations
+        // Normal equations components
         const AT = A_mat.transpose();
         const AT_A = AT.mmul(A_mat);
         const AT_B = AT.mmul(B_mat);
 
-        const w = new Float64Array(nElements).fill(1.0); // Start with uniform weights
+        // --- NEW AUDIT LOGS ---
+        let normB = 0;
+        for (let r=0; r<B_mat.rows; r++) normB += B_mat.get(r,0)**2;
+        normB = Math.sqrt(normB);
+        
+        let maxAT_B = 0;
+        for (let i=0; i<nElements; i++) maxAT_B = Math.max(maxAT_B, AT_B.get(i,0));
+        
+        console.log(`   [NNLS Audit] Target ||B||: ${normB.toExponential(4)}`);
+        console.log(`   [NNLS Audit] Max AT_B    : ${maxAT_B.toExponential(4)}`);
+        console.log(`   [NNLS Audit] Matrix A    : ${nConstraints}x${nElements} (Full rank likely if rows > cols)`);
+        // ----------------------
+
+        const w = new Float64Array(nElements).fill(0.0);
+        
+        // Maintain the 'prediction' AT_A * w to make updates O(1) inside the inner loop
+        const prediction = new Float64Array(nElements).fill(0.0);
         
         for (let iter = 0; iter < maxIters; iter++) {
             let maxChange = 0;
-            for (let i = 0; i < nElements; i++) {
-                // Gradient of 0.5 * ||Aw - B||^2 is AT*(Aw - B)
-                let grad = AT_B.get(i, 0);
-                for (let j = 0; j < nElements; j++) {
-                    grad -= AT_A.get(i, j) * w[j];
-                }
+            let activeCount = 0;
 
-                const oldW = w[i];
+            // Iterate over elements (Coordinate Descent)
+            for (let i = 0; i < nElements; i++) {
+                // Gradient of 0.5 * ||Aw - B||^2 + lambda * sum(w)
+                // grad = (AT_B - AT_A*w) - lambda
+                const lambda = 1e-6; // Sparsity penalty
+                const grad = (AT_B.get(i, 0) - prediction[i]) - lambda;
                 const diag = AT_A.get(i, i);
                 
-                // Projected Gradient step
                 if (diag > 1e-12) {
-                    w[i] = Math.max(0, w[i] + grad / diag);
+                    const oldW = w[i];
+                    // Coordinate descent update with soft-thresholding
+                    const nextW = Math.max(0, oldW + grad / diag);
+                    const diff = nextW - oldW;
+                    
+                    if (Math.abs(diff) > 1e-10) {
+                        w[i] = nextW;
+                        // Update the prediction vector for all other elements: P = P + AT_A(:,i) * diff
+                        for (let k = 0; k < nElements; k++) {
+                            prediction[k] += AT_A.get(k, i) * diff;
+                        }
+                        maxChange = Math.max(maxChange, Math.abs(diff));
+                    }
                 }
-                
-                maxChange = Math.max(maxChange, Math.abs(w[i] - oldW));
+                if (w[i] > 1e-8) activeCount++;
             }
             
-            if (maxChange < tolerance) {
-                console.log(`ECSW Core: NNLS converged in ${iter} iterations.`);
+            // --- NEW AUDIT LOGS ---
+            if (iter === 0 || iter === 10 || iter === 100) {
+                let res = 0;
+                for(let r=0; r<nConstraints; r++) {
+                    let err = B_mat.get(r,0);
+                    for(let c=0; c<nElements; c++) err -= A_mat.get(r,c) * w[c];
+                    res += err*err;
+                }
+                console.log(`   [NNLS Iter ${iter}] Active: ${activeCount}/${nElements}, Residual: ${Math.sqrt(res).toExponential(4)}, MaxChange: ${maxChange.toExponential(4)}`);
+            }
+            // ----------------------
+            
+            // Check for convergence
+            if (maxChange < tolerance * 0.1 && iter > 20) {
+                console.log(`ECSW Core: Converged in ${iter} iters. Active: ${activeCount}`);
                 break;
             }
         }

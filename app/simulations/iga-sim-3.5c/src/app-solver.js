@@ -2,19 +2,19 @@
  * DEIM Benchmark — Solver & Comparison logic
  */
 
-DEIMBenchmarkApp.prototype.solve = function(method, mag) {
+DEIMBenchmarkApp.prototype.solve = function(method, mag, options = {}) {
     const bcs = this.getBCs(), loads = this.getLoads(mag);
     const t0 = performance.now();
     let result, meta = {};
 
     if (method === 'fom') {
-        result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, {iterations:15, steps:3});
+        result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, {iterations:15, steps:3, ...options});
     } else if (method === 'galerkin') {
-        result = this.romEngine.solveReduced(this.patch, bcs, loads, {iterations:15});
-    } else if (method === 'deim') {
+        result = this.romEngine.solveReduced(this.patch, bcs, loads, {iterations:15, ...options});
+    } else if (method === 'ecsw') {
         // ECSW Engine signature: solveReduced(fomSolver, patch, loads, options)
-        result = this.deimEngine.solveReduced(this.solverFOM, this.patch, loads, {iterations:15, steps:1});
-        meta.sampled = `${result.sampledCount || this.deimEngine.sampleElements.length} elements`;
+        result = this.ecswEngine.solveReduced(this.solverFOM, this.patch, loads, {iterations:15, steps:1, ...options});
+        meta.sampled = `${result.sampledCount || this.ecswEngine.sampleElements.length} elements`;
     }
 
     const dt = performance.now() - t0;
@@ -92,7 +92,7 @@ DEIMBenchmarkApp.prototype.runFDCurves = async function() {
     const loads = [];
     for (let f = 10; f <= 600; f += 20) loads.push(f);
     
-    const results = { fom: { d: [], e: [] }, galerkin: { d: [], e: [] }, deim: { d: [], e: [] } };
+    const results = { fom: { d: [], e: [] }, galerkin: { d: [], e: [] }, ecsw: { d: [], e: [] } };
     const originalFom = this.lastFomResult; // Save to prevent UI state pollution
     
     for (const f of loads) {
@@ -108,15 +108,15 @@ DEIMBenchmarkApp.prototype.runFDCurves = async function() {
         try {
             const gal = this.solve('galerkin', f);
             results.galerkin.d.push(gal.meta.tipDisp);
-            results.galerkin.e.push(gal.meta.error);
+            results.galerkin.e.push(gal.meta.error * 100);
         } catch (e) { results.galerkin.d.push(NaN); results.galerkin.e.push(NaN); }
 
-        // Run DEIM
+        // Run ECSW
         try {
-            const deim = this.solve('deim', f);
-            results.deim.d.push(deim.meta.tipDisp);
-            results.deim.e.push(deim.meta.error);
-        } catch (e) { results.deim.d.push(NaN); results.deim.e.push(NaN); }
+            const ecsw = this.solve('ecsw', f);
+            results.ecsw.d.push(ecsw.meta.tipDisp);
+            results.ecsw.e.push(ecsw.meta.error * 100);
+        } catch (e) { results.ecsw.d.push(NaN); results.ecsw.e.push(NaN); }
         
         await new Promise(r => setTimeout(r, 1)); // Yield UI
     }
@@ -128,7 +128,7 @@ DEIMBenchmarkApp.prototype.runFDCurves = async function() {
     this.fdChart.data.datasets = [
         { label: 'FOM', data: results.fom.d, borderColor: '#64748b', tension: 0.1 },
         { label: 'Galerkin', data: results.galerkin.d, borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.1 },
-        { label: 'DEIM', data: results.deim.d, borderColor: '#8b5cf6', tension: 0.1 }
+        { label: 'ECSW', data: results.ecsw.d, borderColor: '#10b981', tension: 0.1 }
     ];
     this.fdChart.update();
 
@@ -136,10 +136,49 @@ DEIMBenchmarkApp.prototype.runFDCurves = async function() {
     this.errorChart.data.labels = loads;
     this.errorChart.data.datasets = [
         { label: 'Galerkin Error', data: results.galerkin.e, borderColor: '#0ea5e9', tension: 0.1 },
-        { label: 'DEIM Error', data: results.deim.e, borderColor: '#8b5cf6', tension: 0.1 }
+        { label: 'ECSW Error', data: results.ecsw.e, borderColor: '#10b981', tension: 0.1 }
     ];
     this.errorChart.update();
 
     document.getElementById('btn-compare').disabled = false;
     this.updatePhysics(); // Refresh the UI stats to clear the 64% artifact
+};
+
+DEIMBenchmarkApp.prototype.runPointsConvergence = async function() {
+    if (!this.isTrained) return;
+    const labels = [], errors = [];
+    
+    // For ECSW, we sweep the tolerance to get different numbers of elements
+    const originalWeights = this.ecswEngine.sampleElements;
+    const tolerances = [1e-1, 5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5];
+
+    for (const tol of tolerances) {
+        // Re-train with specific tolerance
+        const info = await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, tol);
+        const m = info.elementCount;
+        labels.push(m);
+        
+        try {
+            const { meta } = this.solve('ecsw', this.loadMag, { quiet: true });
+            errors.push(meta.error * 100); // %
+        } catch(e) {
+            errors.push(NaN);
+        }
+        await new Promise(r => setTimeout(r, 10));
+    }
+
+    // Restore original training state
+    const currentTol = Math.pow(10, -parseInt(document.getElementById('input-m').value));
+    await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, currentTol);
+
+    this.convergenceChart.data.labels = labels;
+    this.convergenceChart.data.datasets = [{
+        label: 'ECSW Convergence',
+        data: errors,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16,185,129,0.1)',
+        tension: 0.2,
+        fill: true
+    }];
+    this.convergenceChart.update();
 };

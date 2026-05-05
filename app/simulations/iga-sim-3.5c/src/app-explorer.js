@@ -103,6 +103,49 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
     this._render();
 };
 
+DEIMBenchmarkApp.prototype.runECSWExplorer = function(step) {
+    if (!this.ecswEngine.sampleElements) return;
+    
+    // For ECSW, we don't always have a step-by-step history like DEIM,
+    // so we just show the active elements.
+    const activeElements = this.ecswEngine.sampleElements;
+    document.getElementById('exp-step-label').textContent = `All Active Elements (${activeElements.length})`;
+    
+    const uniqueU = [...new Set(this.patch.U)], uniqueV = [...new Set(this.patch.V)];
+    const activeSpans = activeElements.map(el => ({
+        uMin: uniqueU[el.i], uMax: uniqueU[el.i+1],
+        vMin: uniqueV[el.j], vMax: uniqueV[el.j+1]
+    }));
+
+    if (this.deformedMesh) {
+        const colors = [];
+        const res = 32;
+        this.updateMesh(null);
+        
+        for (let i = 0; i <= res; i++) {
+            const u = Math.min(i/res, 0.9999);
+            for (let j = 0; j <= res; j++) {
+                const v = Math.min(j/res, 0.9999);
+                
+                let isActive = false;
+                for (const span of activeSpans) {
+                    if (u >= span.uMin && u < span.uMax + 1e-6 && v >= span.vMin && v < span.vMax + 1e-6) { isActive = true; break; }
+                }
+
+                if (isActive) colors.push(0.1, 0.8, 0.4); // ECSW Green
+                else colors.push(0.85, 0.88, 0.9);         // Slate grey
+            }
+        }
+        this.deformedMesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        this.deformedMesh.geometry.attributes.color.needsUpdate = true;
+        this.deformedMesh.visible = true;
+        
+        if (this.wireframe) this.wireframe.visible = false;
+        this._updateSpanBorders();
+    }
+    this._render();
+};
+
 DEIMBenchmarkApp.prototype._updateSpanBorders = function() {
     if (this.spanBorders) {
         this.scene.remove(this.spanBorders);
@@ -111,26 +154,31 @@ DEIMBenchmarkApp.prototype._updateSpanBorders = function() {
     if (!this.isExplorerActive) return;
 
     const uniqueU = [...new Set(this.patch.U)], uniqueV = [...new Set(this.patch.V)];
-    const activeIndices = this.deimEngine.history.map(h => h.point);
-    const nV = this.patch.controlPoints[0].length;
     
-    const activeSpans = new Set();
-    activeIndices.forEach(dofIdx => {
-        const cpIdx = Math.floor(dofIdx / 2);
-        const cpI = Math.floor(cpIdx / nV);
-        const cpJ = cpIdx % nV;
-        for (let i = 0; i < uniqueU.length - 1; i++) {
-            const uMid = (uniqueU[i] + uniqueU[i+1])/2;
-            const spanU = this.engine.findSpan(this.patch.controlPoints.length - 1, this.patch.p, uMid, this.patch.U);
-            if (cpI >= spanU - this.patch.p && cpI <= spanU) {
-                for (let j = 0; j < uniqueV.length - 1; j++) {
-                    const vMid = (uniqueV[j] + uniqueV[j+1])/2;
-                    const spanV = this.engine.findSpan(this.patch.controlPoints[0].length - 1, this.patch.q, vMid, this.patch.V);
-                    if (cpJ >= spanV - this.patch.q && cpJ <= spanV) activeSpans.add(`${i},${j}`);
+    // Support both DEIM and ECSW in border rendering
+    let activeSpansSet = new Set();
+    if (this.method === 'ecsw' && this.ecswEngine) {
+        this.ecswEngine.sampleElements.forEach(el => activeSpansSet.add(`${el.i},${el.j}`));
+    } else if (this.deimEngine && this.deimEngine.history) {
+        const activeIndices = this.deimEngine.history.map(h => h.point);
+        const nV = this.patch.controlPoints[0].length;
+        activeIndices.forEach(dofIdx => {
+            const cpIdx = Math.floor(dofIdx / 2);
+            const cpI = Math.floor(cpIdx / nV);
+            const cpJ = cpIdx % nV;
+            for (let i = 0; i < uniqueU.length - 1; i++) {
+                const uMid = (uniqueU[i] + uniqueU[i+1])/2;
+                const spanU = this.engine.findSpan(this.patch.controlPoints.length - 1, this.patch.p, uMid, this.patch.U);
+                if (cpI >= spanU - this.patch.p && cpI <= spanU) {
+                    for (let j = 0; j < uniqueV.length - 1; j++) {
+                        const vMid = (uniqueV[j] + uniqueV[j+1])/2;
+                        const spanV = this.engine.findSpan(this.patch.controlPoints[0].length - 1, this.patch.q, vMid, this.patch.V);
+                        if (cpJ >= spanV - this.patch.q && cpJ <= spanV) activeSpansSet.add(`${i},${j}`);
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
     const activeLines = [], inactiveLines = [];
     for (let i = 0; i < uniqueU.length - 1; i++) {
@@ -142,7 +190,7 @@ DEIMBenchmarkApp.prototype._updateSpanBorders = function() {
                 const st = this.engine.getSurfaceState(this.patch, Math.min(c.u, 0.999), Math.min(c.v, 0.999));
                 return new THREE.Vector3(st.position.x, st.position.y, 0.11); 
             });
-            const isActive = activeSpans.has(`${i},${j}`);
+            const isActive = activeSpansSet.has(`${i},${j}`);
             const list = isActive ? activeLines : inactiveLines;
             for (let k = 0; k < 4; k++) {
                 list.push(corners[k].x, corners[k].y, corners[k].z);
