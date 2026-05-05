@@ -75,7 +75,7 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
     this.initResidualChart();
 };
 
-DEIMBenchmarkApp.prototype.runErrorTolCurve = function() {
+DEIMBenchmarkApp.prototype.runErrorTolCurve = async function() {
     if (!this.ecswEngine || !this.isTrained) return;
     
     const labels = [];
@@ -84,16 +84,16 @@ DEIMBenchmarkApp.prototype.runErrorTolCurve = function() {
     const currentMethod = this.method;
     const currentLoad = this.loadMag;
 
-    // Evaluate across different tolerances (1e-2 to 1e-7)
-    for (let t = 2; t <= 7; t++) {
+    // Evaluate across different tolerances (1e-1 to 1e-6)
+    for (let t = 1; t <= 6; t++) {
         const tol = Math.pow(10, -t);
         labels.push(`1e-${t}`);
         
-        // Re-weight with different tolerance
-        this.ecswEngine.train(this.ecswEngine.snapshots, tol);
+        // Re-weight with different tolerance (await since it's async)
+        await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, tol);
         
         // Run online evaluation at current load
-        const result = this.ecswEngine.solve(currentLoad, currentK, this.loadType);
+        const { result, meta } = this.solve('ecsw', currentLoad, { quiet: true });
         
         // Compare with FOM if available, or use a cached FOM result
         if (this.lastFomResult) {
@@ -106,7 +106,7 @@ DEIMBenchmarkApp.prototype.runErrorTolCurve = function() {
 
     // Restore original training (using current slider value)
     const originalTol = Math.pow(10, -parseInt(document.getElementById('input-m').value));
-    this.ecswEngine.train(this.ecswEngine.snapshots, originalTol);
+    await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, originalTol);
 
     this.errTolChart.data.labels = labels;
     this.errTolChart.data.datasets = [{
