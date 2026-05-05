@@ -11,7 +11,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    .math-block { border-left-color: #f43f5e; } /* Phase 4 specific accent */
+  </style>
   <script src="../scripts.js" defer></script>
 </head>
 <body>
@@ -47,8 +50,8 @@
             <h3 style="color: #f43f5e; font-size: 1.6rem; margin-top: 0;"><i class="fa-solid fa-lightbulb"></i> Retrospective: What we learned from Phase 3</h3>
             <p>Our journey through static nonlinear phases (3.1–3.5) established the critical pillars for dynamic simulation:</p>
             <ul style="line-height: 1.8; color: var(--text-secondary); margin-left: 20px;">
-              <li><strong>The Spatial Manifold</strong>: POD basis extraction ($\Phi$) from static snapshots captures the fundamental "shapes" of deformation. Even in dynamics, the structure will largely move within this low-dimensional spatial subspace.</li>
-              <li><strong>Hyper-Reduction is Mandatory</strong>: Static benchmarks showed that Galerkin projection alone is not enough for speed; calculating nonlinear internal forces $F_{int}(u)$ is the bottleneck. ECSW and DEIM are our "speed kernels".</li>
+              <li><strong>The Spatial Manifold</strong>: POD basis extraction ($\mathbf{\Phi}$) from static snapshots captures the fundamental "shapes" of deformation. Even in dynamics, the structure will largely move within this low-dimensional spatial subspace.</li>
+              <li><strong>Hyper-Reduction is Mandatory</strong>: Static benchmarks showed that Galerkin projection alone is not enough for speed; calculating nonlinear internal forces $\mathbf{F}_{int}(\mathbf{u})$ is the bottleneck. ECSW and DEIM are our "speed kernels".</li>
               <li><strong>Physical Consistency</strong>: ECSW taught us that conserving energy (virtual work) is more robust for nonlinear structures than pure nodal interpolation (DEIM), especially near singularities.</li>
             </ul>
           </div>
@@ -108,5 +111,16 @@
     </div>
   </footer>
 
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
 </body>
 </html>
