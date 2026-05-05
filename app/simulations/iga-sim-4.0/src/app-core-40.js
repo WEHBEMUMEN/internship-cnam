@@ -46,6 +46,13 @@ class TransientLab {
             data: { labels: [], datasets: [{ label: 'Tip Displacement (mm)', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.1)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: true, title: { display: true, text: 'Time (s)', color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }, y: { display: true, title: { display: true, text: 'Disp (mm)', color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } } }, plugins: { legend: { display: false } } }
         });
+
+        const ctxRes = document.getElementById('chart-response').getContext('2d');
+        this.responseChart = new Chart(ctxRes, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Live Resp', data: [], borderColor: '#10b981', borderWidth: 2, pointRadius: 0, fill: false }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: 'rgba(16,185,129,0.1)' } } }, animation: false }
+        });
     }
 
     async runSimulation() {
@@ -60,6 +67,8 @@ class TransientLab {
         this.trace = [];
         this.mainChart.data.labels = [];
         this.mainChart.data.datasets[0].data = [];
+        this.responseChart.data.labels = [];
+        this.responseChart.data.datasets[0].data = [];
         
         const T = parseFloat(document.getElementById('input-time').value);
         const dt = parseFloat(document.getElementById('input-dt').value);
@@ -107,14 +116,26 @@ class TransientLab {
         document.getElementById('iters-val').innerText = result.iters;
         document.getElementById('tip-disp').innerText = (tipDisp * 1000).toFixed(2) + 'mm';
         
-        // Update Chart (limit to last 100 pts for performance)
+        // Update Chart (limit to last 200 pts for performance)
         this.mainChart.data.labels.push(this.currentTime.toFixed(3));
         this.mainChart.data.datasets[0].data.push(tipDisp * 1000);
+        
+        // Response chart (shorter window for "live" feel)
+        this.responseChart.data.labels.push(this.currentTime.toFixed(3));
+        this.responseChart.data.datasets[0].data.push(tipDisp * 1000);
+
         if (this.mainChart.data.labels.length > 200) {
             this.mainChart.data.labels.shift();
             this.mainChart.data.datasets[0].data.shift();
         }
+        
+        if (this.responseChart.data.labels.length > 50) {
+            this.responseChart.data.labels.shift();
+            this.responseChart.data.datasets[0].data.shift();
+        }
+
         this.mainChart.update('none');
+        this.responseChart.update('none');
     }
 
 }

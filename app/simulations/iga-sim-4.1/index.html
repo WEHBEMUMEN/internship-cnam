@@ -129,13 +129,17 @@
         </div>
 
         <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px">Modal Energy Spectrum</div>
-        <canvas id="chart-energy" height="120" style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px;"></canvas>
+        <div style="height: 120px; position: relative;">
+            <canvas id="chart-energy" style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px;"></canvas>
+        </div>
     </div>
 
     <!-- Bottom Chart Panel -->
     <div id="chart-panel" class="glass-panel">
         <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#f43f5e;margin-bottom:12px">Transient Training Trace (FOM)</div>
-        <canvas id="chart-trace" height="140"></canvas>
+        <div style="height: 160px; position: relative;">
+            <canvas id="chart-trace"></canvas>
+        </div>
     </div>
 
     <!-- App Logic -->
