@@ -54,23 +54,45 @@
 
   <script>
     async function fetchAndRender() {
+      const loadingEl = document.getElementById('loading');
+      const contentEl = document.getElementById('content');
+      const markdownBody = document.getElementById('markdown-body');
+
       try {
+        console.log("Fetching weekly_log.md...");
         const response = await fetch('weekly_log.md');
-        if (!response.ok) throw new Error('Could not fetch weekly_log.md');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP Error ${response.status}: Could not fetch weekly_log.md`);
+        }
+        
         let text = await response.text();
+        console.log("Successfully fetched weekly_log.md, length:", text.length);
         
         // Remove frontmatter if present
         text = text.replace(/^---[\s\S]*?---/, '');
         
-        document.getElementById('markdown-body').innerHTML = marked.parse(text);
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
+        // Ensure marked is available
+        if (typeof marked === 'undefined') {
+          throw new Error('Markdown parser (marked.js) failed to load. Please check your internet connection.');
+        }
+
+        markdownBody.innerHTML = marked.parse(text);
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+        
+        console.log("Weekly log rendered successfully.");
       } catch (error) {
-        document.getElementById('loading').innerHTML = '<p>Error: ' + error.message + '</p>';
+        console.error("Weekly Log Error:", error);
+        loadingEl.innerHTML = `
+          <div style="color: #ef4444; padding: 20px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <i class="fa-solid fa-circle-exclamation"></i> <strong>Failed to load log:</strong> ${error.message}
+          </div>`;
       }
     }
     
-    fetchAndRender();
+    // Use window.onload to ensure all scripts (marked.js) are ready
+    window.onload = fetchAndRender;
   </script>
 
 </body>
