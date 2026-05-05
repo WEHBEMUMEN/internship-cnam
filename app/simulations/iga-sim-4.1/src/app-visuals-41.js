@@ -1,5 +1,5 @@
 /**
- * Phase 4.0 Visuals — Mesh Rendering & 3D Scene
+ * Phase 4.1 Visuals — Mesh Rendering & 3D Scene
  */
 
 class TransientVisuals {
@@ -10,7 +10,6 @@ class TransientVisuals {
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         
         this.deformedMesh = null;
-        this.ghostMesh = null;
         this.wireframe = null;
         
         this.init();
@@ -18,12 +17,14 @@ class TransientVisuals {
 
     init() {
         const container = document.getElementById('canvas-container');
+        if (!container) return;
+        
         this.renderer.setSize(container.clientWidth, container.clientHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(this.renderer.domElement);
 
-        this.camera.position.set(2, 2, 5);
-        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.camera.position.set(5, 5, 20);
+        this.camera.lookAt(0, 0, 0);
         
         const ambient = new THREE.AmbientLight(0xffffff, 0.6);
         const direct = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -31,6 +32,7 @@ class TransientVisuals {
         this.scene.add(ambient, direct);
 
         window.addEventListener('resize', () => {
+            if (!container) return;
             this.camera.aspect = container.clientWidth / container.clientHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -41,43 +43,35 @@ class TransientVisuals {
 
     animate() {
         requestAnimationFrame(() => this.animate());
-        this.controls.update();
         this.renderer.render(this.scene, this.camera);
     }
 
     updateMesh(uDisp) {
-        const res = 32;
+        const res = 24; 
         const posDef = [], colors = [];
-        let maxF = 0;
+        let maxDisp = 0;
 
-        // 1. Calculate positions and find max displacement for scaling
+        const engine = this.app.engine;
+        const patch = this.app.patch;
+
+        const states = [];
         for (let i = 0; i <= res; i++) {
-            const u = Math.min(i/res, 0.9999);
+            const xi = i / res;
             for (let j = 0; j <= res; j++) {
-                const v = Math.min(j/res, 0.9999);
-                const st = this.app.fom.getSurfaceState(this.app.patch, u, v);
-                let px = st.position.x, py = st.position.y;
-                
-                const d = this._interpDisp(u, v, st.denominator, uDisp);
-                px += d.x; py += d.y;
-                
+                const eta = j / res;
+                const st = engine.getSurfaceState(patch, xi, eta);
+                const d = this._interpDisp(xi, eta, st.denominator, uDisp);
                 const mag = Math.sqrt(d.x*d.x + d.y*d.y);
-                maxF = Math.max(maxF, mag);
-                posDef.push(px, py, 0);
+                maxDisp = Math.max(maxDisp, mag);
+                states.push({ st, d, mag });
             }
         }
 
-        // 2. Generate colors using Jet colormap
-        for (let i = 0; i <= res; i++) {
-            const u = Math.min(i/res, 0.9999);
-            for (let j = 0; j <= res; j++) {
-                const v = Math.min(j/res, 0.9999);
-                const st = this.app.fom.getSurfaceState(this.app.patch, u, v);
-                const d = this._interpDisp(u, v, st.denominator, uDisp);
-                const f = maxF > 0 ? Math.sqrt(d.x*d.x + d.y*d.y) / maxF : 0;
-                const [r, g, b] = this._jet(f);
-                colors.push(r, g, b);
-            }
+        for (const s of states) {
+            posDef.push(s.st.position.x + s.d.x, s.st.position.y + s.d.y, s.st.position.z);
+            const f = maxDisp > 0 ? s.mag / maxDisp : 0;
+            const [r, g, b] = this._jet(f);
+            colors.push(r, g, b);
         }
 
         if (!this.deformedMesh) {
@@ -98,8 +92,8 @@ class TransientVisuals {
         } else {
             const pa = this.deformedMesh.geometry.getAttribute('position');
             const ca = this.deformedMesh.geometry.getAttribute('color');
-            pa.copyArray(posDef);
-            ca.copyArray(colors);
+            pa.copyArray(new Float32Array(posDef));
+            ca.copyArray(new Float32Array(colors));
             pa.needsUpdate = true; ca.needsUpdate = true;
             this.deformedMesh.geometry.computeVertexNormals();
             this.wireframe.geometry.dispose();
@@ -107,22 +101,24 @@ class TransientVisuals {
         }
     }
 
-    _interpDisp(u, v, denom, uDisp) {
-        const nU = this.app.patch.controlPoints.length, nV = this.app.patch.controlPoints[0].length;
-        const p = this.app.patch.p, q = this.app.patch.q;
+    _interpDisp(xi, eta, denom, uDisp) {
+        const patch = this.app.patch;
+        const engine = this.app.engine;
+        const { p, q, U, V, weights, controlPoints } = patch;
+        const nV = controlPoints[0].length;
+        const nU = controlPoints.length;
+
+        const spanU = engine.findSpan(nU - 1, p, xi, U);
+        const spanV = engine.findSpan(nV - 1, q, eta, V);
+        const Nu = engine.basisFuns(spanU, xi, p, U);
+        const Nv = engine.basisFuns(spanV, eta, q, V);
+
         let dx = 0, dy = 0;
-        
-        // Use NURBS basis functions
-        const spanU = window.nurbsUtils.findSpan(nU - 1, p, u, this.app.patch.U);
-        const spanV = window.nurbsUtils.findSpan(nV - 1, q, v, this.app.patch.V);
-        const Nu = window.nurbsUtils.dersBasisFuns(spanU, p, u, this.app.patch.U, 0)[0];
-        const Nv = window.nurbsUtils.dersBasisFuns(spanV, q, v, this.app.patch.V, 0)[0];
-        
         for (let i = 0; i <= p; i++) {
             for (let j = 0; j <= q; j++) {
                 const idxI = spanU - p + i;
                 const idxJ = spanV - q + j;
-                const w = this.app.patch.weights[idxI][idxJ] || 1;
+                const w = weights[idxI][idxJ];
                 const R = (Nu[i] * Nv[j] * w) / denom;
                 const dofIdx = (idxI * nV + idxJ) * 2;
                 dx += R * uDisp[dofIdx];

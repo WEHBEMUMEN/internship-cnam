@@ -19,11 +19,12 @@ class TransientLab {
 
     async init() {
         // Setup NURBS Patch (Cantilever by default)
-        const preset = window.nurbsPresets.cantilever();
-        this.patch = new window.NURBS2D(preset);
+        const preset = window.NURBSPresets.generateCantilever();
+        this.engine = new window.NURBS2D();
+        this.patch = preset;
         
         // Setup Nonlinear Solver (FOM)
-        this.fom = new window.IGANonlinearSolver(this.patch);
+        this.fom = new window.IGANonlinearSolver(this.engine);
         
         // Setup Dynamics Solver
         this.dyn = new DynamicsSolver(this.patch, this.fom);
@@ -36,7 +37,6 @@ class TransientLab {
         this.viz.updateMesh(this.dyn.u);
         
         this.initCharts();
-        this.render();
     }
 
     initCharts() {

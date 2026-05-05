@@ -5,9 +5,13 @@
 
 class DynamicsSolver {
     constructor(patch, solverFOM) {
-        this.patch = patch;
-        this.fom = solverFOM; // Reuse the nonlinear FOM solver for K and Fint
-        this.dofs = patch.controlPoints.length * patch.controlPoints[0].length * 2;
+        this.patch = patch; // Geometry data
+        this.fom = solverFOM; // IGANonlinearSolver instance
+        this.engine = solverFOM.engine; // NURBS2D engine
+        
+        const nU = patch.controlPoints.length;
+        const nV = patch.controlPoints[0].length;
+        this.dofs = nU * nV * 2;
         
         // Dynamic state vectors
         this.u = new Float64Array(this.dofs);
@@ -16,69 +20,69 @@ class DynamicsSolver {
         
         // Matrices
         this.M = null; // Global Mass
-        this.C = null; // Global Damping
         
         // Parameters
-        this.rho = 0.001; // Density (scaled for visualization)
-        this.alpha = 0.5; // Rayleigh alpha (Mass)
-        this.betaR = 0.001; // Rayleigh beta (Stiffness)
-        this.beta = 0.25; // Newmark beta
-        this.gamma = 0.5; // Newmark gamma
+        this.rho = 0.0001; // Density (kg/mm2)
+        this.alpha = 0.1;  // Rayleigh Mass damping
+        this.betaR = 0.001; // Rayleigh Stiffness damping
+        this.beta = 0.25;  // Newmark beta (Average Acceleration)
+        this.gamma = 0.5;  // Newmark gamma
     }
 
     /**
      * Assemble the Global Consistent Mass Matrix M
      */
     assembleMass() {
-        const { p, q, U, V, controlPoints } = this.patch;
-        const nU = controlPoints.length;
-        const nV = controlPoints[0].length;
-        this.M = new Array(this.dofs).fill(0).map(() => new Float64Array(this.dofs));
+        const { p, q, U, V, weights, controlPoints } = this.patch;
+        const nBasisU = controlPoints.length;
+        const nBasisV = controlPoints[0].length;
+        const nDofs = nBasisU * nBasisV * 2;
+        
+        this.M = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
 
-        const uniqueU = [...new Set(U)];
-        const uniqueV = [...new Set(V)];
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const gRule = window.GaussQuadrature2D ? window.GaussQuadrature2D.getPoints(Math.max(p, q) + 1) : { points: [-0.7745, 0, 0.7745], weights: [0.555, 0.888, 0.555] };
 
         for (let i = 0; i < uniqueU.length - 1; i++) {
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            if (uMax - uMin < 1e-10) continue;
             for (let j = 0; j < uniqueV.length - 1; j++) {
-                if (uniqueU[i+1] <= uniqueU[i] || uniqueV[j+1] <= uniqueV[j]) continue;
+                const vMin = uniqueV[j], vMax = uniqueV[j+1];
+                if (vMax - vMin < 1e-10) continue;
 
-                // Gauss Integration (p+1 points)
-                const gPoints = this.fom.gaussPoints || 3;
-                const { weights, coords } = this.getGaussRule(gPoints);
+                for (let gu = 0; gu < gRule.points.length; gu++) {
+                    const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
+                    const wu = gRule.weights[gu] * (uMax - uMin) / 2;
+                    for (let gv = 0; gv < gRule.points.length; gv++) {
+                        const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
+                        const wv = gRule.weights[gv] * (vMax - vMin) / 2;
 
-                for (let wu = 0; wu < gPoints; wu++) {
-                    for (let wv = 0; wv < gPoints; wv++) {
-                        const u = ((uniqueU[i+1] - uniqueU[i]) * coords[wu] + (uniqueU[i+1] + uniqueU[i])) / 2;
-                        const v = ((uniqueV[j+1] - uniqueV[j]) * coords[wv] + (uniqueV[j+1] + uniqueV[j])) / 2;
-                        const weight = weights[wu] * weights[wv] * (uniqueU[i+1] - uniqueU[i]) * (uniqueV[j+1] - uniqueV[j]) / 4;
+                        const detJ = this.engine.getJacobianDeterminant(this.patch, u, v);
+                        const factor = detJ * wu * wv * this.rho * (this.fom.thickness || 1.0);
 
-                        const spanU = window.nurbsUtils.findSpan(nU - 1, p, u, U);
-                        const spanV = window.nurbsUtils.findSpan(nV - 1, q, v, V);
-                        const ders = window.nurbsUtils.dersBasisFuns(spanU, p, u, U, 0);
-                        const dersV = window.nurbsUtils.dersBasisFuns(spanV, q, v, V, 0);
+                        const spanU = this.engine.findSpan(nBasisU - 1, p, u, U);
+                        const spanV = this.engine.findSpan(nBasisV - 1, q, v, V);
+                        const NU = this.engine.basisFuns(spanU, u, p, U);
+                        const MV = this.engine.basisFuns(spanV, v, q, V);
+                        const W = this.engine.computeDenominator(this.patch, u, v);
 
-                        // Basis functions N
-                        const N = [];
+                        const activeIndices = [];
+                        const R = [];
                         for (let ki = 0; ki <= p; ki++) {
                             for (let kj = 0; kj <= q; kj++) {
-                                N.push(ders[0][ki] * dersV[0][kj]);
+                                const idx = (spanU - p + ki) * nBasisV + (spanV - q + kj);
+                                activeIndices.push(idx);
+                                const w = weights[spanU - p + ki][spanV - q + kj];
+                                R.push(NU[ki] * MV[kj] * w / W);
                             }
                         }
 
-                        const Jac = this.fom.calculateJacobian(spanU, spanV, u, v, ders, dersV);
-                        const detJ = Jac.determinant();
-                        const dV = detJ * weight * this.rho;
-
-                        // Local Mass Matrix: m_ij = rho * N_i * N_j
-                        const activeIndices = this.fom.getActiveIndices(spanU, spanV, p, q, nV);
-                        for (let r = 0; r < N.length; r++) {
-                            for (let c = 0; c < N.length; c++) {
-                                const val = N[r] * N[c] * dV;
-                                // Add to x and y DOFs
-                                const idxR = activeIndices[r] * 2;
-                                const idxC = activeIndices[c] * 2;
-                                this.M[idxR][idxC] += val;
-                                this.M[idxR+1][idxC+1] += val;
+                        for (let a = 0; a < activeIndices.length; a++) {
+                            for (let b = 0; b < activeIndices.length; b++) {
+                                const val = R[a] * R[b] * factor;
+                                const ia = activeIndices[a], ib = activeIndices[b];
+                                this.M[ia * 2][ib * 2] += val;
+                                this.M[ia * 2 + 1][ib * 2 + 1] += val;
                             }
                         }
                     }
@@ -87,24 +91,18 @@ class DynamicsSolver {
         }
     }
 
-    getGaussRule(n) {
-        if (n === 3) return { weights: [5/9, 8/9, 5/9], coords: [-Math.sqrt(0.6), 0, Math.sqrt(0.6)] };
-        return { weights: [1, 1], coords: [-1/Math.sqrt(3), 1/Math.sqrt(3)] };
-    }
-
     /**
-     * Perform one transient step using Newmark-beta
+     * Solve one Newmark-beta time step
      */
     async solveStep(dt, Fext, options = {}) {
         const tol = options.tol || 1e-6;
-        const maxIters = options.maxIters || 10;
+        const maxIters = options.maxIters || 15;
         
-        // Predictors
         const u_n = new Float64Array(this.u);
         const v_n = new Float64Array(this.v);
         const a_n = new Float64Array(this.a);
 
-        // Constants for Newmark
+        // Prediction (Newmark constants)
         const a0 = 1 / (this.beta * dt * dt);
         const a1 = this.gamma / (this.beta * dt);
         const a2 = 1 / (this.beta * dt);
@@ -112,12 +110,9 @@ class DynamicsSolver {
         const a4 = this.gamma / this.beta - 1;
         const a5 = (dt / 2) * (this.gamma / this.beta - 2);
 
-        // Initial guess for u_{n+1}
         let u_next = new Float64Array(u_n);
         
         for (let iter = 0; iter < maxIters; iter++) {
-            // Compute accelerations and velocities from current u_next
-            // a_{n+1} = a0*(u_{n+1} - u_n) - a2*v_n - a3*a_n
             const a_next = new Float64Array(this.dofs);
             const v_next = new Float64Array(this.dofs);
             for (let i = 0; i < this.dofs; i++) {
@@ -125,39 +120,38 @@ class DynamicsSolver {
                 v_next[i] = v_n[i] + (1 - this.gamma) * dt * a_n[i] + this.gamma * dt * a_next[i];
             }
 
-            // Internal Forces and Tangent Stiffness at u_next
-            const { Fint, Kt } = this.fom.computeInternalForces(u_next);
+            const Fint = this.fom.calculateInternalForce(this.patch, u_next);
+            const Kt = this.fom.calculateTangentStiffness(this.patch, u_next);
             
-            // Damping Matrix C = alpha*M + betaR*Kt
-            // Residual R = M*a_next + C*v_next + Fint - Fext
-            const R = new Float64Array(this.dofs);
-            const Keff = new Array(this.dofs).fill(0).map(() => new Float64Array(this.dofs));
+            // Effective Stiffness Keff = Kt + a0*M + a1*C
+            // where C = alpha*M + betaR*Kt
+            const R_res = new Float64Array(this.dofs);
+            const Keff = Array.from({ length: this.dofs }, () => new Float64Array(this.dofs).fill(0));
 
             for (let i = 0; i < this.dofs; i++) {
-                // M*a_next component
-                let Ma = 0;
-                for (let j = 0; j < this.dofs; j++) Ma += this.M[i][j] * a_next[j];
-
-                // C*v_next component
-                let Cv = 0;
+                let Ma = 0, Cv = 0;
                 for (let j = 0; j < this.dofs; j++) {
-                    const Cij = this.alpha * this.M[i][j] + this.betaR * Kt[i][j];
-                    Cv += Cij * v_next[j];
+                    const mij = this.M[i][j];
+                    const kij = Kt[i][j];
+                    const cij = this.alpha * mij + this.betaR * kij;
                     
-                    // Effective Tangent: Keff = Kt + a0*M + a1*C
-                    Keff[i][j] = Kt[i][j] + a0 * this.M[i][j] + a1 * Cij;
+                    Ma += mij * a_next[j];
+                    Cv += cij * v_next[j];
+                    Keff[i][j] = kij + a0 * mij + a1 * cij;
                 }
-
-                R[i] = Ma + Cv + Fint[i] - Fext[i];
+                R_res[i] = Ma + Cv + Fint[i] - Fext[i];
             }
 
-            // Apply Boundary Conditions to R and Keff (Penalty or Direct)
-            this.fom.applyBCs(Keff, R);
+            // Boundary Conditions (Fixed Left End)
+            const nV = this.patch.controlPoints[0].length;
+            const bcs = [];
+            for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
+            
+            this.fom.applyPenaltyConstraints(Keff, R_res, u_next, this.patch, bcs);
 
-            // Solve Keff * du = -R
-            const du = this.fom.linearSolver(Keff, R.map(x => -x));
-
-            // Update
+            // Solve step: Keff * du = -R_res
+            const du = this.fom.gaussianElimination(Keff, R_res.map(x => -x));
+            
             let norm = 0;
             for (let i = 0; i < this.dofs; i++) {
                 u_next[i] += du[i];
@@ -165,14 +159,16 @@ class DynamicsSolver {
             }
 
             if (Math.sqrt(norm) < tol) {
-                // Converged! Update state
                 this.u = u_next;
-                this.a = a_next;
                 this.v = v_next;
+                this.a = a_next;
                 return { iters: iter + 1, converged: true };
             }
         }
 
+        this.u = u_next;
         return { iters: maxIters, converged: false };
     }
 }
+
+window.DynamicsSolver = DynamicsSolver;

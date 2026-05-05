@@ -17,9 +17,10 @@ class OfflineLab {
     }
 
     async init() {
-        const preset = window.nurbsPresets.cantilever();
-        this.patch = new window.NURBS2D(preset);
-        this.fom = new window.IGANonlinearSolver(this.patch);
+        const preset = window.NURBSPresets.generateCantilever();
+        this.engine = new window.NURBS2D();
+        this.patch = preset;
+        this.fom = new window.IGANonlinearSolver(this.engine);
         this.dyn = new DynamicsSolver(this.patch, this.fom);
         this.dyn.assembleMass();
         
