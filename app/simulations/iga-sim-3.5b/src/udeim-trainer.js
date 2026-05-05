@@ -63,12 +63,21 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
         const f_u = new Float64Array(N_u);
         const u_disp = snapshotDisplacements[s];
         
+        let normSq = 0;
         for (let e = 0; e < this.numElements; e++) {
             const el = elements[e];
             const f_e = this._computeLocalForce(fomSolver, patch, el, u_disp, gRule);
             for (let ld = 0; ld < this.numLocalDofs; ld++) {
-                f_u[e * this.numLocalDofs + ld] = f_e[ld];
+                const val = f_e[ld];
+                f_u[e * this.numLocalDofs + ld] = val;
+                normSq += val * val;
             }
+        }
+        
+        // Normalize snapshots to avoid high-load dominance in SVD
+        const norm = Math.sqrt(normSq);
+        if (norm > 1e-12) {
+            for (let i = 0; i < N_u; i++) f_u[i] /= norm;
         }
         S_u.push(f_u);
     }
@@ -84,8 +93,21 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
     this.kf = Math.min(this.kf, this.m);
     this.U_f = U_greedy.subMatrix(0, N_u - 1, 0, this.kf - 1);
     
-    // 4. Greedy DEIM selection on Unassembled Basis
-    console.log(`U-DEIM: Running greedy selection for ${this.m} indices...`);
+    // 4. Q-DEIM: QR Factorization with Column Pivoting on U_f^T
+    // This corresponds to performing pivoted Gram-Schmidt directly on the rows of U_f.
+    const A = Array.from({ length: N_u }, (_, i) => {
+        const row = new Float64Array(this.m);
+        for (let j = 0; j < this.m; j++) row[j] = U_greedy.get(i, j);
+        return row;
+    });
+    
+    // Keep track of the squared 2-norm of each row (unassembled DOF)
+    const norms = new Float64Array(N_u);
+    for (let i = 0; i < N_u; i++) {
+        let sum = 0;
+        for (let j = 0; j < this.m; j++) sum += A[i][j] * A[i][j];
+        norms[i] = sum;
+    }
     
     const constrainedDofs_init = new Set();
     const nV_global_init = patch.controlPoints[0].length;
@@ -98,62 +120,56 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
     }
 
     const indices = [];
-    let maxVal = -1, maxIdx = -1;
-    const r0 = new Float64Array(N_u);
-    for (let i = 0; i < N_u; i++) {
-        const val = Math.abs(U_greedy.get(i, 0));
-        r0[i] = val;
-        
-        if (constrainedDofs_init.has(this.elementDofMap[Math.floor(i / this.numLocalDofs)][i % this.numLocalDofs])) continue;
-        
-        if (val > maxVal) { maxVal = val; maxIdx = i; }
-    }
-    if (maxIdx === -1) maxIdx = 0; // Fallback
-    indices.push(maxIdx);
-    this.history = [{ step: 1, residual: Array.from(r0), point: maxIdx, maxVal }];
+    this.history = [];
 
-    for (let l = 1; l < this.m; l++) {
-        const ul = new Float64Array(N_u);
-        for (let i = 0; i < N_u; i++) ul[i] = U_greedy.get(i, l);
-
-        const Psub = Array.from({ length: l }, () => new Float64Array(l));
-        const rhs = new Float64Array(l);
-        for (let i = 0; i < l; i++) {
-            for (let j = 0; j < l; j++) Psub[i][j] = U_greedy.get(indices[i], j);
-            rhs[i] = ul[indices[i]];
-        }
-
-        const c = UDEIMEngine._solveLinear(Psub, rhs);
-
-        const r = new Float64Array(N_u);
+    for (let l = 0; l < this.m; l++) {
+        // Find row with max residual norm (Pivoting)
+        let maxNorm = -1, pivot = -1;
         for (let i = 0; i < N_u; i++) {
-            r[i] = ul[i];
-            for (let j = 0; j < l; j++) r[i] -= U_greedy.get(i, j) * c[j];
-        }
-
-        // 4a. Identify constrained unassembled DOFs to exclude
-        const constrainedDofs = new Set();
-        const nV_global = patch.controlPoints[0].length;
-        if (Array.isArray(this.bcs)) {
-            this.bcs.forEach(bc => {
-                const base = (bc.i * nV_global + bc.j) * 2;
-                if (bc.axis === 'x' || bc.axis === 'both') constrainedDofs.add(base);
-                if (bc.axis === 'y' || bc.axis === 'both') constrainedDofs.add(base + 1);
-            });
-        }
-
-        let maxR = -1, bestIdx = -1;
-        for (let i = 0; i < N_u; i++) {
-            if (constrainedDofs.has(this.elementDofMap[Math.floor(i / this.numLocalDofs)][i % this.numLocalDofs])) continue;
-
-            const rMag = Math.abs(r[i]);
-            if (!indices.includes(i) && rMag > maxR) {
-                maxR = rMag;
-                bestIdx = i;
+            // Skip constrained DOFs
+            if (constrainedDofs_init.has(this.elementDofMap[Math.floor(i / this.numLocalDofs)][i % this.numLocalDofs])) continue;
+            
+            if (norms[i] > maxNorm && !indices.includes(i)) {
+                maxNorm = norms[i];
+                pivot = i;
             }
         }
-        indices.push(bestIdx);
-        this.history.push({ step: l + 1, residual: Array.from(r), point: bestIdx, maxVal: maxR });
+
+        if (pivot === -1 || maxNorm < 1e-22) {
+            console.warn(`U-DEIM: Residual dropped to noise floor at step ${l+1}. Truncating.`);
+            this.m = l;
+            this.kf = Math.min(this.kf, this.m);
+            break;
+        }
+
+        indices.push(pivot);
+        this.history.push({
+            step: l + 1,
+            point: pivot,
+            maxVal: Math.sqrt(maxNorm),
+            residual: Array.from(norms).map(n => Math.sqrt(Math.max(0, n)))
+        });
+
+        // Orthogonalize remaining rows against the pivot row
+        const pivotRow = A[pivot];
+        const pNorm = Math.sqrt(maxNorm);
+        for (let j = 0; j < this.m; j++) pivotRow[j] /= pNorm; 
+
+        for (let i = 0; i < N_u; i++) {
+            if (indices.includes(i)) continue;
+            
+            // Dot product
+            let dot = 0;
+            for (let j = 0; j < this.m; j++) dot += A[i][j] * pivotRow[j];
+            
+            // Subtract projection and recompute norm
+            let newNorm = 0;
+            for (let j = 0; j < this.m; j++) {
+                A[i][j] -= dot * pivotRow[j];
+                newNorm += A[i][j] * A[i][j];
+            }
+            norms[i] = newNorm;
+        }
     }
     this.indices = indices;
 
@@ -191,6 +207,11 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
         if (S_interp[i] > threshold) S_inv_mat.set(i, i, 1.0 / S_interp[i]);
     }
     const PtU_pinv = V_interp.mmul(S_inv_mat).mmul(U_interp.transpose());
+    this.PtU_pinv = PtU_pinv.to2DArray();
+
+    // Audit conditioning
+    const cond = S_interp[0] / Math.max(S_interp[S_interp.length-1], 1e-30);
+    console.log(`U-DEIM: Interpolation Matrix Condition Number: ${cond.toExponential(2)} (${cond < 1e6 ? 'HEALTHY' : 'DANGEROUS'})`);
 
 
     // A * U_f (Assemble U_f into global space)
@@ -211,7 +232,7 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
     
     // Phi^T * (A * U_f) * PtU_pinv
     const PhiT_A_Uf = Phi.transpose().mmul(A_Uf);
-    const M_matrix = PhiT_A_Uf.mmul(PtU_pinv);
+    const M_matrix = PhiT_A_Uf.mmul(new Matrix(this.PtU_pinv));
     this.M = M_matrix.to2DArray();
     
     // Pre-compute Reduced Tangent
@@ -222,6 +243,7 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
     console.log(`U-DEIM Trained: ${uniqueElIndices.length} elements selected.`);
     return {
         m: this.m,
+        history: this.history,
         elementCount: uniqueElIndices.length,
         totalElements: this.numElements
     };

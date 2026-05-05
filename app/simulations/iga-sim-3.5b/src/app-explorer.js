@@ -25,8 +25,12 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
     const nV = this.patch.controlPoints[0].length;
     const currentIndices = this.deimEngine.history.slice(0, step).map(s => s.point);
     
-    currentIndices.forEach((dofIdx, idx) => {
-        const cpIdx = Math.floor(dofIdx / 2);
+    currentIndices.forEach((unassembledIdx, idx) => {
+        const eIdx = Math.floor(unassembledIdx / this.deimEngine.numLocalDofs);
+        const ldIdx = unassembledIdx % this.deimEngine.numLocalDofs;
+        const globalDofIdx = this.deimEngine.elementDofMap[eIdx][ldIdx];
+        
+        const cpIdx = Math.floor(globalDofIdx / 2);
         const cpI = Math.floor(cpIdx / nV);
         const cpJ = cpIdx % nV;
         const u = this.patch.U[cpI + this.patch.p];
@@ -44,27 +48,29 @@ DEIMBenchmarkApp.prototype.runDEIMExplorer = function(step) {
     const uniqueU = [...new Set(this.patch.U)], uniqueV = [...new Set(this.patch.V)];
     const previousSpans = [], newestSpans = [];
     
-    currentIndices.forEach((dofIdx, idx) => {
-        const cpIdx = Math.floor(dofIdx / 2);
-        const cpI = Math.floor(cpIdx / nV);
-        const cpJ = cpIdx % nV;
+    currentIndices.forEach((unassembledIdx, idx) => {
+        const eIdx = Math.floor(unassembledIdx / this.deimEngine.numLocalDofs);
         const isNewest = (idx === currentIndices.length - 1);
         
-        for (let i = 0; i < uniqueU.length - 1; i++) {
-            const uMid = (uniqueU[i] + uniqueU[i+1])/2;
-            const spanU = this.engine.findSpan(this.patch.controlPoints.length - 1, this.patch.p, uMid, this.patch.U);
-            if (cpI >= spanU - this.patch.p && cpI <= spanU) {
-                for (let j = 0; j < uniqueV.length - 1; j++) {
-                    const vMid = (uniqueV[j] + uniqueV[j+1])/2;
-                    const spanV = this.engine.findSpan(this.patch.controlPoints[0].length - 1, this.patch.q, vMid, this.patch.V);
-                    if (cpJ >= spanV - this.patch.q && cpJ <= spanV) {
-                        const span = { uMin: uniqueU[i], uMax: uniqueU[i+1], vMin: uniqueV[j], vMax: uniqueV[j+1] };
-                        if (isNewest) newestSpans.push(span);
-                        else previousSpans.push(span);
-                    }
-                }
-            }
-        }
+        const el = this.deimEngine.activeElements.find(e => {
+            // Need to find the element object corresponding to eIdx. 
+            // However, activeElements only contains selected elements. 
+            // Better to find by coordinates from the original elements list if possible, 
+            // but we can just use the indices we have.
+            // Wait, we can just use the eIdx to find the span directly.
+            return true; 
+        });
+
+        // We can just get the uMin, uMax etc from the element in the patch structure.
+        // Or we can rebuild the elements array locally like in udeim-trainer.
+        // Actually, we can just use the eIdx to find the span.
+        const nV_spans = uniqueV.length - 1;
+        const i = Math.floor(eIdx / nV_spans);
+        const j = eIdx % nV_spans;
+        
+        const span = { uMin: uniqueU[i], uMax: uniqueU[i+1], vMin: uniqueV[j], vMax: uniqueV[j+1] };
+        if (isNewest) newestSpans.push(span);
+        else previousSpans.push(span);
     });
 
     if (this.deformedMesh) {
@@ -112,24 +118,14 @@ DEIMBenchmarkApp.prototype._updateSpanBorders = function() {
 
     const uniqueU = [...new Set(this.patch.U)], uniqueV = [...new Set(this.patch.V)];
     const activeIndices = this.deimEngine.history.map(h => h.point);
-    const nV = this.patch.controlPoints[0].length;
+    const nV_spans = uniqueV.length - 1;
     
     const activeSpans = new Set();
-    activeIndices.forEach(dofIdx => {
-        const cpIdx = Math.floor(dofIdx / 2);
-        const cpI = Math.floor(cpIdx / nV);
-        const cpJ = cpIdx % nV;
-        for (let i = 0; i < uniqueU.length - 1; i++) {
-            const uMid = (uniqueU[i] + uniqueU[i+1])/2;
-            const spanU = this.engine.findSpan(this.patch.controlPoints.length - 1, this.patch.p, uMid, this.patch.U);
-            if (cpI >= spanU - this.patch.p && cpI <= spanU) {
-                for (let j = 0; j < uniqueV.length - 1; j++) {
-                    const vMid = (uniqueV[j] + uniqueV[j+1])/2;
-                    const spanV = this.engine.findSpan(this.patch.controlPoints[0].length - 1, this.patch.q, vMid, this.patch.V);
-                    if (cpJ >= spanV - this.patch.q && cpJ <= spanV) activeSpans.add(`${i},${j}`);
-                }
-            }
-        }
+    activeIndices.forEach(unassembledIdx => {
+        const eIdx = Math.floor(unassembledIdx / this.deimEngine.numLocalDofs);
+        const i = Math.floor(eIdx / nV_spans);
+        const j = eIdx % nV_spans;
+        activeSpans.add(`${i},${j}`);
     });
 
     const activeLines = [], inactiveLines = [];

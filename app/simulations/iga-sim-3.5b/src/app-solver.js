@@ -2,17 +2,17 @@
  * DEIM Benchmark — Solver & Comparison logic
  */
 
-DEIMBenchmarkApp.prototype.solve = function(method, mag) {
+DEIMBenchmarkApp.prototype.solve = function(method, mag, options = {}) {
     const bcs = this.getBCs(), loads = this.getLoads(mag);
     const t0 = performance.now();
     let result, meta = {};
 
     if (method === 'fom') {
-        result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, {iterations:15, steps:3});
+        result = this.solverFOM.solveNonlinear(this.patch, bcs, loads, {iterations:15, steps:3, ...options});
     } else if (method === 'galerkin') {
-        result = this.romEngine.solveReduced(this.patch, bcs, loads, {iterations:15});
+        result = this.romEngine.solveReduced(this.patch, bcs, loads, {iterations:15, ...options});
     } else if (method === 'deim') {
-        result = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {iterations:15, steps:1});
+        result = this.deimEngine.solveReduced(this.solverFOM, this.romEngine, this.patch, bcs, loads, {iterations:15, steps:1, ...options});
         meta.sampled = `${result.sampledCount} / ${result.totalDofs} dofs`;
     }
 
@@ -107,14 +107,14 @@ DEIMBenchmarkApp.prototype.runFDCurves = async function() {
         try {
             const gal = this.solve('galerkin', f);
             results.galerkin.d.push(gal.meta.tipDisp);
-            results.galerkin.e.push(gal.meta.error);
+            results.galerkin.e.push(gal.meta.error * 100);
         } catch (e) { results.galerkin.d.push(NaN); results.galerkin.e.push(NaN); }
 
         // Run DEIM
         try {
             const deim = this.solve('deim', f);
             results.deim.d.push(deim.meta.tipDisp);
-            results.deim.e.push(deim.meta.error);
+            results.deim.e.push(deim.meta.error * 100);
         } catch (e) { results.deim.d.push(NaN); results.deim.e.push(NaN); }
         
         await new Promise(r => setTimeout(r, 1)); // Yield UI
@@ -141,4 +141,50 @@ DEIMBenchmarkApp.prototype.runFDCurves = async function() {
 
     document.getElementById('btn-compare').disabled = false;
     this.updatePhysics(); // Refresh the UI stats to clear the 64% artifact
+};
+
+DEIMBenchmarkApp.prototype.runPointsConvergence = async function() {
+    if (!this.isTrained || !this.lastFomResult) return;
+    
+    const mMax = this.deimEngine.indices.length;
+    const mSteps = [];
+    const stepSize = Math.max(1, Math.floor(mMax / 15));
+    for (let m = 2; m <= mMax; m += stepSize) mSteps.push(m);
+    if (mSteps[mSteps.length-1] !== mMax) mSteps.push(mMax);
+
+    const errors = [];
+    const originalM = this.deimEngine.m;
+    const originalKF = this.deimEngine.kf;
+    const originalM_matrix = this.deimEngine.M;
+
+    for (const m of mSteps) {
+        // Subset U-DEIM points and recompute projection
+        this.deimEngine.updatePoints(this.romEngine, m, m); 
+        
+        try {
+            const { meta } = this.solve('deim', this.loadMag, { quiet: true });
+            errors.push(meta.error * 100); // %
+        } catch(e) {
+            errors.push(NaN);
+        }
+        await new Promise(r => setTimeout(r, 1));
+    }
+
+    // Restore original state
+    this.deimEngine.m = originalM;
+    this.deimEngine.kf = originalKF;
+    this.deimEngine.M = originalM_matrix;
+
+    this.convergenceChart.data.labels = mSteps;
+    this.convergenceChart.data.datasets = [{
+        label: 'L2 Error (%)',
+        data: errors,
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+    }];
+    this.convergenceChart.update();
 };

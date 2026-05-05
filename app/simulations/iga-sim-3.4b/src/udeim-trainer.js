@@ -54,8 +54,9 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
         this.elementDofMap.push(map);
     }
 
-    // 2. Compute Unassembled Force Snapshots
-    const S_u = [];
+    // 2. Assemble snapshot matrix for force modes
+    const { Matrix, SVD } = window.mlMatrix;
+    const S_u = new Matrix(N_u, snapshotDisplacements.length);
     const gRule = window.GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
     
     console.log(`U-DEIM: Computing unassembled forces for ${nSnaps} snapshots...`);
@@ -70,18 +71,25 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
                 f_u[e * this.numLocalDofs + ld] = f_e[ld];
             }
         }
-        S_u.push(f_u);
+        
+        // Normalize snapshot to prevent large loads from dominating the SVD
+        let norm = 0;
+        for(let i=0; i<N_u; i++) norm += f_u[i] * f_u[i];
+        norm = Math.sqrt(norm);
+        if (norm > 1e-14) {
+            for(let i=0; i<N_u; i++) S_u.set(i, s, f_u[i] / norm);
+        } else {
+            for(let i=0; i<N_u; i++) S_u.set(i, s, f_u[i]);
+        }
     }
 
-    // 3. POD on Unassembled Forces
+    // 3. Compute POD on Unassembled Forces
     console.log(`U-DEIM: Performing SVD on ${N_u}x${nSnaps} snapshot matrix...`);
-    const { Matrix, SVD } = window.mlMatrix;
-    const S_mat = new Matrix(S_u.map(s => Array.from(s))).transpose();
-    const svd = new SVD(S_mat, { computeLeftSingularVectors: true, computeRightSingularVectors: false, autoTranspose: true });
+    const svd = new SVD(S_u, { computeLeftSingularVectors: true, computeRightSingularVectors: false });
     const U_greedy = svd.leftSingularVectors;
     
     this.m = Math.min(this.m, U_greedy.columns);
-    this.kf = Math.min(this.kf, this.m);
+    this.kf = Math.min(this.kf, U_greedy.columns); // Cap by snapshots
     this.U_f = U_greedy.subMatrix(0, N_u - 1, 0, this.kf - 1);
     
     // 4. Greedy DEIM selection on Unassembled Basis
@@ -163,6 +171,11 @@ UDEIMEngine.prototype.train = async function(fomSolver, romEngine, patch, snapsh
         if (S_interp[i] > threshold) S_inv_mat.set(i, i, 1.0 / S_interp[i]);
     }
     const PtU_pinv = V_interp.mmul(S_inv_mat).mmul(U_interp.transpose());
+    this.PtU_pinv = PtU_pinv.to2DArray();
+
+    // Audit conditioning
+    const cond = S_interp[0] / Math.max(S_interp[S_interp.length-1], 1e-30);
+    console.log(`U-DEIM: Interpolation Matrix Condition Number: ${cond.toExponential(2)} (${cond < 1e6 ? 'HEALTHY' : 'DANGEROUS'})`);
 
 
     // A * U_f (Assemble U_f into global space)

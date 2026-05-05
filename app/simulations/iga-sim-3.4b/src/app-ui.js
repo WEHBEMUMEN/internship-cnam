@@ -5,6 +5,9 @@
 UDEIMBenchmarkApp.prototype.initUI = function() {
     document.getElementById('btn-train').onclick = () => this.trainAll();
     document.getElementById('btn-compare').onclick = () => this.runComparison();
+    document.getElementById('btn-audit').onclick = () => {
+        if (this.isTrained) this.deimEngine.auditMath(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
+    };
     
     const btnExp = document.getElementById('btn-explorer');
     btnExp.onclick = () => {
@@ -43,7 +46,7 @@ UDEIMBenchmarkApp.prototype.initUI = function() {
 
             if (this.snapDisp) this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(() => {
                 this._scheduleUpdate();
-                this.deimEngine.audit(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
+                this.deimEngine.auditMath(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
             });
 
         }
@@ -55,7 +58,7 @@ UDEIMBenchmarkApp.prototype.initUI = function() {
         if (this.isTrained && this.snapDisp) {
             this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, this.deimM, this.k).then(() => {
                 this._scheduleUpdate();
-                this.deimEngine.audit(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
+                this.deimEngine.auditMath(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
             });
         }
 

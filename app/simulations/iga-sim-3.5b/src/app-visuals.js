@@ -28,9 +28,11 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
             document.getElementById('chart-speedup-wrap').classList.toggle('hidden', t.dataset.chart !== 'speedup');
             document.getElementById('chart-fd-wrap').classList.toggle('hidden', t.dataset.chart !== 'fd');
             document.getElementById('chart-error-wrap').classList.toggle('hidden', t.dataset.chart !== 'error');
+            document.getElementById('chart-convergence-wrap').classList.toggle('hidden', t.dataset.chart !== 'convergence');
             document.getElementById('explorer-wrap').classList.toggle('hidden', t.dataset.chart !== 'explorer');
             
             if ((t.dataset.chart === 'fd' || t.dataset.chart === 'error') && this.isTrained) this.runFDCurves();
+            if (t.dataset.chart === 'convergence' && this.isTrained) this.runPointsConvergence();
             if (t.dataset.chart === 'explorer') {
                 this.isExplorerActive = true;
                 this.runDEIMExplorer(this.explorerStep);
@@ -52,7 +54,14 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
         type: 'line', data: { labels: [], datasets: [] },
         options: { responsive:true, maintainAspectRatio:false,
             plugins:{legend:{position:'top', labels:{font:{size:9}}}},
-            scales:{x:{title:{display:true, text:'Load F', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error', font:{size:10}}}}}
+            scales:{x:{title:{display:true, text:'Load F', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error (%)', font:{size:10}}}}}
+    });
+
+    this.convergenceChart = new Chart(document.getElementById('chart-convergence'), {
+        type: 'line', data: { labels: [], datasets: [] },
+        options: { responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{display:false}},
+            scales:{x:{title:{display:true, text:'DEIM Points (m)', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error (%)', font:{size:10}}}}}
     });
 
     this.residualChart = new Chart(document.getElementById('chart-residual'), {

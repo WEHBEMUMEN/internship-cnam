@@ -151,28 +151,18 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
             for(let d=0; d<f_true.length; d++) f_proj_exact[i] += PhiT.get(i, d) * f_true[d];
         }
 
-        // DEIM reduced force using precomputed M_deim matrix (exactly as solveReduced does)
-        const U_f = this.deimEngine.U_f;
-        const PtU_pinv = this.deimEngine.PtU_pinv;
-        const m = this.deimEngine.m;
-        const f_proj_deim = new Float64Array(this.k);
-        
-        // Reconstruct c first (coefficients in U_f space)
-        const c = new Float64Array(U_f.columns);
-        for(let i=0; i<U_f.columns; i++) {
-            for(let j=0; j<m; j++) {
-                const val = f_sampled[j];
-                if (isFinite(val)) c[i] += PtU_pinv[i][j] * val;
+        // DEIM reduced force using precomputed M matrix
+        const f_proj_deim = new Float64Array(k_safe);
+        for(let i=0; i<k_safe; i++) {
+            for(let j=0; j<this.deimM; j++) {
+                if (this.deimEngine.M[i] && isFinite(f_sampled[j])) {
+                    f_proj_deim[i] += this.deimEngine.M[i][j] * f_sampled[j];
+                }
             }
-        }
-        // Project U_f * c
-        const PhiT_Uf = PhiT.mmul(U_f);
-        for(let i=0; i<this.k; i++) {
-            for(let j=0; j<U_f.columns; j++) f_proj_deim[i] += PhiT_Uf.get(i, j) * c[j];
         }
 
         let pNum = 0, pDen = 0;
-        for(let i=0; i<this.k; i++) {
+        for(let i=0; i<k_safe; i++) {
             const err = f_proj_exact[i] - f_proj_deim[i];
             pNum += err * err;
             pDen += f_proj_exact[i] * f_proj_exact[i];
@@ -181,15 +171,14 @@ DEIMBenchmarkApp.prototype.runOnlineAudit = async function() {
         console.log(`\n   DEIM Projection Error : ${(projError * 100).toFixed(6)}%`);
         console.log(`   (Compares ΦᵀF_true vs M_deim * f_sampled)`);
 
-        // 5. DIAGNOSTIC: Direct Sample Comparison
-        console.log(`\n   DIAGNOSTIC: First 5 Samples`);
-        console.log(`   Idx | DOF | FOM Value | Sampled Value | Match?`);
-        console.log(`   ────┼─────┼───────────┼───────────────┼───────`);
-        for(let i=0; i<Math.min(5, m); i++) {
-            const dof = this.deimEngine.indices[i];
-            const v1 = f_true[dof], v2 = f_sampled[i];
-            const match = Math.abs(v1 - v2) < 1e-8 ? "YES" : "NO!!";
-            console.log(`   ${i+1} | ${dof.toString().padStart(3)} | ${v1.toExponential(4)} | ${v2.toExponential(4)} | ${match}`);
+        // 5. DIAGNOSTIC: Sample Check
+        console.log(`\n   DIAGNOSTIC: First 5 Samples (Unassembled)`);
+        console.log(`   Idx | Point | Sampled Value`);
+        console.log(`   ────┼───────┼───────────────`);
+        for(let i=0; i<Math.min(5, this.deimM); i++) {
+            const pt = this.deimEngine.indices[i];
+            const v2 = f_sampled[i];
+            console.log(`   ${i+1} | ${pt.toString().padStart(5)} | ${v2.toExponential(4)}`);
         }
     }
 

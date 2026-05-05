@@ -161,10 +161,11 @@ UDEIMBenchmarkApp.prototype.trainAll = async function() {
     btn.disabled = false;
     document.getElementById('btn-compare').disabled = false;
     document.getElementById('btn-explorer').disabled = false;
+    document.getElementById('btn-audit').style.display = 'flex';
     status.textContent = `Training complete ✓`;
     setTimeout(() => status.classList.add('hidden'), 5000);
     this.updatePhysics();
-    this.deimEngine.audit(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
+    this.deimEngine.auditMath(this.solverFOM, this.romEngine, this.patch, this.snapDisp);
 };
 
 UDEIMBenchmarkApp.prototype.runComparison = async function() {

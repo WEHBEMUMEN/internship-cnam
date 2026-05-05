@@ -105,9 +105,7 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
 
         [0.9, 1.1].forEach(scale => {
             const u_pert = res.u.map(v => v * scale);
-            const Fint_pert = this.solverFOM.calculateInternalForce(this.patch, u_pert);
-            constrained.forEach(dof => Fint_pert[dof] = 0);
-            forceSnaps.push(Fint_pert);
+            snapDisp.push(new Float64Array(u_pert));
         });
         
         snapIdx++;
@@ -132,9 +130,7 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
         for (let d = 0; d < Phi.rows; d++) u_mode[d] = Phi.get(d, j);
         [10.0, -10.0].forEach(scale => {
             const u_pert = u_mode.map(v => v * scale);
-            const f_pert = this.solverFOM.calculateInternalForce(this.patch, u_pert);
-            bcs_dofs.forEach(d => f_pert[d] = 0);
-            forceSnaps.push(f_pert);
+            snapDisp.push(new Float64Array(u_pert));
         });
     }
 
@@ -143,6 +139,12 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     const deimInfo = await this.deimEngine.train(this.solverFOM, this.romEngine, this.patch, snapDisp, this.deimM, this.k, bcs);
     document.getElementById('input-m').disabled = false;
     document.getElementById('deim-info').textContent = `${deimInfo.m} interpolation points | ${deimInfo.elementCount} active elements`;
+    
+    // Draw convergence history
+    if (deimInfo.history && this.sparkline) {
+        const residuals = deimInfo.history.map(h => h.maxVal);
+        this.sparkline.draw(residuals);
+    }
 
     this.isTrained = true;
     this.forceSnaps = forceSnaps;
@@ -150,8 +152,9 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     btn.disabled = false;
     document.getElementById('btn-compare').disabled = false;
     document.getElementById('btn-explorer').disabled = false;
+    document.getElementById('btn-audit').style.display = 'flex';
     status.textContent = `Training complete ✓`;
     
     this.updatePhysics();
-    this.runOnlineAudit();
+    this.auditMath();
 };

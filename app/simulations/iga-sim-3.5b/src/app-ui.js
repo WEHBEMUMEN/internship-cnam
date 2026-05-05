@@ -5,6 +5,7 @@
 DEIMBenchmarkApp.prototype.initUI = function() {
     document.getElementById('btn-train').onclick = () => this.trainAll();
     document.getElementById('btn-compare').onclick = () => this.runComparison();
+    document.getElementById('btn-audit').onclick = () => this.auditMath();
     document.getElementById('btn-explorer').onclick = () => {
         const explorerTab = document.querySelector('.chart-tab[data-chart="explorer"]');
         if (explorerTab) explorerTab.click();
