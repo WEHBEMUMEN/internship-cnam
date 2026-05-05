@@ -23,9 +23,12 @@ class TransientVisuals {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(this.renderer.domElement);
 
-        this.camera.position.set(5, 5, 20);
+        this.camera.position.set(10, 10, 30);
         this.camera.lookAt(0, 0, 0);
         
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.05;
         const ambient = new THREE.AmbientLight(0xffffff, 0.6);
         const direct = new THREE.DirectionalLight(0xffffff, 0.8);
         direct.position.set(5, 10, 5);
@@ -43,6 +46,7 @@ class TransientVisuals {
 
     animate() {
         requestAnimationFrame(() => this.animate());
+        if (this.controls) this.controls.update();
         this.renderer.render(this.scene, this.camera);
     }
 
