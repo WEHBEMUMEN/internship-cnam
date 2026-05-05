@@ -28,10 +28,12 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
             document.getElementById('chart-speedup-wrap').classList.toggle('hidden', t.dataset.chart !== 'speedup');
             document.getElementById('chart-fd-wrap').classList.toggle('hidden', t.dataset.chart !== 'fd');
             document.getElementById('chart-error-wrap').classList.toggle('hidden', t.dataset.chart !== 'error');
+            document.getElementById('chart-errortol-wrap').classList.toggle('hidden', t.dataset.chart !== 'errortol');
             document.getElementById('chart-convergence-wrap').classList.toggle('hidden', t.dataset.chart !== 'convergence');
             document.getElementById('explorer-wrap').classList.toggle('hidden', t.dataset.chart !== 'explorer');
             
             if ((t.dataset.chart === 'fd' || t.dataset.chart === 'error') && this.isTrained) this.runFDCurves();
+            if (t.dataset.chart === 'errortol' && this.isTrained) this.runErrorTolCurve();
             if (t.dataset.chart === 'convergence' && this.isTrained) this.runPointsConvergence();
             if (t.dataset.chart === 'explorer') {
                 this.isExplorerActive = true;
@@ -64,6 +66,64 @@ DEIMBenchmarkApp.prototype.initCharts = function() {
             scales:{x:{title:{display:true, text:'Sampled Elements (m)', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error (%)', font:{size:10}}}}}
     });
 
+    this.errTolChart = new Chart(document.getElementById('chart-errortol'), {
+        type: 'line', data: { labels: [], datasets: [] },
+        options: { responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{display:false}},
+            scales:{x:{title:{display:true, text:'Tolerance (1e-x)', font:{size:10}}}, y:{type: 'logarithmic', title:{display:true, text:'L2 Rel Error (%)', font:{size:10}}}}}
+    });
+    this.initResidualChart();
+};
+
+DEIMBenchmarkApp.prototype.runErrorTolCurve = function() {
+    if (!this.ecswEngine || !this.isTrained) return;
+    
+    const labels = [];
+    const errorData = [];
+    const currentK = this.k;
+    const currentMethod = this.method;
+    const currentLoad = this.loadMag;
+
+    // Evaluate across different tolerances (1e-2 to 1e-7)
+    for (let t = 2; t <= 7; t++) {
+        const tol = Math.pow(10, -t);
+        labels.push(`1e-${t}`);
+        
+        // Re-weight with different tolerance
+        this.ecswEngine.train(this.ecswEngine.snapshots, tol);
+        
+        // Run online evaluation at current load
+        const result = this.ecswEngine.solve(currentLoad, currentK, this.loadType);
+        
+        // Compare with FOM if available, or use a cached FOM result
+        if (this.lastFomResult) {
+            const err = this.calculateError(this.lastFomResult.u, result.u);
+            errorData.push(err * 100);
+        } else {
+            errorData.push(0);
+        }
+    }
+
+    // Restore original training (using current slider value)
+    const originalTol = Math.pow(10, -parseInt(document.getElementById('input-m').value));
+    this.ecswEngine.train(this.ecswEngine.snapshots, originalTol);
+
+    this.errTolChart.data.labels = labels;
+    this.errTolChart.data.datasets = [{
+        label: 'Error (%)',
+        data: errorData,
+        borderColor: '#f43f5e',
+        backgroundColor: 'rgba(244, 63, 94, 0.1)',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+    }];
+    this.errTolChart.update();
+};
+
+DEIMBenchmarkApp.prototype.initResidualChart = function() {
     this.residualChart = new Chart(document.getElementById('chart-residual'), {
         type: 'line',
         data: { labels: [], datasets: [

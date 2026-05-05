@@ -26,19 +26,20 @@ DEIMBenchmarkApp.prototype.solve = function(method, mag, options = {}) {
     if (result && result.u) {
         meta.tipDisp = result.u[tipIdx];
         if (this.lastFomResult && method !== 'fom') {
-            let num = 0, den = 0;
-            for (let i = 0; i < result.u.length; i++) {
-                num += (result.u[i] - this.lastFomResult.u[i])**2;
-                den += this.lastFomResult.u[i]**2;
-            }
-            meta.error = den > 0 ? Math.sqrt(num/den) : 0;
+            meta.error = this.calculateError(this.lastFomResult.u, result.u);
         }
-    } else {
-        meta.tipDisp = null;
-        meta.error = null;
     }
-    
     return { result, meta };
+};
+
+DEIMBenchmarkApp.prototype.calculateError = function(uFom, uRom) {
+    if (!uFom || !uRom || uFom.length !== uRom.length) return 0;
+    let num = 0, den = 0;
+    for (let i = 0; i < uFom.length; i++) {
+        num += (uRom[i] - uFom[i])**2;
+        den += uFom[i]**2;
+    }
+    return den > 0 ? Math.sqrt(num/den) : 0;
 };
 
 DEIMBenchmarkApp.prototype.updatePhysics = function() {
