@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 4.1: Nonlinear Dynamics Theory | Digital Twin</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script src="../scripts.js" defer></script>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="../index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="../index.html"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+        <a href="timeline.html"><i class="fa-solid fa-calendar-alt"></i> <span>Timeline</span></a>
+        <a href="tasks.html"><i class="fa-solid fa-list-check"></i> <span>Tasks</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal reveal-up">
+          <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e;">PHASE 4.1 THEORY</span>
+          <h2 class="section-title">From Static to Dynamic ROM</h2>
+          <p class="section-sub">Lessons from static hyper-reduction applied to transient structural problems.</p>
+        </div>
+
+        <div class="theory-content reveal reveal-up delay-1" style="max-width: 900px; margin: 0 auto;">
+          
+          <div class="theory-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; box-shadow: var(--card-shadow);">
+            <h3 style="color: #f43f5e; font-size: 1.6rem; margin-top: 0;"><i class="fa-solid fa-lightbulb"></i> Retrospective: What we learned from Phase 3</h3>
+            <p>Our journey through static nonlinear phases (3.1–3.5) established the critical pillars for dynamic simulation:</p>
+            <ul style="line-height: 1.8; color: var(--text-secondary); margin-left: 20px;">
+              <li><strong>The Spatial Manifold</strong>: POD basis extraction ($\Phi$) from static snapshots captures the fundamental "shapes" of deformation. Even in dynamics, the structure will largely move within this low-dimensional spatial subspace.</li>
+              <li><strong>Hyper-Reduction is Mandatory</strong>: Static benchmarks showed that Galerkin projection alone is not enough for speed; calculating nonlinear internal forces $F_{int}(u)$ is the bottleneck. ECSW and DEIM are our "speed kernels".</li>
+              <li><strong>Physical Consistency</strong>: ECSW taught us that conserving energy (virtual work) is more robust for nonlinear structures than pure nodal interpolation (DEIM), especially near singularities.</li>
+            </ul>
+          </div>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-gears"></i> 1. The Dynamic Semi-Discrete Equation</h3>
+          <p>In the static phases, we solved for equilibrium: $F_{int}(u) = F_{ext}$. In Phase 4, we introduce <strong>Inertia</strong> and <strong>Damping</strong>:</p>
+          
+          <div class="math-block" style="background: #0f172a; padding: 30px; border-radius: 16px; border: 1px solid rgba(244, 63, 94, 0.3); margin: 30px 0; color: white;">
+            $$\mathbf{M} \ddot{\mathbf{u}} + \mathbf{C} \dot{\mathbf{u}} + \mathbf{F}_{int}(\mathbf{u}) = \mathbf{F}_{ext}(t)$$
+          </div>
+          
+          <p>Where:</p>
+          <ul style="line-height: 1.8; color: var(--text-secondary);">
+            <li>$\mathbf{M}$: Global Mass Matrix (consistent or lumped).</li>
+            <li>$\mathbf{C}$: Damping Matrix (usually Rayleigh damping: $\mathbf{C} = \alpha \mathbf{M} + \beta \mathbf{K}$).</li>
+            <li>$\mathbf{F}_{int}(\mathbf{u})$: Nonlinear internal forces (lessons from Phase 3).</li>
+            <li>$\mathbf{F}_{ext}(t)$: Time-dependent external excitation.</li>
+          </ul>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-clock"></i> 2. Time Integration (The Newmark-&beta; Scheme)</h3>
+          <p>To solve the second-order ODE, we discretize time into increments $\Delta t$. We use the <strong>Newmark-&beta; method</strong> (implicit) for its stability in structural mechanics:</p>
+          
+          <div class="math-block" style="background: #0f172a; padding: 25px; border-radius: 12px; margin: 20px 0; color: white;">
+            $$\dot{u}_{n+1} = \dot{u}_n + [(1-\gamma)\ddot{u}_n + \gamma \ddot{u}_{n+1}]\Delta t$$
+            $$u_{n+1} = u_n + \dot{u}_n \Delta t + [(\frac{1}{2}-\beta)\ddot{u}_n + \beta \ddot{u}_{n+1}]\Delta t^2$$
+          </div>
+          
+          <p>For unconditional stability (Average Acceleration Method), we set $\gamma = 0.5$ and $\beta = 0.25$. This transforms the dynamic problem into a series of "pseudo-static" nonlinear problems at each time step.</p>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-compress-arrows-alt"></i> 3. Projected Dynamics (ROM)</h3>
+          <p>By substituting $u \approx \Phi q$ and projecting onto the POD basis, we obtain the reduced dynamic system:</p>
+
+          <div class="math-block" style="background: #0f172a; padding: 30px; border-radius: 16px; border: 1px solid rgba(244, 63, 94, 0.3); margin: 30px 0; color: white;">
+            $$\mathbf{M}_r \ddot{\mathbf{q}} + \mathbf{C}_r \dot{\mathbf{q}} + \Phi^T \mathbf{F}_{int}(\Phi \mathbf{q}) = \Phi^T \mathbf{F}_{ext}(t)$$
+          </div>
+
+          <p>Where <strong>$\mathbf{M}_r = \Phi^T \mathbf{M} \Phi$</strong> and <strong>$\mathbf{C}_r = \Phi^T \mathbf{C} \Phi$</strong> are $k \times k$ matrices (typically $k < 20$).</p>
+          
+          <div style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid #10b981; padding: 20px; border-radius: 0 12px 12px 0; margin-top: 40px;">
+            <h4 style="color: #10b981; margin: 0 0 10px 0;"><i class="fa-solid fa-rocket"></i> The Hyper-Reduction Synergy</h4>
+            <p style="margin: 0;">The term $\Phi^T \mathbf{F}_{int}(\Phi \mathbf{q})$ is still expensive. In Phase 4, we will apply our <strong>ECSW weights</strong> $w_e$ from the static training to evaluate this term at a fraction of the cost, enabling **real-time transient structural feedback**.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 80px; text-align: center;">
+          <a href="../index.html" class="btn btn-primary" style="background: #f43f5e; padding: 15px 35px; font-size: 1.1rem; border-radius: 50px; box-shadow: 0 10px 20px rgba(244, 63, 94, 0.3);">
+            Back to Dashboard <i class="fa-solid fa-arrow-right" style="margin-left: 10px;"></i>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBE Mumen & EPN04, Cnam.</p>
+    </div>
+  </footer>
+
+</body>
+</html>
