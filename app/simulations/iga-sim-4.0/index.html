@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4.0 | Nonlinear Transient FOM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Shared Engines -->
+    <script src="../phase-2-core/src/nurbs-2d.js?v=3"></script>
+    <script src="../phase-2-core/src/nurbs-presets.js?v=3"></script>
+    <script src="../phase-2-core/src/refine-utils.js?v=3"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js?v=3"></script>
+    <script src="../phase-3-core/src/iga-nonlinear.js?v=3"></script>
+    
+    <!-- Dynamics Engine -->
+    <script src="src/dynamics-core.js"></script>
+
+    <style>
+        :root { --primary:#0ea5e9; --secondary:#38bdf8; --accent:#10b981; --bg:#0f172a; --card:rgba(30,41,59,0.9); --border:rgba(14,165,233,0.2); }
+        *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+        body { background:var(--bg); color:#f8fafc; font-family:'Inter',sans-serif; overflow:hidden; }
+        #canvas-container { position:absolute; inset:0; background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%); }
+        .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.5); }
+        #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
+        #stats-panel { position:absolute; top:20px; right:20px; width:400px; padding:20px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
+        #chart-panel { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); width:780px; padding:20px; z-index:10; }
+        .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #0ea5e9, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .panel-sub { font-size:0.75rem; color:#94a3b8; margin-top:4px; font-weight:500; }
+        .section-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#0ea5e9; margin-bottom:12px; display:block; }
+        .control-group { margin-bottom:20px; }
+        .label-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .label-row .lbl { font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; }
+        .label-row .val { font-size:0.85rem; font-weight:700; color:var(--primary); font-family:'JetBrains Mono',monospace; }
+        input[type="range"] { width:100%; height:4px; background:#334155; border-radius:2px; appearance:none; cursor:pointer; }
+        input[type="range"]::-webkit-slider-thumb { appearance:none; width:16px; height:16px; background:var(--primary); border-radius:50%; border:3px solid #fff; box-shadow:0 2px 6px rgba(14,165,233,0.4); cursor:pointer; }
+        .btn-action { width:100%; padding:14px; border-radius:16px; font-size:0.8rem; font-weight:700; letter-spacing:.5px; cursor:pointer; background:linear-gradient(135deg,#0ea5e9,#0284c7); color:white; border:none; box-shadow:0 8px 20px -6px rgba(14,165,233,0.5); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+        .btn-action:hover { transform:translateY(-2px); box-shadow:0 12px 24px -6px rgba(14,165,233,0.6); }
+        .btn-action:disabled { opacity:.5; transform:none; cursor:not-allowed; }
+        .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px; }
+        .stat-card { background:rgba(15,23,42,0.5); border-radius:16px; padding:12px; border:1px solid var(--border); transition:all .3s; }
+        .stat-card:hover { background: rgba(30,41,59,0.8); transform: translateY(-2px); }
+        .stat-card .lbl { font-size:0.58rem; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px; }
+        .stat-num { font-size:1.15rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:#f8fafc; }
+        .divider { border: 0; border-top: 1px solid rgba(14,165,233,0.1); margin:20px 0; }
+        #train-status { font-size:0.68rem; font-family:'JetBrains Mono',monospace; color:#0ea5e9; margin-top:10px; min-height:16px; text-align:center; }
+        .hidden { display:none !important; }
+        .back-link { font-size:0.65rem; text-transform:uppercase; letter-spacing:1.2px; color:#94a3b8; display:flex; align-items:center; gap:8px; text-decoration:none; margin-bottom:16px; transition:color .2s; font-weight:600; }
+        .back-link:hover { color:var(--primary); }
+        .live-dot { width:8px; height:8px; background:#10b981; border-radius:50%; animation:pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.4; transform:scale(0.8);} }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- Left Panel -->
+    <div id="ui-panel" class="glass-panel">
+        <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
+        <div class="panel-title">Phase 4.0 <span style="color:#10b981">Transient</span></div>
+        <div class="panel-sub">Nonlinear IGA Dynamics · FOM Ground Truth</div>
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">1 · Newmark-&beta; Integrator</span>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Total Time (T)</span><span class="val" id="time-val">1.0s</span></div>
+                <input type="range" id="input-time" min="0.1" max="2.0" step="0.1" value="0.5">
+            </div>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Step Size (&Delta;t)</span><span class="val" id="dt-val">0.005s</span></div>
+                <input type="range" id="input-dt" min="0.001" max="0.02" step="0.001" value="0.005">
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:10px;">
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">&beta; (Beta)</span><span class="val">0.25</span></div>
+                    <div style="font-size:0.6rem; color:#94a3b8">Avg Acceleration</div>
+                </div>
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">&gamma; (Gamma)</span><span class="val">0.50</span></div>
+                    <div style="font-size:0.6rem; color:#94a3b8">Unconditional Stable</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <span class="section-label">2 · Rayleigh Damping</span>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Mass Coeff (&alpha;)</span><span class="val" id="alpha-val">0.5</span></div>
+                <input type="range" id="input-alpha" min="0" max="2.0" step="0.1" value="0.5">
+            </div>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Stiff Coeff (&beta;<sub>R</sub>)</span><span class="val" id="beta-val">0.001</span></div>
+                <input type="range" id="input-beta" min="0" max="0.01" step="0.0005" value="0.001">
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="control-group">
+            <span class="section-label">3 · External Force</span>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Amplitude (F<sub>0</sub>)</span><span class="val" id="f0-val">200N</span></div>
+                <input type="range" id="input-f0" min="50" max="1000" step="50" value="400">
+            </div>
+            <select id="input-force-type" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:12px; font-size:0.75rem; padding:10px; color:#f8fafc; outline:none; cursor:pointer;">
+                <option value="step">Step Force</option>
+                <option value="impulse">Short Impulse</option>
+                <option value="harmonic">Harmonic Oscillation</option>
+            </select>
+        </div>
+
+        <button id="btn-run" class="btn-action"><i class="fa-solid fa-play"></i> Run Transient FOM</button>
+        <div id="run-status" class="hidden"></div>
+    </div>
+
+    <!-- Right Stats Panel -->
+    <div id="stats-panel" class="glass-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <span style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8">Dynamics Engine</span>
+            <div style="display:flex;align-items:center;gap:8px"><div class="live-dot" id="run-dot"></div><span style="font-size:.6rem;color:#10b981;font-weight:800;text-transform:uppercase" id="run-label">Ready</span></div>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card"><span class="lbl">Current Time</span><div class="stat-num" id="curr-time">0.00s</div></div>
+            <div class="stat-card"><span class="lbl">Energy</span><div class="stat-num" id="energy-val">—</div></div>
+            <div class="stat-card"><span class="lbl">NR Iters</span><div class="stat-num" id="iters-val">—</div></div>
+            <div class="stat-card"><span class="lbl">Tip Disp</span><div class="stat-num" id="tip-disp">—</div></div>
+        </div>
+
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px">Real-time Response</div>
+        <canvas id="chart-response" height="180" style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px;"></canvas>
+    </div>
+
+    <!-- Bottom Chart Panel -->
+    <div id="chart-panel" class="glass-panel">
+        <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#0ea5e9;margin-bottom:12px">Transient Trace: Tip Y Displacement</div>
+        <canvas id="chart-full-trace" height="140"></canvas>
+    </div>
+
+    <!-- App Logic -->
+    <script src="../../shared/performance.js"></script>
+    <script src="src/app-visuals-40.js"></script>
+    <script src="src/app-core-40.js"></script>
+    <script src="src/app-ui-40.js"></script>
+</body>
+</html>
