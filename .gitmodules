@@ -1,0 +1,21 @@
+[submodule "resources/Recorces/GOLDFISH"]
+	path = resources/Recorces/GOLDFISH
+	url = https://github.com/hanzhao2020/GOLDFISH.git
+[submodule "resources/Recorces/PENGoLINS"]
+	path = resources/Recorces/PENGoLINS
+	url = https://github.com/hanzhao2020/PENGoLINS.git
+[submodule "resources/Recorces/ShNAPr"]
+	path = resources/Recorces/ShNAPr
+	url = https://github.com/david-kamensky/ShNAPr.git
+[submodule "resources/Recorces/libROM"]
+	path = resources/Recorces/libROM
+	url = https://github.com/LLNL/libROM.git
+[submodule "resources/Recorces/mfem"]
+	path = resources/Recorces/mfem
+	url = https://github.com/mfem/mfem.git
+[submodule "resources/Recorces/psydac"]
+	path = resources/Recorces/psydac
+	url = https://github.com/pyccel/psydac.git
+[submodule "resources/Recorces/tIGAr"]
+	path = resources/Recorces/tIGAr
+	url = https://github.com/david-kamensky/tIGAr.git
