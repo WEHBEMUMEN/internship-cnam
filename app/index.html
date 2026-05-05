@@ -749,21 +749,35 @@
 
         <hr data-phase="4" class="grid-separator">
 
-        <h3 data-phase="4" class="phase-section-title" style="color: #f43f5e;">
+        <h3 data-phase="4" class="phase-section-title" style="color: #0ea5e9;">
             <i class="fa-solid fa-bolt-lightning"></i> Phase 4: Nonlinear Structural Dynamics
         </h3>
 
         <div class="grid">
-          <!-- Phase 4.1: Transient Analysis -->
+          <!-- Phase 4.0: Transient FOM -->
           <div class="card reveal reveal-up" data-phase="4">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                <i class="fa-solid fa-stopwatch-20" style="font-size: 2rem; color: #f43f5e;"></i>
-                <span class="badge" style="font-size: 0.7rem; background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2);">PHASE 4.1</span>
+                <i class="fa-solid fa-gauge-high" style="font-size: 2rem; color: #0ea5e9;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(14, 165, 233, 0.1); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.2);">PHASE 4.0</span>
             </div>
-            <h3>Transient Nonlinear ROM</h3>
-            <p>Real-time time-integration using Generalized-α and Newmark-β schemes. Expanding Hyper-Reduction to include inertia and damping forces.</p>
+            <h3>Transient Nonlinear FOM</h3>
+            <p>Ground Truth transient analysis using Newmark-&beta; integration. Full-order nonlinear response with Rayleigh damping.</p>
             <div class="app-actions">
-              <button class="btn btn-primary btn-center" style="width: 100%; background: #f43f5e; opacity: 0.7; cursor: not-allowed;" disabled>Developing Lab <i class="fa-solid fa-clock" style="margin-left: 8px;"></i></button>
+              <a href="simulations/iga-sim-4.0/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #0ea5e9; box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);">Launch FOM Lab <i class="fa-solid fa-play" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-4.1.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+
+          <!-- Phase 4.1: Offline Trainer -->
+          <div class="card reveal reveal-up" data-phase="4">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-brain" style="font-size: 2rem; color: #10b981;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">PHASE 4.1</span>
+            </div>
+            <h3>Offline Transient ROM Trainer</h3>
+            <p>Capturing transient snapshots for POD basis extraction and ECSW weight optimization. Exporting verifiable ROM packages.</p>
+            <div class="app-actions">
+              <a href="simulations/iga-sim-4.1/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">Launch Offline Lab <i class="fa-solid fa-microscope" style="margin-left: 8px;"></i></a>
               <a href="../theory/theory-4.1.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
             </div>
           </div>
