@@ -169,12 +169,30 @@ tasks:
     description: "Authored theory documentation for Periodic Boundary Conditions and Follower Force mechanics for the Annulus benchmark."
 
   - title: "Phase 3.4: Hyper-Reduction Benchmark (Cantilever Beam)"
-    status: In Progress
+    status: Done
     priority: High
-    deadline: 2026-05-12
-    description: "FOM vs Galerkin ROM vs HR-ROM comparison on nonlinear cantilever beam using six hyper-reduction methods: DEIM, UDEIM, Gappy POD, ECSW, ECM, Collocation (LSPG). Report section drafted."
+    deadline: 2026-05-05
+    description: "FOM vs Galerkin ROM vs HR-ROM comparison on nonlinear cantilever beam using six hyper-reduction methods: DEIM, UDEIM, Gappy POD, ECSW, ECM, Collocation (LSPG). Successfully benchmarked accuracy vs speedup."
+
+  - title: "Phase 3.5: ECSW & U-DEIM Stabilization"
+    status: Done
+    priority: High
+    deadline: 2026-05-05
+    description: "Implemented proper Greedy OMP solver for ECSW. Fixed sparsity issues and resolved audit suite crashes. Achieved stable, monotonic convergence."
+
+  - title: "Phase 3.6: Technical Documentation Hub"
+    status: Done
+    priority: Medium
+    deadline: 2026-05-05
+    description: "Built a centralized Flowchart Gallery using Mermaid.js to visualize algorithmic pipelines for all project phases."
 
   # ── IN PROGRESS ───────────────────────────────────────────────────────────
+
+  - title: "Phase 4: Nonlinear Structural Dynamics (Transient)"
+    status: In Progress
+    priority: High
+    deadline: 2026-05-26
+    description: "Developing the real-time time-integration kernel (Generalized-alpha/Newmark). Expanding hyper-reduction to handle transient inertia and damping forces."
 
   # ── TO DO (Phase 2E — Hyper-reduction) ────────────────────────────────────
   - title: "Phase 2E: Implement & Compare Hyper-reduction (DEIM / ECS / ECSW)"
@@ -204,12 +222,6 @@ tasks:
     deadline: 2026-08-10
     description: "Implement full 2D dynamic simulation with interactive control points running at 24 fps."
 
-  # ── TO DO (Phase 4 — Digital Twin Frontend Development) ───────────────────────
-  - title: "Phase 4: Design Digital Twin Frontend"
-    status: To Do
-    priority: Medium
-    deadline: 2026-07-14
-    description: Build interactive viewer for ROM outputs. Parameter sliders, real-time displacement plot, error indicator. Connect to JSON export or Flask API.
 
   # ── TO DO (Phase 4 — Physical Extension Note) ─────────────────────────────
   - title: Write Physical Extension Design Note
