@@ -23,10 +23,16 @@ class TransientVisuals {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(this.renderer.domElement);
 
-        this.camera.position.set(10, 10, 30);
-        this.camera.lookAt(0, 0, 0);
+        this.camera.position.set(5, 5, 40);
+        this.camera.lookAt(5, 5, 0);
         
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableRotate = false; // Disable 3D rotation
+        this.controls.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE
+        };
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
         const ambient = new THREE.AmbientLight(0xffffff, 0.6);
