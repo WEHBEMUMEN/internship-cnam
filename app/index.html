@@ -259,6 +259,9 @@
             <button class="filter-btn" onclick="filterPhases('3', this)">
               <i class="fa-solid fa-link"></i> Phase 3: Nonlinear 2D
             </button>
+            <button class="filter-btn" onclick="filterPhases('4', this)">
+              <i class="fa-solid fa-bolt-lightning"></i> Phase 4: NL Dynamic
+            </button>
           </div>
 
         <!-- Phase 1: 1D Foundation -->
@@ -740,6 +743,27 @@
             <div class="app-actions">
               <a href="simulations/iga-sim-3.5c/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">Launch 3.5c Lab <i class="fa-solid fa-bolt" style="margin-left: 8px;"></i></a>
               <a href="../theory/theory-3.4c.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+        </div>
+
+        <hr data-phase="4" class="grid-separator">
+
+        <h3 data-phase="4" class="phase-section-title" style="color: #f43f5e;">
+            <i class="fa-solid fa-bolt-lightning"></i> Phase 4: Nonlinear Structural Dynamics
+        </h3>
+
+        <div class="grid">
+          <!-- Phase 4.1: Transient Analysis -->
+          <div class="card reveal reveal-up" data-phase="4">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-stopwatch-20" style="font-size: 2rem; color: #f43f5e;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2);">PHASE 4.1</span>
+            </div>
+            <h3>Transient Nonlinear ROM</h3>
+            <p>Real-time time-integration using Generalized-α and Newmark-β schemes. Expanding Hyper-Reduction to include inertia and damping forces.</p>
+            <div class="app-actions">
+              <button class="btn btn-primary btn-center" style="width: 100%; background: #f43f5e; opacity: 0.7; cursor: not-allowed;" disabled>Coming Soon <i class="fa-solid fa-clock" style="margin-left: 8px;"></i></button>
             </div>
           </div>
         </div>
