@@ -209,5 +209,3 @@ build/
 *.bcf
 report/svg-inkscape/
 
-# Large Resources
-resources/Recorces/
