@@ -29,8 +29,12 @@
         body { background:var(--bg); color:#f8fafc; font-family:'Outfit',sans-serif; overflow:hidden; }
         #canvas-container { position:absolute; inset:0; background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%); }
         .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.5); cursor: move; user-select: none; }
-        #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; }
-        #stats-panel { position:absolute; top:20px; right:20px; width:380px; padding:20px; z-index:10; }
+        #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; scrollbar-width: thin; scrollbar-color: var(--primary) transparent; }
+        #ui-panel::-webkit-scrollbar { width: 4px; }
+        #ui-panel::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+        #stats-panel { position:absolute; top:20px; right:20px; width:380px; padding:20px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; scrollbar-width: thin; scrollbar-color: var(--primary) transparent; }
+        #stats-panel::-webkit-scrollbar { width: 4px; }
+        #stats-panel::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
         #chart-panel { position:absolute; bottom:20px; left:calc(50% - 390px); width:780px; padding:20px; z-index:10; }
         .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #f43f5e, #fb7185); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         .panel-sub { font-size:0.75rem; color:#94a3b8; margin-top:4px; font-weight:500; }
