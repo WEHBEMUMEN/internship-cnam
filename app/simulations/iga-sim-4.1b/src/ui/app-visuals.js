@@ -16,6 +16,9 @@ class TransientVisuals {
         this.scene.add(this.markersGroup);
         
         this.defScale = 10;
+        this.showActiveElements = false;
+        this.activeElementsGroup = new THREE.Group();
+        this.scene.add(this.activeElementsGroup);
         this.init();
     }
 
@@ -141,9 +144,43 @@ class TransientVisuals {
         }
     }
 
+    updateActiveElements() {
+        this.activeElementsGroup.clear();
+        if (!this.showActiveElements || !this.app.rom || !this.app.rom.indices) return;
+
+        const patch = this.app.patch;
+        const { U, V } = patch;
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const nV = uniqueV.length - 1;
+
+        const mat = new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 2, depthTest: false });
+
+        this.app.rom.indices.forEach(idx => {
+            const i = Math.floor(idx / nV);
+            const j = idx % nV;
+            
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            const vMin = uniqueV[j], vMax = uniqueV[j+1];
+
+            // Draw a box for this element
+            const pts = [];
+            const res = 4;
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMin + (uMax-uMin)*(k/res), vMin).position);
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMax, vMin + (vMax-vMin)*(k/res)).position);
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMax - (uMax-uMin)*(k/res), vMax).position);
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMin, vMax - (vMax-vMin)*(k/res)).position);
+
+            const geometry = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(p.x, p.y, p.z + 0.05)));
+            const line = new THREE.Line(geometry, mat);
+            line.renderOrder = 2000;
+            this.activeElementsGroup.add(line);
+        });
+    }
+
     updateMesh(uDisp, t = 0) {
         if (this.markersGroup.children.length === 0) this.drawMarkers();
         this.updateForceMarkers(t);
+        this.updateActiveElements();
         const res = 24; 
         const posDef = [], colors = [];
         let maxDisp = 0;

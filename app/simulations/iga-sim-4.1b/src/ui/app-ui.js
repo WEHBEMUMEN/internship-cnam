@@ -50,6 +50,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-run').addEventListener('click', () => app.toggle());
     document.getElementById('btn-reset').addEventListener('click', () => app.reset());
     
+    // Toggle Active Elements
+    const toggleActive = document.getElementById('toggle-active');
+    if (toggleActive) {
+        toggleActive.addEventListener('change', (e) => {
+            app.viz.showActiveElements = e.target.checked;
+            if (app.rom && app.rom.u) app.viz.updateMesh(app.rom.u);
+        });
+    }
+    
     const btnAudit = document.getElementById('btn-audit');
     if (btnAudit) {
         btnAudit.addEventListener('click', () => {
