@@ -1,5 +1,0 @@
-[run]
-source = nutils
-
-[html]
-directory = build/coverage/
