@@ -13,7 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'input-k', valId: 'k-val', suffix: '' },
         { id: 'input-m', valId: 'm-val', suffix: '' },
         { id: 'input-h', valId: 'h-val', suffix: '' },
-        { id: 'input-p', valId: 'p-val', suffix: '' }
+        { id: 'input-p', valId: 'p-val', suffix: '' },
+        { id: 'input-fmin', valId: 'fmin-val', suffix: 'N' },
+        { id: 'input-fmax', valId: 'fmax-val', suffix: 'N' },
+        { id: 'input-samples', valId: 'samples-val', suffix: '' }
     ];
 
     inputs.forEach(cfg => {

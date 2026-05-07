@@ -137,11 +137,12 @@ class DynamicsSolver {
             const Fint = this.fom.calculateInternalForce(this.patch, u_next);
             const Kt = this.fom.calculateTangentStiffness(this.patch, u_next);
             
-            // Damping Matrix C = alpha*M + betaR*Kt
-            // Residual R = M*a_next + C*v_next + Fint - Fext
-            const R = new Float64Array(this.dofs);
-            const Keff = new Array(this.dofs).fill(0).map(() => new Float64Array(this.dofs));
-
+            // Effective Stiffness Keff = Kt + a0*M + a1*C
+            // where C = alpha*M + betaR*Kt
+            if (!this.R_res) this.R_res = new Float64Array(this.dofs);
+            
+            const R_res = this.R_res;
+            const Keff = Array.from({ length: this.dofs }, () => new Float64Array(this.dofs)); // Fresh array to avoid row-swap corruption
             for (let i = 0; i < this.dofs; i++) {
                 // M*a_next component
                 let Ma = 0;
@@ -157,14 +158,17 @@ class DynamicsSolver {
                     Keff[i][j] = Kt[i][j] + a0 * this.M[i][j] + a1 * Cij;
                 }
 
-                R[i] = Ma + Cv + Fint[i] - Fext[i];
+                R_res[i] = Ma + Cv + Fint[i] - Fext[i];
             }
 
-            // Apply Boundary Conditions to R and Keff
-            this.fom.applyPenaltyConstraints(Keff, R, u_next, this.patch, []); 
+            // Boundary Conditions (Fixed Left End)
+            const nV = this.patch.controlPoints[0].length;
+            const bcs = [];
+            for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
+            
+            this.fom.applyPenaltyConstraints(Keff, R_res, u_next, this.patch, bcs);
 
-            // Solve Keff * du = -R
-            const du = this.fom.gaussianElimination(Keff, R.map(x => -x));
+            const du = this.fom.gaussianElimination(Keff, R_res.map(r => -r));
 
             // Update
             let norm = 0;

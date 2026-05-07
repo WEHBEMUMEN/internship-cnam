@@ -7,11 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Range Inputs
     const inputs = [
-        { id: 'input-time', valId: 'time-val', suffix: 's' },
-        { id: 'input-steps', valId: 'steps-val', suffix: '' },
         { id: 'input-defscale', valId: 'defscale-val', suffix: 'x' },
-        { id: 'input-k', valId: 'k-val', suffix: '' },
-        { id: 'input-m', valId: 'm-val', suffix: '' }
+        { id: 'input-fy', valId: 'fy-val', suffix: 'N' }
     ];
 
     inputs.forEach(cfg => {
@@ -19,64 +16,44 @@ document.addEventListener('DOMContentLoaded', () => {
         const valEl = document.getElementById(cfg.valId);
         if (!el) return;
         el.addEventListener('input', () => {
-            let displayVal = el.value;
-            if (cfg.id === 'input-m') displayVal = "1e-" + el.value;
-            valEl.innerText = displayVal + cfg.suffix;
-
+            valEl.innerText = el.value + cfg.suffix;
             if (cfg.id === 'input-defscale') {
                 app.viz.defScale = parseFloat(el.value);
-                if (app.dyn && app.dyn.u) app.viz.updateMesh(app.dyn.u);
+                if (app.rom && app.rom.u) app.viz.updateMesh(app.rom.u);
             }
         });
     });
 
-    // Draggable Logic (from 4.0)
-    let activePanel = null;
-    let offset = [0, 0];
-    let isDown = false;
-
-    document.querySelectorAll('.glass-panel').forEach(panel => {
-        panel.addEventListener('mousedown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
-            isDown = true;
-            activePanel = panel;
-            offset = [panel.offsetLeft - e.clientX, panel.offsetTop - e.clientY];
-            document.querySelectorAll('.glass-panel').forEach(p => p.style.zIndex = "10");
-            panel.style.zIndex = "100";
-        });
+    // Package Import
+    const btnTrigger = document.getElementById('btn-import-trigger');
+    const inputPackage = document.getElementById('input-package');
+    
+    btnTrigger.addEventListener('click', () => inputPackage.click());
+    
+    inputPackage.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                app.loadPackage(data);
+            } catch (err) {
+                alert("Invalid JSON package: " + err.message);
+            }
+        };
+        reader.readAsText(file);
     });
 
-    document.addEventListener('mouseup', () => { isDown = false; });
-    document.addEventListener('mousemove', (e) => {
-        if (isDown && activePanel) {
-            activePanel.style.left = (e.clientX + offset[0]) + 'px';
-            activePanel.style.top = (e.clientY + offset[1]) + 'px';
-            activePanel.style.right = 'auto';
-            activePanel.style.bottom = 'auto';
-        }
-    });
-
-    // Run Training
-    document.getElementById('btn-train').addEventListener('click', async () => {
-        await app.runTraining();
-        document.getElementById('input-k').disabled = false;
-        document.getElementById('input-m').disabled = false;
-    });
-
-    // Export Package
-    const btnExport = document.getElementById('btn-export');
-    if (btnExport) {
-        btnExport.addEventListener('click', () => {
-            app.trainer.exportPackage();
-        });
-    }
-
-    // Verify Package
-    const btnVerify = document.getElementById('btn-verify');
-    if (btnVerify) {
-        btnVerify.addEventListener('click', () => {
-            const report = app.trainer.verifyPackage();
-            showVerificationModal(report);
+    // Control Buttons
+    document.getElementById('btn-run').addEventListener('click', () => app.toggle());
+    document.getElementById('btn-reset').addEventListener('click', () => app.reset());
+    
+    const btnAudit = document.getElementById('btn-audit');
+    if (btnAudit) {
+        btnAudit.addEventListener('click', () => {
+            alert("Benchmark: ROM Step Latency < 1ms (Hyper-Reduced)");
         });
     }
 

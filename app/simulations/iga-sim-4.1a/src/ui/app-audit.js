@@ -8,7 +8,7 @@ class OfflineAudit {
         this.app = app;
         this.startTime = 0;
         this.phases = {
-            1: { name: "Transient FOM Training", status: "Pending" },
+            1: { name: "Parametric Load Sweep", status: "Pending" },
             2: { name: "POD Basis Extraction", status: "Pending" },
             3: { name: "ECSW Sparse Sampling", status: "Pending" },
             4: { name: "Reduced Matrix Assembly", status: "Pending" },
@@ -57,6 +57,14 @@ class OfflineAudit {
             "Total Elements": total,
             "Sampled Elements": sampled,
             "Sparsity Ratio": ratio + "%"
+        });
+    }
+
+    reportReconstruction(avgErr, maxErr) {
+        this.log(2, `Basis Reconstruction Quality Check:`, {
+            "Average L2 Error": (avgErr * 100).toExponential(4) + "%",
+            "Maximum L2 Error": (maxErr * 100).toExponential(4) + "%",
+            "Health": maxErr < 0.01 ? "✅ EXCELLENT" : (maxErr < 0.05 ? "⚠️ ACCEPTABLE" : "❌ POOR")
         });
     }
 

@@ -89,20 +89,21 @@ class OfflineLab {
         if (this.isTraining) return;
         this.isTraining = true;
         this.audit.start();
-        this.audit.log(1, "Starting high-fidelity FOM simulation...");
+        this.audit.log(1, "Starting parametric Load Sweep (High-Fidelity FOM)...");
         
-        const T = parseFloat(document.getElementById('input-time').value);
-        const steps = parseInt(document.getElementById('input-steps').value);
-        const dt_calc = T / steps;
+        const fMin = parseFloat(document.getElementById('input-fmin').value);
+        const fMax = parseFloat(document.getElementById('input-fmax').value);
+        const samples = parseInt(document.getElementById('input-samples').value);
 
         this.snapshots = [];
         this.dyn.u.fill(0);
         this.dyn.v.fill(0);
         this.dyn.a.fill(0);
 
-        for (let s = 0; s < steps; s++) {
+        for (let s = 0; s < samples; s++) {
+            // Equidistant Force Sampling
+            const mag = fMin + (fMax - fMin) * (s / (samples - 1));
             const Fext = new Float64Array(this.dyn.dofs);
-            const mag = 400; 
 
             const nU = this.patch.controlPoints.length;
             const nV = this.patch.controlPoints[0].length;
@@ -111,22 +112,21 @@ class OfflineLab {
 
             for (let j = 0; j < nV; j++) {
                 const dofIdx = ((nU - 1) * nV + j) * 2 + 1;
-                // EXACT IGA CONSISTENT FORCE DISTRIBUTION:
-                // \int N_{j,q} d\eta = (V_{j+q+1} - V_j) / (q + 1)
                 const weight = (V[j + q + 1] - V[j]) / (q + 1);
                 Fext[dofIdx] = -mag * weight;
             }
 
-            await this.dyn.solveStep(dt_calc, Fext);
+            // Run until steady state (Quasi-static approximation using dynamics with high damping)
+            // Or just solve a single large step. Let's do 10 steps of 0.1s to converge.
+            for(let step=0; step<10; step++) {
+                await this.dyn.solveStep(0.1, Fext);
+            }
+            
             this.snapshots.push(new Float64Array(this.dyn.u));
             
-            // UI Performance Optimization: Render every 5 steps or skip more if many steps
-            const skipRate = Math.max(1, Math.floor(steps / 20)); 
-            if (s % skipRate === 0) {
-                this.viz.updateMesh(this.dyn.u, s * dt_calc);
-                this.updateTrace(s * dt_calc, this.dyn.u[this.dyn.dofs - 1]);
-                this.audit.log(1, `Snapshot collection: ${s}/${steps}...`);
-            }
+            this.viz.updateMesh(this.dyn.u, s);
+            this.updateTrace(s, this.dyn.u[this.dyn.dofs - 1]);
+            this.audit.log(1, `Load Level ${mag.toFixed(0)}N: ${s+1}/${samples} snapshots collected.`);
         }
         this.audit.log(1, `Phase 1 Complete. Harvested ${this.snapshots.length} snapshots.`);
 
@@ -136,6 +136,30 @@ class OfflineLab {
         const { Phi, energyTrace } = this.trainer.computePOD(this.snapshots, k);
         this.updateEnergyChart(energyTrace);
         this.audit.reportSVD(energyTrace, Phi.columns);
+
+        // Verification: Compare Basis against ALL snapshots (Audit requirement)
+        let totalErr = 0, maxErr = 0;
+        const { Matrix } = window.mlMatrix;
+        const PhiT = Phi.transpose();
+
+        this.snapshots.forEach(u_fom => {
+            const u_mat = new Matrix([Array.from(u_fom)]).transpose();
+            // Project & Reconstruct: u_rom = Phi * Phi^T * u_fom
+            const q = PhiT.mmul(u_mat);
+            const u_rec_mat = Phi.mmul(q);
+            const u_rec = u_rec_mat.to2DArray().map(r => r[0]);
+
+            let diffNorm = 0, fomNorm = 0;
+            for(let i=0; i<u_fom.length; i++) {
+                const d = u_fom[i] - u_rec[i];
+                diffNorm += d*d;
+                fomNorm += u_fom[i] * u_fom[i];
+            }
+            const relErr = Math.sqrt(diffNorm) / (Math.sqrt(fomNorm) || 1e-12);
+            totalErr += relErr;
+            maxErr = Math.max(maxErr, relErr);
+        });
+        this.audit.reportReconstruction(totalErr / this.snapshots.length, maxErr);
 
         // Phase 3: ECSW
         this.audit.log(3, "Starting ECSW Sparse Training...");

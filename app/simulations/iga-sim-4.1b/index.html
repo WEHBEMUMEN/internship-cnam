@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IGA ROM Trainer — Phase 4.1b</title>
+    <title>IGA Online Simulator — Phase 4.1b</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,8 +29,12 @@
         body { background:var(--bg); color:#f8fafc; font-family:'Outfit',sans-serif; overflow:hidden; }
         #canvas-container { position:absolute; inset:0; background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%); }
         .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.5); cursor: move; user-select: none; }
-        #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; }
-        #stats-panel { position:absolute; top:20px; right:20px; width:380px; padding:20px; z-index:10; }
+        #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; scrollbar-width: thin; scrollbar-color: var(--primary) transparent; }
+        #ui-panel::-webkit-scrollbar { width: 4px; }
+        #ui-panel::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+        #stats-panel { position:absolute; top:20px; right:20px; width:380px; padding:20px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; scrollbar-width: thin; scrollbar-color: var(--primary) transparent; }
+        #stats-panel::-webkit-scrollbar { width: 4px; }
+        #stats-panel::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
         #chart-panel { position:absolute; bottom:20px; left:calc(50% - 390px); width:780px; padding:20px; z-index:10; }
         .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #f43f5e, #fb7185); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         .panel-sub { font-size:0.75rem; color:#94a3b8; margin-top:4px; font-weight:500; }
@@ -64,54 +68,44 @@
     <!-- Left Panel -->
     <div id="ui-panel" class="glass-panel">
         <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-        <div class="panel-title">Phase 4.1b <span style="color:#10b981">Offline</span></div>
-        <div class="panel-sub">Transient Training · Dynamic Package Generation</div>
+        <div class="panel-title">Phase 4.1b <span style="color:#10b981">Online</span></div>
+        <div class="panel-sub">Hyper-Reduced Simulator · Real-time Inference</div>
         <hr class="divider">
 
         <div class="control-group">
-            <span class="section-label">1 · Dynamic Snapshots</span>
-            <p style="font-size:.68rem;color:#94a3b8;margin-bottom:12px;line-height:1.6">Runs a full Transient FOM (Newmark-&beta;) to collect displacement and force snapshots.</p>
+            <span class="section-label">1 · ROM Package Import</span>
+            <p style="font-size:.68rem;color:#94a3b8;margin-bottom:12px;line-height:1.6">Upload the .json package generated during the Offline Training phase to initialize the reduced basis and ECSW weights.</p>
             
-            <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Total Time (T)</span><span class="val" id="time-val">1.0s</span></div>
-                <input type="range" id="input-time" min="0.5" max="5.0" step="0.5" value="1.0">
-            </div>
-
-            <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Time Steps (&Delta;t)</span><span class="val" id="steps-val">100</span></div>
-                <input type="range" id="input-steps" min="20" max="200" step="10" value="100">
-            </div>
-
-            <div style="display:flex; gap:8px;">
-                <button id="btn-train" class="btn-action"><i class="fa-solid fa-play"></i> Run FOM Training</button>
-            </div>
-            <div id="train-status" class="hidden"></div>
+            <button id="btn-import-trigger" class="btn-action" style="background:linear-gradient(135deg,#6366f1,#4f46e5);">
+                <i class="fa-solid fa-file-import"></i> Load ROM Package (.json)
+            </button>
+            <input type="file" id="input-package" accept=".json" class="hidden">
+            <div id="import-status" style="font-size:0.65rem; color:#10b981; margin-top:10px; font-weight:700; text-align:center;"></div>
         </div>
 
         <div class="control-group">
-            <span class="section-label">2 · ROM Synthesis</span>
+            <span class="section-label">2 · Online Simulation</span>
             <div style="margin-bottom: 14px;">
                 <div class="label-row"><span class="lbl">Deformation Scale</span><span class="val" id="defscale-val">10x</span></div>
-                <input type="range" id="input-defscale" min="0" max="2000" step="10" value="10">
+                <input type="range" id="input-defscale" min="1" max="100" step="1" value="10">
             </div>
+            
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">POD Modes k</span><span class="val" id="k-val">10</span></div>
-                <input type="range" id="input-k" min="1" max="30" value="10" disabled>
+                <div class="label-row"><span class="lbl">External Force (F<sub>y</sub>)</span><span class="val" id="fy-val">400N</span></div>
+                <input type="range" id="input-fy" min="-1000" max="1000" step="50" value="400">
             </div>
-            <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">ECSW Tol &tau;</span><span class="val" id="m-val">1e-4</span></div>
-                <input type="range" id="input-m" min="1" max="7" value="4" disabled>
+
+            <div class="btn-grid">
+                <button id="btn-run" class="btn-action" disabled><i class="fa-solid fa-play"></i> Start Online ROM</button>
+                <button id="btn-reset" class="btn-reset" style="margin-top:8px;"><i class="fa-solid fa-rotate-left"></i> Reset Simulation</button>
             </div>
         </div>
 
         <hr class="divider">
 
         <div class="control-group">
-            <span class="section-label">3 · Package Export</span>
-            <div class="btn-grid">
-                <button id="btn-export" class="btn-action" style="background:linear-gradient(135deg,#10b981,#059669);" disabled><i class="fa-solid fa-file-export"></i> Export JSON Package</button>
-                <button id="btn-verify" class="btn-action" style="background:linear-gradient(135deg,#6366f1,#4f46e5); margin-top:8px;" disabled><i class="fa-solid fa-check-double"></i> Verify Package Content</button>
-            </div>
+            <span class="section-label">3 · Physics Audit</span>
+            <button id="btn-audit" class="btn-reset" style="width:100%; border-radius:12px; padding:10px; border:1px solid #f43f5e; background:none; color:#f43f5e; cursor:pointer; font-size:0.7rem; font-weight:700;"><i class="fa-solid fa-gauge-high"></i> Benchmark ROM Latency</button>
         </div>
     </div>
 
