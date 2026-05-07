@@ -14,6 +14,7 @@ class OfflineLab {
         
         this.snapshots = []; 
         this.isTraining = false;
+        this.audit = new window.OfflineAudit(this);
         
         this.init();
     }
