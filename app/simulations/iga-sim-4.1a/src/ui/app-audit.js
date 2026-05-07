@@ -110,20 +110,39 @@ class Audit41a {
             report.push(`   Disp Vector : ${uNaN ? '❌ NaN' : '✅ OK'}`);
             report.push(`   Max |U|      : ${(uMax * 1000).toFixed(4)} mm`);
 
-            report.push(`\n3. PHYSICAL CONSISTENCY`);
+            report.push(`\n3. PHYSICAL CONSISTENCY (U-OUTCOME)`);
+            // 1. Nonlinear Static Ground Truth
+            const F0 = parseFloat(document.getElementById('input-fmax')?.value) || 400;
+            const bcs = [];
+            for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
+            
+            const nU_f = patch.controlPoints.length;
+            const loads = [];
+            for (let j = 0; j < nV; j++) {
+                const weight = (V[j + q + 1] - V[j]) / (q + 1);
+                loads.push({ i: nU_f - 1, j: j, fx: 0, fy: -F0 * weight, type: 'nodal' });
+            }
+
+            const staticRes = app.fom.solveNonlinear(patch, bcs, loads, { iterations: 10, tolerance: 1e-6 });
+            const uStatic = staticRes.u;
+            const staticTipY = Math.abs(uStatic[app.dyn.dofs - 1]);
+            const currentTipY = Math.abs(app.dyn.u[app.dyn.dofs - 1]);
+
+            // 2. Linear Reference (Simple check for sanity)
             const L = 10.0, H = 2.0, t = app.fom.thickness || 1.0, E = app.fom.E || 100000;
             const I = (t * Math.pow(H, 3)) / 12;
-            const F0 = 400; // Hardcoded mag in app-core for 4.1a
-            const staticTheory = (F0 * Math.pow(L, 3)) / (3 * E * I);
-            const currentTipY = Math.abs(app.dyn.u[app.dyn.dofs - 1]);
-            const ratio = staticTheory > 0 ? (currentTipY / staticTheory) : 0;
+            const linearTheory = (F0 * Math.pow(L, 3)) / (3 * E * I);
 
-            report.push(`   Theory (Linear): ${(staticTheory * 1000).toFixed(4)} mm`);
+            report.push(`   NL Static Tip (Truth): ${(staticTipY * 1000).toFixed(4)} mm`);
             report.push(`   Current Tip Y  : ${(currentTipY * 1000).toFixed(4)} mm`);
-            report.push(`   Accuracy Ratio : ${ratio.toFixed(4)}`);
             
-            if (patch.p === 1 && ratio < 0.2) {
-                report.push(`   ⚠️ DIAGNOSIS: Massive Shear Locking (p=1).`);
+            const nlRatio = staticTipY > 0 ? (currentTipY / staticTipY) : 0;
+            report.push(`   Convergence Ratio   : ${nlRatio.toFixed(4)} (Current/Static NL)`);
+
+            if (staticTipY < linearTheory * 0.5 && patch.p === 1) {
+                report.push(`   ⚠️ DIAGNOSIS: Massive Shear Locking detected (p=1).`);
+            } else if (staticTipY > linearTheory * 1.5) {
+                report.push(`   ℹ️ Geometric Nonlinearity detected.`);
             }
 
             report.push(`\n4. FORCE INTEGRATION`);
