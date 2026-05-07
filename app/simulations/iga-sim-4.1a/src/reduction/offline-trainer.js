@@ -7,11 +7,14 @@ class OfflineTrainer {
     constructor(app) {
         this.app = app;
         this.package = {
-            metadata: { date: new Date().toISOString(), version: "4.1-transient" },
-            basis: null, // Phi
-            weights: null, // w (ECSW)
+            metadata: { date: new Date().toISOString(), version: "4.1b-online" },
+            phi: null,
+            ecsw: { weights: [], indices: [] },
             reducedMatrices: { M_r: null, C_r: null },
-            dofs: 0
+            mesh: { h: 0, p: 1 },
+            k: 0,
+            snapshots: 0,
+            pod_energy: 0
         };
     }
 
@@ -52,10 +55,12 @@ class OfflineTrainer {
         // Truncate to k modes (ensure k doesn't exceed available columns)
         const actualK = Math.min(k, U.columns, s.length);
         const Phi = U.subMatrix(0, n - 1, 0, actualK - 1);
-        this.package.basis = Phi.to2DArray();
-        this.package.energy = energyTrace[actualK - 1];
+        this.package.phi = Phi.to2DArray();
+        this.package.pod_energy = energyTrace[actualK - 1];
+        this.package.k = actualK;
+        this.package.snapshots = snapshots.length;
         
-        console.log(`[Offline] POD Complete. Extracted ${actualK} modes. Energy: ${(this.package.energy * 100).toFixed(4)}%`);
+        console.log(`[Offline] POD Complete. Extracted ${actualK} modes. Energy: ${(this.package.pod_energy * 100).toFixed(4)}%`);
         return { Phi, energyTrace };
     }
 
@@ -63,16 +68,45 @@ class OfflineTrainer {
      * Phase 3: ECSW Sparse Sampling
      */
     async trainECSW(snapshots, Phi, tol = 1e-4) {
-        // Calculate total elements from patch knot spans
-        const uniqueU = [...new Set(this.app.patch.U)];
-        const uniqueV = [...new Set(this.app.patch.V)];
-        const totalElements = (uniqueU.length - 1) * (uniqueV.length - 1);
-        const sampledIndices = []; // Indices of selected elements
-        const weights = []; // Reduced weights
+        console.log(`[Offline] Starting ECSW Training with tol=${tol}...`);
+        
+        // 1. Subsample snapshots equidistantly to speed up training
+        // If we have 100 snapshots, training on all might be slow.
+        // We pick a subset that covers the entire force range equidistantly.
+        const maxTrainSnaps = 20;
+        const trainSnapshots = [];
+        if (snapshots.length <= maxTrainSnaps) {
+            snapshots.forEach(s => trainSnapshots.push(s));
+        } else {
+            const step = (snapshots.length - 1) / (maxTrainSnaps - 1);
+            for (let i = 0; i < maxTrainSnaps; i++) {
+                trainSnapshots.push(snapshots[Math.round(i * step)]);
+            }
+        }
+        console.log(`[Offline] Subsampled ${trainSnapshots.length}/${snapshots.length} snapshots for ECSW.`);
 
-        // Simulate training for audit demonstration
-        this.package.weights = { indices: sampledIndices, vals: weights };
-        return { indices: sampledIndices, weights };
+        // 2. Initialize and Run ECSW
+        const ecsw = new window.ECSWEngine();
+        const romDummy = { Phi: Phi }; 
+        
+        const result = await ecsw.train(this.app.fom, romDummy, this.app.patch, trainSnapshots, tol);
+        
+        // 3. Store in package
+        this.package.ecsw = {
+            indices: ecsw.sampleElements.map(el => el.i * ( [...new Set(this.app.patch.V)].length - 1) + el.j),
+            weights: ecsw.sampleElements.map(el => el.weight)
+        };
+        
+        // Store mesh info
+        this.package.mesh = {
+            h: parseInt(document.getElementById('input-h').value),
+            p: parseInt(document.getElementById('input-p').value)
+        };
+
+        return { 
+            indices: this.package.ecsw.indices, 
+            weights: this.package.ecsw.weights 
+        };
     }
 
     /**
@@ -93,7 +127,7 @@ class OfflineTrainer {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.package, null, 2));
         const downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "rom_package_4.1.json");
+        downloadAnchorNode.setAttribute("download", "rom_package_4.1b.json");
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
@@ -107,8 +141,8 @@ class OfflineTrainer {
         };
 
         // 1. Basis Existence & Dimensions
-        if (pkg.basis) {
-            const Phi = new mlMatrix.Matrix(pkg.basis);
+        if (pkg.phi) {
+            const Phi = new mlMatrix.Matrix(pkg.phi);
             report.checks.push({ name: "Basis Dimensions", status: "OK", detail: `${Phi.rows} DOFs x ${Phi.columns} Modes` });
             
             // 2. Orthogonality Check: Phi^T * Phi should be I
@@ -129,7 +163,7 @@ class OfflineTrainer {
         }
 
         // 3. Energy Check
-        const energy = (pkg.energy || 0) * 100;
+        const energy = (pkg.pod_energy || 0) * 100;
         const energyStatus = energy > 99.9 ? "OK" : "Warning";
         report.checks.push({ name: "Energy Capture", status: energyStatus, detail: `${energy.toFixed(4)}%` });
 

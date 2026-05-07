@@ -77,66 +77,56 @@ class Audit40 {
             if (maxLeak > 1e-5) report.push(`   ❌ WARNING: BC Leakage detected! Support is moving.`);
             else report.push(`   ✅ Boundary is strictly fixed.`);
 
-            report.push(`\n4. U-OUTCOME (PHYSICAL CONSISTENCY)`);
-            // Reference: Linear Cantilever Beam Theory (Tip Load P)
-            // Delta = (P * L^3) / (3 * E * I)
-            const L = 10.0; // From presets
-            const H = 2.0;
-            const t = app.fom.thickness || 1.0;
-            const E = app.fom.E || 100000;
-            const I = (t * Math.pow(H, 3)) / 12;
+            report.push(`\n4. PHYSICAL CONSISTENCY (U-OUTCOME)`);
+            // 1. Nonlinear Static Ground Truth
             const F0 = parseFloat(document.getElementById('input-f0').value) || 0;
-            const staticTheory = (F0 * Math.pow(L, 3)) / (3 * E * I);
+            const bcs = [];
+            for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
             
-            const currentTipY = Math.abs(app.dyn.u[app.dyn.dofs - 1]);
-            const ratio = staticTheory > 0 ? (currentTipY / staticTheory) : 0;
-
-            report.push(`   Theory (Linear): ${(staticTheory * 1000).toFixed(4)} mm`);
-            report.push(`   Current Tip Y  : ${(currentTipY * 1000).toFixed(4)} mm`);
-            report.push(`   Accuracy Ratio : ${ratio.toFixed(4)} (Current/Linear Theory)`);
-            
-            if (patch.p === 1 && ratio < 0.2) {
-                report.push(`   ⚠️ DIAGNOSIS: Massive Shear Locking detected (p=1 is too stiff).`);
-                report.push(`   ACTION: Increase p to 2 or increase Mesh Size (h).`);
-            } else if (patch.p >= 2 && ratio > 1.2) {
-                report.push(`   ℹ️ INFO: Nonlinearity/Dynamics adding >20% to static theory.`);
-            } else {
-                report.push(`   ✅ Results appear within expected physical ranges.`);
+            const nU_f = patch.controlPoints.length;
+            const loads = [];
+            for (let j = 0; j < nV; j++) {
+                const weight = (V[j + q + 1] - V[j]) / (q + 1);
+                loads.push({ i: nU_f - 1, j: j, fx: 0, fy: -F0 * weight, type: 'nodal' });
             }
 
-            report.push(`\n5. STATIC EQUILIBRIUM CONVERGENCE`);
-            if (F0 > 0) {
-                report.push(`   Computing Nonlinear Static Ground Truth...`);
-                // Prepare loads for static solver
-                const bcs = [];
-                for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
-                
-                const nU_f = patch.controlPoints.length;
-                const loads = [];
-                for (let j = 0; j < nV; j++) {
-                    const weight = (V[j + q + 1] - V[j]) / (q + 1);
-                    loads.push({ i: nU_f - 1, j: j, fx: 0, fy: -F0 * weight, type: 'nodal' });
-                }
+            const staticRes = app.fom.solveNonlinear(patch, bcs, loads, { iterations: 10, tolerance: 1e-6 });
+            const uStatic = staticRes.u;
+            const staticTipY = Math.abs(uStatic[app.dyn.dofs - 1]);
+            const currentTipY = Math.abs(app.dyn.u[app.dyn.dofs - 1]);
 
-                const staticRes = app.fom.solveNonlinear(patch, bcs, loads, { iterations: 10, tolerance: 1e-6 });
-                const uStatic = staticRes.u;
-                const staticTipY = Math.abs(uStatic[app.dyn.dofs - 1]);
-                
+            // 2. Linear Reference (Simple check for sanity)
+            const L = 10.0, H = 2.0, t = app.fom.thickness || 1.0, E = app.fom.E || 100000;
+            const I = (t * Math.pow(H, 3)) / 12;
+            const linearTheory = (F0 * Math.pow(L, 3)) / (3 * E * I);
+
+            report.push(`   NL Static Tip (Truth): ${(staticTipY * 1000).toFixed(4)} mm`);
+            report.push(`   Dynamic Tip (Current): ${(currentTipY * 1000).toFixed(4)} mm`);
+            
+            const nlRatio = staticTipY > 0 ? (currentTipY / staticTipY) : 0;
+            report.push(`   Convergence Ratio   : ${nlRatio.toFixed(4)} (Dynamic/Static NL)`);
+
+            if (nlRatio > 0.98 && nlRatio < 1.02) {
+                report.push(`   ✅ Steady-state reached (<2% diff from Static NL).`);
+            } else {
+                report.push(`   ℹ️ Transient state: Oscillating around equilibrium.`);
+            }
+
+            if (staticTipY < linearTheory * 0.5 && patch.p === 1) {
+                report.push(`   ⚠️ DIAGNOSIS: Massive Shear Locking (Static NL is 2x stiffer than Linear).`);
+            } else if (staticTipY > linearTheory * 1.5) {
+                report.push(`   ℹ️ Geometric Nonlinearity detected (Large Displacements).`);
+            }
+
+            report.push(`\n5. L2 CONVERGENCE ERROR`);
+            if (F0 > 0) {
                 let diff2 = 0, norm2 = 0;
                 for (let i = 0; i < app.dyn.dofs; i++) {
                     diff2 += Math.pow(app.dyn.u[i] - uStatic[i], 2);
                     norm2 += Math.pow(uStatic[i], 2);
                 }
                 const relError = Math.sqrt(diff2) / Math.sqrt(norm2 || 1e-18);
-
-                report.push(`   Static Ground Truth Tip: ${(staticTipY * 1000).toFixed(4)} mm`);
-                report.push(`   Current Convergence Err: ${(relError * 100).toFixed(2)}%`);
-                
-                if (relError < 0.01) {
-                    report.push(`   ✅ Steady-state reached (<1% error).`);
-                } else {
-                    report.push(`   ℹ️ Simulation is still oscillating or transient.`);
-                }
+                report.push(`   Global L2 Error  : ${(relError * 100).toFixed(4)}% (Dynamic vs Static NL)`);
             } else {
                 report.push(`   (Skipped: Load is zero)`);
             }

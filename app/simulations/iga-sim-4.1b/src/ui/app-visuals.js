@@ -63,10 +63,9 @@ class TransientVisuals {
 
     drawMarkers() {
         this.markersGroup.clear();
-        const dyn = this.app.dyn;
-        if (!dyn || !dyn.patch) return;
+        const patch = this.app.patch;
+        if (!patch) return;
 
-        const patch = dyn.patch;
         const nV = patch.controlPoints[0].length;
         const nU = patch.controlPoints.length;
 
@@ -111,7 +110,7 @@ class TransientVisuals {
         }
         this.forceArrowsGroup.clear();
 
-        const load = this.app.dyn.load;
+        const load = this.app.dyn ? this.app.dyn.load : (this.app.patch ? this.app.patch.load : null);
         if (!load) return;
 
         const timeFactor = load.timeFunction ? load.timeFunction(t) : 1.0;
