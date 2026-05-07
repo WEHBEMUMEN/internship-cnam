@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 4.0: Transient Nonlinear FOM | Digital Twin</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    .math-block { border-left-color: #0ea5e9; } 
+  </style>
+  <script src="../scripts.js" defer></script>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="../index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="../index.html"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal reveal-up">
+          <span class="badge" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9;">PHASE 4.0 THEORY</span>
+          <h2 class="section-title">Transient Nonlinear Structural Dynamics</h2>
+          <p class="section-sub">Direct integration of the full-order model (FOM) using Newmark-&beta;.</p>
+        </div>
+
+        <div class="theory-content reveal reveal-up delay-1" style="max-width: 900px; margin: 0 auto;">
+          
+          <div class="theory-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; box-shadow: var(--card-shadow);">
+            <h3 style="color: #0ea5e9; font-size: 1.6rem; margin-top: 0;"><i class="fa-solid fa-clock"></i> The Governing Equation</h3>
+            <p>Phase 4.0 extends our nonlinear static solver into the time domain by including inertial and dissipative effects:</p>
+            <div class="math-block">
+                $$\mathbf{M} \ddot{\mathbf{u}} + \mathbf{C} \dot{\mathbf{u}} + \mathbf{F}_{int}(\mathbf{u}) = \mathbf{F}_{ext}(t)$$
+            </div>
+            <p>This is a second-order nonlinear ODE. To achieve real-time performance in the Digital Twin, we must first solve this expensive FOM to collect snapshots.</p>
+          </div>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-wave-square"></i> 1. Mass and Damping Matrices</h3>
+          <p>The global mass matrix $\mathbf{M}$ is assembled using consistent IGA shape functions, ensuring accurate kinetic energy representation. We employ <strong>Rayleigh Damping</strong> for numerical stability:</p>
+          
+          <div class="math-block">
+            $$\mathbf{C} = \alpha \mathbf{M} + \beta_R \mathbf{K}_t$$
+          </div>
+          
+          <p>This proportional damping allows us to control low-frequency and high-frequency oscillations independently during the transient response.</p>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-rotate"></i> 2. The Newmark-&beta; Algorithm</h3>
+          <p>We use an implicit, unconditionally stable scheme to integrate the equations of motion. At each step $n+1$, we solve for displacement using an iterative Newton-Raphson loop:</p>
+          
+          <ul style="line-height: 1.8; color: var(--text-secondary); margin-left: 20px;">
+            <li><strong>Predictor</strong>: Estimate $\mathbf{u}_{n+1}$ using velocity and acceleration from the previous step.</li>
+            <li><strong>Equilibrium</strong>: Calculate the residual $\mathbf{R} = \mathbf{M}\ddot{\mathbf{u}} + \mathbf{C}\dot{\mathbf{u}} + \mathbf{F}_{int} - \mathbf{F}_{ext}$.</li>
+            <li><strong>Effective Stiffness</strong>: $\mathbf{K}_{eff} = \mathbf{K}_t + a_0 \mathbf{M} + a_1 \mathbf{C}$.</li>
+            <li><strong>Correction</strong>: $\Delta \mathbf{u} = -\mathbf{K}_{eff}^{-1} \mathbf{R}$.</li>
+          </ul>
+
+          <div style="background: rgba(14, 165, 233, 0.05); border-left: 4px solid #0ea5e9; padding: 20px; border-radius: 0 12px 12px 0; margin-top: 40px;">
+            <h4 style="color: #0ea5e9; margin: 0 0 10px 0;"><i class="fa-solid fa-shield-halved"></i> Numerical Stability</h4>
+            <p style="margin: 0;">By setting $\beta = 0.25$ and $\gamma = 0.5$, the scheme becomes the <strong>Average Acceleration Method</strong>, which is energy-conserving and prevents non-physical damping of lower modes.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 80px; text-align: center;">
+          <a href="../index.html" class="btn btn-primary" style="background: #0ea5e9; padding: 15px 35px; font-size: 1.1rem; border-radius: 50px;">
+            Back to Hub <i class="fa-solid fa-arrow-right" style="margin-left: 10px;"></i>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBE Mumen & EPN04, Cnam.</p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</body>
+</html>

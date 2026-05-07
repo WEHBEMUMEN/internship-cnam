@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
     <!-- Shared Engines -->
     <script src="../phase-2-core/src/nurbs-2d.js?v=3"></script>
@@ -32,9 +32,10 @@
         .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.5); }
         #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
         #stats-panel { position:absolute; top:20px; right:20px; width:400px; padding:20px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
-        #chart-panel { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); width:780px; padding:20px; z-index:10; }
-        .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #0ea5e9, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #chart-panel { position:absolute; bottom:20px; left:calc(50% - 390px); width:780px; padding:20px; z-index:10; }
+        .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #0ea5e9, #38bdf8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         .panel-sub { font-size:0.75rem; color:#94a3b8; margin-top:4px; font-weight:500; }
+        .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.5); cursor: move; user-select: none; }
         .section-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#0ea5e9; margin-bottom:12px; display:block; }
         .control-group { margin-bottom:20px; }
         .label-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
@@ -53,6 +54,16 @@
         .divider { border: 0; border-top: 1px solid rgba(14,165,233,0.1); margin:20px 0; }
         #train-status { font-size:0.68rem; font-family:'JetBrains Mono',monospace; color:#0ea5e9; margin-top:10px; min-height:16px; text-align:center; }
         .hidden { display:none !important; }
+
+        /* Toggle Switch Implementation (Replaces Tailwind) */
+        .toggle-container { display:flex; align-items:center; gap:12px; cursor:pointer; }
+        .toggle-bg { width:40px; height:20px; background:#334155; border-radius:10px; transition:all 0.3s; position:relative; }
+        .toggle-dot { position:absolute; top:4px; left:4px; width:12px; height:12px; background:white; border-radius:50%; transition:all 0.3s; }
+        .toggle-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; }
+
+        .btn-row { display:flex; gap:10px; margin-top:10px; }
+        .btn-reset { flex:1; padding:14px; border-radius:16px; font-size:0.8rem; font-weight:700; cursor:pointer; background:rgba(30,41,59,0.5); color:#94a3b8; border:1px solid var(--border); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+        .btn-reset:hover { background:rgba(30,41,59,0.8); color:#f8fafc; border-color:var(--primary); }
         .back-link { font-size:0.65rem; text-transform:uppercase; letter-spacing:1.2px; color:#94a3b8; display:flex; align-items:center; gap:8px; text-decoration:none; margin-bottom:16px; transition:color .2s; font-weight:600; }
         .back-link:hover { color:var(--primary); }
         .live-dot { width:8px; height:8px; background:#10b981; border-radius:50%; animation:pulse 2s infinite; }
@@ -65,29 +76,19 @@
     <!-- Left Panel -->
     <div id="ui-panel" class="glass-panel">
         <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-        <div class="panel-title">Phase 4.0 <span style="color:#10b981">Transient</span></div>
-        <div class="panel-sub">Nonlinear IGA Dynamics · FOM Ground Truth</div>
+        <div class="panel-title">Phase 4.0 <span style="color:#10b981">Live</span></div>
+        <div class="panel-sub">Nonlinear IGA Dynamics · Digital Twin</div>
         <hr class="divider">
 
         <div class="control-group">
-            <span class="section-label">1 · Newmark-&beta; Integrator</span>
-            <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Total Time (T)</span><span class="val" id="time-val">1.0s</span></div>
-                <input type="range" id="input-time" min="0.1" max="2.0" step="0.1" value="0.5">
-            </div>
+            <span class="section-label">1 · Real-Time Clock</span>
             <div style="margin-bottom: 14px;">
                 <div class="label-row"><span class="lbl">Step Size (&Delta;t)</span><span class="val" id="dt-val">0.005s</span></div>
-                <input type="range" id="input-dt" min="0.001" max="0.02" step="0.001" value="0.005">
+                <input type="range" id="input-dt" min="0.001" max="0.1" step="0.001" value="0.005">
             </div>
-            <div style="display:flex; justify-content:space-between; gap:10px;">
-                <div style="width:48%">
-                    <div class="label-row"><span class="lbl">&beta; (Beta)</span><span class="val">0.25</span></div>
-                    <div style="font-size:0.6rem; color:#94a3b8">Avg Acceleration</div>
-                </div>
-                <div style="width:48%">
-                    <div class="label-row"><span class="lbl">&gamma; (Gamma)</span><span class="val">0.50</span></div>
-                    <div style="font-size:0.6rem; color:#94a3b8">Unconditional Stable</div>
-                </div>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Simulation Speed</span><span class="val" id="timescale-val">1.0x</span></div>
+                <input type="range" id="input-timescale" min="0.1" max="10.0" step="0.1" value="1.0">
             </div>
         </div>
 
@@ -95,11 +96,11 @@
             <span class="section-label">2 · Rayleigh Damping</span>
             <div style="margin-bottom: 14px;">
                 <div class="label-row"><span class="lbl">Mass Coeff (&alpha;)</span><span class="val" id="alpha-val">0.5</span></div>
-                <input type="range" id="input-alpha" min="0" max="2.0" step="0.1" value="0.5">
+                <input type="range" id="input-alpha" min="0" max="20.0" step="0.1" value="0.5">
             </div>
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Stiff Coeff (&beta;<sub>R</sub>)</span><span class="val" id="beta-val">0.001</span></div>
-                <input type="range" id="input-beta" min="0" max="0.01" step="0.0005" value="0.001">
+                <div class="label-row"><span class="lbl">Stiff Coeff (&beta;<sub>R</sub>)</span><span class="val" id="beta-val">0.0</span></div>
+                <input type="range" id="input-beta" min="0" max="0.1" step="0.0001" value="0">
             </div>
         </div>
 
@@ -108,17 +109,50 @@
         <div class="control-group">
             <span class="section-label">3 · External Force</span>
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Amplitude (F<sub>0</sub>)</span><span class="val" id="f0-val">200N</span></div>
-                <input type="range" id="input-f0" min="50" max="1000" step="50" value="400">
+                <div class="label-row"><span class="lbl">Amplitude (F<sub>0</sub>)</span><span class="val" id="f0-val">400N</span></div>
+                <input type="range" id="input-f0" min="0" max="2000" step="50" value="400">
             </div>
-            <select id="input-force-type" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:12px; font-size:0.75rem; padding:10px; color:#f8fafc; outline:none; cursor:pointer;">
+            <select id="input-force-type" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:12px; font-size:0.75rem; padding:10px; color:#f8fafc; outline:none; cursor:pointer; margin-bottom:15px;">
                 <option value="step">Step Force</option>
                 <option value="impulse">Short Impulse</option>
                 <option value="harmonic">Harmonic Oscillation</option>
             </select>
         </div>
 
-        <button id="btn-run" class="btn-action"><i class="fa-solid fa-play"></i> Run Transient FOM</button>
+        <div class="control-group">
+            <span class="section-label">4 · Visualization</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom:14px;">
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">Mesh Size (h)</span><span class="val" id="h-val">0</span></div>
+                    <input type="range" id="input-h" min="0" max="3" step="1" value="0">
+                </div>
+                <div style="width:48%">
+                    <div class="label-row"><span class="lbl">Degree (p)</span><span class="val" id="p-val">1</span></div>
+                    <input type="range" id="input-p" min="1" max="4" step="1" value="1">
+                </div>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Visual Detail</span><span class="val" id="res-val">24x24</span></div>
+                <input type="range" id="input-res" min="8" max="64" step="4" value="24">
+            </div>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Deformation Scale</span><span class="val" id="defscale-val">10x</span></div>
+                <input type="range" id="input-defscale" min="1" max="50" step="1" value="10">
+            </div>
+            <div class="toggle-container" id="toggle-cp-trigger">
+                <input type="checkbox" id="check-cp" class="hidden">
+                <div class="toggle-bg" id="toggle-bg">
+                    <div class="toggle-dot" id="toggle-dot"></div>
+                </div>
+                <span class="toggle-label">Show Control Points</span>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button id="btn-run" class="btn-action" style="flex:2;"><i class="fa-solid fa-pause"></i> Pause</button>
+            <button id="btn-reset" class="btn-reset"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+        </div>
+        <button id="btn-audit" class="btn-reset" style="margin-top:10px; width:100%; border-color:#f43f5e; color:#f43f5e; font-size:0.7rem;"><i class="fa-solid fa-bug"></i> Run Diagnostic Audit</button>
         <div id="run-status" class="hidden"></div>
     </div>
 
@@ -135,7 +169,7 @@
             <div class="stat-card"><span class="lbl">Tip Disp</span><div class="stat-num" id="tip-disp">—</div></div>
         </div>
 
-        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px">Real-time Response</div>
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:8px">External Force Profile</div>
         <div style="height: 180px; position: relative;">
             <canvas id="chart-response" style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px;"></canvas>
         </div>
@@ -154,5 +188,6 @@
     <script src="src/app-visuals-40.js"></script>
     <script src="src/app-core-40.js"></script>
     <script src="src/app-ui-40.js"></script>
+    <script src="src/audit-40.js"></script>
 </body>
 </html>

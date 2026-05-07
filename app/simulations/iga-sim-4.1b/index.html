@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase 4.1 | Transient ROM Offline</title>
+    <title>IGA ROM Trainer — Phase 4.1b</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
     <!-- Shared Engines -->
     <script src="../phase-2-core/src/nurbs-2d.js?v=3"></script>
@@ -23,20 +23,16 @@
     <script src="../phase-3-core/src/rom-engine.js?v=3"></script>
     
     <!-- Dynamics & ECSW Engine -->
-    <script src="src/ecsw-engine.js"></script>
-    <script src="src/dynamics-engine.js"></script>
-    <script src="src/offline-trainer.js"></script>
-
     <style>
         :root { --primary:#f43f5e; --secondary:#fb7185; --accent:#10b981; --bg:#0f172a; --card:rgba(30,41,59,0.9); --border:rgba(244,63,94,0.2); }
         *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-        body { background:var(--bg); color:#f8fafc; font-family:'Inter',sans-serif; overflow:hidden; }
+        body { background:var(--bg); color:#f8fafc; font-family:'Outfit',sans-serif; overflow:hidden; }
         #canvas-container { position:absolute; inset:0; background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%); }
-        .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.5); }
-        #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
-        #stats-panel { position:absolute; top:20px; right:20px; width:400px; padding:20px; z-index:10; max-height:calc(100vh - 40px); overflow-y:auto; }
-        #chart-panel { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); width:780px; padding:20px; z-index:10; }
-        .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #f43f5e, #fb7185); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .glass-panel { background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:24px; box-shadow:0 10px 40px -10px rgba(0,0,0,0.5); cursor: move; user-select: none; }
+        #ui-panel { position:absolute; top:20px; left:20px; width:360px; padding:24px; z-index:10; }
+        #stats-panel { position:absolute; top:20px; right:20px; width:380px; padding:20px; z-index:10; }
+        #chart-panel { position:absolute; bottom:20px; left:calc(50% - 390px); width:780px; padding:20px; z-index:10; }
+        .panel-title { font-size:1.25rem; font-weight:800; letter-spacing:-0.03em; background: linear-gradient(135deg, #f43f5e, #fb7185); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         .panel-sub { font-size:0.75rem; color:#94a3b8; margin-top:4px; font-weight:500; }
         .section-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#f43f5e; margin-bottom:12px; display:block; }
         .control-group { margin-bottom:20px; }
@@ -45,14 +41,14 @@
         .label-row .val { font-size:0.85rem; font-weight:700; color:var(--primary); font-family:'JetBrains Mono',monospace; }
         input[type="range"] { width:100%; height:4px; background:#334155; border-radius:2px; appearance:none; cursor:pointer; }
         input[type="range"]::-webkit-slider-thumb { appearance:none; width:16px; height:16px; background:var(--primary); border-radius:50%; border:3px solid #fff; box-shadow:0 2px 6px rgba(244,63,94,0.4); cursor:pointer; }
-        .btn-train-full { width:100%; padding:14px; border-radius:16px; font-size:0.8rem; font-weight:700; letter-spacing:.5px; cursor:pointer; background:linear-gradient(135deg,#f43f5e,#e11d48); color:white; border:none; box-shadow:0 8px 20px -6px rgba(244,63,94,0.5); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:10px; }
-        .btn-train-full:hover { transform:translateY(-2px); box-shadow:0 12px 24px -6px rgba(244,63,94,0.6); }
-        .btn-train-full:disabled { opacity:.5; transform:none; cursor:not-allowed; }
+        .btn-action { width:100%; padding:14px; border-radius:16px; font-size:0.8rem; font-weight:700; letter-spacing:.5px; cursor:pointer; background:linear-gradient(135deg,#f43f5e,#e11d48); color:white; border:none; box-shadow:0 8px 20px -6px rgba(244,63,94,0.5); transition:all .2s; display:flex; align-items:center; justify-content:center; gap:10px; }
+        .btn-action:hover { transform:translateY(-2px); box-shadow:0 12px 24px -6px rgba(244,63,94,0.6); }
+        .btn-action:disabled { opacity:.5; transform:none; cursor:not-allowed; }
         .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px; }
         .stat-card { background:rgba(15,23,42,0.5); border-radius:16px; padding:12px; border:1px solid var(--border); transition:all .3s; }
         .stat-card:hover { background: rgba(30,41,59,0.8); transform: translateY(-2px); }
         .stat-card .lbl { font-size:0.58rem; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px; }
-        .stat-num { font-size:1.15rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:#f8fafc; }
+        .stat-num { font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:#f8fafc; }
         .divider { border: 0; border-top: 1px solid rgba(244,63,94,0.1); margin:20px 0; }
         #train-status { font-size:0.68rem; font-family:'JetBrains Mono',monospace; color:#f43f5e; margin-top:10px; min-height:16px; text-align:center; }
         .hidden { display:none !important; }
@@ -68,7 +64,7 @@
     <!-- Left Panel -->
     <div id="ui-panel" class="glass-panel">
         <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-        <div class="panel-title">Phase 4.1 <span style="color:#10b981">Offline</span></div>
+        <div class="panel-title">Phase 4.1b <span style="color:#10b981">Offline</span></div>
         <div class="panel-sub">Transient Training · Dynamic Package Generation</div>
         <hr class="divider">
 
@@ -87,13 +83,17 @@
             </div>
 
             <div style="display:flex; gap:8px;">
-                <button id="btn-train" class="btn-train-full"><i class="fa-solid fa-play"></i> Run FOM Training</button>
+                <button id="btn-train" class="btn-action"><i class="fa-solid fa-play"></i> Run FOM Training</button>
             </div>
             <div id="train-status" class="hidden"></div>
         </div>
 
         <div class="control-group">
             <span class="section-label">2 · ROM Synthesis</span>
+            <div style="margin-bottom: 14px;">
+                <div class="label-row"><span class="lbl">Deformation Scale</span><span class="val" id="defscale-val">10x</span></div>
+                <input type="range" id="input-defscale" min="0" max="2000" step="10" value="10">
+            </div>
             <div style="margin-bottom: 14px;">
                 <div class="label-row"><span class="lbl">POD Modes k</span><span class="val" id="k-val">10</span></div>
                 <input type="range" id="input-k" min="1" max="30" value="10" disabled>
@@ -109,8 +109,8 @@
         <div class="control-group">
             <span class="section-label">3 · Package Export</span>
             <div class="btn-grid">
-                <button id="btn-export" class="btn-train-full" style="background:linear-gradient(135deg,#10b981,#059669);" disabled><i class="fa-solid fa-file-export"></i> Export JSON Package</button>
-                <button id="btn-verify" class="btn-train-full" style="background:linear-gradient(135deg,#6366f1,#4f46e5); margin-top:8px;" disabled><i class="fa-solid fa-check-double"></i> Verify Package Content</button>
+                <button id="btn-export" class="btn-action" style="background:linear-gradient(135deg,#10b981,#059669);" disabled><i class="fa-solid fa-file-export"></i> Export JSON Package</button>
+                <button id="btn-verify" class="btn-action" style="background:linear-gradient(135deg,#6366f1,#4f46e5); margin-top:8px;" disabled><i class="fa-solid fa-check-double"></i> Verify Package Content</button>
             </div>
         </div>
     </div>
@@ -144,11 +144,12 @@
 
     <!-- App Logic -->
     <script src="../../shared/performance.js"></script>
-    <script src="src/dynamics-core.js"></script>
-    <script src="src/ecsw-engine.js"></script>
-    <script src="src/app-visuals-41.js"></script>
-    <script src="src/offline-trainer.js"></script>
-    <script src="src/app-core-41.js"></script>
-    <script src="src/app-ui-41.js"></script>
+    <script src="src/core/dynamics-core.js"></script>
+    <script src="src/reduction/ecsw-engine.js"></script>
+    <script src="src/ui/app-visuals.js"></script>
+    <script src="src/ui/app-audit.js"></script>
+    <script src="src/reduction/offline-trainer.js"></script>
+    <script src="src/core/app-core.js"></script>
+    <script src="src/ui/app-ui.js"></script>
 </body>
 </html>

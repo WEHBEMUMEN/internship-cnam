@@ -8,6 +8,8 @@ class DynamicsSolver {
         this.patch = patch; // Geometry data
         this.fom = solverFOM; // IGANonlinearSolver instance
         this.engine = solverFOM.engine; // NURBS2D engine
+        this.load = patch.load;
+        this.fixedDOFs = new Set();
         
         const nU = patch.controlPoints.length;
         const nV = patch.controlPoints[0].length;
@@ -21,12 +23,16 @@ class DynamicsSolver {
         // Matrices
         this.M = null; // Global Mass
         
-        // Parameters
-        this.rho = 0.0001; // Density (kg/mm2)
-        this.alpha = 0.1;  // Rayleigh Mass damping
-        this.betaR = 0.001; // Rayleigh Stiffness damping
+        // Parameters (SI Units: m, kg, N)
+        this.rho = 1000.0; // Density (kg/m3) - Adjusted for live interaction
+        this.alpha = 0.5;  // Rayleigh Mass damping
+        this.betaR = 0.0;  // Rayleigh Stiffness damping (Mass-only by default)
         this.beta = 0.25;  // Newmark beta (Average Acceleration)
         this.gamma = 0.5;  // Newmark gamma
+        
+        // Reusable buffers for solveStep
+        this.Keff = null;
+        this.R_res = null;
     }
 
     /**
@@ -125,8 +131,10 @@ class DynamicsSolver {
             
             // Effective Stiffness Keff = Kt + a0*M + a1*C
             // where C = alpha*M + betaR*Kt
-            const R_res = new Float64Array(this.dofs);
-            const Keff = Array.from({ length: this.dofs }, () => new Float64Array(this.dofs).fill(0));
+            if (!this.R_res) this.R_res = new Float64Array(this.dofs);
+            
+            const R_res = this.R_res;
+            const Keff = Array.from({ length: this.dofs }, () => new Float64Array(this.dofs)); // Fresh array to avoid row-swap corruption
 
             for (let i = 0; i < this.dofs; i++) {
                 let Ma = 0, Cv = 0;

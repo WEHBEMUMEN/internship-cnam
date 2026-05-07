@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 4.1b: Online ROM Solver | Digital Twin</title>
+  <link rel="stylesheet" href="../index.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    .math-block { border-left-color: #6366f1; } 
+  </style>
+  <script src="../scripts.js" defer></script>
+</head>
+<body>
+
+  <header>
+    <div class="container header-container">
+      <a href="../index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="../index.html"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="repository.html"><i class="fa-solid fa-folder-open"></i> <span>Files</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal reveal-up">
+          <span class="badge" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">PHASE 4.1b THEORY</span>
+          <h2 class="section-title">The Online Digital Twin Solver</h2>
+          <p class="section-sub">Real-time reconstruction using the pre-trained ROM package.</p>
+        </div>
+
+        <div class="theory-content reveal reveal-up delay-1" style="max-width: 900px; margin: 0 auto;">
+          
+          <div class="theory-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 24px; padding: 40px; margin-bottom: 40px; box-shadow: var(--card-shadow);">
+            <h3 style="color: #6366f1; font-size: 1.6rem; margin-top: 0;"><i class="fa-solid fa-file-import"></i> 1. Package Consumption</h3>
+            <p>Phase 4.1b is the "execution" phase. It takes the JSON package exported from 4.1a, which contains:</p>
+            <ul style="line-height: 1.8; color: var(--text-secondary); margin-left: 20px;">
+              <li><strong>Reduced Basis ($\mathbf{\Phi}$)</strong>: The $N \times k$ matrix of POD modes.</li>
+              <li><strong>Reduced Operators</strong>: $\mathbf{M}_r$ and $\mathbf{C}_r$ (the small $k \times k$ matrices).</li>
+              <li><strong>ECSW Weights ($w$)</strong>: The indices and values of the sampled elements.</li>
+            </ul>
+          </div>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-bolt"></i> 2. Hyper-Reduced Force Evaluation</h3>
+          <p>Instead of assembling the full stiffness matrix or internal force vector (which takes $O(N)$ time), the Online Solver only evaluates the forces on the **reduced integration domain** (RID):</p>
+          
+          <div class="math-block">
+            $$\mathbf{F}_{int}^r(\mathbf{q}) \approx \sum_{e \in RID} w_e \mathbf{\Phi}_e^T \mathbf{f}_e^{int}(\mathbf{\Phi}_e \mathbf{q})$$
+          </div>
+          
+          <p>Where $\mathbf{\Phi}_e$ is the basis restricted to element $e$. Since $|RID| \ll |Elements|$, this evaluation is orders of magnitude faster, enabling the Digital Twin to respond in milliseconds.</p>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-microchip"></i> 3. Online Integration</h3>
+          <p>The solver performs time integration in the reduced coordinate space $\mathbf{q}$. The system size is reduced from $1,000+$ DOFs to just $10$ or $20$, allowing the Newmark-&beta; loop to run at high frequencies:</p>
+          
+          <div class="math-block">
+             $$\mathbf{M}_r \ddot{\mathbf{q}} + \mathbf{C}_r \dot{\mathbf{q}} + \mathbf{F}_{int}^r(\mathbf{q}) = \mathbf{\Phi}^T \mathbf{F}_{ext}(t)$$
+          </div>
+
+          <div style="background: rgba(99, 102, 241, 0.05); border-left: 4px solid #6366f1; padding: 20px; border-radius: 0 12px 12px 0; margin-top: 40px;">
+            <h4 style="color: #6366f1; margin: 0 0 10px 0;"><i class="fa-solid fa-expand"></i> Full-State Visualization</h4>
+            <p style="margin: 0;">Although the solver works in $\mathbf{q}$, we reconstruct the full displacement field $\mathbf{u} = \mathbf{\Phi}\mathbf{q}$ only for the WebGL visualizer. This ensures a high-fidelity visual experience with zero lag.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 80px; text-align: center;">
+          <a href="../index.html" class="btn btn-primary" style="background: #6366f1; padding: 15px 35px; font-size: 1.1rem; border-radius: 50px;">
+            Back to Dashboard <i class="fa-solid fa-arrow-right" style="margin-left: 10px;"></i>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 WEHBE Mumen & EPN04, Cnam.</p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</body>
+</html>

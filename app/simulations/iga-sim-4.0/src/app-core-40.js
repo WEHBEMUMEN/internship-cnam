@@ -13,30 +13,26 @@ class TransientLab {
         this.isRunning = false;
         this.currentTime = 0;
         this.trace = []; // {t, disp}
+        this.h = 0; // Refinement level
         
         this.init();
     }
 
     async init() {
-        // Setup NURBS Patch (Cantilever by default)
         const preset = window.NURBSPresets.generateCantilever();
         this.engine = new window.NURBS2D();
         this.patch = preset;
-        
-        // Setup Nonlinear Solver (FOM)
         this.fom = new window.IGANonlinearSolver(this.engine);
-        
-        // Setup Dynamics Solver
         this.dyn = new DynamicsSolver(this.patch, this.fom);
-        
-        // Assemble Initial Mass
         this.dyn.assembleMass();
-        
-        // Setup Visuals
         this.viz = new TransientVisuals(this);
-        this.viz.updateMesh(this.dyn.u);
-        
+        this.updateTrace(0, 0);
         this.initCharts();
+        setTimeout(() => this.runSimulation(), 1000);
+    }
+
+    updateTrace(t, disp) {
+        this.viz.updateMesh(this.dyn.u, t);
     }
 
     initCharts() {
@@ -44,98 +40,167 @@ class TransientLab {
         this.mainChart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [{ label: 'Tip Displacement (mm)', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.1)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: true, title: { display: true, text: 'Time (s)', color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }, y: { display: true, title: { display: true, text: 'Disp (mm)', color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } } }, plugins: { legend: { display: false } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                onClick: (e) => this.handleChartClick(e),
+                scales: { 
+                    x: { display: true, title: { display: true, text: 'Time (s)', color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }, 
+                    y: { display: true, title: { display: true, text: 'Disp (mm)', color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } } 
+                }, 
+                plugins: { 
+                    legend: { display: false },
+                    zoom: {
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                        pan: { enabled: true, mode: 'x', modifierKey: 'ctrl' }
+                    }
+                } 
+            }
         });
 
         const ctxRes = document.getElementById('chart-response').getContext('2d');
         this.responseChart = new Chart(ctxRes, {
             type: 'line',
-            data: { labels: [], datasets: [{ label: 'Live Resp', data: [], borderColor: '#10b981', borderWidth: 2, pointRadius: 0, fill: false }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: 'rgba(16,185,129,0.1)' } } }, animation: false }
+            data: { labels: [], datasets: [{ label: 'Force (N)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, borderWidth: 2, pointRadius: 0, tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: 'rgba(16,185,129,0.1)' }, ticks: { font: { size: 9 } } } }, animation: false }
         });
+    }
+
+    handleChartClick(event) {
+        if (this.isRunning || event.ctrlKey) return; // Ignore if running or Ctrl is held (panning)
+        const points = this.mainChart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+        if (points.length) {
+            const index = points[0].index;
+            const traceOffset = this.trace.length - this.mainChart.data.labels.length;
+            const historyIndex = traceOffset + index;
+            if (this.trace[historyIndex]) {
+                const state = this.trace[historyIndex];
+                this.viz.updateMesh(state.u);
+                document.getElementById('curr-time').innerText = state.t.toFixed(3) + 's (History)';
+                document.getElementById('tip-disp').innerText = (state.disp * 1000).toFixed(2) + 'mm';
+            }
+        }
     }
 
     async runSimulation() {
         if (this.isRunning) return;
         this.isRunning = true;
         
-        // Reset state
-        this.currentTime = 0;
-        this.dyn.u.fill(0);
-        this.dyn.v.fill(0);
-        this.dyn.a.fill(0);
-        this.trace = [];
-        this.mainChart.data.labels = [];
-        this.mainChart.data.datasets[0].data = [];
-        this.responseChart.data.labels = [];
-        this.responseChart.data.datasets[0].data = [];
+        if (this.currentTime === 0) {
+            this.dyn.u.fill(0);
+            this.dyn.v.fill(0);
+            this.dyn.a.fill(0);
+            this.trace = [];
+            this.mainChart.data.labels = [];
+            this.mainChart.data.datasets[0].data = [];
+            this.responseChart.data.labels = [];
+            this.responseChart.data.datasets[0].data = [];
+        }
         
-        const T = parseFloat(document.getElementById('input-time').value);
-        const dt = parseFloat(document.getElementById('input-dt').value);
-        const F0 = parseFloat(document.getElementById('input-f0').value);
-        const forceType = document.getElementById('input-force-type').value;
+        const timeScale = parseFloat(document.getElementById('input-timescale').value) || 1.0;
+        const startTime = performance.now() - (this.currentTime / timeScale) * 1000;
+        
+        while (this.isRunning) {
+            const F0 = parseFloat(document.getElementById('input-f0').value);
+            const forceType = document.getElementById('input-force-type').value;
+            this.dyn.alpha = parseFloat(document.getElementById('input-alpha').value);
+            this.dyn.betaR = parseFloat(document.getElementById('input-beta').value);
+            const dt = parseFloat(document.getElementById('input-dt').value);
 
-        // Update Rayleigh params
-        this.dyn.alpha = parseFloat(document.getElementById('input-alpha').value);
-        this.dyn.betaR = parseFloat(document.getElementById('input-beta').value);
-
-        while (this.currentTime < T && this.isRunning) {
-            // Compute External Force at current time step
             const Fext = new Float64Array(this.dyn.dofs);
             let mag = 0;
             if (forceType === 'step') mag = F0;
             else if (forceType === 'impulse') mag = (this.currentTime < 0.05) ? F0 : 0;
-            else if (forceType === 'harmonic') mag = F0 * Math.sin(2 * Math.PI * 10 * this.currentTime);
+            else if (forceType === 'harmonic') mag = F0 * Math.sin(2 * Math.PI * 2 * this.currentTime);
 
-            // Apply to tip (last control point, Y DOF)
-            Fext[this.dyn.dofs - 1] = -mag; 
-
-            // Solve Step
-            const result = await this.dyn.solveStep(dt, Fext);
+            // Apply Distributed Shear to right edge (i = nU-1)
+            const nU = this.patch.controlPoints.length;
+            const nV = this.patch.controlPoints[0].length;
             
+            for (let j = 0; j < nV; j++) {
+                const dofIdx = ((nU - 1) * nV + j) * 2 + 1; // Y-DOF
+                
+                // EXACT IGA CONSISTENT FORCE DISTRIBUTION:
+                // \int N_{j,q} d\eta = (V_{j+q+1} - V_j) / (q + 1)
+                const q = this.patch.q;
+                const V = this.patch.V;
+                const weight = (V[j + q + 1] - V[j]) / (q + 1);
+                
+                Fext[dofIdx] = -mag * weight;
+            }
+
+            const result = await this.dyn.solveStep(dt, Fext);
             this.currentTime += dt;
             
-            // Record Trace
             const tipDisp = this.dyn.u[this.dyn.dofs - 1];
-            this.trace.push({ t: this.currentTime, disp: tipDisp });
+            this.trace.push({ t: this.currentTime, disp: tipDisp, u: new Float64Array(this.dyn.u) });
+            if (this.trace.length > 10000) this.trace.shift();
             
-            // UI Updates
-            if (Math.round(this.currentTime / dt) % 2 === 0) {
-                this.updateUI(result, tipDisp);
+            const currentTimeScale = parseFloat(document.getElementById('input-timescale').value) || 1.0;
+            const elapsedWallTime = (performance.now() - startTime) / 1000;
+            const targetWallTime = this.currentTime / currentTimeScale;
+            
+            if (targetWallTime > elapsedWallTime) {
+                const delay = (targetWallTime - elapsedWallTime) * 1000;
+                if (delay > 1) await new Promise(r => setTimeout(r, Math.min(delay, 100))); 
+            }
+
+            // Dynamic UI Skip: Render less frequently as timescale increases to save CPU
+            const skipRate = Math.max(1, Math.floor(timeScale * 2));
+            if (Math.round(this.currentTime / dt) % skipRate === 0) {
+                this.updateUI(result, tipDisp, mag);
                 this.viz.updateMesh(this.dyn.u);
+                await new Promise(requestAnimationFrame);
             }
         }
-        
-        this.isRunning = false;
-        document.getElementById('run-label').innerText = 'Complete';
-        document.getElementById('run-dot').style.background = '#94a3b8';
     }
 
-    updateUI(result, tipDisp) {
+    updateUI(result, tipDisp, forceMag) {
         document.getElementById('curr-time').innerText = this.currentTime.toFixed(3) + 's';
         document.getElementById('iters-val').innerText = result.iters;
         document.getElementById('tip-disp').innerText = (tipDisp * 1000).toFixed(2) + 'mm';
         
-        // Update Chart (limit to last 200 pts for performance)
-        this.mainChart.data.labels.push(this.currentTime.toFixed(3));
+        const timeStr = this.currentTime.toFixed(2);
+        this.mainChart.data.labels.push(timeStr);
         this.mainChart.data.datasets[0].data.push(tipDisp * 1000);
         
-        // Response chart (shorter window for "live" feel)
-        this.responseChart.data.labels.push(this.currentTime.toFixed(3));
-        this.responseChart.data.datasets[0].data.push(tipDisp * 1000);
+        this.responseChart.data.labels.push(timeStr);
+        this.responseChart.data.datasets[0].data.push(forceMag);
 
-        if (this.mainChart.data.labels.length > 200) {
+        if (this.mainChart.data.labels.length > 5000) {
             this.mainChart.data.labels.shift();
             this.mainChart.data.datasets[0].data.shift();
         }
-        
-        if (this.responseChart.data.labels.length > 50) {
+        if (this.responseChart.data.labels.length > 40) {
             this.responseChart.data.labels.shift();
             this.responseChart.data.datasets[0].data.shift();
         }
-
+        
         this.mainChart.update('none');
         this.responseChart.update('none');
+    }
+
+    async updateRefinement(h, p = null) {
+        this.isRunning = false;
+        this.h = h;
+        if (p !== null) this.p = p;
+        const preset = window.NURBSPresets.generateCantilever();
+        this.patch = preset;
+        window.RefineUtils.apply(this.engine, this.patch, { h: this.h, p: this.p || this.patch.p });
+        this.fom = new window.IGANonlinearSolver(this.engine);
+        this.dyn = new DynamicsSolver(this.patch, this.fom);
+        this.dyn.assembleMass();
+        this.currentTime = 0;
+        this.trace = [];
+        if (this.viz.cpPoints) {
+            this.viz.scene.remove(this.viz.cpPoints, this.viz.cpLattice);
+            this.viz.cpPoints = null;
+            this.viz.cpLattice = null;
+        }
+        this.viz.updateMesh(this.dyn.u);
+        this.mainChart.data.labels = [];
+        this.mainChart.data.datasets[0].data = [];
+        this.mainChart.update();
     }
 
 }

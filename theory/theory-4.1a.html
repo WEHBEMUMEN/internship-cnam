@@ -90,9 +90,40 @@
 
           <p>Where <strong>$\mathbf{M}_r = \mathbf{\Phi}^T \mathbf{M} \mathbf{\Phi}$</strong> and <strong>$\mathbf{C}_r = \mathbf{\Phi}^T \mathbf{C} \mathbf{\Phi}$</strong> are $k \times k$ matrices (typically $k < 20$).</p>
           
-          <div style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid #10b981; padding: 20px; border-radius: 0 12px 12px 0; margin-top: 40px;">
-            <h4 style="color: #10b981; margin: 0 0 10px 0;"><i class="fa-solid fa-rocket"></i> The Hyper-Reduction Synergy</h4>
-            <p style="margin: 0;">The term $\mathbf{\Phi}^T \mathbf{F}_{int}(\mathbf{\Phi} \mathbf{q})$ is still expensive. In Phase 4, we will apply our <strong>ECSW weights</strong> $w_e$ from the static training to evaluate this term at a fraction of the cost, enabling **real-time transient structural feedback**.</p>
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-sitemap"></i> 4. Modular Trainer Architecture</h3>
+          <p>To handle the complexity of transient ROM generation, Phase 4.1b introduces a <strong>Decoupled Modular Architecture</strong>. This separation of concerns ensures that the physics engine remains independent of the UI and reduction algorithms:</p>
+          
+          <ul style="line-height: 1.8; color: var(--text-secondary); margin-left: 20px; margin-bottom: 30px;">
+            <li><strong>Core Module</strong> (<code>src/core/</code>): Manages the Newmark-&beta; integration and IGA patch assembly.</li>
+            <li><strong>Reduction Module</strong> (<code>src/reduction/</code>): Implements SVD-based POD and ECSW NNLS weight optimization.</li>
+            <li><strong>UI & Visuals</strong> (<code>src/ui/</code>): Handles the glass-morphism dashboard, WebGL rendering, and real-time audit logging.</li>
+          </ul>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-file-shield"></i> 5. Structural Audit & ROM Verification</h3>
+          <p>Before a ROM package is deployed to the Digital Twin, it undergoes a rigorous <strong>Structural Audit</strong>. This multi-phase check ensures the mathematical integrity of the reduced system:</p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
+            <div style="background: rgba(30, 41, 59, 0.5); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="color: #10b981; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 10px;">Basis Orthogonality</div>
+                <p style="font-size: 0.9rem; color: #94a3b8; margin: 0;">Verifies that $\mathbf{\Phi}^T \mathbf{\Phi} \approx \mathbf{I}$, ensuring that the reduced modes are numerically independent and stable.</p>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.5); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="color: #6366f1; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 10px;">Energy Threshold</div>
+                <p style="font-size: 0.9rem; color: #94a3b8; margin: 0;">Ensures the cumulative energy capture of the POD basis exceeds 99.9% for high-fidelity response.</p>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.5); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="color: #f43f5e; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 10px;">Matrix Positive Definiteness</div>
+                <p style="font-size: 0.9rem; color: #94a3b8; margin: 0;">Checks the reduced mass matrix $\mathbf{M}_r$ to prevent numerical divergence in the online solver.</p>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.5); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="color: #f59e0b; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 10px;">Sparsity Audit</div>
+                <p style="font-size: 0.9rem; color: #94a3b8; margin: 0;">Reports the final ECSW sparsity ratio, balancing computational speed against reconstruction error.</p>
+            </div>
+          </div>
+
+          <div style="background: rgba(244, 63, 94, 0.05); border-left: 4px solid #f43f5e; padding: 20px; border-radius: 0 12px 12px 0; margin-top: 40px;">
+            <h4 style="color: #f43f5e; margin: 0 0 10px 0;"><i class="fa-solid fa-terminal"></i> Real-time Audit Reporting</h4>
+            <p style="margin: 0;">The Phase 4.1 trainer features a dedicated <code>OfflineAudit</code> class that generates these reports in real-time, providing immediate visual feedback during the 5-phase training loop.</p>
           </div>
         </div>
 

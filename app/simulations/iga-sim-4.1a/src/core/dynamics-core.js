@@ -6,7 +6,9 @@
 class DynamicsSolver {
     constructor(patch, solverFOM) {
         this.patch = patch;
-        this.fom = solverFOM; // Reuse the nonlinear FOM solver for K and Fint
+        this.fom = solverFOM; 
+        this.load = patch.load;
+        this.fixedDOFs = new Set();
         this.dofs = patch.controlPoints.length * patch.controlPoints[0].length * 2;
         
         // Dynamic state vectors
@@ -18,12 +20,12 @@ class DynamicsSolver {
         this.M = null; // Global Mass
         this.C = null; // Global Damping
         
-        // Parameters
-        this.rho = 0.001; // Density (scaled for visualization)
-        this.alpha = 0.5; // Rayleigh alpha (Mass)
-        this.betaR = 0.001; // Rayleigh beta (Stiffness)
-        this.beta = 0.25; // Newmark beta
-        this.gamma = 0.5; // Newmark gamma
+        // Parameters (SI Units: m, kg, N)
+        this.rho = 1000.0; // Density (kg/m3)
+        this.alpha = 0.5;  // Rayleigh Mass damping
+        this.betaR = 0.0;  // Rayleigh Stiffness damping
+        this.beta = 0.25;  // Newmark beta
+        this.gamma = 0.5;  // Newmark gamma
     }
 
     /**
@@ -52,10 +54,10 @@ class DynamicsSolver {
                         const v = ((uniqueV[j+1] - uniqueV[j]) * coords[wv] + (uniqueV[j+1] + uniqueV[j])) / 2;
                         const weight = weights[wu] * weights[wv] * (uniqueU[i+1] - uniqueU[i]) * (uniqueV[j+1] - uniqueV[j]) / 4;
 
-                        const spanU = window.nurbsUtils.findSpan(nU - 1, p, u, U);
-                        const spanV = window.nurbsUtils.findSpan(nV - 1, q, v, V);
-                        const ders = window.nurbsUtils.dersBasisFuns(spanU, p, u, U, 0);
-                        const dersV = window.nurbsUtils.dersBasisFuns(spanV, q, v, V, 0);
+                        const spanU = this.fom.engine.findSpan(nU - 1, p, u, U);
+                        const spanV = this.fom.engine.findSpan(nV - 1, q, v, V);
+                        const ders = this.fom.engine.basisFunsDerivs(spanU, u, p, U, 0);
+                        const dersV = this.fom.engine.basisFunsDerivs(spanV, v, q, V, 0);
 
                         // Basis functions N
                         const N = [];
@@ -65,16 +67,22 @@ class DynamicsSolver {
                             }
                         }
 
-                        const Jac = this.fom.calculateJacobian(spanU, spanV, u, v, ders, dersV);
-                        const detJ = Jac.determinant();
+                        // Jacobian Determinant
+                        const deriv = this.fom.engine.getSurfaceDerivatives(this.patch, u, v);
+                        const detJ = Math.abs(deriv.dU.x * deriv.dV.y - deriv.dU.y * deriv.dV.x);
                         const dV = detJ * weight * this.rho;
 
-                        // Local Mass Matrix: m_ij = rho * N_i * N_j
-                        const activeIndices = this.fom.getActiveIndices(spanU, spanV, p, q, nV);
+                        // Local indices and Mass assembly
+                        const activeIndices = [];
+                        for (let ki = 0; ki <= p; ki++) {
+                            for (let kj = 0; kj <= q; kj++) {
+                                activeIndices.push((spanU - p + ki) * nV + (spanV - q + kj));
+                            }
+                        }
+
                         for (let r = 0; r < N.length; r++) {
                             for (let c = 0; c < N.length; c++) {
                                 const val = N[r] * N[c] * dV;
-                                // Add to x and y DOFs
                                 const idxR = activeIndices[r] * 2;
                                 const idxC = activeIndices[c] * 2;
                                 this.M[idxR][idxC] += val;
@@ -126,13 +134,15 @@ class DynamicsSolver {
             }
 
             // Internal Forces and Tangent Stiffness at u_next
-            const { Fint, Kt } = this.fom.computeInternalForces(u_next);
+            const Fint = this.fom.calculateInternalForce(this.patch, u_next);
+            const Kt = this.fom.calculateTangentStiffness(this.patch, u_next);
             
-            // Damping Matrix C = alpha*M + betaR*Kt
-            // Residual R = M*a_next + C*v_next + Fint - Fext
-            const R = new Float64Array(this.dofs);
-            const Keff = new Array(this.dofs).fill(0).map(() => new Float64Array(this.dofs));
-
+            // Effective Stiffness Keff = Kt + a0*M + a1*C
+            // where C = alpha*M + betaR*Kt
+            if (!this.R_res) this.R_res = new Float64Array(this.dofs);
+            
+            const R_res = this.R_res;
+            const Keff = Array.from({ length: this.dofs }, () => new Float64Array(this.dofs)); // Fresh array to avoid row-swap corruption
             for (let i = 0; i < this.dofs; i++) {
                 // M*a_next component
                 let Ma = 0;
@@ -148,14 +158,17 @@ class DynamicsSolver {
                     Keff[i][j] = Kt[i][j] + a0 * this.M[i][j] + a1 * Cij;
                 }
 
-                R[i] = Ma + Cv + Fint[i] - Fext[i];
+                R_res[i] = Ma + Cv + Fint[i] - Fext[i];
             }
 
-            // Apply Boundary Conditions to R and Keff (Penalty or Direct)
-            this.fom.applyBCs(Keff, R);
+            // Boundary Conditions (Fixed Left End)
+            const nV = this.patch.controlPoints[0].length;
+            const bcs = [];
+            for (let j = 0; j < nV; j++) bcs.push({ i: 0, j: j, axis: 'both', value: 0 });
+            
+            this.fom.applyPenaltyConstraints(Keff, R_res, u_next, this.patch, bcs);
 
-            // Solve Keff * du = -R
-            const du = this.fom.linearSolver(Keff, R.map(x => -x));
+            const du = this.fom.gaussianElimination(Keff, R_res.map(r => -r));
 
             // Update
             let norm = 0;

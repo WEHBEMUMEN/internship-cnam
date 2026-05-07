@@ -11,7 +11,11 @@ class TransientVisuals {
         
         this.deformedMesh = null;
         this.wireframe = null;
+        this.markersGroup = new THREE.Group();
+        this.forceArrow = null;
+        this.scene.add(this.markersGroup);
         
+        this.defScale = 10;
         this.init();
     }
 
@@ -23,11 +27,12 @@ class TransientVisuals {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(this.renderer.domElement);
 
-        this.camera.position.set(5, 5, 40);
-        this.camera.lookAt(5, 5, 0);
+        this.camera.position.set(5, 1, 25);
+        this.camera.lookAt(5, 1, 0);
         
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableRotate = false; // Disable 3D rotation
+        this.controls.target.set(5, 1, 0);
+        this.controls.enableRotate = true; 
         this.controls.mouseButtons = {
             LEFT: THREE.MOUSE.PAN,
             MIDDLE: THREE.MOUSE.DOLLY,
@@ -56,7 +61,90 @@ class TransientVisuals {
         this.renderer.render(this.scene, this.camera);
     }
 
-    updateMesh(uDisp) {
+    drawMarkers() {
+        this.markersGroup.clear();
+        const dyn = this.app.dyn;
+        if (!dyn || !dyn.patch) return;
+
+        const patch = dyn.patch;
+        const nV = patch.controlPoints[0].length;
+        const nU = patch.controlPoints.length;
+
+        const coneGeo = new THREE.ConeGeometry(0.15, 0.35, 4); 
+        const coneMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, depthTest: false });
+
+        const constraint = patch.constraints?.[0] || { side: 'left' };
+        const side = constraint.side;
+
+        for (let i = 0; i < nU; i++) {
+            for (let j = 0; j < nV; j++) {
+                
+                let isFixed = false;
+                if (side === 'left' && i === 0) isFixed = true;
+                else if (side === 'right' && i === nU - 1) isFixed = true;
+                else if (side === 'bottom' && j === 0) isFixed = true;
+                else if (side === 'top' && j === nV - 1) isFixed = true;
+
+                if (isFixed) {
+                    const cp = patch.controlPoints[i][j];
+                    const cone = new THREE.Mesh(coneGeo, coneMat);
+                    cone.renderOrder = 999;
+                    
+                    let offsetX = 0, offsetY = 0, rotZ = 0;
+                    if (side === 'left') { offsetX = -0.3; rotZ = -Math.PI/2; }
+                    else if (side === 'right') { offsetX = 0.3; rotZ = Math.PI/2; }
+                    else if (side === 'bottom') { offsetY = -0.3; rotZ = 0; }
+                    else if (side === 'top') { offsetY = 0.3; rotZ = Math.PI; }
+
+                    cone.position.set(cp.x + offsetX, cp.y + offsetY, cp.z);
+                    cone.rotation.z = rotZ;
+                    this.markersGroup.add(cone);
+                }
+            }
+        }
+    }
+
+    updateForceMarkers(t) {
+        if (!this.forceArrowsGroup) {
+            this.forceArrowsGroup = new THREE.Group();
+            this.scene.add(this.forceArrowsGroup);
+        }
+        this.forceArrowsGroup.clear();
+
+        const load = this.app.dyn.load;
+        if (!load) return;
+
+        const timeFactor = load.timeFunction ? load.timeFunction(t) : 1.0;
+        const engine = this.app.engine;
+        const patch = this.app.patch;
+
+        const renderArrow = (pos, magX, magY) => {
+            const mag = Math.sqrt(magX*magX + magY*magY);
+            if (mag < 1e-3) return;
+            const dir = new THREE.Vector3(magX, magY, 0).normalize();
+            const arrow = new THREE.ArrowHelper(dir, pos, mag * 0.5, 0xf43f5e, 0.4, 0.2);
+            arrow.renderOrder = 1000;
+            this.forceArrowsGroup.add(arrow);
+        };
+
+        if (load.type === 'distributed') {
+            const res = 5; 
+            for (let k = 0; k <= res; k++) {
+                const eta = k / res;
+                const st = engine.getSurfaceState(patch, 1.0, eta); 
+                const pos = new THREE.Vector3(st.position.x, st.position.y, st.position.z);
+                renderArrow(pos, load.magnitude.x * timeFactor, load.magnitude.y * timeFactor);
+            }
+        } else if (load.type === 'point') {
+            const st = engine.getSurfaceState(patch, load.xi, load.eta);
+            const pos = new THREE.Vector3(st.position.x, st.position.y, st.position.z);
+            renderArrow(pos, load.magnitude.x * timeFactor, load.magnitude.y * timeFactor);
+        }
+    }
+
+    updateMesh(uDisp, t = 0) {
+        if (this.markersGroup.children.length === 0) this.drawMarkers();
+        this.updateForceMarkers(t);
         const res = 24; 
         const posDef = [], colors = [];
         let maxDisp = 0;
@@ -77,8 +165,13 @@ class TransientVisuals {
             }
         }
 
+        const scale = this.defScale;
         for (const s of states) {
-            posDef.push(s.st.position.x + s.d.x, s.st.position.y + s.d.y, s.st.position.z);
+            posDef.push(
+                s.st.position.x + s.d.x * scale, 
+                s.st.position.y + s.d.y * scale, 
+                s.st.position.z
+            );
             const f = maxDisp > 0 ? s.mag / maxDisp : 0;
             const [r, g, b] = this._jet(f);
             colors.push(r, g, b);

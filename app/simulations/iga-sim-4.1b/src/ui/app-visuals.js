@@ -1,5 +1,5 @@
 /**
- * Phase 4.0 Visuals — Mesh Rendering & 3D Scene
+ * Phase 4.1 Visuals — Mesh Rendering & 3D Scene
  */
 
 class TransientVisuals {
@@ -11,17 +11,11 @@ class TransientVisuals {
         
         this.deformedMesh = null;
         this.wireframe = null;
-        this.cpPoints = null;
-        this.cpLattice = null;
-        
-        this.showCP = false;
-        this.meshRes = 24;
-        this.defScale = 10;
-        
         this.markersGroup = new THREE.Group();
         this.forceArrow = null;
         this.scene.add(this.markersGroup);
         
+        this.defScale = 10;
         this.init();
     }
 
@@ -149,17 +143,15 @@ class TransientVisuals {
     }
 
     updateMesh(uDisp, t = 0) {
-        this.markersGroup.clear(); // Always clear to handle refinement changes
-        this.drawMarkers();
+        if (this.markersGroup.children.length === 0) this.drawMarkers();
         this.updateForceMarkers(t);
-        const res = this.meshRes; 
+        const res = 24; 
         const posDef = [], colors = [];
         let maxDisp = 0;
 
         const engine = this.app.engine;
         const patch = this.app.patch;
 
-        // Pre-calculate surface states and find max displacement
         const states = [];
         for (let i = 0; i <= res; i++) {
             const xi = i / res;
@@ -173,7 +165,6 @@ class TransientVisuals {
             }
         }
 
-        // Generate geometry data
         const scale = this.defScale;
         for (const s of states) {
             posDef.push(
@@ -186,13 +177,7 @@ class TransientVisuals {
             colors.push(r, g, b);
         }
 
-        if (!this.deformedMesh || this.lastRes !== res) {
-            if (this.deformedMesh) {
-                this.scene.remove(this.deformedMesh, this.wireframe);
-                this.deformedMesh.geometry.dispose();
-                this.wireframe.geometry.dispose();
-            }
-
+        if (!this.deformedMesh) {
             const idx = [];
             for (let i = 0; i < res; i++) for (let j = 0; j < res; j++) {
                 const a = i*(res+1)+j, b = (i+1)*(res+1)+j, c = (i+1)*(res+1)+j+1, d = i*(res+1)+j+1;
@@ -207,7 +192,6 @@ class TransientVisuals {
             this.wireframe = new THREE.LineSegments(new THREE.WireframeGeometry(g), new THREE.LineBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.2 }));
             
             this.scene.add(this.deformedMesh, this.wireframe);
-            this.lastRes = res;
         } else {
             const pa = this.deformedMesh.geometry.getAttribute('position');
             const ca = this.deformedMesh.geometry.getAttribute('color');
@@ -217,64 +201,6 @@ class TransientVisuals {
             this.deformedMesh.geometry.computeVertexNormals();
             this.wireframe.geometry.dispose();
             this.wireframe.geometry = new THREE.WireframeGeometry(this.deformedMesh.geometry);
-        }
-
-        this.updateCP(uDisp);
-    }
-
-    updateCP(uDisp) {
-        if (!this.showCP) {
-            if (this.cpPoints) this.cpPoints.visible = false;
-            if (this.cpLattice) this.cpLattice.visible = false;
-            return;
-        }
-
-        const patch = this.app.patch;
-        const nU = patch.controlPoints.length;
-        const nV = patch.controlPoints[0].length;
-        const cpPos = [];
-
-        const scale = this.defScale;
-        for (let i = 0; i < nU; i++) {
-            for (let j = 0; j < nV; j++) {
-                const dofIdx = (i * nV + j) * 2;
-                cpPos.push(
-                    patch.controlPoints[i][j].x + uDisp[dofIdx] * scale,
-                    patch.controlPoints[i][j].y + uDisp[dofIdx + 1] * scale,
-                    patch.controlPoints[i][j].z
-                );
-            }
-        }
-
-        if (!this.cpPoints) {
-            const geom = new THREE.BufferGeometry();
-            geom.setAttribute('position', new THREE.Float32BufferAttribute(cpPos, 3));
-            const mat = new THREE.PointsMaterial({ color: 0xff3366, size: 0.6, sizeAttenuation: true });
-            this.cpPoints = new THREE.Points(geom, mat);
-            
-            // Lattice Lines
-            const latIdx = [];
-            for (let i = 0; i < nU; i++) {
-                for (let j = 0; j < nV; j++) {
-                    const idx = i * nV + j;
-                    if (i < nU - 1) latIdx.push(idx, (i + 1) * nV + j);
-                    if (j < nV - 1) latIdx.push(idx, i * nV + j + 1);
-                }
-            }
-            const latGeom = new THREE.BufferGeometry();
-            latGeom.setIndex(latIdx);
-            latGeom.setAttribute('position', new THREE.Float32BufferAttribute(cpPos, 3));
-            const latMat = new THREE.LineBasicMaterial({ color: 0xff3366, transparent: true, opacity: 0.4 });
-            this.cpLattice = new THREE.LineSegments(latGeom, latMat);
-            
-            this.scene.add(this.cpPoints, this.cpLattice);
-        } else {
-            this.cpPoints.visible = true;
-            this.cpLattice.visible = true;
-            this.cpPoints.geometry.getAttribute('position').copyArray(new Float32Array(cpPos));
-            this.cpPoints.geometry.getAttribute('position').needsUpdate = true;
-            this.cpLattice.geometry.getAttribute('position').copyArray(new Float32Array(cpPos));
-            this.cpLattice.geometry.getAttribute('position').needsUpdate = true;
         }
     }
 

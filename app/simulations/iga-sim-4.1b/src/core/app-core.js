@@ -10,8 +10,9 @@ class OfflineLab {
         this.viz = null;
         this.trainer = null;
         
-        this.snapshots = []; // Displacement snapshots
+        this.snapshots = []; 
         this.isTraining = false;
+        this.audit = new window.OfflineAudit(this);
         
         this.init();
     }
@@ -34,8 +35,22 @@ class OfflineLab {
         const ctxTrace = document.getElementById('chart-trace').getContext('2d');
         this.traceChart = new Chart(ctxTrace, {
             type: 'line',
-            data: { labels: [], datasets: [{ label: 'Tip Displacement', data: [], borderColor: '#f43f5e', fill: false }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            data: { labels: [], datasets: [{ label: 'Tip Displacement (mm)', data: [], borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.1)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0 }] },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { display: false },
+                    zoom: {
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                        pan: { enabled: true, mode: 'x' }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
         });
 
         const ctxEnergy = document.getElementById('chart-energy').getContext('2d');
@@ -49,9 +64,10 @@ class OfflineLab {
     async runTraining() {
         if (this.isTraining) return;
         this.isTraining = true;
+        this.audit.start();
+        this.audit.log(1, "Starting high-fidelity FOM simulation...");
         
         const T = parseFloat(document.getElementById('input-time').value);
-        const dt = parseFloat(document.getElementById('input-dt')?.value || 0.01);
         const steps = parseInt(document.getElementById('input-steps').value);
         const dt_calc = T / steps;
 
@@ -60,42 +76,67 @@ class OfflineLab {
         this.dyn.v.fill(0);
         this.dyn.a.fill(0);
 
-        document.getElementById('train-status').classList.remove('hidden');
-        document.getElementById('train-status').innerText = "Running Transient FOM...";
-
         for (let s = 0; s < steps; s++) {
             const Fext = new Float64Array(this.dyn.dofs);
-            // Simple step force for training
-            Fext[this.dyn.dofs - 1] = -400; 
+            const mag = 400; 
+
+            const nU = this.patch.controlPoints.length;
+            const nV = this.patch.controlPoints[0].length;
+            for (let j = 0; j < nV; j++) {
+                const dofIdx = ((nU - 1) * nV + j) * 2 + 1;
+                const weight = (j === 0 || j === nV - 1) ? 0.5 : 1.0;
+                Fext[dofIdx] = -(mag * weight) / (nV - 1);
+            }
 
             await this.dyn.solveStep(dt_calc, Fext);
-            
-            // Store snapshot
             this.snapshots.push(new Float64Array(this.dyn.u));
             
             if (s % 5 === 0) {
-                this.viz.updateMesh(this.dyn.u);
+                this.viz.updateMesh(this.dyn.u, s * dt_calc);
                 this.updateTrace(s * dt_calc, this.dyn.u[this.dyn.dofs - 1]);
-                document.getElementById('train-status').innerText = `Snapshot ${s}/${steps}...`;
+                this.audit.log(1, `Snapshot collection: ${s}/${steps}...`);
             }
         }
+        this.audit.log(1, `Phase 1 Complete. Harvested ${this.snapshots.length} snapshots.`);
 
-        document.getElementById('train-status').innerText = "Computing POD Basis...";
+        // Phase 2: POD
+        this.audit.log(2, "Extracting POD Basis via SVD...");
         const k = parseInt(document.getElementById('input-k').value);
         const { Phi, energyTrace } = this.trainer.computePOD(this.snapshots, k);
-        
         this.updateEnergyChart(energyTrace);
+        this.audit.reportSVD(energyTrace, Phi.columns);
+
+        // Phase 3: ECSW
+        this.audit.log(3, "Starting ECSW Sparse Training...");
+        const mScale = parseInt(document.getElementById('input-m').value);
+        const ecswTol = Math.pow(10, -mScale);
+        const ecswResult = await this.trainer.trainECSW(this.snapshots, Phi, ecswTol);
+        
+        const totalElements = ([...new Set(this.patch.U)].length - 1) * ([...new Set(this.patch.V)].length - 1);
+        this.audit.reportECSW(totalElements, ecswResult.indices.length, ecswTol);
+
+        // Phase 4: Projection
+        this.audit.log(4, "Assembling Reduced Matrices...");
         this.trainer.computeReducedMatrices(Phi);
         
-        document.getElementById('train-status').innerText = "Training Complete.";
+        // Phase 5: Verification
+        this.audit.log(5, "Verifying Package Integrity...");
+        this.trainer.verifyPackage();
+        
         document.getElementById('btn-export').disabled = false;
         document.getElementById('btn-verify').disabled = false;
         
         this.isTraining = false;
-        this._updateStats(Phi.columns, energyTrace[k-1]);
+        this.audit.success();
+        
+        // Update Final UI Stats
+        const actualK = Phi.columns;
+        const finalEnergy = energyTrace[actualK - 1];
+        this._updateStats(actualK, finalEnergy);
     }
 
     updateTrace(t, disp) {
+        this.viz.updateMesh(this.dyn.u, t);
         this.traceChart.data.labels.push(t.toFixed(2));
         this.traceChart.data.datasets[0].data.push(disp * 1000);
         this.traceChart.update('none');

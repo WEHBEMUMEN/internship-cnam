@@ -47,7 +47,16 @@ class NURBSPresets {
         ];
         const weights = [ [1,1], [1,1] ];
         
-        return { p, q, U, V, controlPoints, weights };
+        return { 
+            p, q, U, V, controlPoints, weights,
+            constraints: [ { type: 'clamp', side: 'left' } ],
+            load: {
+                type: 'distributed',
+                side: 'right',
+                magnitude: { x: 0, y: -4.0 }, // Base mag for visual scaling
+                timeFunction: (t) => { const s = Math.sin(Math.PI * t * 2); return s * s; } // Non-negative dynamic factor
+            }
+        };
     }
 
     /**
