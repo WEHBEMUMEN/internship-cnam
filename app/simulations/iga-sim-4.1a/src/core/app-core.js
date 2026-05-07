@@ -116,9 +116,9 @@ class OfflineLab {
                 Fext[dofIdx] = -mag * weight;
             }
 
-            // Run until steady state (Quasi-static approximation using dynamics with high damping)
-            // Or just solve a single large step. Let's do 10 steps of 0.1s to converge.
-            for(let step=0; step<10; step++) {
+            // Run until steady state (Quasi-static approximation)
+            // 40 steps of 0.1s with numerical damping ensures convergence to static solution.
+            for(let step=0; step<40; step++) {
                 await this.dyn.solveStep(0.1, Fext);
             }
             

@@ -55,6 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Toggle Active Elements
+    const toggleActive = document.getElementById('toggle-active');
+    if (toggleActive) {
+        toggleActive.addEventListener('change', (e) => {
+            app.viz.showActiveElements = e.target.checked;
+            if (app.dyn && app.dyn.u) app.viz.updateMesh(app.dyn.u);
+        });
+    }
+
     // Draggable Logic (from 4.0)
     let activePanel = null;
     let offset = [0, 0];

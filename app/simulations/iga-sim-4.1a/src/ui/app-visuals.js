@@ -16,6 +16,11 @@ class TransientVisuals {
         this.scene.add(this.markersGroup);
         
         this.defScale = 10;
+        this.showCP = false;
+        this.showActiveElements = false;
+        this.controlPointsGroup = new THREE.Group();
+        this.activeElementsGroup = new THREE.Group();
+        this.scene.add(this.controlPointsGroup, this.activeElementsGroup);
         this.init();
     }
 
@@ -104,6 +109,66 @@ class TransientVisuals {
         }
     }
 
+    drawControlPoints(uDisp) {
+        this.controlPointsGroup.clear();
+        if (!this.showCP || !uDisp) return;
+
+        const patch = this.app.patch;
+        const nU = patch.controlPoints.length;
+        const nV = patch.controlPoints[0].length;
+        const scale = this.defScale;
+
+        const sphereGeo = new THREE.SphereGeometry(0.1, 8, 8);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false });
+
+        for (let i = 0; i < nU; i++) {
+            for (let j = 0; j < nV; j++) {
+                const cp = patch.controlPoints[i][j];
+                const dofIdx = (i * nV + j) * 2;
+                const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+                sphere.position.set(
+                    cp.x + uDisp[dofIdx] * scale,
+                    cp.y + uDisp[dofIdx+1] * scale,
+                    cp.z
+                );
+                sphere.renderOrder = 2000;
+                this.controlPointsGroup.add(sphere);
+            }
+        }
+    }
+
+    updateActiveElements() {
+        this.activeElementsGroup.clear();
+        if (!this.showActiveElements || !this.app.trainer || !this.app.trainer.package.ecsw) return;
+
+        const patch = this.app.patch;
+        const { U, V } = patch;
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const nV = uniqueV.length - 1;
+
+        const mat = new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 2, depthTest: false });
+
+        this.app.trainer.package.ecsw.indices.forEach(idx => {
+            const i = Math.floor(idx / nV);
+            const j = idx % nV;
+            
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            const vMin = uniqueV[j], vMax = uniqueV[j+1];
+
+            const pts = [];
+            const res = 4;
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMin + (uMax-uMin)*(k/res), vMin).position);
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMax, vMin + (vMax-vMin)*(k/res)).position);
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMax - (uMax-uMin)*(k/res), vMax).position);
+            for(let k=0; k<=res; k++) pts.push(this.app.engine.getSurfaceState(patch, uMin, vMax - (vMax-vMin)*(k/res)).position);
+
+            const geometry = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(p.x, p.y, p.z + 0.1)));
+            const line = new THREE.Line(geometry, mat);
+            line.renderOrder = 3000;
+            this.activeElementsGroup.add(line);
+        });
+    }
+
     updateForceMarkers(t) {
         if (!this.forceArrowsGroup) {
             this.forceArrowsGroup = new THREE.Group();
@@ -145,6 +210,8 @@ class TransientVisuals {
     updateMesh(uDisp, t = 0) {
         if (this.markersGroup.children.length === 0) this.drawMarkers();
         this.updateForceMarkers(t);
+        this.drawControlPoints(uDisp);
+        this.updateActiveElements();
         const res = 24; 
         const posDef = [], colors = [];
         let maxDisp = 0;
