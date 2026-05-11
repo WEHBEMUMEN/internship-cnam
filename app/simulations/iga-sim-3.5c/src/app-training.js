@@ -136,7 +136,7 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
     await new Promise(r => setTimeout(r, 10));
     const tol = Math.pow(10, -parseInt(document.getElementById('input-m').value));
     const ecswInfo = await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, snapDisp, tol);
-    document.getElementById('input-m').disabled = true; // ECSW uses internal tolerance
+    document.getElementById('input-m').disabled = false; 
     document.getElementById('deim-info').textContent = `${ecswInfo.elementCount} active elements / ${ecswInfo.totalElements}`;
 
     this.isTrained = true;

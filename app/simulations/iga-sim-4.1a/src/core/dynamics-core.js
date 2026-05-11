@@ -177,6 +177,11 @@ class DynamicsSolver {
                 norm += du[i] * du[i];
             }
 
+            // Real-time iteration update
+            if (options.onIter) {
+                await options.onIter(u_next, iter + 1, Math.sqrt(norm));
+            }
+
             if (Math.sqrt(norm) < tol) {
                 // Converged! Update state
                 this.u = u_next;

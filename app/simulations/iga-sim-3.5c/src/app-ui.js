@@ -43,9 +43,15 @@ DEIMBenchmarkApp.prototype.initUI = function() {
         document.getElementById('k-val').textContent = this.k;
     };
 
-    document.getElementById('input-m').oninput = (e) => {
+    document.getElementById('input-m').oninput = async (e) => {
         const val = parseInt(e.target.value);
         document.getElementById('m-val').textContent = `1e-${val}`;
+        if (this.isTrained && this.snapDisp) {
+            const tol = Math.pow(10, -val);
+            const info = await this.ecswEngine.train(this.solverFOM, this.romEngine, this.patch, this.snapDisp, tol);
+            document.getElementById('deim-info').textContent = `${info.elementCount} active elements / ${info.totalElements}`;
+            this.updatePhysics();
+        }
     };
 
     document.querySelectorAll('[data-method]').forEach(btn => {

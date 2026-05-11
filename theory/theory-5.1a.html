@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Theory | Phase 5.1a - Geometric ROM</title>
+    <link rel="stylesheet" href="../app/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <style>
+        .theory-container { max-width: 900px; margin: 60px auto; padding: 40px; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        h1 { font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #8b5cf6, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; }
+        h2 { color: #8b5cf6; margin-top: 40px; border-bottom: 1px solid rgba(139, 92, 246, 0.2); padding-bottom: 10px; }
+        p { line-height: 1.8; color: #cbd5e1; margin-bottom: 20px; }
+        .math-block { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; margin: 20px 0; overflow-x: auto; text-align: center; }
+    </style>
+</head>
+<body class="dark-theme">
+    <div class="theory-container">
+        <a href="../app/index.html" style="color: #94a3b8; text-decoration: none; font-weight: 600;">← Back to Hub</a>
+        
+        <h1>Phase 5.1a: Shape-Parametric Reduced-Order Modeling</h1>
+        
+        <p>In Phase 5, we transition from <strong>Force-Parametric ROM</strong> to <strong>Geometric-Parametric ROM</strong>. In this regime, the physical domain $\Omega$ is no longer static; its boundary $\Gamma$ and internal metric $g$ are functions of a shape parameter vector $\mathbf{\theta}$. This is the foundation of <strong>Geometric Digital Twins</strong>.</p>
+
+        <h2>1. NURBS Geometric Morphing</h2>
+        <p>A NURBS surface is defined by its control points $\mathbf{P}_{i,j}$. To enable parametric geometry, we define a mapping function $\mathcal{M}$ that evolves these points based on the shape vector $\mathbf{\theta} = [R, L_1, L_2]^T$:</p>
+        
+        <div class="math-block">
+            $$\mathbf{P}_{i,j}(\mathbf{\theta}) = \mathcal{M}(\mathbf{P}_{i,j}^{ref}, \mathbf{\theta})$$
+        </div>
+
+        <p>For the notched plate, the mapping for the inner boundary ($R$) and outer dimensions ($L_1, L_2$) must maintain the <strong>exact circularity</strong> of the hole while stretching the surrounding "tensor-mesh." This is achieved by a linear blending between the radial notch coordinates and the rectangular outer boundary coordinates.</p>
+
+        <h2>2. Parametric Jacobian and Stiffness</h2>
+        <p>In force-parametric ROM, the stiffness matrix $\mathbf{K}$ is constant. In geometric ROM, every change in $\mathbf{\theta}$ alters the Jacobian $\mathbf{J}(\xi, \eta; \mathbf{\theta})$ of the mapping from the reference unit square to the physical space. The parametric stiffness is defined as:</p>
+
+        <div class="math-block">
+            $$\mathbf{K}(\mathbf{\theta}) = \int_{\hat{\Omega}} \mathbf{B}^T(\xi, \eta; \mathbf{\theta}) \mathbf{D} \mathbf{B}(\xi, \eta; \mathbf{\theta}) \det(\mathbf{J}(\xi, \eta; \mathbf{\theta})) d\hat{\Omega}$$
+        </div>
+
+        <p>Because $\mathbf{K}$ is now a function of $\mathbf{\theta}$, the snapshot collection process becomes computationally intensive, as it requires a full assembly and solve for each geometric sample. The goal of Phase 5 is to build a reduced basis $\mathbf{\Phi}$ that can approximate the displacement field $\mathbf{u}(\mathbf{\theta})$ even as the integration domain itself deforms.</p>
+
+        <h2>3. Linear Static Benchmark: The Kirsch Problem</h2>
+        <p>We utilize the <strong>Plate with a Hole</strong> (Notch) benchmark. Due to symmetry, we solve a quarter-model with the following boundary conditions:</p>
+        <ul>
+            <li><strong>Bottom Edge ($y=0$):</strong> $u_y = 0$ (Symmetry)</li>
+            <li><strong>Left Edge ($x=0$):</strong> $u_x = 0$ (Symmetry)</li>
+            <li><strong>Right Edge ($x=L_1$):</strong> $\sigma_{xx} = T_x$ (Tension)</li>
+        </ul>
+        <p>The exact stress concentration factor (SCF) at the notch is theoretically $3.0$ for an infinite plate. In our Digital Twin, the ROM must capture the localized stress gradients as $R$ increases relative to $L_1$ and $L_2$, demonstrating <strong>Topological Sensitivity</strong>.</p>
+
+        <h2>4. Multidimensional Shape-Space Sweep</h2>
+        <p>The offline trainer performs a grid search across the parameters:</p>
+        <div class="math-block">
+            $$\mathcal{D}_{\theta} = \{ (R_i, L1_j, L2_k) \}$$
+        </div>
+        <p>For each triplet, a linear static IGA solution is obtained. The resulting snapshot matrix $\mathbf{S}$ is then decomposed via SVD to extract the dominant geometric modes that represent the most common deformation patterns across the shape-space.</p>
+    </div>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+</body>
+</html>

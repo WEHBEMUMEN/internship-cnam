@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase 3.5a | Equidistant DEIM</title>
+    <title>Phase 3.5b | U-DEIM Benchmark</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -98,7 +98,10 @@
                 <button id="btn-train" class="btn-train-full" style="flex:2;"><i class="fa-solid fa-brain"></i> Train U-DEIM</button>
                 <button id="btn-explorer" class="btn-train-full" style="flex:1; background:linear-gradient(135deg,#f59e0b,#d97706); font-size:0.65rem;" disabled><i class="fa-solid fa-magnifying-glass"></i> Explorer</button>
             </div>
-            <button id="btn-audit" class="btn-audit"><i class="fa-solid fa-flask-vial"></i> Run Math Audit</button>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="btn-audit" class="btn-audit" style="flex:1; display:flex;"><i class="fa-solid fa-flask-vial"></i> Math Audit</button>
+                <a href="../../../theory/theory-3.5b.html" class="btn-audit" style="flex:1; display:flex; background:linear-gradient(135deg,#6366f1,#4f46e5);"><i class="fa-solid fa-book-open"></i> Detailed Theory</a>
+            </div>
             <div id="train-status" class="hidden"></div>
         </div>
 
@@ -130,11 +133,15 @@
         <div class="control-group">
             <span class="section-label">3 · Physics</span>
             <div style="display:flex; justify-content:space-between; margin-bottom:14px;">
-                <div style="width:48%">
+                <div style="width:31%">
                     <div class="label-row"><span class="lbl">Mesh (h)</span><span class="val" id="mesh-val">1</span></div>
                     <input type="range" id="input-mesh" min="1" max="4" value="1">
                 </div>
-                <div style="width:48%">
+                <div style="width:31%">
+                    <div class="label-row"><span class="lbl">Degree (p)</span><span class="val" id="p-val">2</span></div>
+                    <input type="range" id="input-p" min="1" max="4" value="2">
+                </div>
+                <div style="width:31%">
                     <div class="label-row"><span class="lbl">Live Load</span><span class="val" id="load-val">200</span></div>
                     <input type="range" id="input-load" min="10" max="2000" step="10" value="200">
                 </div>

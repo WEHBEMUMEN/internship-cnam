@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory 3.5b | U-DEIM Hyper-Reduction</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root { --primary: #6366f1; --secondary: #10b981; --bg: #020617; --card: #0f172a; --text: #f8fafc; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.8; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 80px 30px; }
+        .math-card { background: #020617; padding: 30px; border-radius: 20px; margin: 30px 0; border-left: 4px solid var(--primary); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); overflow-x: auto; }
+        .content-section { background: var(--card); border: 1px solid var(--border); border-radius: 32px; padding: 50px; margin-bottom: 50px; transition: border-color 0.3s ease; }
+        .content-section:hover { border-color: var(--primary); }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 15px; }
+        .highlight { color: var(--primary); font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-20">
+            <span class="px-4 py-1.5 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold tracking-widest uppercase border border-indigo-500/20 mb-6 inline-block">Phase 3.5b | Advanced Hyper-Reduction</span>
+            <h1>U-DEIM<br>Unassembled DEIM</h1>
+            <p class="mt-6 text-xl text-slate-400 font-light">Breaking the assembly bottleneck through element-level sparse interpolation.</p>
+        </header>
+
+        <section class="content-section">
+            <h2><i class="fa-solid fa-link-slash"></i> 1. The Assembly Problem</h2>
+            <p>In standard DEIM (Phase 3.4a), we approximate the <strong>assembled</strong> internal force vector $\mathbf{F}_{int} \in \mathbb{R}^N$. However, evaluating even a single entry of $\mathbf{F}_{int}$ often requires visiting multiple elements that share that DOF. For complex nonlinearities, the cost of "assembling just what we need" can still be significant.</p>
+            <p>U-DEIM (Unassembled DEIM) shifts the focus from the assembled global vector to the <strong>unassembled force vector</strong> $\mathcal{F} \in \mathbb{R}^{n_e \times n_{dof}^e}$:</p>
+            <div class="math-card">
+                $$\mathcal{F}(\mathbf{u}) = \begin{bmatrix} \mathbf{f}_1(\mathbf{u}_1) \\ \mathbf{f}_2(\mathbf{u}_2) \\ \vdots \\ \mathbf{f}_{n_e}(\mathbf{u}_{n_e}) \end{bmatrix}$$
+            </div>
+            <p>where $\mathbf{f}_e$ is the local force contribution of element $e$. By approximating $\mathcal{F}$ directly, we can skip the assembly process entirely for most elements.</p>
+        </section>
+
+        <section class="content-section">
+            <h2><i class="fa-solid fa-microscope"></i> 2. The U-DEIM Formulation</h2>
+            <p>We approximate the unassembled force field using a POD basis $\mathbf{U}_{\mathcal{F}}$ built from unassembled force snapshots:</p>
+            <div class="math-card">
+                $$\mathcal{F} \approx \mathbf{U}_{\mathcal{F}} \left( \mathbf{P}^T \mathbf{U}_{\mathcal{F}} \right)^{-1} \mathbf{P}^T \mathcal{F}$$
+            </div>
+            <p>The key difference is that $\mathbf{P}$ now selects <strong>specific integration points or local DOFs</strong> within elements. This allows the solver to jump directly to the $m$ most important integration points across the mesh.</p>
+        </section>
+
+        <section class="content-section">
+            <h2><i class="fa-solid fa-layer-group"></i> 3. Role of Polynomial Degree ($p$)</h2>
+            <p>In Isogeometric Analysis (IGA), the polynomial degree $p$ has a profound impact on hyper-reduction:</p>
+            <ul class="list-disc list-inside text-slate-400 space-y-3 mt-4">
+                <li><span class="highlight">Support Span</span>: Higher $p$ increases the overlap (support) of basis functions. This makes the force field smoother but also increases the number of DOFs affected by a single U-DEIM point.</li>
+                <li><span class="highlight">Integration Points</span>: For a degree $p$, we typically use $(p+1)^2$ Gauss points per element. U-DEIM must select points within these local grids.</li>
+                <li><span class="highlight">Accuracy</span>: Higher $p$ generally leads to better approximation of the nonlinear manifold, allowing U-DEIM to converge with fewer points $m$.</li>
+            </ul>
+        </section>
+
+        <div class="text-center mt-16">
+            <a href="../app/simulations/iga-sim-3.5b/index.html" class="inline-block px-8 py-3 bg-indigo-600 text-white rounded-full font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30">
+                <i class="fa-solid fa-play mr-2"></i> Return to U-DEIM Lab
+            </a>
+        </div>
+    </div>
+</body>
+</html>

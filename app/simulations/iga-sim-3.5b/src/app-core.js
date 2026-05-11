@@ -29,6 +29,7 @@ class DEIMBenchmarkApp {
         this.k = 25;
         this.deimM = 40;
         this.meshLevel = 1;
+        this.pLevel = 2;
         this.loadType = 'tip';
         this.showDOFs = true;
         this.isTrained = false;
@@ -93,7 +94,7 @@ class DEIMBenchmarkApp {
     loadBenchmark() {
         this.clearMesh();
         this.patch = NURBSPresets.generateCantilever(10, 2);
-        RefineUtils.apply(this.engine, this.patch, { p: 3, h: this.meshLevel });
+        RefineUtils.apply(this.engine, this.patch, { p: this.pLevel, h: this.meshLevel });
         this.solverFOM.E = 100000;
         this.solverFOM.nu = 0.3;
         this.solverFOM.thickness = 1.0;

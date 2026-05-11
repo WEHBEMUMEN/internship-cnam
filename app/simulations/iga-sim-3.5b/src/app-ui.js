@@ -32,6 +32,12 @@ DEIMBenchmarkApp.prototype.initUI = function() {
         document.getElementById('mesh-val').textContent = this.meshLevel;
         this.loadBenchmark();
     };
+    
+    document.getElementById('input-p').onchange = (e) => {
+        this.pLevel = parseInt(e.target.value);
+        document.getElementById('p-val').textContent = this.pLevel;
+        this.loadBenchmark();
+    };
 
     document.getElementById('input-load').oninput = (e) => {
         this.loadMag = parseFloat(e.target.value);
@@ -47,6 +53,7 @@ DEIMBenchmarkApp.prototype.initUI = function() {
     document.getElementById('input-m').oninput = (e) => {
         this.deimM = parseInt(e.target.value);
         document.getElementById('m-val').textContent = this.deimM;
+        if (this.isTrained) this.updatePhysics();
     };
 
     document.querySelectorAll('[data-method]').forEach(btn => {

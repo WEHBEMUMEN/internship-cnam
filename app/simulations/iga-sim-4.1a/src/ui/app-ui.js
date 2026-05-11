@@ -25,7 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!el) return;
         el.addEventListener('input', () => {
             let displayVal = el.value;
-            if (cfg.id === 'input-m') displayVal = "1e-" + el.value;
+            if (cfg.id === 'input-m') {
+                displayVal = "1e-" + el.value;
+                if (!app.isTraining && app.snapshots.length > 0) {
+                    app.recomputeECSW(parseInt(el.value));
+                }
+            }
             valEl.innerText = displayVal + cfg.suffix;
 
             if (cfg.id === 'input-defscale') {
@@ -34,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (cfg.id === 'input-h' || cfg.id === 'input-p') {
                 const hVal = parseInt(document.getElementById('input-h').value);
                 const pVal = parseInt(document.getElementById('input-p').value);
+                
+                // Show warning if high intensity
+                const warning = document.getElementById('mesh-warning');
+                if (warning) warning.style.display = hVal >= 4 ? 'block' : 'none';
+                
                 app.updateRefinement(hVal, pVal);
             }
         });

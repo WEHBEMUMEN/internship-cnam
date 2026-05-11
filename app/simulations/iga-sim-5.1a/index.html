@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 5.1a | Geometric Digital Twin Trainer</title>
+    <link rel="stylesheet" href="../../../index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-light: #a78bfa;
+            --accent: #f59e0b;
+        }
+
+        .geometry-badge {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--primary-light);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .param-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #f1f5f9;
+        }
+
+        .stat-label {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-shapes"></i>
+                    <span>Phase 5.1a</span>
+                </div>
+                <div class="geometry-badge">Geometry Phase</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-group">
+                    <span class="nav-label">Geometric Parameters</span>
+                    
+                    <div class="control-group">
+                        <div class="control-header">
+                            <label>Notch Radius (R)</label>
+                            <span id="r-val" class="value-display">1.00</span>
+                        </div>
+                        <input type="range" id="input-r" min="0.5" max="2.5" step="0.1" value="1.0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <label>Width (L1)</label>
+                            <span id="l1-val" class="value-display">4.00</span>
+                        </div>
+                        <input type="range" id="input-l1" min="3.0" max="8.0" step="0.25" value="4.0">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-header">
+                            <label>Height (L2)</label>
+                            <span id="l2-val" class="value-display">4.00</span>
+                        </div>
+                        <input type="range" id="input-l2" min="3.0" max="8.0" step="0.25" value="4.0">
+                    </div>
+                </div>
+
+                <div class="nav-group" style="margin-top: 20px;">
+                    <span class="nav-label">Reduction Settings</span>
+                    <div class="control-group">
+                        <div class="control-header">
+                            <label>SVD Modes (k)</label>
+                            <span id="k-val" class="value-display">5</span>
+                        </div>
+                        <input type="range" id="input-k" min="1" max="20" value="5">
+                    </div>
+                </div>
+
+                <div class="nav-group" style="margin-top: auto;">
+                    <button id="btn-train" class="btn-action" style="background: var(--primary);">
+                        <i class="fa-solid fa-microchip"></i> Run Geometric Sweep
+                    </button>
+                    <button id="btn-export" class="btn-reset" disabled>
+                        <i class="fa-solid fa-download"></i> Export Geo-ROM
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar glass">
+                <div class="breadcrumb">
+                    <a href="../../index.html">Simulation Hub</a>
+                    <i class="fa-solid fa-chevron-right"></i>
+                    <span>Phase 5.1a: Geometric Offline Trainer</span>
+                </div>
+                <div class="top-actions">
+                    <a href="../../../theory/theory-5.1a.html" class="theory-btn">
+                        <i class="fa-solid fa-book"></i> Detailed Theory
+                    </a>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <div class="viz-container glass" id="canvas-container">
+                    <!-- Three.js Canvas will be injected here -->
+                    <div class="viz-overlay top-left">
+                        <div class="audit-badge" id="training-status">Ready to Sweep</div>
+                    </div>
+                    
+                    <div class="viz-overlay bottom-right param-grid" style="width: 250px;">
+                        <div class="stat-card">
+                            <div class="stat-val" id="stat-dofs">0</div>
+                            <div class="stat-label">Total DOFs</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-val" id="stat-snaps">0</div>
+                            <div class="stat-label">Snapshots</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-panel glass">
+                    <div class="tabs">
+                        <div class="tab active" data-tab="log">Geometric Audit Log</div>
+                        <div class="tab" data-tab="energy">Energy Spectrum</div>
+                    </div>
+                    <div class="tab-content" id="audit-log">
+                        <div class="log-entry system">
+                            <span class="log-time">[SYSTEM]</span>
+                            <span class="log-msg">Welcome to Phase 5. Geometric parametrization initialized. Select R, L1, L2 to define the parametric shape-space.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
+
+    <!-- Phase 2 Core Shared (Linked) -->
+    <script src="../phase-2-core/src/nurbs-2d.js"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js"></script>
+
+    <!-- Atomic Source Files (Phase 5) -->
+    <script src="src/shared/constants.js"></script>
+    <script src="src/core/geometry-factory.js"></script>
+    <script src="src/core/solver-bridge.js"></script>
+    <script src="src/reduction/pod-engine.js"></script>
+    <script src="src/reduction/snapshot-collector.js"></script>
+    <script src="src/reduction/offline-trainer.js"></script>
+    <script src="src/ui/visuals-engine.js"></script>
+    <script src="src/ui/dom-manager.js"></script>
+    <script src="src/ui/audit-reporter.js"></script>
+    <script src="src/core/app-state.js"></script>
+
+    <!-- Entry Point -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Orchestration will happen in app-state.js
+        });
+    </script>
+</body>
+</html>

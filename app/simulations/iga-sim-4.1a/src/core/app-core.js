@@ -13,6 +13,7 @@ class OfflineLab {
         this.p = 1;
         
         this.snapshots = []; 
+        this.snapshotMetadata = []; // Tracks { t, mu } for each snapshot
         this.isTraining = false;
         this.audit = new window.OfflineAudit(this);
         
@@ -38,7 +39,12 @@ class OfflineLab {
             this.viz.cpLattice = null;
         }
         this.viz.updateMesh(this.dyn.u);
+        const uniqueU = [...new Set(this.patch.U)].length - 1;
+        const uniqueV = [...new Set(this.patch.V)].length - 1;
+        this.elementCount = uniqueU * uniqueV;
+
         document.getElementById('dofs-val').innerText = this.dyn.dofs;
+        document.getElementById('elems-val').innerText = this.elementCount;
     }
 
     async init() {
@@ -83,6 +89,26 @@ class OfflineLab {
             data: { labels: [], datasets: [{ label: 'Cumulative Energy', data: [], backgroundColor: '#10b981' }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0.9, max: 1.0 } } }
         });
+
+        const ctxSampling = document.getElementById('chart-sampling').getContext('2d');
+        this.samplingChart = new Chart(ctxSampling, {
+            type: 'scatter',
+            data: { 
+                datasets: [
+                    { label: 'Path Snapshots', data: [], backgroundColor: 'rgba(244,63,94,0.3)', pointRadius: 3 },
+                    { label: 'Convergence Point', data: [], backgroundColor: '#10b981', pointRadius: 6, pointStyle: 'rectRot' }
+                ] 
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: true, labels: { color: '#94a3b8', boxWidth: 10, font: { size: 9 } } } },
+                scales: { 
+                    x: { title: { display: true, text: 'Time (t)', color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { title: { display: true, text: 'Load (\u03bc)', color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
     }
 
     async runTraining() {
@@ -91,17 +117,30 @@ class OfflineLab {
         this.audit.start();
         this.audit.log(1, "Starting parametric Load Sweep (High-Fidelity FOM)...");
         
+        const progContainer = document.getElementById('progress-container');
+        const progStatus = document.getElementById('progress-status');
+        const progFill = document.getElementById('progress-fill');
+        const progPercent = document.getElementById('progress-percent');
+        
+        if (progContainer) progContainer.style.display = 'block';
+
         const fMin = parseFloat(document.getElementById('input-fmin').value);
         const fMax = parseFloat(document.getElementById('input-fmax').value);
         const samples = parseInt(document.getElementById('input-samples').value);
 
         this.snapshots = [];
+        this.snapshotMetadata = [];
+        this.samplingChart.data.datasets[0].data = [];
+        this.samplingChart.data.datasets[1].data = [];
+        this.samplingChart.update();
+
         this.dyn.u.fill(0);
         this.dyn.v.fill(0);
         this.dyn.a.fill(0);
 
+        const convTol = 1e-7;
+
         for (let s = 0; s < samples; s++) {
-            // Equidistant Force Sampling
             const mag = fMin + (fMax - fMin) * (s / (samples - 1));
             const Fext = new Float64Array(this.dyn.dofs);
 
@@ -116,19 +155,65 @@ class OfflineLab {
                 Fext[dofIdx] = -mag * weight;
             }
 
-            // Run until steady state (Quasi-static approximation)
-            // 40 steps of 0.1s with numerical damping ensures convergence to static solution.
-            for(let step=0; step<40; step++) {
-                await this.dyn.solveStep(0.1, Fext);
-            }
+            // Adaptive Sampling: Run until steady state
+            let converged = false;
+            let uPrev = new Float64Array(this.dyn.u);
             
-            this.snapshots.push(new Float64Array(this.dyn.u));
+            for(let step=1; step<=150; step++) { // Allow more room for high loads
+                const dt = 0.1;
+                
+                // Solve with iteration callback for real-time visualization
+                await this.dyn.solveStep(dt, Fext, {
+                    onIter: async (u_next, iter, norm) => {
+                        this.viz.updateMesh(u_next, s);
+                        if (progStatus) progStatus.innerText = `Solving ${mag.toFixed(0)}N (Iter ${iter})...`;
+                        await new Promise(r => requestAnimationFrame(r));
+                    }
+                });
+                
+                // Convergence check (Steady state)
+                let diffNorm = 0;
+                for(let i=0; i<this.dyn.u.length; i++) {
+                    const d = this.dyn.u[i] - uPrev[i];
+                    diffNorm += d*d;
+                    uPrev[i] = this.dyn.u[i];
+                }
+                const err = Math.sqrt(diffNorm);
+                const time = step * dt;
+
+                // 1. Path snapshots (every 10 steps)
+                if (step % 10 === 0 && !converged) {
+                    this.snapshots.push(new Float64Array(this.dyn.u));
+                    this.snapshotMetadata.push({ t: time, mu: mag, type: 'path' });
+                    this.updateSamplingChart(time, mag, false);
+                }
+
+                // 2. Convergence point detection
+                if (err < convTol && step > 5) {
+                    converged = true;
+                    this.snapshots.push(new Float64Array(this.dyn.u));
+                    this.snapshotMetadata.push({ t: time, mu: mag, type: 'converged' });
+                    this.updateSamplingChart(time, mag, true);
+                    this.audit.log(1, `Load Level ${mag.toFixed(0)}N Converged at t=${time.toFixed(1)}s.`);
+                    break; 
+                }
+
+                if (step === 150) {
+                    this.audit.log(1, `Warning: Load Level ${mag.toFixed(0)}N failed to converge in 150 steps.`);
+                }
+            }
             
             this.viz.updateMesh(this.dyn.u, s);
             this.updateTrace(s, this.dyn.u[this.dyn.dofs - 1]);
-            this.audit.log(1, `Load Level ${mag.toFixed(0)}N: ${s+1}/${samples} snapshots collected.`);
+            
+            // Update Global Progress Bar
+            const totalProgress = ((s + 1) / samples) * 100;
+            if (progFill) progFill.style.width = totalProgress + '%';
+            if (progPercent) progPercent.innerText = Math.round(totalProgress) + '%';
         }
-        this.audit.log(1, `Phase 1 Complete. Harvested ${this.snapshots.length} snapshots.`);
+        
+        if (progContainer) progContainer.style.display = 'none';
+        this.audit.log(1, `Phase 1 Complete. Harvested ${this.snapshots.length} snapshots with adaptive convergence tracking.`);
 
         // Phase 2: POD
         this.audit.log(2, "Extracting POD Basis via SVD...");
@@ -190,6 +275,23 @@ class OfflineLab {
         this._updateStats(actualK, finalEnergy);
     }
 
+    async recomputeECSW(mScale) {
+        if (!this.snapshots.length || !this.trainer.package.phi) return;
+        
+        this.audit.log(3, `Retraining ECSW with tol=1e-${mScale}...`);
+        const ecswTol = Math.pow(10, -mScale);
+        const Phi = new window.mlMatrix.Matrix(this.trainer.package.phi);
+        
+        const ecswResult = await this.trainer.trainECSW(this.snapshots, Phi, ecswTol);
+        
+        const totalElements = ([...new Set(this.patch.U)].length - 1) * ([...new Set(this.patch.V)].length - 1);
+        this.audit.reportECSW(totalElements, ecswResult.indices.length, ecswTol);
+        
+        // Re-project reduced matrices
+        this.trainer.computeReducedMatrices(Phi);
+        this._updateStats(Phi.columns, this.trainer.package.pod_energy);
+    }
+
     updateTrace(t, disp) {
         this.viz.updateMesh(this.dyn.u, t);
         this.traceChart.data.labels.push(t.toFixed(2));
@@ -203,8 +305,15 @@ class OfflineLab {
         this.energyChart.update();
     }
 
+    updateSamplingChart(t, mu, isConverged) {
+        const datasetIdx = isConverged ? 1 : 0;
+        this.samplingChart.data.datasets[datasetIdx].data.push({ x: t, y: mu });
+        this.samplingChart.update('none');
+    }
+
     _updateStats(k, energy) {
         document.getElementById('dofs-val').innerText = this.dyn.dofs;
+        document.getElementById('elems-val').innerText = this.elementCount || "—";
         document.getElementById('sampled-val').innerText = this.snapshots.length;
         document.getElementById('energy-val').innerText = (energy * 100).toFixed(4) + "%";
         document.getElementById('sparse-val').innerText = "Pending";

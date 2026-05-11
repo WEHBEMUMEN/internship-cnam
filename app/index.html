@@ -262,6 +262,17 @@
             <button class="filter-btn" onclick="filterPhases('4', this)">
               <i class="fa-solid fa-bolt-lightning"></i> Phase 4: NL Dynamic
             </button>
+            
+            <!-- Distinct Separator for Phase 5+ -->
+            <div style="flex-basis: 100%; display: flex; align-items: center; gap: 20px; margin: 25px 0 15px 0; opacity: 0.8;">
+              <div style="flex-grow: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(139, 92, 246, 0.5));"></div>
+              <span style="font-size: 0.65rem; font-weight: 800; color: #8b5cf6; text-transform: uppercase; letter-spacing: 2px;">Geometry Research Phase</span>
+              <div style="flex-grow: 1; height: 1px; background: linear-gradient(to left, transparent, rgba(139, 92, 246, 0.5));"></div>
+            </div>
+            
+            <button class="filter-btn" onclick="filterPhases('5', this)" style="border-color: rgba(139, 92, 246, 0.4); background: rgba(139, 92, 246, 0.05);">
+              <i class="fa-solid fa-compass-drafting" style="color: #8b5cf6;"></i> <span style="color: #8b5cf6;">Phase 5: Geometric Digital Twin</span>
+            </button>
           </div>
 
         <!-- Phase 1: 1D Foundation -->
@@ -728,7 +739,7 @@
             <p>Unassembled element-wise reduction with deterministic loading paths. Porting premium aesthetics to U-DEIM.</p>
             <div class="app-actions">
               <a href="simulations/iga-sim-3.5b/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);">Launch 3.5b Lab <i class="fa-solid fa-bolt" style="margin-left: 8px;"></i></a>
-              <a href="../theory/theory-3.4b.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-3.5b.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
             </div>
           </div>
 
@@ -742,7 +753,7 @@
             <p>Energy-conserving sampling with uniform force intervals. Optimized NNLS weighting with premium Explorer integration.</p>
             <div class="app-actions">
               <a href="simulations/iga-sim-3.5c/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);">Launch 3.5c Lab <i class="fa-solid fa-bolt" style="margin-left: 8px;"></i></a>
-              <a href="../theory/theory-3.4c.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-3.5c.html" class="btn btn-outline btn-center" style="width: 100%;">Read Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
             </div>
           </div>
         </div>
@@ -797,7 +808,27 @@
           </div>
         </div>
 
-        
+        <hr data-phase="5" class="grid-separator" style="border-top: 1px solid rgba(139, 92, 246, 0.2);">
+
+        <h3 data-phase="5" class="phase-section-title" style="color: #8b5cf6;">
+            <i class="fa-solid fa-compass-drafting"></i> Phase 5: Geometric Digital Twins (The Geometry Phase)
+        </h3>
+
+        <div class="grid">
+          <!-- Phase 5.1a: Geometric Offline -->
+          <div class="card reveal reveal-up" data-phase="5">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <i class="fa-solid fa-shapes" style="font-size: 2rem; color: #8b5cf6;"></i>
+                <span class="badge" style="font-size: 0.7rem; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2);">PHASE 5.1a</span>
+            </div>
+            <h3>Geometric Offline Trainer</h3>
+            <p>Snapshot harvesting across variable shapes ($R, L_1, L_2$). Foundation for shape-parametric reduced-order modeling.</p>
+            <div class="app-actions">
+              <a href="simulations/iga-sim-5.1a/index.html" class="btn btn-primary btn-center" style="width: 100%; background: #8b5cf6; box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);">Launch Shape Lab <i class="fa-solid fa-drafting-compass" style="margin-left: 8px;"></i></a>
+              <a href="../theory/theory-5.1a.html" class="btn btn-outline btn-center" style="width: 100%;">Geometry Theory <i class="fa-solid fa-book-open" style="margin-left: 8px;"></i></a>
+            </div>
+          </div>
+        </div>
 
         <div id="tab-flowcharts" class="tab-pane">
           <div class="section-head">
