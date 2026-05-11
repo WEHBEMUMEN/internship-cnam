@@ -7,6 +7,7 @@ class VisualsEngine {
         this.container = document.getElementById(containerId);
         this.nurbs = nurbs;
         this.defScale = 50.0;
+        this.showControlNet = true;
         
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0f172a);
@@ -156,10 +157,12 @@ class VisualsEngine {
         }
 
         this.cpNet = group;
+        this.cpNet.visible = this.showControlNet;
         this.scene.add(this.cpNet);
     }
 
     setControlNetVisibility(visible) {
+        this.showControlNet = visible;
         if (this.cpNet) this.cpNet.visible = visible;
     }
 
