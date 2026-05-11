@@ -10,6 +10,14 @@ DEIMBenchmarkApp.prototype.initUI = function() {
         if (explorerTab) explorerTab.click();
     };
 
+    document.getElementById('btn-audit').onclick = () => {
+        if (!this.isTrained) {
+            alert("Please train ECSW first to generate an audit report.");
+            return;
+        }
+        window.ECSWAudit.report(this.ecswEngine, this.lastPOD);
+    };
+
     // Phase 3.5 Specific Sliders
     const samplesInput = document.getElementById('input-samples');
     const maxForceInput = document.getElementById('input-max-force');

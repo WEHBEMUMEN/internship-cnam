@@ -110,7 +110,8 @@ DEIMBenchmarkApp.prototype.trainAll = async function() {
 
     status.textContent = 'Computing POD basis...';
     await new Promise(r => setTimeout(r, 10));
-    const podInfo = this.romEngine.computePOD(this.k);
+    this.lastPOD = this.romEngine.computePOD(this.k);
+    const podInfo = this.lastPOD;
     
     const energyEl = document.getElementById('energy-val');
     if (energyEl) energyEl.textContent = `Energy: ${(podInfo.energy * 100).toFixed(4)}%`;

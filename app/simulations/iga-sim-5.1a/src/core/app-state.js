@@ -13,6 +13,7 @@ class AppState {
         this.bridge = new window.SolverBridge(this.solver);
         this.collector = new window.SnapshotCollector();
         this.reporter = new window.AuditReporter('audit-log');
+        this.charts = new window.AppCharts();
         
         // 1.5 Initialize Visuals
         window.viz = new window.VisualsEngine('canvas-container', this.nurbs);
@@ -56,21 +57,24 @@ class AppState {
 
         // Update UI/Visuals if they exist
         if (window.viz) window.viz.update(this.activePatch, result.u);
-        if (window.app.reporter) window.app.reporter.reportStats({
+        if (this.charts) this.charts.updateCurrent(this.params.R, this.params.L1);
+        if (this.reporter) this.reporter.reportStats({
             nDofs: this.activePatch.controlPoints.length * this.activePatch.controlPoints[0].length * 2,
             nSnaps: this.collector.count
         });
     }
 
     /**
-     * Runs the Geometric Sweep
+     * Runs the Full Geometric Training Job
      */
     async runSweep() {
-        console.log("[Phase 5] Starting Geometric Sweep...");
-        this.snapshots = [];
+        this.reporter.log('system', 'Starting Full Geometric Training Job...');
+        this.collector.clear();
+        this.charts.clearSamples();
         
-        const R_range = [0.8, 1.0, 1.2, 1.5];
-        const L_range = [4.0, 5.0, 6.0];
+        // 1. Snapshot Harvesting (Sweep)
+        const R_range = [0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0];
+        const L_range = [4.0, 5.0, 6.0, 7.0];
         
         let count = 0;
         const total = R_range.length * L_range.length;
@@ -84,17 +88,30 @@ class AppState {
                 const ap = this.factory.refine(p, 2, 0);
                 const res = this.bridge.solveLinearStatic(ap, 100.0);
                 
-                this.snapshots.push(res.u);
+                this.collector.add({ R: r, L1: l, L2: l }, res.u);
+                this.charts.addSample(r, l);
+
+                // Live update visual for the first and last
+                if (count === 1 || count === total) window.viz.update(ap, res.u);
                 
-                // Yield to UI
-                await new Promise(r => setTimeout(r, 10));
+                await new Promise(r => setTimeout(r, 5));
             }
         }
 
-        console.log(`[Phase 5] Sweep complete. Collected ${this.snapshots.length} snapshots.`);
+        this.reporter.log('success', `Harvested ${this.collector.count} snapshots.`);
+
+        // 2. Basis Reduction (POD)
+        this.reporter.log('system', `Computing POD Basis (k=${this.k})...`);
+        const pod = new window.PODEngine();
+        const result = pod.compute(this.collector.snapshots, this.k);
+        this.basis = result.Phi;
+
+        this.charts.updateEnergy(result.singularValues);
+        this.reporter.log('success', `Reduced Basis Extracted. Energy: ${(result.energy * 100).toFixed(6)}%`);
+
         this.isTrained = true;
         if (window.dom) {
-            window.dom.setLoading("Sweep Complete");
+            window.dom.setLoading("Training Complete");
             window.dom.enableExport(true);
         }
     }

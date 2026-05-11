@@ -132,6 +132,7 @@ class VisualsEngine {
     }
 
     renderControlNet(patch) {
+        if (this.cpNet) this.scene.remove(this.cpNet);
         const material = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.4 });
         const group = new THREE.Group();
 
@@ -156,6 +157,10 @@ class VisualsEngine {
 
         this.cpNet = group;
         this.scene.add(this.cpNet);
+    }
+
+    setControlNetVisibility(visible) {
+        if (this.cpNet) this.cpNet.visible = visible;
     }
 
     animate() {

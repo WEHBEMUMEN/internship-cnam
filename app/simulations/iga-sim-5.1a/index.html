@@ -365,14 +365,30 @@
             <input type="range" id="input-k" min="1" max="20" value="5">
         </div>
 
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Show Control Points</label>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-cp" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <span class="section-label">Sampling Strategy</span>
+        <div style="height: 180px; width: 100%; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; margin-bottom: 20px;">
+            <canvas id="sweep-map"></canvas>
+        </div>
+
         <div id="training-status">Ready to Sweep</div>
         
         <button id="btn-train" class="btn-main">
-            <i class="fa-solid fa-microchip"></i> Run Geometric Sweep
+            <i class="fa-solid fa-bolt"></i> Execute Training Sweep
         </button>
         
         <button id="btn-export" class="btn-main" style="background: rgba(255,255,255,0.05); box-shadow: none; margin-top: 12px;" disabled>
-            <i class="fa-solid fa-file-export"></i> Export Shape Basis
+            <i class="fa-solid fa-file-export"></i> Export Shape-ROM (.json)
         </button>
     </aside>
 
@@ -383,7 +399,7 @@
             <div class="stat-val" id="stat-dofs">0</div>
         </div>
         <div class="stat-item">
-            <div class="stat-lbl">Shape Snapshots</div>
+            <div class="stat-lbl">Snapshots</div>
             <div class="stat-val" id="stat-snaps">0</div>
         </div>
     </div>
@@ -391,23 +407,27 @@
     <!-- Theory Link -->
     <a href="../../../theory/theory-5.1a.html" class="glass-panel theory-float">
         <i class="fa-solid fa-book-open" style="color: var(--primary);"></i>
-        Theoretical Framework
+        Mathematical Basis
     </a>
 
     <!-- Audit Panel -->
     <div id="audit-panel" class="glass-panel">
         <div class="tabs">
-            <div class="tab active">Geometric Audit Log</div>
-            <div class="tab">Spectrum Energy</div>
+            <div class="tab active" data-tab="log">Geometric Audit Log</div>
+            <div class="tab" data-tab="reduction">Reduction Audit</div>
         </div>
         <div id="audit-log">
             <!-- Logs will be injected here -->
+        </div>
+        <div id="reduction-audit" style="display: none; height: 100%; width: 100%;">
+            <canvas id="chart-energy"></canvas>
         </div>
     </div>
 
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
 
@@ -425,6 +445,7 @@
     <script src="src/ui/visuals-engine.js"></script>
     <script src="src/ui/dom-manager.js"></script>
     <script src="src/ui/audit-reporter.js"></script>
+    <script src="src/ui/app-charts.js"></script>
     <script src="src/core/app-state.js"></script>
 
     <script>

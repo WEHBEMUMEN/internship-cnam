@@ -38,6 +38,23 @@ class DOMManager {
         document.getElementById('btn-train').onclick = () => {
             window.app.runSweep();
         };
+
+        // Toggles
+        document.getElementById('toggle-cp').onchange = (e) => {
+            if (window.viz) window.viz.setControlNetVisibility(e.target.checked);
+        };
+
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.onclick = () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                const target = tab.dataset.tab;
+                document.getElementById('audit-log').style.display = target === 'log' ? 'block' : 'none';
+                document.getElementById('reduction-audit').style.display = target === 'reduction' ? 'block' : 'none';
+            };
+        });
     }
 
     updateStats(patch, snapCount) {
