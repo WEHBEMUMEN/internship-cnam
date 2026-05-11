@@ -21,6 +21,8 @@ class VisualsEngine {
         this.container.appendChild(this.renderer.domElement);
 
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableRotate = false;
+        this.controls.screenSpacePanning = true;
         this.controls.target.set(2, 2, 0);
         this.controls.update();
 
