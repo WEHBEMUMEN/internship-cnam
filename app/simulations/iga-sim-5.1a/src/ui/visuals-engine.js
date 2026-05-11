@@ -23,6 +23,11 @@ class VisualsEngine {
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableRotate = false;
         this.controls.screenSpacePanning = true;
+        this.controls.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE
+        };
         this.controls.target.set(2, 2, 0);
         this.controls.update();
 
