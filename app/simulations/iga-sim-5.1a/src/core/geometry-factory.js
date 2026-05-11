@@ -110,9 +110,8 @@ class GeometryFactory {
         const engine = new window.NURBS2D();
 
         // 1. Degree Elevation
-        for (let i = 0; i < pLevel; i++) {
-            // Placeholder: Assume core has elevate method
-            // refined = engine.elevate(refined); 
+        if (pLevel > 0) {
+            engine.setDegree(refined, patch.p + pLevel, patch.q + pLevel);
         }
 
         // 2. Knot Insertion (Global Subdivisions)

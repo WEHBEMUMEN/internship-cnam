@@ -2,61 +2,232 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Theory | Phase 5.1a - Geometric ROM</title>
-    <link rel="stylesheet" href="../app/css/style.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    
     <style>
-        .theory-container { max-width: 900px; margin: 60px auto; padding: 40px; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
-        h1 { font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #8b5cf6, #d946ef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; }
-        h2 { color: #8b5cf6; margin-top: 40px; border-bottom: 1px solid rgba(139, 92, 246, 0.2); padding-bottom: 10px; }
-        p { line-height: 1.8; color: #cbd5e1; margin-bottom: 20px; }
-        .math-block { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; margin: 20px 0; overflow-x: auto; text-align: center; }
+        :root {
+            --primary: #8b5cf6;
+            --primary-dark: #7c3aed;
+            --accent: #f59e0b;
+            --bg: #0f172a;
+            --card: rgba(30, 41, 59, 0.5);
+            --border: rgba(139, 92, 246, 0.2);
+            --glass: blur(16px);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(217, 70, 239, 0.1) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: #f1f5f9;
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.6;
+        }
+
+        .theory-container {
+            max-width: 1000px;
+            margin: 60px auto;
+            padding: 60px;
+            background: var(--card);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .back-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 40px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--primary); }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin: 50px 0 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        h2::before {
+            content: '';
+            width: 30px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-bottom: 24px;
+            font-weight: 400;
+        }
+
+        strong { color: #fff; font-weight: 600; }
+
+        .math-block {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+            overflow-x: auto;
+        }
+
+        ul {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+        li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #cbd5e1;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        li::before {
+            content: '•';
+            position: absolute;
+            left: 10px;
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #a78bfa;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .theory-container { margin: 20px; padding: 30px; }
+            h1 { font-size: 2rem; }
+        }
     </style>
 </head>
-<body class="dark-theme">
+<body>
     <div class="theory-container">
-        <a href="../app/index.html" style="color: #94a3b8; text-decoration: none; font-weight: 600;">← Back to Hub</a>
+        <a href="../app/simulations/iga-sim-5.1a/index.html" class="back-link">← Return to Simulation</a>
         
         <h1>Phase 5.1a: Shape-Parametric Reduced-Order Modeling</h1>
         
-        <p>In Phase 5, we transition from <strong>Force-Parametric ROM</strong> to <strong>Geometric-Parametric ROM</strong>. In this regime, the physical domain $\Omega$ is no longer static; its boundary $\Gamma$ and internal metric $g$ are functions of a shape parameter vector $\mathbf{\theta}$. This is the foundation of <strong>Geometric Digital Twins</strong>.</p>
+        <p>In Phase 5, we transition from <strong>Force-Parametric ROM</strong> to <strong>Geometric-Parametric ROM</strong>. In this regime, the physical domain $\Omega$ is no longer static; its boundary $\Gamma$ and internal metric $g$ are functions of a shape parameter vector $\mathbf{\theta} = [R, L_1, L_2]^T$. This shift represents the core challenge in building <strong>Geometric Digital Twins</strong>, where the ROM must adapt to topological and dimensional variations.</p>
 
-        <h2>1. NURBS Geometric Morphing</h2>
-        <p>A NURBS surface is defined by its control points $\mathbf{P}_{i,j}$. To enable parametric geometry, we define a mapping function $\mathcal{M}$ that evolves these points based on the shape vector $\mathbf{\theta} = [R, L_1, L_2]^T$:</p>
+        <h2>1. Isogeometric Analysis (IGA) Foundations</h2>
+        <p>Isogeometric Analysis utilizes the same basis functions for both the geometry representation and the approximation of the solution field. For a bivariate NURBS surface, the geometry is mapped from the parametric space $(\xi, \eta)$ to the physical space via:</p>
+        <div class="math-block">
+            $$\mathbf{x}(\xi, \eta) = \sum_{i=1}^n \sum_{j=1}^m R_{i,j}^{p,q}(\xi, \eta) \mathbf{P}_{i,j}$$
+        </div>
+        <p>where $R_{i,j}^{p,q}$ are the rational basis functions of degree $p$ and $q$, and $\mathbf{P}_{i,j}$ are the control points. In Phase 5.1a, we treat these control points as <strong>functions of the shape parameters</strong> $\mathbf{\theta}$.</p>
+
+        <h2>2. NURBS Geometric Morphing Mapping</h2>
+        <p>To enable parametric geometry without manual remeshing, we define a continuous mapping function $\mathcal{M}$ that evolves the reference control points $\mathbf{P}_{i,j}^{ref}$ based on the shape vector $\mathbf{\theta}$:</p>
         
         <div class="math-block">
             $$\mathbf{P}_{i,j}(\mathbf{\theta}) = \mathcal{M}(\mathbf{P}_{i,j}^{ref}, \mathbf{\theta})$$
         </div>
 
-        <p>For the notched plate, the mapping for the inner boundary ($R$) and outer dimensions ($L_1, L_2$) must maintain the <strong>exact circularity</strong> of the hole while stretching the surrounding "tensor-mesh." This is achieved by a linear blending between the radial notch coordinates and the rectangular outer boundary coordinates.</p>
-
-        <h2>2. Parametric Jacobian and Stiffness</h2>
-        <p>In force-parametric ROM, the stiffness matrix $\mathbf{K}$ is constant. In geometric ROM, every change in $\mathbf{\theta}$ alters the Jacobian $\mathbf{J}(\xi, \eta; \mathbf{\theta})$ of the mapping from the reference unit square to the physical space. The parametric stiffness is defined as:</p>
-
+        <p>For the notched plate quarter-model, we define a <strong>radial-to-rectangular blending</strong>. The inner control points are constrained to an arc of radius $R$, while the outer points define a rectangle of size $L_1 \times L_2$. The intermediate points are computed using a linear blend to ensure a smooth "tensor-mesh" distribution that avoids element inversion (Jacobian positivity):</p>
         <div class="math-block">
-            $$\mathbf{K}(\mathbf{\theta}) = \int_{\hat{\Omega}} \mathbf{B}^T(\xi, \eta; \mathbf{\theta}) \mathbf{D} \mathbf{B}(\xi, \eta; \mathbf{\theta}) \det(\mathbf{J}(\xi, \eta; \mathbf{\theta})) d\hat{\Omega}$$
+            $$\mathbf{P}_{mid}(\mathbf{\theta}) = (1 - \alpha) \mathbf{P}_{inner}(R) + \alpha \mathbf{P}_{outer}(L_1, L_2)$$
         </div>
 
-        <p>Because $\mathbf{K}$ is now a function of $\mathbf{\theta}$, the snapshot collection process becomes computationally intensive, as it requires a full assembly and solve for each geometric sample. The goal of Phase 5 is to build a reduced basis $\mathbf{\Phi}$ that can approximate the displacement field $\mathbf{u}(\mathbf{\theta})$ even as the integration domain itself deforms.</p>
+        <h2>3. Parametric Stiffness and Jacobian Sensitivity</h2>
+        <p>In geometric ROM, the stiffness matrix $\mathbf{K}$ depends on the shape $\mathbf{\theta}$ through the Jacobian $\mathbf{J}$ and the strain-displacement matrix $\mathbf{B}$:</p>
 
-        <h2>3. Linear Static Benchmark: The Kirsch Problem</h2>
-        <p>We utilize the <strong>Plate with a Hole</strong> (Notch) benchmark. Due to symmetry, we solve a quarter-model with the following boundary conditions:</p>
+        <div class="math-block">
+            $$\mathbf{K}(\mathbf{\theta}) = \int_{\hat{\Omega}} \mathbf{B}^T(\xi, \eta; \mathbf{\theta}) \mathbf{D} \mathbf{B}(\xi, \eta; \mathbf{\theta}) |\mathbf{J}(\xi, \eta; \mathbf{\theta})| d\xi d\eta$$
+        </div>
+
+        <p>The Jacobian $\mathbf{J}$ represents the metric of the transformation. As the notch radius $R$ grows, the elements near the hole compress, increasing the local stiffness and altering the stress concentration patterns. The ROM must capture these <strong>metric sensitivities</strong> without re-assembling the full-order model (FOM) during online evaluation.</p>
+
+        <h2>4. The Snapshot Proper Orthogonal Decomposition (POD)</h2>
+        <p>The offline trainer constructs a reduced basis $\mathbf{\Phi}$ by harvesting solutions (snapshots) across a discretized shape-space $\mathcal{D}_{\theta}$:</p>
+        <ol>
+            <li><strong>Sampling</strong>: Generate $N_s$ snapshots $\mathbf{u}(\mathbf{\theta}_i)$ for $i=1 \dots N_s$.</li>
+            <li><strong>Snapshot Matrix</strong>: Construct $\mathbf{S} = [\mathbf{u}(\mathbf{\theta}_1), \mathbf{u}(\mathbf{\theta}_2), \dots, \mathbf{u}(\mathbf{\theta}_{N_s})]$.</li>
+            <li><strong>SVD</strong>: Perform Singular Value Decomposition $\mathbf{S} = \mathbf{U}\mathbf{\Sigma}\mathbf{V}^T$.</li>
+            <li><strong>Truncation</strong>: Select the first $k$ columns of $\mathbf{U}$ to form the basis $\mathbf{\Phi} \in \mathbb{R}^{N_{dof} \times k}$.</li>
+        </ol>
+        <p>The energy captured by the $k$ modes is defined by the singular values $\sigma_i$:</p>
+        <div class="math-block">
+            $$\mathcal{E}(k) = \frac{\sum_{i=1}^k \sigma_i^2}{\sum_{j=1}^{N_s} \sigma_j^2}$$
+        </div>
+
+        <h2>5. Numerical Benchmark: The Kirsch Solution</h2>
+        <p>The <strong>Plate with a Hole</strong> benchmark is used to validate the ROM. For an infinite plate under tension $T$, the radial stress $\sigma_{rr}$ and tangential stress $\sigma_{\theta\theta}$ are given by:</p>
+        <div class="math-block">
+            $$\sigma_{\theta\theta} = \frac{T}{2} \left( 1 + \frac{R^2}{r^2} \right) - \frac{T}{2} \left( 1 + 3\frac{R^4}{r^4} \right) \cos(2\theta)$$
+        </div>
+        <p>At $r=R$ and $\theta=\pi/2$, $\sigma_{\theta\theta} = 3T$. Our ROM targets this localized gradient, ensuring that the <strong>Geometric Digital Twin</strong> remains accurate even under significant shape distortions.</p>
+
+        <h2>6. Nomenclature and Terminology</h2>
         <ul>
-            <li><strong>Bottom Edge ($y=0$):</strong> $u_y = 0$ (Symmetry)</li>
-            <li><strong>Left Edge ($x=0$):</strong> $u_x = 0$ (Symmetry)</li>
-            <li><strong>Right Edge ($x=L_1$):</strong> $\sigma_{xx} = T_x$ (Tension)</li>
+            <li><strong>$\Omega, \Gamma$:</strong> The physical domain (the plate) and its boundary.</li>
+            <li><strong>$\mathbf{\theta} = [R, L_1, L_2]^T$:</strong> The shape parameter vector containing the Notch Radius, Plate Width, and Plate Height.</li>
+            <li><strong>$R_{i,j}^{p,q}(\xi, \eta)$:</strong> Bivariate NURBS basis functions of degree $p$ in $\xi$ and $q$ in $\eta$.</li>
+            <li><strong>$\mathbf{P}_{i,j}$:</strong> Control points that define the skeleton of the geometric shape.</li>
+            <li><strong>$\mathcal{M}(\cdot)$:</strong> The morphing operator that translates parameter changes into control point displacements.</li>
+            <li><strong>$\mathbf{J} = \frac{\partial \mathbf{x}}{\partial \mathbf{\xi}}$:</strong> The Jacobian matrix representing the local transformation from parametric to physical space.</li>
+            <li><strong>$|\mathbf{J}|$:</strong> The determinant of the Jacobian, representing the local area (or volume) change.</li>
+            <li><strong>$\mathbf{B}(\mathbf{\theta})$:</strong> The strain-displacement matrix, which now varies with the geometry.</li>
+            <li><strong>$\mathbf{K}(\mathbf{\theta})$:</strong> The global stiffness matrix, assembled by integrating the material properties over the deformed domain.</li>
+            <li><strong>$\mathbf{S} \in \mathbb{R}^{N_{dof} \times N_s}$:</strong> The snapshot matrix containing full-order solutions for different shapes.</li>
+            <li><strong>$\mathbf{\Phi}$:</strong> The POD basis (Reduced Basis), a set of orthogonal vectors that best span the snapshot space.</li>
+            <li><strong>$\sigma_i$:</strong> Singular values indicating the relative "importance" or energy contribution of each mode.</li>
         </ul>
-        <p>The exact stress concentration factor (SCF) at the notch is theoretically $3.0$ for an infinite plate. In our Digital Twin, the ROM must capture the localized stress gradients as $R$ increases relative to $L_1$ and $L_2$, demonstrating <strong>Topological Sensitivity</strong>.</p>
-
-        <h2>4. Multidimensional Shape-Space Sweep</h2>
-        <p>The offline trainer performs a grid search across the parameters:</p>
-        <div class="math-block">
-            $$\mathcal{D}_{\theta} = \{ (R_i, L1_j, L2_k) \}$$
-        </div>
-        <p>For each triplet, a linear static IGA solution is obtained. The resulting snapshot matrix $\mathbf{S}$ is then decomposed via SVD to extract the dominant geometric modes that represent the most common deformation patterns across the shape-space.</p>
     </div>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\[', display: true}
+                ],
+                throwOnError : false
+            });
+        });
+    </script>
 </body>
 </html>

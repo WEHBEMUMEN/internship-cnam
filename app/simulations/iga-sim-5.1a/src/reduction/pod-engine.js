@@ -4,12 +4,22 @@
 
 class PODEngine {
     static computeBasis(snapshots, k = 10) {
-        if (!snapshots || snapshots.length === 0) return null;
+        console.log("[PODEngine] computeBasis called with", snapshots.length, "snapshots, k =", k);
+        if (!snapshots || snapshots.length === 0) {
+            console.warn("[PODEngine] No snapshots provided");
+            return null;
+        }
 
         const nDofs = snapshots[0].length;
         const nSnaps = snapshots.length;
+        console.log("[PODEngine] Matrix dimensions:", nDofs, "x", nSnaps);
 
-        const { Matrix, SingularValueDecomposition } = window.mlMatrix;
+        const lib = window.mlMatrix || window.ML;
+        if (!lib) {
+            console.error("[PODEngine] ML Matrix library not found (tried window.mlMatrix and window.ML)");
+            throw new Error("ML Matrix library not found");
+        }
+        const { Matrix, SingularValueDecomposition } = lib;
 
         // 1. Build Snapshot Matrix S
         const S = new Matrix(nDofs, nSnaps);

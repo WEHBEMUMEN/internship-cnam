@@ -16,12 +16,13 @@ class AppState {
         this.charts = new window.AppCharts();
         
         // 1.5 Initialize Visuals
-        window.viz = new window.VisualsEngine('canvas-container', this.nurbs);
+        window.viz = new window.VisualsEngine('canvas-container', this.nurbs, this.solver);
         
         // 2. State Properties
-        this.params = { R: 1.0, L1: 4.0, L2: 4.0 };
+        this.params = { R: 1.0, L1: 4.0, L2: 4.0, h: 2, p: 0 };
         this.k = 5;
         this.isTrained = false;
+        this.evaluationMode = 'fom'; // 'fom' or 'rom'
         
         // 3. Current Data
         this.basePatch = null;
@@ -37,6 +38,8 @@ class AppState {
 
     async init() {
         console.log("[Phase 5] Initializing App State...");
+        // Patch visuals if it exists but lacks solver
+        if (window.viz && !window.viz.solver) window.viz.solver = this.solver;
         this.updateGeometry();
     }
 
@@ -44,15 +47,27 @@ class AppState {
      * Updates the base geometry and solves the system
      */
     async updateGeometry() {
+        if (window.dom) window.dom.setLoading("Solving...");
+        
+        // Yield to allow UI to show "Solving..."
+        await new Promise(r => setTimeout(r, 20));
+
         // Generate base 2-element notch plate
         this.basePatch = this.factory.generateNotchPlate(this.params.R, this.params.L1, this.params.L2);
         
-        // Refine for solver accuracy (h-refinement)
-        // We'll use 2 subdivisions for a 16-element model by default
-        this.activePatch = this.factory.refine(this.basePatch, 2, 0);
+        // Refine for solver accuracy (h-refinement and p-elevation)
+        this.activePatch = this.factory.refine(this.basePatch, this.params.h, this.params.p);
         
-        // Solve linear static
-        const result = this.bridge.solveLinearStatic(this.activePatch, 100.0);
+        // Solve linear static (Check mode)
+        let result;
+        if (this.evaluationMode === 'rom' && this.isTrained && this.basis) {
+            console.log("[AppState] Solving in REDUCED space...");
+            result = this.bridge.solveReduced(this.activePatch, this.basis, 100.0);
+        } else {
+            console.log("[AppState] Solving in FULL space...");
+            result = this.bridge.solveLinearStatic(this.activePatch, 100.0);
+        }
+        
         this.lastResult = result;
 
         // Update UI/Visuals if they exist
@@ -85,7 +100,7 @@ class AppState {
                 if (window.dom) window.dom.setLoading(`Sweeping: ${count}/${total}`);
                 
                 const p = this.factory.generateNotchPlate(r, l, l);
-                const ap = this.factory.refine(p, 2, 0);
+                const ap = this.factory.refine(p, this.params.h, this.params.p);
                 const res = this.bridge.solveLinearStatic(ap, 100.0);
                 
                 this.collector.add({ R: r, L1: l, L2: l }, res.u);
@@ -101,18 +116,26 @@ class AppState {
         this.reporter.log('success', `Harvested ${this.collector.count} snapshots.`);
 
         // 2. Basis Reduction (POD)
+        console.log("[AppState] Starting POD calculation...");
         this.reporter.log('system', `Computing POD Basis (k=${this.k})...`);
-        const pod = new window.PODEngine();
-        const result = pod.compute(this.collector.snapshots, this.k);
-        this.basis = result.Phi;
+        try {
+            const result = window.PODEngine.computeBasis(this.collector.snapshots, this.k);
+            console.log("[AppState] POD Result:", result);
+            this.basis = result.Phi;
 
-        this.charts.updateEnergy(result.singularValues);
-        this.reporter.log('success', `Reduced Basis Extracted. Energy: ${(result.energy * 100).toFixed(6)}%`);
+            this.charts.updateEnergy(result.singularValues);
+            const finalEnergy = result.energy[result.energy.length - 1];
+            this.reporter.log('success', `Reduced Basis Extracted. Energy: ${(finalEnergy * 100).toFixed(6)}%`);
+        } catch (err) {
+            console.error("[AppState] POD Error:", err);
+            this.reporter.log('warning', `POD Error: ${err.message}`);
+        }
 
         this.isTrained = true;
         if (window.dom) {
             window.dom.setLoading("Training Complete");
             window.dom.enableExport(true);
+            window.dom.enableROM(true);
         }
     }
 }

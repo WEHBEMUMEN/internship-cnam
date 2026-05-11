@@ -34,6 +34,60 @@ class DOMManager {
             window.app.updateGeometry();
         };
 
+        const hInput = document.getElementById('input-h');
+        const pInput = document.getElementById('input-p');
+
+        hInput.oninput = (e) => {
+            document.getElementById('h-val').textContent = e.target.value;
+        };
+
+        hInput.onchange = (e) => {
+            window.app.params.h = parseInt(e.target.value);
+            // Removed automatic updateGeometry
+        };
+
+        pInput.oninput = (e) => {
+            document.getElementById('p-val').textContent = parseInt(e.target.value) + 2;
+        };
+
+        pInput.onchange = (e) => {
+            window.app.params.p = parseInt(e.target.value);
+            // Removed automatic updateGeometry
+        };
+
+        // Apply Mesh Button
+        document.getElementById('btn-apply-mesh').onclick = () => {
+            window.app.updateGeometry();
+        };
+
+        // View Mode Toggle
+        document.getElementById('view-disp').onclick = () => {
+            window.viz.viewMode = 'displacement';
+            this.updateViewModeUI();
+            window.app.updateGeometry();
+        };
+
+        document.getElementById('view-stress').onclick = () => {
+            window.viz.viewMode = 'stress';
+            this.updateViewModeUI();
+            window.app.updateGeometry();
+        };
+
+        // Evaluation Mode Toggle
+        document.getElementById('mode-fom').onclick = () => {
+            window.app.evaluationMode = 'fom';
+            this.updateModeUI();
+            window.app.updateGeometry();
+        };
+
+        document.getElementById('mode-rom').onclick = () => {
+            if (window.app.isTrained) {
+                window.app.evaluationMode = 'rom';
+                this.updateModeUI();
+                window.app.updateGeometry();
+            }
+        };
+
         // Train Button
         document.getElementById('btn-train').onclick = () => {
             window.app.runSweep();
@@ -44,15 +98,33 @@ class DOMManager {
             if (window.viz) window.viz.setControlNetVisibility(e.target.checked);
         };
 
+        document.getElementById('toggle-bc').onchange = (e) => {
+            if (window.viz) window.viz.setBCVisibility(e.target.checked);
+        };
+
         // Tabs
         document.querySelectorAll('.tab').forEach(tab => {
             tab.onclick = () => {
+                console.log("[DOM] Tab clicked:", tab.dataset.tab);
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 
                 const target = tab.dataset.tab;
+                console.log("[DOM] Switching display for:", target);
                 document.getElementById('audit-log').style.display = target === 'log' ? 'block' : 'none';
                 document.getElementById('reduction-audit').style.display = target === 'reduction' ? 'block' : 'none';
+
+                if (target === 'reduction') {
+                    console.log("[DOM] Reduction tab active. Chart state:", {
+                        appExists: !!window.app,
+                        chartsExists: !!(window.app && window.app.charts),
+                        energyChartExists: !!(window.app && window.app.charts && window.app.charts.energyChart)
+                    });
+                    if (window.app && window.app.charts && window.app.charts.energyChart) {
+                        window.app.charts.energyChart.resize();
+                        window.app.charts.energyChart.update();
+                    }
+                }
             };
         });
     }
@@ -70,6 +142,48 @@ class DOMManager {
 
     enableExport(enabled) {
         document.getElementById('btn-export').disabled = !enabled;
+    }
+
+    enableROM(enabled) {
+        const btn = document.getElementById('mode-rom');
+        btn.disabled = !enabled;
+        if (enabled) btn.style.color = '#94a3b8';
+    }
+
+    updateModeUI() {
+        const isRom = window.app.evaluationMode === 'rom';
+        const fomBtn = document.getElementById('mode-fom');
+        const romBtn = document.getElementById('mode-rom');
+
+        if (isRom) {
+            romBtn.style.background = 'var(--primary)';
+            romBtn.style.color = 'white';
+            fomBtn.style.background = 'transparent';
+            fomBtn.style.color = '#64748b';
+        } else {
+            fomBtn.style.background = 'var(--primary)';
+            fomBtn.style.color = 'white';
+            romBtn.style.background = 'transparent';
+            romBtn.style.color = '#64748b';
+        }
+    }
+
+    updateViewModeUI() {
+        const isStress = window.viz.viewMode === 'stress';
+        const dispBtn = document.getElementById('view-disp');
+        const stressBtn = document.getElementById('view-stress');
+
+        if (isStress) {
+            stressBtn.style.background = 'var(--primary)';
+            stressBtn.style.color = 'white';
+            dispBtn.style.background = 'transparent';
+            dispBtn.style.color = '#64748b';
+        } else {
+            dispBtn.style.background = 'var(--primary)';
+            dispBtn.style.color = 'white';
+            stressBtn.style.background = 'transparent';
+            stressBtn.style.color = '#64748b';
+        }
     }
 }
 

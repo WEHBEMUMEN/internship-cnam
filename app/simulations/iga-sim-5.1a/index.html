@@ -317,10 +317,69 @@
         input:checked + .slider { background-color: var(--primary); }
         input:checked + .slider:before { transform: translateX(14px); }
 
+        /* Color Bar */
+        .colorbar-float {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 80px;
+            height: 300px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .colorbar-gradient {
+            flex: 1;
+            width: 20px;
+            border-radius: 10px;
+            background: linear-gradient(to top, 
+                #0000ff 0%, 
+                #00ffff 25%, 
+                #00ff00 50%, 
+                #ffff00 75%, 
+                #ff0000 100%
+            );
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .colorbar-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .colorbar-title {
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #fff;
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
+
+    <div id="colorbar-container" class="glass-panel colorbar-float" style="display: none;">
+        <div style="display: flex; height: 100%; gap: 10px;">
+            <div class="colorbar-labels">
+                <span id="cb-max">100.0</span>
+                <span id="cb-mid">50.0</span>
+                <span id="cb-min">0.0</span>
+            </div>
+            <div class="colorbar-gradient"></div>
+        </div>
+        <div class="colorbar-title" id="cb-title">Von Mises (MPa)</div>
+    </div>
 
     <!-- Control Panel -->
     <aside id="control-panel" class="glass-panel">
@@ -334,14 +393,37 @@
             </div>
         </div>
 
-        <span class="section-label">Shape Parametrization</span>
-        
+        <span class="section-label">Mesh & Finite Element Order</span>
+        <div class="control-item">
+            <div class="label-row">
+                <label>Mesh Density (h)</label>
+                <span id="h-val" class="value-display">2</span>
+            </div>
+            <input type="range" id="input-h" min="0" max="4" step="1" value="2">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label>Polynomial Order (p)</label>
+                <span id="p-val" class="value-display">2</span>
+            </div>
+            <input type="range" id="input-p" min="0" max="2" step="1" value="0">
+            <div style="font-size: 0.55rem; color: #64748b; margin-top: 4px;">(Base p=2 + Elevation)</div>
+        </div>
+
+        <button id="btn-apply-mesh" class="btn-main" style="margin-bottom: 20px; background: var(--primary-dark);">
+            <i class="fa-solid fa-play"></i> Apply Mesh Settings
+        </button>
+
+        <hr class="divider">
+
+        <span class="section-label">Geometry Morphing</span>
         <div class="control-item">
             <div class="label-row">
                 <label>Notch Radius (R)</label>
                 <span id="r-val" class="value-display">1.00</span>
             </div>
-            <input type="range" id="input-r" min="0.5" max="2.5" step="0.1" value="1.0">
+            <input type="range" id="input-r" min="0.5" max="2.0" step="0.05" value="1.0">
         </div>
 
         <div class="control-item">
@@ -372,10 +454,34 @@
             <input type="range" id="input-k" min="1" max="20" value="5">
         </div>
 
-        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">View Mode</label>
+                <div id="view-mode-selector" style="display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+                    <button id="view-disp" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: var(--primary); color: white;">DISP</button>
+                    <button id="view-stress" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: transparent; color: #64748b;">STRESS</button>
+                </div>
+            </div>
+
+            <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Evaluation Mode</label>
+                <div id="mode-selector" style="display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+                    <button id="mode-fom" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: var(--primary); color: white;">FULL</button>
+                    <button id="mode-rom" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: transparent; color: #64748b;" disabled>ROM</button>
+                </div>
+            </div>
+
+            <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                 <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Show Control Points</label>
                 <label class="switch">
                     <input type="checkbox" id="toggle-cp" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Show Boundary Cond.</label>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-bc" checked>
                     <span class="slider"></span>
                 </label>
             </div>
@@ -426,7 +532,7 @@
         <div id="audit-log">
             <!-- Logs will be injected here -->
         </div>
-        <div id="reduction-audit" style="display: none; height: 100%; width: 100%;">
+        <div id="reduction-audit" style="display: none; height: 100%; width: 100%; flex: 1;">
             <canvas id="chart-energy"></canvas>
         </div>
     </div>

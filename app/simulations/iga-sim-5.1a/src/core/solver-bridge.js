@@ -20,27 +20,24 @@ class SolverBridge {
         // 1. Define Boundary Conditions (Symmetry)
         const bcs = [];
         
-        // Bottom Edge (j=0): Symm in Y (u_y = 0)
-        for (let i = 0; i < nU; i++) {
-            bcs.push({ i, j: 0, axis: 'y', value: 0 });
+        // Bottom Edge (i=0): Symm in Y (u_y = 0)
+        for (let j = 0; j < nV; j++) {
+            bcs.push({ i: 0, j, axis: 'y', value: 0 });
         }
         
-        // Left Edge (i=3 for 4x3 grid? No, i=3 is y-axis): Symm in X (u_x = 0)
-        // In our factory, i=3 is the vertical edge (90 degrees)
+        // Left Edge (i=nU-1): Symm in X (u_x = 0)
         for (let j = 0; j < nV; j++) {
-            bcs.push({ i: 3, j, axis: 'x', value: 0 });
+            bcs.push({ i: nU - 1, j, axis: 'x', value: 0 });
         }
 
         // 2. Define Loads (Traction on Right Edge)
-        // For simplicity in this first static step, we'll use point loads 
-        // distributed along the right edge (i=0) or use the analytical traction assembly.
+        // In our topology, the outer boundary is j=nV-1. 
+        // The right edge is the part where x=L1, which corresponds to indices i=0 to nU/2 approx.
         const loads = [];
-        const rightEdgeIdx = 0; // i=0 is 0 degrees (x-axis)
+        const nU_half = Math.floor(nU / 2);
         
-        // For the trainer, we can use the exact nodal traction if available,
-        // or a simple point load distribution.
-        for (let j = 0; j < nV; j++) {
-            loads.push({ i: 0, j, fx: Tx / nV, fy: 0 });
+        for (let i = 0; i <= nU_half; i++) {
+            loads.push({ i, j: nV - 1, fx: Tx / (nU_half + 1), fy: 0 });
         }
 
         // 3. Execute Solve
@@ -49,6 +46,56 @@ class SolverBridge {
         return {
             u: displacement,
             f_ext: Tx
+        };
+    }
+
+    /**
+     * Solves the system using a Reduced Basis (ROM)
+     * @param {object} patch - The NURBS patch
+     * @param {Array} basis  - The POD basis (Phi)
+     * @param {number} Tx    - Tension magnitude
+     */
+    solveReduced(patch, basis, Tx = 100.0) {
+        const nDofs = patch.controlPoints.length * patch.controlPoints[0].length * 2;
+        const { Matrix, SingularValueDecomposition } = window.mlMatrix || window.ML;
+        
+        // 1. Assemble Full System (K and f)
+        const K_full_raw = this.solver.assembleStiffness(patch);
+        this.solver.applyPenaltyConstraints(K_full_raw, patch);
+        
+        // Convert to ml-matrix
+        const K_full = new Matrix(K_full_raw);
+        
+        const F_full = new Matrix(nDofs, 1);
+        const nV = patch.controlPoints[0].length;
+        for (let j = 0; j < nV; j++) {
+            const idx = (0 * nV + j) * 2; // Right edge i=0
+            F_full.set(idx, 0, Tx / nV);
+        }
+
+        // 2. Project to Reduced Space
+        // Basis is N_dof x k
+        const Phi = new Matrix(basis);
+        const PhiT = Phi.transpose();
+        
+        // Kr = Phi^T * K * Phi  (k x k)
+        const Kr = PhiT.mmul(K_full).mmul(Phi);
+        
+        // fr = Phi^T * f (k x 1)
+        const fr = PhiT.mmul(F_full);
+
+        // 3. Solve Reduced System Kr * ur = fr
+        // Since Kr is small (k x k), we use SVD or inverse
+        const ur = new SingularValueDecomposition(Kr).solve(fr);
+
+        // 4. Expand back to Full Space: u = Phi * ur
+        const u_full_mat = Phi.mmul(ur);
+        const u_full = u_full_mat.to1DArray();
+
+        return {
+            u: u_full,
+            f_ext: Tx,
+            isReduced: true
         };
     }
 }
