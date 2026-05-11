@@ -108,7 +108,6 @@ class DEIMBenchmarkApp {
         });
         document.getElementById('btn-compare').disabled = true;
         document.getElementById('input-k').disabled = true;
-        document.getElementById('input-m').disabled = true;
         this.updateMesh(null);
         this._render();
     }
