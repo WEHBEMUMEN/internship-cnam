@@ -57,4 +57,3 @@ class DOMManager {
 }
 
 window.dom = new DOMManager();
-window.viz = new window.VisualsEngine('canvas-container');

@@ -3,15 +3,16 @@
  */
 
 class VisualsEngine {
-    constructor(containerId) {
+    constructor(containerId, nurbs) {
         this.container = document.getElementById(containerId);
+        this.nurbs = nurbs;
         this.defScale = 50.0;
         
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0f172a);
         
         this.camera = new THREE.PerspectiveCamera(45, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
-        this.camera.position.set(5, 5, 15);
+        this.camera.position.set(2, 2, 10);
         this.camera.lookAt(2, 2, 0);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -19,8 +20,12 @@ class VisualsEngine {
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.container.appendChild(this.renderer.domElement);
 
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.target.set(2, 2, 0);
+        this.controls.update();
+
         // Lighting
-        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
         this.scene.add(ambient);
         const directional = new THREE.DirectionalLight(0xffffff, 0.8);
         directional.position.set(10, 10, 20);
@@ -60,8 +65,8 @@ class VisualsEngine {
             const u = geometry.attributes.uv.getX(i);
             const v = geometry.attributes.uv.getY(i);
             
-            // Basic NURBS evaluation (using global engine)
-            const pos = window.app.nurbs.evaluateSurface(patch, u, v);
+            // Basic NURBS evaluation (using injected engine)
+            const pos = this.nurbs.evaluateSurface(patch, u, v);
             
             // Apply displacement if provided
             if (displacement) {
@@ -99,10 +104,10 @@ class VisualsEngine {
         const nU = controlPoints.length;
         const nV = controlPoints[0].length;
         
-        const spanU = window.app.nurbs.findSpan(nU - 1, p, u, U);
-        const spanV = window.app.nurbs.findSpan(nV - 1, q, v, V);
-        const dersU = window.app.nurbs.basisFuns(spanU, u, p, U);
-        const dersV = window.app.nurbs.basisFuns(spanV, v, q, V);
+        const spanU = this.nurbs.findSpan(nU - 1, p, u, U);
+        const spanV = this.nurbs.findSpan(nV - 1, q, v, V);
+        const dersU = this.nurbs.basisFuns(spanU, u, p, U);
+        const dersV = this.nurbs.basisFuns(spanV, v, q, V);
 
         let ux = 0, uy = 0, W = 0;
         for (let i = 0; i <= p; i++) {

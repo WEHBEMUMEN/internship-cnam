@@ -6,168 +6,408 @@
     <title>Phase 5.1a | Geometric Digital Twin Trainer</title>
     <link rel="stylesheet" href="../../../index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary: #8b5cf6;
-            --primary-light: #a78bfa;
+            --primary-dark: #7c3aed;
             --accent: #f59e0b;
+            --bg: #0f172a;
+            --card: rgba(30, 41, 59, 0.7);
+            --border: rgba(139, 92, 246, 0.2);
+            --glass: blur(12px);
         }
 
-        .geometry-badge {
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--primary-light);
-            border: 1px solid rgba(139, 92, 246, 0.2);
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: #f1f5f9;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%);
+            z-index: 1;
+        }
+
+        /* Glass Panels */
+        .glass-panel {
+            background: var(--card);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            z-index: 10;
+            position: absolute;
+        }
+
+        /* Sidebar Control Panel */
+        #control-panel {
+            top: 20px;
+            left: 20px;
+            width: 360px;
+            bottom: 20px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* Top Header Area */
+        .panel-header {
+            margin-bottom: 24px;
+        }
+
+        .back-link {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            margin-bottom: 16px;
+            transition: color 0.2s;
+            font-weight: 700;
+        }
+        .back-link:hover { color: var(--primary); }
+
+        .title-group h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .phase-badge {
+            display: inline-block;
             padding: 4px 10px;
+            background: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
             border-radius: 6px;
             font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 6px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* Controls */
+        .section-label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            margin: 24px 0 16px;
+        }
+
+        .control-item {
+            margin-bottom: 20px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .label-row label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .value-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 10px 20px -5px rgba(124, 58, 237, 0.4);
+            transition: all 0.2s;
+            margin-top: auto;
+        }
+
+        .btn-main:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(124, 58, 237, 0.5);
+        }
+
+        .btn-main:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Stats & Audit Area */
+        #audit-panel {
+            bottom: 20px;
+            right: 20px;
+            left: 400px;
+            height: 240px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            padding-bottom: 12px;
+            font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
+            color: #64748b;
+            cursor: pointer;
+            position: relative;
         }
 
-        .param-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+        .tab.active {
+            color: var(--primary);
         }
 
-        .stat-card {
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
         }
+
+        #audit-log {
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            padding-right: 10px;
+        }
+
+        .log-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            display: flex;
+            gap: 12px;
+        }
+
+        .log-time { color: #475569; }
+        .log-msg { line-height: 1.4; }
+
+        /* Floating Stats Card */
+        #stats-card {
+            top: 20px;
+            right: 20px;
+            width: 220px;
+            padding: 20px;
+        }
+
+        .stat-item {
+            margin-bottom: 12px;
+        }
+        .stat-item:last-child { margin-bottom: 0; }
 
         .stat-val {
-            font-size: 1.1rem;
+            font-size: 1.25rem;
             font-weight: 800;
-            color: #f1f5f9;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .stat-label {
+        .stat-lbl {
             font-size: 0.6rem;
-            color: #94a3b8;
+            color: #64748b;
             text-transform: uppercase;
-            margin-top: 4px;
+            letter-spacing: 1px;
+            font-weight: 700;
         }
+
+        /* Utility */
+        .divider {
+            border: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin: 24px 0;
+        }
+
+        #training-status {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .theory-float {
+            position: absolute;
+            top: 20px;
+            right: 260px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        .theory-float:hover { background: rgba(255,255,255,0.1); }
     </style>
 </head>
-<body class="dark-theme">
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar glass">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <i class="fa-solid fa-shapes"></i>
-                    <span>Phase 5.1a</span>
-                </div>
-                <div class="geometry-badge">Geometry Phase</div>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- Control Panel -->
+    <aside id="control-panel" class="glass-panel">
+        <div class="panel-header">
+            <a href="../../index.html" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i> Simulation Hub
+            </a>
+            <div class="title-group">
+                <h1>Geo-Digital Twin</h1>
+                <div class="phase-badge">Phase 5.1a · Offline Trainer</div>
             </div>
+        </div>
 
-            <nav class="sidebar-nav">
-                <div class="nav-group">
-                    <span class="nav-label">Geometric Parameters</span>
-                    
-                    <div class="control-group">
-                        <div class="control-header">
-                            <label>Notch Radius (R)</label>
-                            <span id="r-val" class="value-display">1.00</span>
-                        </div>
-                        <input type="range" id="input-r" min="0.5" max="2.5" step="0.1" value="1.0">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-header">
-                            <label>Width (L1)</label>
-                            <span id="l1-val" class="value-display">4.00</span>
-                        </div>
-                        <input type="range" id="input-l1" min="3.0" max="8.0" step="0.25" value="4.0">
-                    </div>
-
-                    <div class="control-group">
-                        <div class="control-header">
-                            <label>Height (L2)</label>
-                            <span id="l2-val" class="value-display">4.00</span>
-                        </div>
-                        <input type="range" id="input-l2" min="3.0" max="8.0" step="0.25" value="4.0">
-                    </div>
-                </div>
-
-                <div class="nav-group" style="margin-top: 20px;">
-                    <span class="nav-label">Reduction Settings</span>
-                    <div class="control-group">
-                        <div class="control-header">
-                            <label>SVD Modes (k)</label>
-                            <span id="k-val" class="value-display">5</span>
-                        </div>
-                        <input type="range" id="input-k" min="1" max="20" value="5">
-                    </div>
-                </div>
-
-                <div class="nav-group" style="margin-top: auto;">
-                    <button id="btn-train" class="btn-action" style="background: var(--primary);">
-                        <i class="fa-solid fa-microchip"></i> Run Geometric Sweep
-                    </button>
-                    <button id="btn-export" class="btn-reset" disabled>
-                        <i class="fa-solid fa-download"></i> Export Geo-ROM
-                    </button>
-                </div>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-bar glass">
-                <div class="breadcrumb">
-                    <a href="../../index.html">Simulation Hub</a>
-                    <i class="fa-solid fa-chevron-right"></i>
-                    <span>Phase 5.1a: Geometric Offline Trainer</span>
-                </div>
-                <div class="top-actions">
-                    <a href="../../../theory/theory-5.1a.html" class="theory-btn">
-                        <i class="fa-solid fa-book"></i> Detailed Theory
-                    </a>
-                </div>
-            </header>
-
-            <div class="content-body">
-                <div class="viz-container glass" id="canvas-container">
-                    <!-- Three.js Canvas will be injected here -->
-                    <div class="viz-overlay top-left">
-                        <div class="audit-badge" id="training-status">Ready to Sweep</div>
-                    </div>
-                    
-                    <div class="viz-overlay bottom-right param-grid" style="width: 250px;">
-                        <div class="stat-card">
-                            <div class="stat-val" id="stat-dofs">0</div>
-                            <div class="stat-label">Total DOFs</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-val" id="stat-snaps">0</div>
-                            <div class="stat-label">Snapshots</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bottom-panel glass">
-                    <div class="tabs">
-                        <div class="tab active" data-tab="log">Geometric Audit Log</div>
-                        <div class="tab" data-tab="energy">Energy Spectrum</div>
-                    </div>
-                    <div class="tab-content" id="audit-log">
-                        <div class="log-entry system">
-                            <span class="log-time">[SYSTEM]</span>
-                            <span class="log-msg">Welcome to Phase 5. Geometric parametrization initialized. Select R, L1, L2 to define the parametric shape-space.</span>
-                        </div>
-                    </div>
-                </div>
+        <span class="section-label">Shape Parametrization</span>
+        
+        <div class="control-item">
+            <div class="label-row">
+                <label>Notch Radius (R)</label>
+                <span id="r-val" class="value-display">1.00</span>
             </div>
-        </main>
+            <input type="range" id="input-r" min="0.5" max="2.5" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label>Plate Width (L1)</label>
+                <span id="l1-val" class="value-display">4.00</span>
+            </div>
+            <input type="range" id="input-l1" min="3.0" max="8.0" step="0.25" value="4.0">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label>Plate Height (L2)</label>
+                <span id="l2-val" class="value-display">4.00</span>
+            </div>
+            <input type="range" id="input-l2" min="3.0" max="8.0" step="0.25" value="4.0">
+        </div>
+
+        <hr class="divider">
+
+        <span class="section-label">Reduction Settings</span>
+        
+        <div class="control-item">
+            <div class="label-row">
+                <label>Target POD Modes (k)</label>
+                <span id="k-val" class="value-display">5</span>
+            </div>
+            <input type="range" id="input-k" min="1" max="20" value="5">
+        </div>
+
+        <div id="training-status">Ready to Sweep</div>
+        
+        <button id="btn-train" class="btn-main">
+            <i class="fa-solid fa-microchip"></i> Run Geometric Sweep
+        </button>
+        
+        <button id="btn-export" class="btn-main" style="background: rgba(255,255,255,0.05); box-shadow: none; margin-top: 12px;" disabled>
+            <i class="fa-solid fa-file-export"></i> Export Shape Basis
+        </button>
+    </aside>
+
+    <!-- Floating Stats -->
+    <div id="stats-card" class="glass-panel">
+        <div class="stat-item">
+            <div class="stat-lbl">Degrees of Freedom</div>
+            <div class="stat-val" id="stat-dofs">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-lbl">Shape Snapshots</div>
+            <div class="stat-val" id="stat-snaps">0</div>
+        </div>
+    </div>
+
+    <!-- Theory Link -->
+    <a href="../../../theory/theory-5.1a.html" class="glass-panel theory-float">
+        <i class="fa-solid fa-book-open" style="color: var(--primary);"></i>
+        Theoretical Framework
+    </a>
+
+    <!-- Audit Panel -->
+    <div id="audit-panel" class="glass-panel">
+        <div class="tabs">
+            <div class="tab active">Geometric Audit Log</div>
+            <div class="tab">Spectrum Energy</div>
+        </div>
+        <div id="audit-log">
+            <!-- Logs will be injected here -->
+        </div>
     </div>
 
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
 
@@ -187,10 +427,9 @@
     <script src="src/ui/audit-reporter.js"></script>
     <script src="src/core/app-state.js"></script>
 
-    <!-- Entry Point -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Orchestration will happen in app-state.js
+            // Initialized via app-state.js
         });
     </script>
 </body>

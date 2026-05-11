@@ -5,6 +5,7 @@
 
 class AppState {
     constructor() {
+        window.app = this;
         // 1. Initialize Core Engines
         this.nurbs = new window.NURBS2D();
         this.factory = window.GeometryFactory;
@@ -12,6 +13,9 @@ class AppState {
         this.bridge = new window.SolverBridge(this.solver);
         this.collector = new window.SnapshotCollector();
         this.reporter = new window.AuditReporter('audit-log');
+        
+        // 1.5 Initialize Visuals
+        window.viz = new window.VisualsEngine('canvas-container', this.nurbs);
         
         // 2. State Properties
         this.params = { R: 1.0, L1: 4.0, L2: 4.0 };
