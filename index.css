@@ -102,12 +102,16 @@ header {
   align-items: center;
   gap: 12px;
   letter-spacing: -0.02em;
+  animation: logoFloat 6s infinite ease-in-out;
 }
 
 .logo i {
   color: var(--accent);
   font-size: 1.8rem;
-  animation: logoPulse 3s infinite ease-in-out;
+  display: inline-block;
+  animation: logoRotate 12s infinite linear;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 0 10px var(--accent-glow));
 }
 
 .nav-links {
@@ -860,10 +864,14 @@ h1 span {
   100% { transform: translateY(0px); }
 }
 
-@keyframes logoPulse {
-  0% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-glow)); }
-  50% { transform: scale(1.1); filter: drop-shadow(0 0 10px var(--accent)); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-glow)); }
+@keyframes logoRotate {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 @keyframes heroBgPulse {
