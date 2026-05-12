@@ -336,13 +336,14 @@
             width: 20px;
             border-radius: 10px;
             background: linear-gradient(to top, 
-                #0000ff 0%, 
-                #00ffff 25%, 
-                #00ff00 50%, 
-                #ffff00 75%, 
-                #ff0000 100%
+                #3b82f6 0%,   /* Blue */
+                #06b6d4 20%,  /* Cyan */
+                #10b981 40%,  /* Green */
+                #facc15 60%,  /* Yellow */
+                #f97316 80%,  /* Orange */
+                #ef4444 100%  /* Red */
             );
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
         }
         .colorbar-labels {
             display: flex;
@@ -393,7 +394,7 @@
             </div>
         </div>
 
-        <span class="section-label">Mesh & Finite Element Order</span>
+        <span class="section-label">Mesh & Physics Parameters</span>
         <div class="control-item">
             <div class="label-row">
                 <label>Mesh Density (h)</label>
@@ -411,8 +412,16 @@
             <div style="font-size: 0.55rem; color: #64748b; margin-top: 4px;">(Base p=2 + Elevation)</div>
         </div>
 
+        <div class="control-item">
+            <div class="label-row">
+                <label>Traction Load (Tx)</label>
+                <span id="tx-val" class="value-display">100.0</span>
+            </div>
+            <input type="range" id="input-tx" min="10" max="1000" step="10" value="100">
+        </div>
+
         <button id="btn-apply-mesh" class="btn-main" style="margin-bottom: 20px; background: var(--primary-dark);">
-            <i class="fa-solid fa-play"></i> Apply Mesh Settings
+            <i class="fa-solid fa-play"></i> Apply Physics & Mesh
         </button>
 
         <hr class="divider">
@@ -431,7 +440,7 @@
                 <label>Plate Width (L1)</label>
                 <span id="l1-val" class="value-display">4.00</span>
             </div>
-            <input type="range" id="input-l1" min="3.0" max="8.0" step="0.25" value="4.0">
+            <input type="range" id="input-l1" min="3.0" max="10.0" step="0.25" value="4.0">
         </div>
 
         <div class="control-item">
@@ -439,7 +448,7 @@
                 <label>Plate Height (L2)</label>
                 <span id="l2-val" class="value-display">4.00</span>
             </div>
-            <input type="range" id="input-l2" min="3.0" max="8.0" step="0.25" value="4.0">
+            <input type="range" id="input-l2" min="3.0" max="10.0" step="0.25" value="4.0">
         </div>
 
         <hr class="divider">
@@ -473,7 +482,7 @@
             <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                 <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Show Control Points</label>
                 <label class="switch">
-                    <input type="checkbox" id="toggle-cp" checked>
+                    <input type="checkbox" id="toggle-cp">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -508,17 +517,25 @@
     <!-- Floating Stats -->
     <div id="stats-card" class="glass-panel">
         <div class="stat-item">
-            <div class="stat-lbl">Degrees of Freedom</div>
+            <div class="stat-lbl">Full DOFs</div>
             <div class="stat-val" id="stat-dofs">0</div>
         </div>
+        <div class="stat-item" id="stat-rom-container" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+            <div class="stat-lbl" style="color: var(--accent);">ROM Error (L2)</div>
+            <div class="stat-val" id="stat-error" style="color: var(--accent);">0.00%</div>
+        </div>
         <div class="stat-item">
-            <div class="stat-lbl">Snapshots</div>
+            <div class="stat-lbl">Reduction Ratio</div>
+            <div class="stat-val" id="stat-ratio">0.0%</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-lbl">Training Samples</div>
             <div class="stat-val" id="stat-snaps">0</div>
         </div>
     </div>
 
     <!-- Theory Link -->
-    <a href="../../../theory/theory-5.1a.html" class="glass-panel theory-float">
+    <a href="theory.html" class="glass-panel theory-float">
         <i class="fa-solid fa-book-open" style="color: var(--primary);"></i>
         Mathematical Basis
     </a>
@@ -562,6 +579,11 @@
     <script src="src/core/app-state.js"></script>
 
     <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error("[Global Error]", msg, "at", url, ":", line);
+            if (window.reporter) window.reporter.log('warning', `Runtime Error: ${msg}`);
+            return false;
+        };
         document.addEventListener('DOMContentLoaded', () => {
             // Initialized via app-state.js
         });

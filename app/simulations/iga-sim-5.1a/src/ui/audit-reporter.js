@@ -33,12 +33,29 @@ class AuditReporter {
     }
 
     reportStats(stats) {
-        // Update DOM elements if they exist
         if (document.getElementById('stat-dofs')) {
             document.getElementById('stat-dofs').textContent = stats.nDofs;
         }
         if (document.getElementById('stat-snaps')) {
             document.getElementById('stat-snaps').textContent = stats.nSnaps;
+        }
+        
+        // Reduction Ratio
+        if (document.getElementById('stat-ratio')) {
+            const ratio = ((stats.nDofs - stats.k) / stats.nDofs) * 100;
+            document.getElementById('stat-ratio').textContent = `${ratio.toFixed(1)}%`;
+        }
+
+        // Error Handling
+        const errorContainer = document.getElementById('stat-rom-container');
+        if (errorContainer) {
+            if (stats.mode === 'rom') {
+                errorContainer.style.display = 'block';
+                const errVal = document.getElementById('stat-error');
+                if (errVal) errVal.textContent = `${(stats.error * 100).toFixed(4)}%`;
+            } else {
+                errorContainer.style.display = 'none';
+            }
         }
     }
 }

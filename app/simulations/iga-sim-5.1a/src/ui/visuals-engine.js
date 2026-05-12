@@ -8,15 +8,16 @@ class VisualsEngine {
         this.nurbs = nurbs;
         this.solver = solver;
         this.defScale = 50.0;
-        this.showControlNet = true;
-        this.viewMode = 'displacement'; // 'displacement' or 'stress'
+        this.showControlNet = false;
+        this.showBCs = true; 
+        this.viewMode = 'displacement'; 
         
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0f172a);
+        this.scene.background = new THREE.Color(0x020617); // Exact 2B.2 dark
         
         this.camera = new THREE.PerspectiveCamera(45, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
-        this.camera.position.set(2, 2, 10);
-        this.camera.lookAt(2, 2, 0);
+        this.camera.position.set(2.5, 2.5, 12); // Center of 4x4 plate
+        this.camera.lookAt(2.5, 2.5, 0);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
@@ -31,7 +32,7 @@ class VisualsEngine {
             MIDDLE: THREE.MOUSE.DOLLY,
             RIGHT: THREE.MOUSE.PAN
         };
-        this.controls.target.set(2, 2, 0);
+        this.controls.target.set(2.5, 2.5, 0);
         this.controls.update();
 
         // Lighting
@@ -74,6 +75,30 @@ class VisualsEngine {
 
         // 1. Evaluate Surface and Scalar Field
         console.log("[Visuals] Starting update. Mode:", this.viewMode, "Solver:", !!this.solver);
+        
+        // Pre-calculate max for normalization (matching 2B.2 logic)
+        if (displacement) {
+            if (this.viewMode === 'displacement') {
+                for (let i = 0; i < displacement.length; i += 2) {
+                    // Match 2B.2: maxVal for the color bar is the Resultant Magnitude
+                    const mag = Math.sqrt(displacement[i]**2 + displacement[i+1]**2);
+                    if (mag > maxVal) maxVal = mag;
+                }
+            } else if (this.viewMode === 'stress' && this.solver) {
+                // Sample stress capped at v=0.95 to avoid degenerate corner artifacts (2B.2 logic)
+                const res = 15;
+                for (let i = 0; i <= res; i++) {
+                    for (let j = 0; j <= res; j++) {
+                        const u = i / res;
+                        const v = (j / res) * 0.95;
+                        const s = this.solver.getNumericalStress(patch, displacement, u, v, this.solver.E, this.solver.nu);
+                        if (s.vonMises > maxVal) maxVal = s.vonMises;
+                    }
+                }
+            }
+        }
+        if (maxVal === 0) maxVal = 1.0;
+
         for (let i = 0; i < positions.count; i++) {
             const u = geometry.attributes.uv.getX(i);
             const v = geometry.attributes.uv.getY(i);
@@ -89,36 +114,31 @@ class VisualsEngine {
                     try {
                         const s = this.solver.getNumericalStress(patch, displacement, u, v, this.solver.E, this.solver.nu);
                         vals[i] = s.vonMises;
-                        if (s.vonMises > maxVal) maxVal = s.vonMises;
                     } catch (err) {
                         if (i === 0) console.error("[Visuals] Stress Eval Error:", err);
                     }
                 } else if (this.viewMode === 'displacement') {
-                    // Magnitude of displacement
-                    const mag = Math.sqrt(u_disp.x**2 + u_disp.y**2);
-                    vals[i] = mag;
-                    if (mag > maxVal) maxVal = mag;
+                    // Match 2B.2: Use absolute X-displacement for coloring
+                    vals[i] = Math.abs(u_disp.x);
                 }
             }
             positions.setXYZ(i, pos.x, pos.y, pos.z);
         }
 
-        // 2. Map Colors (For Stress or Displacement Magnitude)
-        if (maxVal > 0) {
-            for (let i = 0; i < positions.count; i++) {
-                const color = this.getJetColor(vals[i], 0, maxVal);
-                colors[i * 3] = color.r;
-                colors[i * 3 + 1] = color.g;
-                colors[i * 3 + 2] = color.b;
-            }
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        // 2. Map Colors (Exact 2B.2 Heatmap Stops)
+        for (let i = 0; i < positions.count; i++) {
+            const color = this.getJetColor(vals[i], 0, maxVal);
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
         }
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         geometry.computeVertexNormals();
 
         const material = new THREE.MeshPhongMaterial({
-            color: maxVal > 0 ? 0xffffff : 0x8b5cf6,
-            vertexColors: maxVal > 0,
+            color: 0xffffff,
+            vertexColors: true,
             side: THREE.DoubleSide,
             flatShading: false,
             transparent: true,
@@ -136,7 +156,7 @@ class VisualsEngine {
         this.renderControlNet(patch);
         
         // Update Color Bar
-        const title = this.viewMode === 'stress' ? 'Von Mises (MPa)' : 'Displacement (mm)';
+        const title = this.viewMode === 'stress' ? 'Von Mises (MPa)' : 'Disp-X (mm)';
         this.updateColorBar(0, maxVal, title);
     }
 
@@ -157,15 +177,32 @@ class VisualsEngine {
     }
 
     getJetColor(v, min, max) {
-        let dv = max - min;
-        if (dv === 0) dv = 1;
-        const c = { r: 0, g: 0, b: 0 };
-        const x = (v - min) / dv;
-        if (x < 0.25) { c.r = 0; c.g = 4 * x; c.b = 1; }
-        else if (x < 0.5) { c.r = 0; c.g = 1; c.b = 1 + 4 * (0.25 - x); }
-        else if (x < 0.75) { c.r = 4 * (x - 0.5); c.g = 1; c.b = 0; }
-        else { c.r = 1; c.g = 1 + 4 * (0.75 - x); c.b = 0; }
-        return c;
+        let t = (v - min) / (max - min || 1e-6);
+        t = Math.min(Math.max(t, 0), 1.0);
+        
+        // Exact 2B.2 Heatmap Stops
+        const stops = [
+            { t: 0.0, r: 0.23, g: 0.51, b: 0.96 }, // #3b82f6 (Blue)
+            { t: 0.2, r: 0.02, g: 0.71, b: 0.83 }, // #06b6d4 (Cyan)
+            { t: 0.4, r: 0.06, g: 0.73, b: 0.51 }, // #10b981 (Green)
+            { t: 0.6, r: 0.98, g: 0.80, b: 0.08 }, // #facc15 (Yellow)
+            { t: 0.8, r: 0.98, g: 0.45, b: 0.09 }, // #f97316 (Orange)
+            { t: 1.0, r: 0.94, g: 0.27, b: 0.27 }  // #ef4444 (Red)
+        ];
+        
+        for (let i = 0; i < stops.length - 1; i++) {
+            const s1 = stops[i];
+            const s2 = stops[i+1];
+            if (t >= s1.t && t <= s2.t) {
+                const factor = (t - s1.t) / (s2.t - s1.t);
+                return {
+                    r: s1.r + factor * (s2.r - s1.r),
+                    g: s1.g + factor * (s2.g - s1.g),
+                    b: s1.b + factor * (s2.b - s1.b)
+                };
+            }
+        }
+        return stops[stops.length-1];
     }
 
     evaluateDisplacement(patch, u, v, disp) {
@@ -246,7 +283,7 @@ class VisualsEngine {
         const nV = cp[0].length;
 
         // 1. Symmetry BCs (Rollers)
-        const rollerMaterial = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.6 });
+        const rollerMaterial = new THREE.MeshPhongMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.8 });
         const rollerGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.02, 16);
         rollerGeo.rotateX(Math.PI / 2);
 
@@ -265,14 +302,19 @@ class VisualsEngine {
             this.bcGroup.add(roller);
         }
 
-        // 2. Loads (Tension Arrows on Right Outer Edge j=nV-1, i <= nU/2)
+        // 2. Loads (Tension Arrows on Right Edge)
         const arrowDir = new THREE.Vector3(1, 0, 0);
-        const arrowColor = 0xef4444; // Red for force
-        const nU_half = Math.floor(nU / 2);
-        for (let i = 0; i <= nU_half; i++) {
-            const origin = new THREE.Vector3(cp[i][nV-1].x, cp[i][nV-1].y, cp[i][nV-1].z);
-            const arrow = new THREE.ArrowHelper(arrowDir, origin, 0.4, arrowColor, 0.15, 0.1);
-            this.bcGroup.add(arrow);
+        const arrowColor = 0xef4444; 
+        const arrowLength = 0.4;
+
+        const L = patch.params.L1;
+        for (let i = 0; i < nU; i++) {
+            const cp_node = cp[i][nV-1];
+            if (cp_node.x > L - 0.1) {
+                const origin = new THREE.Vector3(cp_node.x, cp_node.y, cp_node.z);
+                const arrow = new THREE.ArrowHelper(arrowDir, origin, arrowLength, arrowColor, 0.15, 0.1);
+                this.bcGroup.add(arrow);
+            }
         }
 
         this.bcGroup.visible = this.showBCs !== false;

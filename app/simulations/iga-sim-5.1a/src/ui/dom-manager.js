@@ -12,12 +12,25 @@ class DOMManager {
         const rInput = document.getElementById('input-r');
         const l1Input = document.getElementById('input-l1');
         const l2Input = document.getElementById('input-l2');
+        const txInput = document.getElementById('input-tx');
 
         rInput.oninput = (e) => {
             const val = parseFloat(e.target.value);
             document.getElementById('r-val').textContent = val.toFixed(2);
             window.app.params.R = val;
             window.app.updateGeometry();
+        };
+
+        // Traction Load (Moved to manual trigger)
+        txInput.oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('tx-val').textContent = val.toFixed(1);
+            window.app.params.Tx = val;
+            
+            // Real-time visual feedback for arrows (no solve)
+            if (window.viz && window.app.activePatch) {
+                window.viz.renderBCs(window.app.activePatch);
+            }
         };
 
         l1Input.oninput = (e) => {

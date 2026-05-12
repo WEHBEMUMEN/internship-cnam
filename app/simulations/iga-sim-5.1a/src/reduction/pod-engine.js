@@ -15,10 +15,6 @@ class PODEngine {
         console.log("[PODEngine] Matrix dimensions:", nDofs, "x", nSnaps);
 
         const lib = window.mlMatrix || window.ML;
-        if (!lib) {
-            console.error("[PODEngine] ML Matrix library not found (tried window.mlMatrix and window.ML)");
-            throw new Error("ML Matrix library not found");
-        }
         const { Matrix, SingularValueDecomposition } = lib;
 
         // 1. Build Snapshot Matrix S
@@ -51,6 +47,28 @@ class PODEngine {
             energy: energy,
             singularValues: s.slice(0, actualK)
         };
+    }
+
+    /**
+     * Solves a small linear system for ROM amplitudes using Math.js
+     */
+    static solveLinear(K_arr, f_arr) {
+        try {
+            // Using Math.js for robust linear solve (already loaded in index.html)
+            // It handles singular or near-singular systems better in the browser.
+            const sol = window.math.lusolve(K_arr, f_arr);
+            // math.js returns a column vector (matrix)
+            return Array.isArray(sol) ? sol.flat() : sol.toArray().flat();
+        } catch (e) {
+            console.warn("[PODEngine] math.js lusolve failed:", e);
+            // Extreme fallback: Simple diagonal inverse if everything else fails
+            const n = K_arr.length;
+            const ar = new Float64Array(n);
+            for(let i=0; i<n; i++) {
+                ar[i] = f_arr[i] / (K_arr[i][i] || 1.0);
+            }
+            return Array.from(ar);
+        }
     }
 }
 

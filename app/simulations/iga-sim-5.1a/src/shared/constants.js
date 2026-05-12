@@ -4,7 +4,7 @@
 
 window.GEO_CONFIG = {
     MATERIAL: {
-        E: 200000,   // Young's Modulus (N/mm^2)
+        E: 100000,   // Young's Modulus (MPa) - Matched to Phase 3.x
         nu: 0.3,     // Poisson's Ratio
         thickness: 1.0
     },

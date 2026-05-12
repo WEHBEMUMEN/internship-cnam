@@ -529,7 +529,7 @@ class IGA2DSolver {
 
                     // --- EXACT KIRSCH TRACTION (Algorithm 3 compatible) ---
                     // Compute exact analytical stress at this boundary point
-                    const R_hole = 1.0; // Hole radius
+                    const R_hole = (patch.params && patch.params.R) ? patch.params.R : 1.0; 
                     const sigma = this.getExactStress(pos.x, pos.y, R_hole, loadValue);
 
                     // Outward normal: n = (ty, -tx) / |t| for CCW traversal
