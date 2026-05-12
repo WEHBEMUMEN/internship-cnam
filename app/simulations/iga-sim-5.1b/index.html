@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 5.1b | Geometric Digital Twin (ECSW)</title>
+    <link rel="stylesheet" href="../../../index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-dark: #7c3aed;
+            --accent: #f59e0b;
+            --bg: #0f172a;
+            --card: rgba(30, 41, 59, 0.7);
+            --border: rgba(139, 92, 246, 0.2);
+            --glass: blur(12px);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: #f1f5f9;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #020617 100%);
+            z-index: 1;
+        }
+
+        /* Glass Panels */
+        .glass-panel {
+            background: var(--card);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            z-index: 10;
+            position: absolute;
+        }
+
+        /* Sidebar Control Panel */
+        #control-panel {
+            top: 20px;
+            left: 20px;
+            width: 360px;
+            bottom: 20px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* Top Header Area */
+        .panel-header {
+            margin-bottom: 24px;
+        }
+
+        .back-link {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            margin-bottom: 16px;
+            transition: color 0.2s;
+            font-weight: 700;
+        }
+        .back-link:hover { color: var(--primary); }
+
+        .title-group h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 6px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* Controls */
+        .section-label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            margin: 24px 0 16px;
+        }
+
+        .control-item {
+            margin-bottom: 20px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .label-row label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .value-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 10px 20px -5px rgba(124, 58, 237, 0.4);
+            transition: all 0.2s;
+            margin-top: auto;
+        }
+
+        .btn-main:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(124, 58, 237, 0.5);
+        }
+
+        .btn-main:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Stats & Audit Area */
+        #audit-panel {
+            bottom: 20px;
+            right: 20px;
+            left: 400px;
+            height: 240px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            padding-bottom: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .tab.active {
+            color: var(--primary);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        #audit-log {
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            padding-right: 10px;
+        }
+
+        .log-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            display: flex;
+            gap: 12px;
+        }
+
+        .log-time { color: #475569; }
+        .log-msg { line-height: 1.4; }
+
+        /* Floating Stats Card */
+        #stats-card {
+            top: 20px;
+            right: 20px;
+            width: 220px;
+            padding: 20px;
+        }
+
+        .stat-item {
+            margin-bottom: 12px;
+        }
+        .stat-item:last-child { margin-bottom: 0; }
+
+        .stat-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-lbl {
+            font-size: 0.6rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+
+        /* Utility */
+        .divider {
+            border: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin: 24px 0;
+        }
+
+        #training-status {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .theory-float {
+            position: absolute;
+            top: 20px;
+            right: 260px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(14px); }
+
+        /* Color Bar */
+        .colorbar-float {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 80px;
+            height: 300px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .colorbar-gradient {
+            flex: 1;
+            width: 20px;
+            border-radius: 10px;
+            background: linear-gradient(to top, 
+                #3b82f6 0%,   /* Blue */
+                #06b6d4 20%,  /* Cyan */
+                #10b981 40%,  /* Green */
+                #facc15 60%,  /* Yellow */
+                #f97316 80%,  /* Orange */
+                #ef4444 100%  /* Red */
+            );
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .colorbar-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .colorbar-title {
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #fff;
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="colorbar-container" class="glass-panel colorbar-float" style="display: none;">
+        <div style="display: flex; height: 100%; gap: 10px;">
+            <div class="colorbar-labels">
+                <span id="cb-max">100.0</span>
+                <span id="cb-mid">50.0</span>
+                <span id="cb-min">0.0</span>
+            </div>
+            <div class="colorbar-gradient"></div>
+        </div>
+        <div class="colorbar-title" id="cb-title">Von Mises (MPa)</div>
+    </div>
+
+    <!-- Control Panel -->
+    <aside id="control-panel" class="glass-panel">
+        <div class="panel-header">
+            <a href="../../index.html" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i> Simulation Hub
+            </a>
+            <div class="title-group">
+                <h1>Geo-Digital Twin</h1>
+                <div class="phase-badge">Phase 5.1b · ECSW Hyper-reduction</div>
+            </div>
+        </div>
+
+        <span class="section-label">Mesh & Physics Parameters</span>
+        <div class="control-item">
+            <div class="label-row">
+                <label>Mesh Density (h)</label>
+                <span id="h-val" class="value-display">2</span>
+            </div>
+            <input type="range" id="input-h" min="0" max="4" step="1" value="2">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label>Polynomial Order (p)</label>
+                <span id="p-val" class="value-display">2</span>
+            </div>
+            <input type="range" id="input-p" min="0" max="2" step="1" value="0">
+            <div style="font-size: 0.55rem; color: #64748b; margin-top: 4px;">(Base p=2 + Elevation)</div>
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label>Traction Load (Tx)</label>
+                <span id="tx-val" class="value-display">100.0</span>
+            </div>
+            <input type="range" id="input-tx" min="10" max="1000" step="10" value="100">
+        </div>
+
+        <button id="btn-apply-mesh" class="btn-main" style="margin-bottom: 20px; background: var(--primary-dark);">
+            <i class="fa-solid fa-play"></i> Apply Physics & Mesh
+        </button>
+
+        <hr class="divider">
+
+        <span class="section-label">Geometry Morphing</span>
+        <div class="control-item">
+            <div class="label-row">
+                <label>Notch Radius (R)</label>
+                <span id="r-val" class="value-display">1.00</span>
+            </div>
+            <input type="range" id="input-r" min="0.5" max="2.0" step="0.05" value="1.0">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label>Plate Width (L1)</label>
+                <span id="l1-val" class="value-display">4.00</span>
+            </div>
+            <input type="range" id="input-l1" min="3.0" max="10.0" step="0.25" value="4.0">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label>Plate Height (L2)</label>
+                <span id="l2-val" class="value-display">4.00</span>
+            </div>
+            <input type="range" id="input-l2" min="3.0" max="10.0" step="0.25" value="4.0">
+        </div>
+
+        <hr class="divider">
+
+        <span class="section-label">Reduction Settings</span>
+        
+        <div class="control-item">
+            <div class="label-row">
+                <label>Target POD Modes (k)</label>
+                <span id="k-val" class="value-display">5</span>
+            </div>
+            <input type="range" id="input-k" min="1" max="20" value="5">
+        </div>
+
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">View Mode</label>
+                <div id="view-mode-selector" style="display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+                    <button id="view-disp" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: var(--primary); color: white;">DISP</button>
+                    <button id="view-stress" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: transparent; color: #64748b;">STRESS</button>
+                </div>
+            </div>
+
+            <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Evaluation Mode</label>
+                <div id="mode-selector" style="display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+                    <button id="mode-fom" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: var(--primary); color: white;">FULL</button>
+                    <button id="mode-rom" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: transparent; color: #64748b;" disabled>ROM</button>
+                    <button id="mode-ecsw" style="padding: 4px 8px; border: none; border-radius: 6px; font-size: 0.6rem; font-weight: 700; cursor: pointer; background: transparent; color: #64748b;" disabled>ECSW</button>
+                </div>
+            </div>
+
+            <div class="control-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; margin-top: 10px; display: block;">
+                <label style="color: #f59e0b; font-size: 0.6rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">ECSW Hyper-reduction Settings</label>
+                
+                <div style="margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <label style="font-size: 0.7rem; color: #94a3b8;">Training Tol (ε)</label>
+                        <span id="ecsw-tol-val" style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #f59e0b;">1e-4</span>
+                    </div>
+                    <input type="range" id="input-ecsw-tol" min="-6" max="-2" step="0.5" value="-4" style="width: 100%;">
+                </div>
+
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
+                    <label style="font-size: 0.7rem; color: #94a3b8;">VIEW SAMPLED MESH</label>
+                    <label class="switch" style="width: 30px; height: 16px;">
+                        <input type="checkbox" id="toggle-ecsw-mesh">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Show Control Points</label>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-cp">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Show Boundary Cond.</label>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-bc" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <span class="section-label">Sampling Strategy</span>
+        <div style="height: 180px; width: 100%; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; margin-bottom: 20px;">
+            <canvas id="sweep-map"></canvas>
+        </div>
+
+        <div id="training-status">Ready to Sweep</div>
+        
+        <button id="btn-train" class="btn-main">
+            <i class="fa-solid fa-bolt"></i> Execute Training Sweep
+        </button>
+        
+        <button id="btn-export" class="btn-main" style="background: rgba(255,255,255,0.05); box-shadow: none; margin-top: 12px;" disabled>
+            <i class="fa-solid fa-file-export"></i> Export Shape-ROM (.json)
+        </button>
+    </aside>
+
+    <!-- Floating Stats -->
+    <div id="stats-card" class="glass-panel">
+        <div class="stat-item">
+            <div class="stat-lbl">Full DOFs</div>
+            <div class="stat-val" id="stat-dofs">0</div>
+        </div>
+        <div class="stat-item" id="stat-rom-container" style="display: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+            <div class="stat-lbl" style="color: var(--accent);">ROM Error (L2)</div>
+            <div class="stat-val" id="stat-error" style="color: var(--accent);">0.00%</div>
+        </div>
+        <div class="stat-item" id="stat-speedup-container">
+            <div class="stat-lbl" style="color: var(--primary);">Solve Speedup</div>
+            <div class="stat-val" id="stat-speedup" style="color: var(--primary);">1.0x</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-lbl">Reduction Ratio</div>
+            <div class="stat-val" id="stat-ratio">0.0%</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-lbl">Training Samples</div>
+            <div class="stat-val" id="stat-snaps">0</div>
+        </div>
+        <div class="stat-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+            <div class="stat-lbl" style="color: #10b981; font-weight: 800;">Real-time FPS</div>
+            <div class="stat-val" id="stat-fps" style="color: #10b981;">--</div>
+        </div>
+    </div>
+
+    <!-- Theory Link -->
+    <a href="theory.html" class="glass-panel theory-float">
+        <i class="fa-solid fa-book-open" style="color: var(--primary);"></i>
+        Mathematical Basis
+    </a>
+
+    <!-- Audit Panel -->
+    <div id="audit-panel" class="glass-panel">
+        <div class="tabs">
+            <div class="tab active" data-tab="log">Geometric Audit Log</div>
+            <div class="tab" data-tab="reduction">Reduction Audit</div>
+        </div>
+        <div id="audit-log">
+            <!-- Logs will be injected here -->
+        </div>
+        <div id="reduction-audit" style="display: none; height: 100%; width: 100%; flex: 1;">
+            <canvas id="chart-energy"></canvas>
+        </div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.11.1/matrix.umd.js"></script>
+
+    <!-- Phase 2 Core Shared (Linked) -->
+    <script src="../phase-2-core/src/nurbs-2d.js"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js"></script>
+
+    <!-- Atomic Source Files (Phase 5) -->
+    <script src="src/shared/constants.js"></script>
+    <script src="src/core/geometry-factory.js"></script>
+    <script src="src/core/solver-extensions.js"></script>
+    <script src="src/core/solver-bridge.js"></script>
+    <script src="src/reduction/pod-engine.js"></script>
+    <script src="src/reduction/ecsw-engine.js"></script>
+    <script src="src/reduction/snapshot-collector.js"></script>
+    <script src="src/reduction/offline-trainer.js"></script>
+    <script src="src/ui/visuals-engine.js"></script>
+    <script src="src/ui/dom-manager.js"></script>
+    <script src="src/ui/audit-reporter.js"></script>
+    <script src="src/ui/app-charts.js"></script>
+    <script src="src/core/app-state.js"></script>
+
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error("[Global Error]", msg, "at", url, ":", line);
+            if (window.reporter) window.reporter.log('warning', `Runtime Error: ${msg}`);
+            return false;
+        };
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialized via app-state.js
+        });
+    </script>
+</body>
+</html>
