@@ -42,10 +42,13 @@ class VisualsEngine {
         directional.position.set(10, 10, 20);
         this.scene.add(directional);
 
-        // Objects
         this.mesh = null;
         this.wireframe = null;
         this.cpNet = null;
+
+        // --- Cache for Basis Functions (O(N) Optimization) ---
+        this.basisCache = null;
+        this.cacheRes = 0;
 
         window.addEventListener('resize', () => this.onResize());
         this.animate();
@@ -65,7 +68,19 @@ class VisualsEngine {
         if (this.wireframe) this.scene.remove(this.wireframe);
         if (this.cpNet) this.scene.remove(this.cpNet);
 
-        const segments = 48; // Higher resolution for stress
+        // Adaptive LOD:
+        // - Stationary (no solve): 48 (High)
+        // - Interaction (isSolving): 16 (Ultra Fast)
+        // - Solved Result: 32 (Balanced)
+        let segments = 48;
+        if (window.app && window.app.isSolving) segments = 16;
+        else if (displacement) segments = 32;
+        
+        // Check if cache needs rebuild
+        if (!this.basisCache || this.cacheRes !== segments) {
+            this.rebuildBasisCache(patch, segments);
+        }
+
         const geometry = new THREE.PlaneGeometry(1, 1, segments, segments);
         const positions = geometry.attributes.position;
         const colors = new Float32Array(positions.count * 3);
@@ -73,59 +88,74 @@ class VisualsEngine {
         let maxVal = 0;
         const vals = new Float32Array(positions.count);
 
-        // 1. Evaluate Surface and Scalar Field
-        console.log("[Visuals] Starting update. Mode:", this.viewMode, "Solver:", !!this.solver);
+        console.log("[Visuals] Starting optimized update. Mode:", this.viewMode, "Res:", segments);
         
-        // Pre-calculate max for normalization (matching 2B.2 logic)
+        // 1. Evaluate Scalar Field Bounds
         if (displacement) {
             if (this.viewMode === 'displacement') {
                 for (let i = 0; i < displacement.length; i += 2) {
-                    // Match 2B.2: maxVal for the color bar is the Resultant Magnitude
                     const mag = Math.sqrt(displacement[i]**2 + displacement[i+1]**2);
                     if (mag > maxVal) maxVal = mag;
                 }
             } else if (this.viewMode === 'stress' && this.solver) {
-                // Sample stress capped at v=0.95 to avoid degenerate corner artifacts (2B.2 logic)
-                const res = 15;
-                for (let i = 0; i <= res; i++) {
-                    for (let j = 0; j <= res; j++) {
-                        const u = i / res;
-                        const v = (j / res) * 0.95;
-                        const s = this.solver.getNumericalStress(patch, displacement, u, v, this.solver.E, this.solver.nu);
-                        if (s.vonMises > maxVal) maxVal = s.vonMises;
-                    }
-                }
+                // Approximate max stress for color bar (faster than sampling 2k points)
+                maxVal = this.estimateMaxStress(patch, displacement);
             }
         }
         if (maxVal === 0) maxVal = 1.0;
 
-        for (let i = 0; i < positions.count; i++) {
-            const u = geometry.attributes.uv.getX(i);
-            const v = geometry.attributes.uv.getY(i);
-            
-            const pos = this.nurbs.evaluateSurface(patch, u, v);
-            
-            if (displacement) {
-                const u_disp = this.evaluateDisplacement(patch, u, v, displacement);
-                pos.x += u_disp.x * this.defScale;
-                pos.y += u_disp.y * this.defScale;
+        // 2. Optimized Geometry Update using Basis Cache
+        const cp = patch.controlPoints;
+        const weights = patch.weights;
+        const nV = cp[0].length;
 
+        for (let idx = 0; idx < positions.count; idx++) {
+            const cache = this.basisCache[idx];
+            let x = 0, y = 0, z = 0, W = 0;
+            let ux = 0, uy = 0;
+
+            // Direct linear sum using pre-computed basis functions
+            for (let i = 0; i < cache.contributions.length; i++) {
+                const c = cache.contributions[i];
+                const weight = weights[c.cpI][c.cpJ];
+                const val = c.basis * weight;
+                
+                x += val * cp[c.cpI][c.cpJ].x;
+                y += val * cp[c.cpI][c.cpJ].y;
+                z += val * cp[c.cpI][c.cpJ].z;
+                
+                if (displacement) {
+                    const dIdx = (c.cpI * nV + c.cpJ) * 2;
+                    ux += val * displacement[dIdx];
+                    uy += val * displacement[dIdx + 1];
+                }
+                W += val;
+            }
+
+            const posX = (x / W) + (ux / W) * this.defScale;
+            const posY = (y / W) + (uy / W) * this.defScale;
+            positions.setXYZ(idx, posX, posY, z / W);
+
+            if (displacement) {
                 if (this.viewMode === 'stress' && this.solver) {
-                    try {
-                        const s = this.solver.getNumericalStress(patch, displacement, u, v, this.solver.E, this.solver.nu);
-                        vals[i] = s.vonMises;
-                    } catch (err) {
-                        if (i === 0) console.error("[Visuals] Stress Eval Error:", err);
+                    // Sample stress only for a subset of points if dragging
+                    if (idx % 2 === 0 || !window.app.isSolving) {
+                        const u = geometry.attributes.uv.getX(idx);
+                        const v = geometry.attributes.uv.getY(idx);
+                        try {
+                            const s = this.solver.getNumericalStress(patch, displacement, u, v, this.solver.E, this.solver.nu);
+                            vals[idx] = s.vonMises;
+                        } catch(e) {}
+                    } else {
+                        vals[idx] = vals[idx-1] || 0;
                     }
-                } else if (this.viewMode === 'displacement') {
-                    // Match 2B.2: Use absolute X-displacement for coloring
-                    vals[i] = Math.abs(u_disp.x);
+                } else {
+                    vals[idx] = Math.abs(ux / W);
                 }
             }
-            positions.setXYZ(i, pos.x, pos.y, pos.z);
         }
 
-        // 2. Map Colors (Exact 2B.2 Heatmap Stops)
+        // 3. Map Colors
         for (let i = 0; i < positions.count; i++) {
             const color = this.getJetColor(vals[i], 0, maxVal);
             colors[i * 3] = color.r;
@@ -133,14 +163,12 @@ class VisualsEngine {
             colors[i * 3 + 2] = color.b;
         }
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
         geometry.computeVertexNormals();
 
         const material = new THREE.MeshPhongMaterial({
             color: 0xffffff,
             vertexColors: true,
             side: THREE.DoubleSide,
-            flatShading: false,
             transparent: true,
             opacity: 0.9,
             shininess: 100
@@ -153,16 +181,61 @@ class VisualsEngine {
         this.wireframe = new THREE.Mesh(geometry, wireMaterial);
         this.scene.add(this.wireframe);
 
-        // 3. ECSW Active Mesh
         if (window.app && window.app.ecswData) {
             this.renderECSWActiveMesh(patch, window.app.ecswData);
         }
 
         this.renderControlNet(patch);
-        
-        // Update Color Bar
-        const title = this.viewMode === 'stress' ? 'Von Mises (MPa)' : 'Disp-X (mm)';
-        this.updateColorBar(0, maxVal, title);
+        this.updateColorBar(0, maxVal, this.viewMode === 'stress' ? 'Von Mises (MPa)' : 'Disp-X (mm)');
+    }
+
+    rebuildBasisCache(patch, res) {
+        console.log(`[Visuals] Rebuilding Basis Cache for resolution ${res}...`);
+        const geometry = new THREE.PlaneGeometry(1, 1, res, res);
+        const uv = geometry.attributes.uv;
+        const count = uv.count;
+        this.basisCache = new Array(count);
+        this.cacheRes = res;
+
+        const { p, q, U, V } = patch;
+        const nU = patch.controlPoints.length;
+        const nV = patch.controlPoints[0].length;
+
+        for (let idx = 0; idx < count; idx++) {
+            const u = uv.getX(idx);
+            const v = uv.getY(idx);
+
+            const spanU = this.nurbs.findSpan(nU - 1, p, u, U);
+            const spanV = this.nurbs.findSpan(nV - 1, q, v, V);
+            const dersU = this.nurbs.basisFuns(spanU, u, p, U);
+            const dersV = this.nurbs.basisFuns(spanV, v, q, V);
+
+            const contributions = [];
+            for (let i = 0; i <= p; i++) {
+                for (let j = 0; j <= q; j++) {
+                    const cpI = spanU - p + i;
+                    const cpJ = spanV - q + j;
+                    contributions.push({
+                        cpI, cpJ,
+                        basis: dersU[i] * dersV[j]
+                    });
+                }
+            }
+            this.basisCache[idx] = { contributions };
+        }
+    }
+
+    estimateMaxStress(patch, displacement) {
+        // Fast approximate max stress sampling at 5x5 grid
+        let max = 0;
+        const steps = 5;
+        for (let i = 0; i <= steps; i++) {
+            for (let j = 0; j <= steps; j++) {
+                const s = this.solver.getNumericalStress(patch, displacement, i/steps, (j/steps)*0.95, this.solver.E, this.solver.nu);
+                if (s.vonMises > max) max = s.vonMises;
+            }
+        }
+        return max || 1.0;
     }
 
     updateColorBar(min, max, title) {

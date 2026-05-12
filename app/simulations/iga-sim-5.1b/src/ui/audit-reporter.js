@@ -32,6 +32,21 @@ class AuditReporter {
         this.log('system', `Performance Benchmark: FOM Solve: ${fomTime.toFixed(2)}ms | ROM Solve: ${romTime.toFixed(2)}ms | <strong style="color: var(--primary);">Speedup: ${speedup.toFixed(1)}x</strong>`);
     }
 
+    logProfile(data) {
+        const solveColor = data.solve < 5 ? '#10b981' : '#f59e0b';
+        const vizColor = data.viz < 16 ? '#10b981' : '#ef4444';
+        
+        let msg = `Performance Profile [${data.mode.toUpperCase()}]: `;
+        msg += `<span style="color:${solveColor}">Solve: ${data.solve.toFixed(1)}ms</span> | `;
+        msg += `<span style="color:${vizColor}">Render: ${data.viz.toFixed(1)}ms</span>`;
+        
+        if (data.mode !== 'fom') {
+            msg += ` | <strong style="color:var(--primary)">Speedup: ${data.speedup.toFixed(1)}x</strong>`;
+        }
+        
+        this.log('system', msg);
+    }
+
     clear() {
         this.logElement.innerHTML = '';
     }

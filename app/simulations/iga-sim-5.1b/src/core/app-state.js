@@ -77,8 +77,9 @@ class AppState {
         this.basePatch = this.factory.generateNotchPlate(this.params.R, this.params.L1, this.params.L2);
         this.activePatch = this.factory.refine(this.basePatch, this.params.h, this.params.p);
         
-        let result;
+        // 1. Numerical Solve
         let t0 = performance.now();
+        let result;
         if (this.evaluationMode === 'rom' && this.isTrained && this.basis) {
             result = this.bridge.solveReduced(this.activePatch, this.basis, this.params.Tx);
         } else if (this.evaluationMode === 'ecsw' && this.isTrained && this.ecswData) {
@@ -86,11 +87,11 @@ class AppState {
         } else {
             result = this.bridge.solveLinearStatic(this.activePatch, this.params.Tx);
         }
-        let solveTime = performance.now() - t0;
+        const tSolve = performance.now() - t0;
         
         this.lastResult = result;
         
-        // --- FPS & Speedup Calculation ---
+        // --- FPS & Profiling ---
         const now = performance.now();
         if (this.lastFrameTime) {
             const dt = now - this.lastFrameTime;
@@ -98,20 +99,35 @@ class AppState {
         }
         this.lastFrameTime = now;
 
+        // 2. Visualization Update
+        const tViz0 = performance.now();
         if (window.viz) window.viz.update(this.activePatch, result.u);
+        const tViz = performance.now() - tViz0;
+
         if (this.charts) this.charts.updateCurrent(this.params.R, this.params.L1);
         
         let romError = 0;
         let speedup = 1.0;
+        let tFom = 0;
+
         if (this.evaluationMode !== 'fom' && this.isTrained) {
-            let tStartFom = performance.now();
+            const tStartFom = performance.now();
             const fomRes = this.bridge.solveLinearStatic(this.activePatch, this.params.Tx);
-            let fomTime = performance.now() - tStartFom;
+            tFom = performance.now() - tStartFom;
             
-            speedup = fomTime / Math.max(0.01, solveTime);
+            speedup = tFom / Math.max(0.01, tSolve);
             romError = this.calculateError(fomRes.u, result.u);
-            
-            if (this.reporter) this.reporter.logSpeedup(fomTime, solveTime, speedup);
+        }
+
+        // --- Log Detailed Performance Profile ---
+        if (this.reporter) {
+            this.reporter.logProfile({
+                solve: tSolve,
+                viz: tViz,
+                fom: tFom,
+                speedup: speedup,
+                mode: this.evaluationMode
+            });
         }
 
         const nDofs = this.activePatch.controlPoints.length * this.activePatch.controlPoints[0].length * 2;
