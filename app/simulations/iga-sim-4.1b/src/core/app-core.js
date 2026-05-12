@@ -60,6 +60,9 @@ class OnlineSimulator {
         // 2. Setup ECSW
         this.rom.weights = data.ecsw.weights;
         this.rom.indices = data.ecsw.indices;
+        if (data.ecsw.Kp_red) {
+            this.Kp_red_mat = new Matrix(data.ecsw.Kp_red);
+        }
         
         // 3. Initialize Mesh State
         this.patch = window.NURBSPresets.generateCantilever();
@@ -133,23 +136,57 @@ class OnlineSimulator {
             this.rom.indices.forEach((elemIdx, i) => {
                 const w = this.rom.weights[i];
                 const res = this.fom.calculateElementContribution(this.patch, u_full, elemIdx);
-                // Project element force and stiffness
-                // f_red += w * Phi_e^T * f_e
-                // K_red += w * Phi_e^T * K_e * Phi_e
-                // (Implementation shortcut: full projection but only for elements)
-                // In a production ROM, Phi_e would be pre-cached.
+                
+                const { f_e, k_e, activeDofs } = res;
+                const nLocal = activeDofs.length;
+
+                // Extract Phi_e [nLocal x k] for active DOFs
+                const Phi_e = new Matrix(nLocal, this.rom.k);
+                for (let r = 0; r < nLocal; r++) {
+                    for (let c = 0; c < this.rom.k; c++) {
+                        Phi_e.set(r, c, this.rom.phi.get(activeDofs[r], c));
+                    }
+                }
+
+                const f_e_mat = new Matrix([Array.from(f_e)]).transpose();
+                const k_e_mat = new Matrix(k_e);
+
+                // Project element force and stiffness: Phi_e^T * f_e and Phi_e^T * k_e * Phi_e
+                const f_red_e = Phi_e.transpose().mmul(f_e_mat);
+                const k_red_e = Phi_e.transpose().mmul(k_e_mat).mmul(Phi_e);
+
+                for (let r = 0; r < this.rom.k; r++) {
+                    f_red_int.set(r, 0, f_red_int.get(r, 0) + w * f_red_e.get(r, 0));
+                    for (let c = 0; c < this.rom.k; c++) {
+                        K_red_tangent.set(r, c, K_red_tangent.get(r, c) + w * k_red_e.get(r, c));
+                    }
+                }
             });
 
-            // For now, let's use the ROMEngine's RB solve as a fallback until ECSW assembly is ready
-            // and reconstruct u for visualization
-            const ur_array = this.rom.q.to2DArray().map(r => r[0]);
-            const romSolver = new window.ROMEngine(this.fom);
-            romSolver.Phi = this.rom.phi;
+            // Add Reduced Penalty Stiffness (K_p_red is linear, so F_p_red = K_p_red * q)
+            // Note: K_p_red should be precomputed or passed in the package. 
+            // For now, we'll approximate or assume it's part of the ROM package.
+            if (this.Kp_red_mat) {
+                f_red_int.add(this.Kp_red_mat.mmul(this.rom.q));
+                K_red_tangent.add(this.Kp_red_mat);
+            }
+
+            const R_red = f_ext_red.clone().sub(f_red_int);
+            const norm = Math.sqrt(R_red.to2DArray().reduce((sum, row) => sum + row[0]**2, 0));
             
-            const res = romSolver.solveReduced(this.patch, [], [{i: nU-1, j: 0, fx: 0, fy: -mag}], { steps: 1 });
-            this.rom.u = res.u;
-            this.rom.q = new Matrix([Array.from(res.ur)]).transpose();
-            break; 
+            if (norm < 1e-6) break;
+
+            // Solve Reduced System: K_red * dq = R_red
+            // Since k is small (e.g. 5-20), we can use Matrix.solve or Gaussian Elimination
+            const dur = this.fom.gaussianElimination(K_red_tangent.to2DArray(), R_red.to2DArray().map(r => r[0]));
+            
+            for (let i = 0; i < this.rom.k; i++) {
+                this.rom.q.set(i, 0, this.rom.q.get(i, 0) + dur[i]);
+            }
+            
+            // Reconstruct displacement for visualization
+            const u_final = this.rom.phi.mmul(this.rom.q).to2DArray().map(r => r[0]);
+            this.rom.u = new Float64Array(u_final);
         }
     }
 

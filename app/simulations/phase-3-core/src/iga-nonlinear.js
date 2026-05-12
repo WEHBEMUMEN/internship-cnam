@@ -252,6 +252,111 @@ class IGANonlinearSolver {
         return Kt;
     }
 
+    /**
+     * Hyper-Reduction Support: Assembles f_e and k_e for a specific element index.
+     * Maps elemIdx to the 2D grid of knot spans.
+     */
+    calculateElementContribution(patch, u_disp, elemIdx) {
+        const { U, V, p, q } = patch;
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const nSpanV = uniqueV.length - 1;
+        
+        const iSpan = Math.floor(elemIdx / nSpanV);
+        const jSpan = elemIdx % nSpanV;
+        
+        const uMin = uniqueU[iSpan], uMax = uniqueU[iSpan+1];
+        const vMin = uniqueV[jSpan], vMax = uniqueV[jSpan+1];
+        
+        const gRule = window.GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
+        
+        const uMid = (uMin + uMax) / 2;
+        const vMid = (vMin + vMax) / 2;
+        const derivCenter = this.engine.getSurfaceDerivatives(patch, uMid, vMid);
+        const { activeIndices } = this.getBParametric(patch, uMid, vMid, derivCenter);
+        
+        const nLocalBasis = activeIndices.length;
+        const nLocalDof = nLocalBasis * 2;
+        const f_e = new Float64Array(nLocalDof);
+        const k_e = Array.from({ length: nLocalDof }, () => new Float64Array(nLocalDof));
+        const globalDofMap = new Uint32Array(nLocalDof);
+        for(let i=0; i<nLocalBasis; i++) {
+            globalDofMap[i*2] = activeIndices[i] * 2;
+            globalDofMap[i*2+1] = activeIndices[i] * 2 + 1;
+        }
+
+        const D = this.getPlaneStressD();
+
+        for (let gu = 0; gu < gRule.points.length; gu++) {
+            const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
+            const wu = gRule.weights[gu] * (uMax - uMin) / 2;
+            for (let gv = 0; gv < gRule.points.length; gv++) {
+                const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
+                const wv = gRule.weights[gv] * (vMax - vMin) / 2;
+
+                const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                const { grads: B_param, detJ } = this.getBParametric(patch, u, v, deriv);
+                
+                let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+                for (let a = 0; a < nLocalBasis; a++) {
+                    const k = activeIndices[a];
+                    const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                    dudx += dRdx * u_disp[k * 2];
+                    dudy += dRdy * u_disp[k * 2];
+                    dvdx += dRdx * u_disp[k * 2 + 1];
+                    dvdy += dRdy * u_disp[k * 2 + 1];
+                }
+
+                const Exx = dudx + 0.5 * (dudx*dudx + dvdx*dvdx);
+                const Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
+                const Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy);
+                const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
+                const Syy = D[1][0]*Exx + D[1][1]*Eyy;
+                const Sxy = D[2][2]*Exy2;
+                const factor = detJ * wu * wv * this.thickness;
+
+                const B_NL = Array.from({ length: nLocalBasis }, () => [new Float64Array(2), new Float64Array(2), new Float64Array(2)]);
+                for (let a = 0; a < nLocalBasis; a++) {
+                    const k = activeIndices[a];
+                    const dRdx = B_param[k][0], dRdy = B_param[k][1];
+                    const bexx_u = (1 + dudx) * dRdx, bexx_v = (dvdx) * dRdx;
+                    const beyy_u = (dudy) * dRdy, beyy_v = (1 + dvdy) * dRdy;
+                    const bexy_u = (1 + dudx)*dRdy + dudy*dRdx, bexy_v = (1 + dvdy)*dRdx + dvdx*dRdy;
+
+                    f_e[a * 2] += (bexx_u * Sxx + beyy_u * Syy + bexy_u * Sxy) * factor;
+                    f_e[a * 2 + 1] += (bexx_v * Sxx + beyy_v * Syy + bexy_v * Sxy) * factor;
+                    B_NL[a][0][0] = bexx_u; B_NL[a][0][1] = bexx_v;
+                    B_NL[a][1][0] = beyy_u; B_NL[a][1][1] = beyy_v;
+                    B_NL[a][2][0] = bexy_u; B_NL[a][2][1] = bexy_v;
+                }
+
+                for (let a = 0; a < nLocalBasis; a++) {
+                    for (let b = 0; b < nLocalBasis; b++) {
+                        for (let i = 0; i < 2; i++) {
+                            for (let j = 0; j < 2; j++) {
+                                let kab = 0;
+                                for (let r = 0; r < 3; r++) {
+                                    for (let c = 0; c < 3; c++) kab += B_NL[a][r][i] * D[r][c] * B_NL[b][c][j];
+                                }
+                                k_e[a * 2 + i][b * 2 + j] += kab * factor;
+                            }
+                        }
+                    }
+                }
+
+                for (let a = 0; a < nLocalBasis; a++) {
+                    for (let b = 0; b < nLocalBasis; b++) {
+                        const dRdx_a = B_param[activeIndices[a]][0], dRdy_a = B_param[activeIndices[a]][1];
+                        const dRdx_b = B_param[activeIndices[b]][0], dRdy_b = B_param[activeIndices[b]][1];
+                        const k_geo = (dRdx_a * Sxx * dRdx_b + dRdy_a * Syy * dRdy_b + dRdx_a * Sxy * dRdy_b + dRdy_a * Sxy * dRdx_b) * factor;
+                        k_e[a * 2][b * 2] += k_geo;
+                        k_e[a * 2 + 1][b * 2 + 1] += k_geo;
+                    }
+                }
+            }
+        }
+        return { f_e, k_e, activeDofs: globalDofMap };
+    }
+
     applyPenaltyConstraints(Kt, F_int, u, patch, bcs = []) {
         const { controlPoints } = patch;
         const nU = controlPoints.length;
