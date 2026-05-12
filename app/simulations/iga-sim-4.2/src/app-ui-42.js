@@ -170,22 +170,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetFreqLabel = document.getElementById('target-f');
         
         if (csmCase === 'csm1') {
-            app.targetY = -7.187;
+            app.targetY = -66.10;
             youngInput.value = 1400000;
             gravityInput.value = 2.0;
-            targetLabel.innerText = '-7.187 mm';
+            targetLabel.innerText = '-66.10 mm';
             targetFreqLabel.innerText = '0 Hz (Static)';
         } else if (csmCase === 'csm2') {
-            app.targetY = -1.897;
+            app.targetY = -16.97;
             youngInput.value = 5600000;
             gravityInput.value = 2.0;
-            targetLabel.innerText = '-1.897 mm';
+            targetLabel.innerText = '-16.97 mm';
             targetFreqLabel.innerText = '0 Hz (Static)';
         } else if (csmCase === 'csm3') {
-            app.targetY = -3.421; // Transient mean
+            app.targetY = -63.00; // Mean value
             youngInput.value = 1400000;
             gravityInput.value = 2.0;
-            targetLabel.innerText = 'Mean: -3.42 mm';
+            targetLabel.innerText = 'Mean: -63.0 mm';
             targetFreqLabel.innerText = '1.0995 Hz';
         }
         

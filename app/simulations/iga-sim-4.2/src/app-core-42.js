@@ -21,29 +21,39 @@ class TransientLab {
         this.rho = 1100;
         this.gy = -2.0;
 
-        this.targetY = -7.187; // mm
+        this.targetY = -66.10; // mm (Turek CSM1 Target Y-Disp)
         this.init();
     }
 
     async init() {
-        const preset = window.NURBSPresets.generateRectangle(0.35, 0.02);
+        // Shared Class Robustness Check
+        const required = ['NURBSPresets', 'NURBS2D', 'IGANonlinearSolver', 'RefineUtils'];
+        for (const req of required) {
+            if (typeof window[req] === 'undefined' && typeof globalThis[req] === 'undefined') {
+                console.warn(`${req} not found, retrying in 100ms...`);
+                setTimeout(() => this.init(), 100);
+                return;
+            }
+        }
+
+        const preset = (window.NURBSPresets || NURBSPresets).generateRectangle(0.35, 0.02);
         preset.constraints = [{ type: 'clamp', side: 'left' }];
-        this.engine = new window.NURBS2D();
+        this.engine = new (window.NURBS2D || NURBS2D)();
         this.patch = preset;
         this.h = 2; // Default to level 2
 
         // Apply initial refinement
-        window.RefineUtils.apply(this.engine, this.patch, { h: this.h, p: 2 });
+        (window.RefineUtils || RefineUtils).apply(this.engine, this.patch, { h: this.h, p: 2 });
 
-        this.fom = new window.IGANonlinearSolver(this.engine);
+        this.fom = new (window.IGANonlinearSolver || IGANonlinearSolver)(this.engine);
         this.fom.E = this.E;
         this.fom.nu = this.nu;
         this.fom.analysisType = 'plane-strain';
 
-        this.dyn = new DynamicsSolver(this.patch, this.fom);
+        this.dyn = new (window.DynamicsSolver || DynamicsSolver)(this.patch, this.fom);
         this.dyn.rho = this.rho;
         this.dyn.assembleMass();
-        this.viz = new TransientVisuals(this);
+        this.viz = new (window.TransientVisuals || TransientVisuals)(this);
         this.updateTrace(0, 0);
         this.initCharts();
         setTimeout(() => this.runSimulation(), 1000);

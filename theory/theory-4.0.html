@@ -74,7 +74,25 @@
 
           <div style="background: rgba(14, 165, 233, 0.05); border-left: 4px solid #0ea5e9; padding: 20px; border-radius: 0 12px 12px 0; margin-top: 40px;">
             <h4 style="color: #0ea5e9; margin: 0 0 10px 0;"><i class="fa-solid fa-shield-halved"></i> Numerical Stability</h4>
-            <p style="margin: 0;">By setting $\beta = 0.25$ and $\gamma = 0.5$, the scheme becomes the <strong>Average Acceleration Method</strong>, which is energy-conserving and prevents non-physical damping of lower modes.</p>
+            <p style="margin: 0;">By setting $\beta = 0.25$ and $\gamma = 0.5$, the scheme becomes the <strong>Average Acceleration Method</strong>, which is energy-conserving and prevents non-physical damping of lower modes. In the nonlinear regime, we ensure convergence through a stringent energy-based residual tolerance.</p>
+          </div>
+
+          <h3 style="font-size: 1.8rem; font-weight: 800; margin-top: 50px;"><i class="fa-solid fa-book"></i> Bibliography</h3>
+          <div class="reference-section" style="background: rgba(255, 255, 255, 0.03); padding: 30px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05);">
+            <ul style="list-style: none; padding: 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+              <li style="margin-bottom: 15px; padding-left: 15px; border-left: 3px solid #0ea5e9;">
+                <strong>Belytschko, T., Liu, W. K., & Moran, B. (2014)</strong><br>
+                <em>Nonlinear Finite Elements for Continua and Structures</em>. Wiley. (Core reference for Newmark integration and Newton-Raphson nonlinear solvers).
+              </li>
+              <li style="margin-bottom: 15px; padding-left: 15px; border-left: 3px solid #0ea5e9;">
+                <strong>Hughes, T. J. R. (2012)</strong><br>
+                <em>The Finite Element Method: Linear Static and Dynamic Finite Element Analysis</em>. Courier Corporation. (Foundational derivations for consistent mass matrices).
+              </li>
+              <li style="margin-bottom: 15px; padding-left: 15px; border-left: 3px solid #0ea5e9;">
+                <strong>Cottrell, J. A., Hughes, T. J. R., & Bazilevs, Y. (2009)</strong><br>
+                <em>Isogeometric Analysis: Toward Integration of CAD and FEA</em>. Wiley. (Application of IGA to structural dynamics).
+              </li>
+            </ul>
           </div>
         </div>
 

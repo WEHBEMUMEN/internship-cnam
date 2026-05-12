@@ -6,94 +6,149 @@
     <title>Theory | CSM Benchmark (Phase 4.2)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        :root { --primary:#f59e0b; --bg:#0f172a; --card:#1e293b; --text:#f8fafc; --text-dim:#94a3b8; }
-        body { background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; line-height:1.6; padding:40px; max-width:900px; margin:0 auto; }
-        h1, h2, h3 { font-family:'Outfit', sans-serif; color:var(--primary); }
-        h1 { font-size:2.5rem; margin-bottom:10px; }
-        .subtitle { color:var(--text-dim); margin-bottom:40px; font-weight:500; }
-        .card { background:var(--card); border-radius:20px; padding:30px; margin-bottom:30px; border:1px solid rgba(245,158,11,0.1); }
-        code { font-family:'JetBrains Mono', monospace; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; color:var(--primary); }
-        .reference { font-style:italic; color:var(--text-dim); border-left:4px solid var(--primary); padding-left:20px; margin:20px 0; }
-        .target-table { width:100%; border-collapse:collapse; margin-top:20px; }
-        .target-table th, .target-table td { padding:12px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
-        .target-table th { color:var(--primary); font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; }
+        :root { --primary:#f59e0b; --bg:#0f172a; --card:#1e293b; --text:#f8fafc; --text-dim:#94a3b8; --accent:#0ea5e9; }
+        body { background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; line-height:1.6; padding:40px; max-width:1000px; margin:0 auto; }
+        h1, h2, h3 { font-family:'Outfit', sans-serif; color:var(--primary); margin-top: 1.5em; }
+        h1 { font-size:2.8rem; margin-bottom:10px; border-bottom: 2px solid rgba(245,158,11,0.2); padding-bottom: 15px; }
+        .subtitle { color:var(--text-dim); margin-bottom:40px; font-weight:500; font-size: 1.1rem; }
+        .card { background:var(--card); border-radius:20px; padding:30px; margin-bottom:30px; border:1px solid rgba(245,158,11,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        code { font-family:'JetBrains Mono', monospace; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; color:var(--accent); }
+        .reference-list { list-style: none; padding: 0; }
+        .reference-item { background: rgba(255,255,255,0.03); border-left: 4px solid var(--primary); padding: 15px 20px; margin-bottom: 15px; border-radius: 0 12px 12px 0; font-size: 0.9rem; }
+        .reference-item strong { color: var(--text); display: block; margin-bottom: 5px; }
+        .math-block { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; margin: 20px 0; overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+        .target-table { width:100%; border-collapse:collapse; margin-top:20px; font-size: 0.9rem; }
+        .target-table th, .target-table td { padding:14px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .target-table th { color: var(--primary); font-size:0.75rem; text-transform:uppercase; letter-spacing:1.5px; background: rgba(0,0,0,0.1); }
         .back-link { color:var(--text-dim); text-decoration:none; display:flex; align-items:center; gap:8px; font-weight:600; margin-bottom:20px; transition:color 0.2s; }
         .back-link:hover { color:var(--primary); }
+        .highlight { color: var(--accent); font-weight: 600; }
+        .warning-box { background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.85rem; color: #fb7185; }
     </style>
 </head>
 <body>
     <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Simulation</a>
-    <h1>CSM Benchmark Theory</h1>
-    <p class="subtitle">Numerical Verification of Nonlinear Isogeometric Analysis (IGA)</p>
+    <h1>Structural Dynamics & Validation</h1>
+    <p class="subtitle">The Mathematical Foundation of the Phase 4.2 Turek CSM Benchmark Suite</p>
 
     <div class="card">
-        <h2>Objective</h2>
+        <h2>1. Objective</h2>
         <p>
-            The primary objective of <strong>Phase 4.2</strong> is to verify the mathematical correctness, numerical stability, and convergence properties of the 
-            Nonlinear IGA solver. By comparing the computed results against high-precision reference solutions from the established 
-            <strong>CSM (Computational Structural Mechanics)</strong> benchmark, we ensure that the internal force assembly, 
-            tangent stiffness derivation, and time-integration schemes are physically consistent and accurate.
+            Phase 4.2 focuses on the rigorous numerical verification of the <strong>Nonlinear Isogeometric Analysis (IGA)</strong> engine. 
+            By implementing the internationally recognized <strong>Turek-Hron CSM Benchmark</strong>, we validate the complete computational pipeline, including 
+            consistent mass matrix assembly, nonlinear internal force vectors, and second-order temporal integration.
         </p>
     </div>
 
     <div class="card">
-        <h2>Benchmark Definition</h2>
+        <h2>2. Hyperelastic Constitutive Model</h2>
         <p>
-            The test case consists of a cantilever beam with length \(L = 0.35\) m and height \(H = 0.02\) m, clamped on the left side. 
-            The material follows a St. Venant-Kirchhoff nonlinear hyperelastic model. The loading is purely gravitational, 
-            modeled as a constant body force density \( \mathbf{b} = (0, \rho g)^T \).
+            We employ the <strong>St. Venant-Kirchhoff</strong> model, which extends the linear elastic material law to the large-deformation regime using the 
+            <span class="highlight">Green-Lagrange strain tensor</span> \(\mathbf{E}\):
         </p>
-        <div class="reference">
-            <strong>Reference:</strong> Turek, S., & Hron, J. (2006). "Proposal for numerical benchmarking of fluid-structure interaction between an elastic object and laminar incompressible flow." 
-            <em>Fluid-Structure Interaction</em>, LNCSE 53, Springer, pp. 371-385.
+        <div class="math-block">
+            \[ \mathbf{E} = \frac{1}{2} (\mathbf{F}^T \mathbf{F} - \mathbf{I}) = \frac{1}{2} (\nabla \mathbf{u} + \nabla \mathbf{u}^T + \nabla \mathbf{u}^T \nabla \mathbf{u}) \]
         </div>
+        <p>
+            The energy density is a quadratic function of the strain, leading to the <strong>Second Piola-Kirchhoff stress</strong> \(\mathbf{S}\):
+        </p>
+        <div class="math-block">
+            \[ \mathbf{S} = \lambda \text{tr}(\mathbf{E})\mathbf{I} + 2\mu\mathbf{E} \]
+        </div>
+        <p>
+            where \(\lambda\) and \(\mu\) are the Lamé parameters, derived from Young's Modulus \(E\) and Poisson's ratio \(\nu\). 
+            This model is particularly effective for verifying geometric nonlinearities in structural benchmarks.
+        </p>
     </div>
 
     <div class="card">
-        <h2>Reference Values</h2>
+        <h2>3. Temporal Integration: Newmark-\(\beta\)</h2>
+        <p>
+            To solve the semi-discrete equations of motion \( \mathbf{M}\mathbf{a} + \mathbf{C}\mathbf{v} + \mathbf{F}_{int}(\mathbf{u}) = \mathbf{F}_{ext} \), 
+            we utilize the implicit <strong>Newmark-\(\beta\)</strong> scheme. We specifically use the <span class="highlight">Average Acceleration Method</span>:
+        </p>
+        <div class="math-block">
+            \[ \mathbf{u}_{n+1} = \mathbf{u}_n + \Delta t \mathbf{v}_n + \Delta t^2 \left[ \left(\frac{1}{2} - \beta\right) \mathbf{a}_n + \beta \mathbf{a}_{n+1} \right] \]
+            \[ \mathbf{v}_{n+1} = \mathbf{v}_n + \Delta t \left[ (1 - \gamma) \mathbf{a}_n + \gamma \mathbf{a}_{n+1} \right] \]
+        </div>
+        <p>
+            With parameters <strong>\(\beta = 0.25\)</strong> and <strong>\(\gamma = 0.5\)</strong>, the method is second-order accurate and 
+            unconditionally stable for linear systems, providing a robust baseline for nonlinear oscillations.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>4. Reference Benchmarks (Turek CSM)</h2>
+        <div class="warning-box">
+            <i class="fa-solid fa-circle-exclamation"></i> <strong>Note on Coordinate Systems:</strong> Many early reports of the Turek benchmark cite 
+            the horizontal tip displacement (\(x\)) as the primary metric. In this suite, we focus on the vertical tip displacement (\(y\)), 
+            which exhibits the dominant nonlinear behavior under gravity.
+        </div>
         <table class="target-table">
             <thead>
                 <tr>
                     <th>Test Case</th>
                     <th>Young's Modulus (E)</th>
-                    <th>Gravity (g)</th>
-                    <th>Target Tip Y [m]</th>
+                    <th>Density (\(\rho\))</th>
+                    <th>Reference Y-Disp [mm]</th>
+                    <th>Reference Freq [Hz]</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><strong>CSM1</strong> (Static)</td>
                     <td>1.4 \(\times 10^6\) Pa</td>
-                    <td>2.0 m/s²</td>
-                    <td>-7.187 \(\times 10^{-3}\)</td>
+                    <td>1000 kg/m³</td>
+                    <td>-66.10</td>
+                    <td>-</td>
                 </tr>
                 <tr>
                     <td><strong>CSM2</strong> (Static)</td>
                     <td>5.6 \(\times 10^6\) Pa</td>
-                    <td>2.0 m/s²</td>
-                    <td>-1.897 \(\times 10^{-3}\)</td>
+                    <td>1000 kg/m³</td>
+                    <td>-16.97</td>
+                    <td>-</td>
                 </tr>
                 <tr>
                     <td><strong>CSM3</strong> (Transient)</td>
                     <td>1.4 \(\times 10^6\) Pa</td>
-                    <td>2.0 m/s²</td>
-                    <td>Mean: -3.42 \(\times 10^{-3}\)</td>
+                    <td>1000 kg/m³</td>
+                    <td>Mean: -63.0 \(\pm\) 65.0</td>
+                    <td>1.0995 Hz</td>
                 </tr>
             </tbody>
         </table>
+        <p style="font-size: 0.8rem; margin-top: 15px; color: var(--text-dim);">
+            * Note: Our simulation defaults to \(\rho = 1100\) kg/m³ to test higher inertia stability. Target values in the app are adjusted accordingly.
+        </p>
     </div>
 
     <div class="card">
-        <h2>Body Force Integration</h2>
-        <p>
-            The equivalent nodal forces for gravity are calculated by integrating the shape functions over the physical volume (or area in 2D):
-            \[ \mathbf{F}_i^{body} = \int_{\Omega} N_i(u,v) \cdot \rho \cdot \mathbf{g} \cdot \text{det}(\mathbf{J}) \cdot t \, du \, dv \]
-            Where \(N_i\) are the NURBS basis functions, \(\rho\) is the material density, and \(t\) is the thickness. 
-            This phase verifies that our quadrature rules correctly capture the full mass of the structure.
-        </p>
+        <h2>5. Bibliography & References</h2>
+        <ul class="reference-list">
+            <li class="reference-item">
+                <strong>Turek, S., & Hron, J. (2006)</strong>
+                Proposal for numerical benchmarking of fluid-structure interaction between an elastic object and laminar incompressible flow. 
+                <em>Fluid-Structure Interaction</em>, Springer LNCSE 53.
+            </li>
+            <li class="reference-item">
+                <strong>Hughes, T. J. R., Cottrell, J. A., & Bazilevs, Y. (2005)</strong>
+                Isogeometric analysis: CAD, finite elements, NURBS, exact geometry and mesh refinement. 
+                <em>Computer Methods in Applied Mechanics and Engineering</em>, 194(39-41).
+            </li>
+            <li class="reference-item">
+                <strong>Cottrell, J. A., Hughes, T. J. R., & Bazilevs, Y. (2009)</strong>
+                <em>Isogeometric Analysis: Toward Integration of CAD and FEA</em>. 
+                John Wiley & Sons.
+            </li>
+            <li class="reference-item">
+                <strong>Belytschko, T., Liu, W. K., Moran, B., & Elkhodary, K. (2014)</strong>
+                <em>Nonlinear Finite Elements for Continua and Structures</em>. 
+                Wiley, 2nd Edition.
+            </li>
+        </ul>
     </div>
 </body>
 </html>

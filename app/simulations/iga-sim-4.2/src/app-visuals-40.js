@@ -354,3 +354,5 @@ class TransientVisuals {
         return [r, g, b];
     }
 }
+
+window.TransientVisuals = TransientVisuals;
