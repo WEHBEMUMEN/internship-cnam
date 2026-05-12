@@ -18,7 +18,7 @@ class DOMManager {
             const val = parseFloat(e.target.value);
             document.getElementById('r-val').textContent = val.toFixed(2);
             window.app.params.R = val;
-            window.app.updateGeometry();
+            window.app.requestUpdate();
         };
 
         // Traction Load (Moved to manual trigger)
@@ -37,14 +37,14 @@ class DOMManager {
             const val = parseFloat(e.target.value);
             document.getElementById('l1-val').textContent = val.toFixed(2);
             window.app.params.L1 = val;
-            window.app.updateGeometry();
+            window.app.requestUpdate();
         };
 
         l2Input.oninput = (e) => {
             const val = parseFloat(e.target.value);
             document.getElementById('l2-val').textContent = val.toFixed(2);
             window.app.params.L2 = val;
-            window.app.updateGeometry();
+            window.app.requestUpdate();
         };
 
         const hInput = document.getElementById('input-h');
@@ -56,7 +56,7 @@ class DOMManager {
 
         hInput.onchange = (e) => {
             window.app.params.h = parseInt(e.target.value);
-            // Removed automatic updateGeometry
+            window.app.requestUpdate();
         };
 
         pInput.oninput = (e) => {
@@ -65,39 +65,39 @@ class DOMManager {
 
         pInput.onchange = (e) => {
             window.app.params.p = parseInt(e.target.value);
-            // Removed automatic updateGeometry
+            window.app.requestUpdate();
         };
 
         // Apply Mesh Button
         document.getElementById('btn-apply-mesh').onclick = () => {
-            window.app.updateGeometry();
+            window.app.requestUpdate();
         };
 
         // View Mode Toggle
         document.getElementById('view-disp').onclick = () => {
             window.viz.viewMode = 'displacement';
             this.updateViewModeUI();
-            window.app.updateGeometry();
+            window.app.requestUpdate();
         };
 
         document.getElementById('view-stress').onclick = () => {
             window.viz.viewMode = 'stress';
             this.updateViewModeUI();
-            window.app.updateGeometry();
+            window.app.requestUpdate();
         };
 
         // Evaluation Mode Toggle
         document.getElementById('mode-fom').onclick = () => {
             window.app.evaluationMode = 'fom';
             this.updateModeUI();
-            window.app.updateGeometry();
+            window.app.requestUpdate();
         };
 
         document.getElementById('mode-rom').onclick = () => {
             if (window.app.isTrained) {
                 window.app.evaluationMode = 'rom';
                 this.updateModeUI();
-                window.app.updateGeometry();
+                window.app.requestUpdate();
             }
         };
 

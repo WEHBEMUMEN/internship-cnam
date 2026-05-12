@@ -30,17 +30,47 @@ class AppState {
         this.lastResult = null;
         
         // 4. ROM Data
-        this.snapshots = [];
-        this.basis = null;
+        // 5. Update Loop State
+        this.isDirty = false;
+        this.isSolving = false;
 
         this.init();
+        this.startUpdateLoop();
     }
 
     async init() {
         console.log("[Phase 5] Initializing App State...");
         // Patch visuals if it exists but lacks solver
         if (window.viz && !window.viz.solver) window.viz.solver = this.solver;
-        this.updateGeometry();
+        this.requestUpdate();
+    }
+
+    /**
+     * Flags a geometry update and triggers the RAF loop
+     */
+    requestUpdate() {
+        this.isDirty = true;
+    }
+
+    /**
+     * Background loop that checks for dirty state and handles solves
+     */
+    startUpdateLoop() {
+        const loop = async () => {
+            if (this.isDirty && !this.isSolving) {
+                this.isDirty = false;
+                this.isSolving = true;
+                try {
+                    await this.updateGeometry();
+                } catch (err) {
+                    console.error("[UpdateLoop] Error:", err);
+                } finally {
+                    this.isSolving = false;
+                }
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
     }
 
     /**
@@ -60,6 +90,7 @@ class AppState {
         
         // Solve linear static (Check mode)
         let result;
+        let t0 = performance.now();
         if (this.evaluationMode === 'rom' && this.isTrained && this.basis) {
             console.log("[AppState] Solving in REDUCED space...");
             result = this.bridge.solveReduced(this.activePatch, this.basis, this.params.Tx);
@@ -67,6 +98,7 @@ class AppState {
             console.log("[AppState] Solving in FULL space...");
             result = this.bridge.solveLinearStatic(this.activePatch, this.params.Tx);
         }
+        let solveTime = performance.now() - t0;
         
         this.lastResult = result;
 
@@ -74,15 +106,22 @@ class AppState {
         if (window.viz) window.viz.update(this.activePatch, result.u);
         if (this.charts) this.charts.updateCurrent(this.params.R, this.params.L1);
         
-        // Calculate Error if in ROM mode
+        // Calculate Error & Speedup if in ROM mode
         let romError = 0;
+        let speedup = 1.0;
         if (this.evaluationMode === 'rom' && this.isTrained) {
+            let tStartFom = performance.now();
             const fomRes = this.bridge.solveLinearStatic(this.activePatch, this.params.Tx);
+            let fomTime = performance.now() - tStartFom;
+            
+            speedup = fomTime / Math.max(0.01, solveTime);
             romError = this.calculateError(fomRes.u, result.u);
             const errorStr = (romError * 100).toFixed(4);
-            console.log(`%c[AppState] ROM Update | R: ${this.params.R.toFixed(2)}, L1: ${this.params.L1.toFixed(2)}, L2: ${this.params.L2.toFixed(2)} | Error: ${errorStr}%`, "color: #f59e0b; font-weight: bold; background: rgba(245, 158, 11, 0.1); padding: 2px 5px; border-radius: 3px;");
+            console.log(`%c[AppState] ROM Update | Speedup: ${speedup.toFixed(1)}x | Error: ${errorStr}%`, "color: #f59e0b; font-weight: bold; background: rgba(245, 158, 11, 0.1); padding: 2px 5px; border-radius: 3px;");
+            
+            if (this.reporter) this.reporter.logSpeedup(fomTime, solveTime, speedup);
         } else {
-            console.log(`%c[AppState] FOM Update | R: ${this.params.R.toFixed(2)}, L1: ${this.params.L1.toFixed(2)}, L2: ${this.params.L2.toFixed(2)}`, "color: #8b5cf6; font-weight: bold;");
+            console.log(`%c[AppState] FOM Update | Time: ${solveTime.toFixed(2)}ms`, "color: #8b5cf6; font-weight: bold;");
         }
 
         const nDofs = this.activePatch.controlPoints.length * this.activePatch.controlPoints[0].length * 2;
@@ -93,6 +132,7 @@ class AppState {
             nSnaps: this.collector.count,
             k: k,
             error: romError,
+            speedup: speedup,
             mode: this.evaluationMode
         });
     }

@@ -184,6 +184,7 @@ Use this document to track weekly goals, daily tasks, and notes from meetings wi
 - [x] **Theory Suite Expansion (Phase 4)**: Authored detailed theory and validation pages for Transient Structural Dynamics, featuring hyperelasticity derivations (St. Venant-Kirchhoff), Newmark-&beta; integration benchmarks, and comprehensive bibliographies.
 - [x] **Branding & UI Refinement**: Implemented fluid 3D-rotation CSS animations for the Digital Twin logo and refined the glass-morphism dashboard layout for professional engineering visualization.
 - [x] **Solver Robustness**: Deployed a resilient initialization sequence with retry logic for shared IGA classes, ensuring stability across diverse browser environments and high-load scenarios.
+- [x] **Geometric ROM Foundations (Phase 5.1a)**: Initiated the transition to shape-parametric modeling; expanded the theory suite with advanced derivations for Jacobian sensitivity and non-affine stiffness operators.
 - [x] **Benchmark-Ready Defaults**: Synchronized the simulation startup to use $p=2, h=2$ and $g_y = -2.0$ by default, ensuring immediate alignment with standard validation cases.
 - [x] **GitHub Sync**: Pushed the finalized Phase 4.2 lab, theory suite, and core stability fixes to the main repository.
 

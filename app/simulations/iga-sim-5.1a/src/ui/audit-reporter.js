@@ -28,6 +28,10 @@ class AuditReporter {
         this.logElement.prepend(entry);
     }
 
+    logSpeedup(fomTime, romTime, speedup) {
+        this.log('system', `Performance Benchmark: FOM Solve: ${fomTime.toFixed(2)}ms | ROM Solve: ${romTime.toFixed(2)}ms | <strong style="color: var(--primary);">Speedup: ${speedup.toFixed(1)}x</strong>`);
+    }
+
     clear() {
         this.logElement.innerHTML = '';
     }
@@ -44,6 +48,16 @@ class AuditReporter {
         if (document.getElementById('stat-ratio')) {
             const ratio = ((stats.nDofs - stats.k) / stats.nDofs) * 100;
             document.getElementById('stat-ratio').textContent = `${ratio.toFixed(1)}%`;
+        }
+
+        // Speedup Factor
+        const spdVal = document.getElementById('stat-speedup');
+        if (spdVal) {
+            if (stats.mode === 'rom' && stats.speedup > 1) {
+                spdVal.textContent = `${stats.speedup.toFixed(1)}x`;
+            } else {
+                spdVal.textContent = `1.0x`; // Baseline
+            }
         }
 
         // Error Handling
