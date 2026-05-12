@@ -33,6 +33,21 @@ class NURBSPresets {
     }
 
     /**
+     * Exact 2D Rectangle (B-Spline)
+     * W: Width, H: Height
+     */
+    static generateRectangle(W = 1.0, H = 1.0) {
+        const p = 1, q = 1;
+        const U = [0, 0, 1, 1], V = [0, 0, 1, 1];
+        const controlPoints = [
+            [ {x: 0, y: 0, z: 0}, {x: 0, y: H, z: 0} ],
+            [ {x: W, y: 0, z: 0}, {x: W, y: H, z: 0} ]
+        ];
+        const weights = [ [1,1], [1,1] ];
+        return { p, q, U, V, controlPoints, weights };
+    }
+
+    /**
      * Exact 2D Cantilever Beam (Sheet)
      * L: Length, H: Height
      */

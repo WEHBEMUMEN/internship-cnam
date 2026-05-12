@@ -68,6 +68,34 @@
         .slider:before { position:absolute; content:""; height:14px; width:14px; left:3px; bottom:3px; background-color:white; transition:.4s; border-radius:50%; }
         input:checked + .slider { background-color:var(--primary); }
         input:checked + .slider:before { transform:translateX(14px); }
+
+        .btn-reset { 
+            padding: 12px; 
+            border-radius: 14px; 
+            border: 1px solid rgba(244, 63, 94, 0.3); 
+            background: rgba(244, 63, 94, 0.05); 
+            color: #f43f5e; 
+            font-size: 0.72rem; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-reset:hover { 
+            background: rgba(244, 63, 94, 0.15); 
+            border-color: #f43f5e; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+        }
+        .btn-reset.active {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
     </style>
 </head>
 <body>
@@ -94,8 +122,8 @@
         <div class="control-group">
             <span class="section-label">2 · Online Simulation</span>
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Deformation Scale</span><span class="val" id="defscale-val">10x</span></div>
-                <input type="range" id="input-defscale" min="1" max="100" step="1" value="10">
+                <div class="label-row"><span class="lbl">Deformation Scale</span><span class="val" id="defscale-val">1x</span></div>
+                <input type="range" id="input-defscale" min="1" max="100" step="1" value="1">
             </div>
             
             <div style="margin-bottom: 14px;">
@@ -103,20 +131,29 @@
                 <input type="range" id="input-fy" min="-1000" max="1000" step="50" value="400">
             </div>
 
-            <div style="margin-bottom: 14px; display:flex; justify-content:space-between; align-items:center;">
-                <span class="lbl" style="font-size:0.68rem; font-weight:600; text-transform:uppercase; color:#94a3b8;">Show Active Elements (ECSW)</span>
-                <label class="switch">
-                    <input type="checkbox" id="toggle-active">
-                    <span class="slider"></span>
-                </label>
+            <div style="margin-bottom: 14px;">
+                <span class="lbl" style="font-size:0.68rem; font-weight:600; text-transform:uppercase; color:#94a3b8; display:block; margin-bottom:8px;">Force Profile</span>
+                <select id="input-force-type" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:12px; font-size:0.75rem; padding:10px; color:#f8fafc; outline:none; cursor:pointer;">
+                    <option value="step">Constant Step Force</option>
+                    <option value="impulse">Short Impulse (0.05s)</option>
+                    <option value="harmonic">Harmonic Oscillation (2Hz)</option>
+                </select>
             </div>
 
-            <div class="btn-grid">
-                <button id="btn-run" class="btn-action" disabled><i class="fa-solid fa-play"></i> Start Online ROM</button>
-                <div style="display:flex; gap:8px;">
-                    <button id="btn-reset" class="btn-reset" style="flex:1;"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-                    <a href="../../../theory/theory-4.1b.html" class="btn-reset" style="flex:1; border-color:#6366f1; color:#6366f1; text-decoration:none; text-align:center;"><i class="fa-solid fa-book"></i> Theory</a>
-                </div>
+
+            <div class="btn-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                <button id="btn-run" class="btn-action" disabled style="grid-column: 1 / -1; margin-bottom: 5px;">
+                    <i class="fa-solid fa-play"></i> Start Online ROM
+                </button>
+                <button id="btn-active-toggle" class="btn-reset" style="border-color:#10b981; color:#10b981; background:rgba(16,185,129,0.05);">
+                    <i class="fa-solid fa-eye"></i> Active Mesh
+                </button>
+                <button id="btn-reset" class="btn-reset">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+                <a href="../../../theory/theory-4.1b.html" class="btn-reset" style="grid-column: 1 / -1; border-color:#6366f1; color:#6366f1; background:rgba(99,102,241,0.05);">
+                    <i class="fa-solid fa-book"></i> Theory Documentation
+                </a>
             </div>
         </div>
 
@@ -141,7 +178,15 @@
             <div class="stat-card"><span class="lbl">ECSW Sparse</span><div class="stat-num" id="sparse-val">—</div></div>
         </div>
 
-        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px">Modal Energy Spectrum</div>
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px; margin-top:20px;">Live ROM Dynamics</div>
+        <div class="stat-grid">
+            <div class="stat-card" style="border-color:rgba(16,185,129,0.3)"><span class="lbl">Sim Time</span><div class="stat-num" id="curr-time">0.000s</div></div>
+            <div class="stat-card" style="border-color:rgba(16,185,129,0.3)"><span class="lbl">Tip Disp</span><div class="stat-num" id="tip-disp">0.00mm</div></div>
+            <div class="stat-card" style="border-color:rgba(16,185,129,0.3)"><span class="lbl">Step Latency</span><div class="stat-num" id="latency-val">—</div></div>
+            <div class="stat-card" style="border-color:rgba(16,185,129,0.3)"><span class="lbl">NR Iters</span><div class="stat-num" id="iters-val">—</div></div>
+        </div>
+
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px; margin-top:20px;">Modal Energy Spectrum</div>
         <div style="height: 120px; position: relative;">
             <canvas id="chart-energy" style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px;"></canvas>
         </div>
@@ -149,7 +194,7 @@
 
     <!-- Bottom Chart Panel -->
     <div id="chart-panel" class="glass-panel">
-        <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#f43f5e;margin-bottom:12px">Transient Training Trace (FOM)</div>
+        <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#f43f5e;margin-bottom:12px">Online ROM Trace (Hyper-Reduced)</div>
         <div style="height: 160px; position: relative;">
             <canvas id="chart-trace"></canvas>
         </div>

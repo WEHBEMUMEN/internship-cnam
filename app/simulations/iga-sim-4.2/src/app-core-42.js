@@ -15,16 +15,19 @@ class TransientLab {
         this.trace = []; // {t, disp}
         this.h = 0; // Refinement level
         
-        // Material State
-        this.E = 100000;
-        this.nu = 0.3;
-        this.rho = 1000;
+        // Material State (CSM1 Defaults)
+        this.E = 1.4e6;
+        this.nu = 0.4;
+        this.rho = 1100;
+        this.gy = -2.0;
 
+        this.targetY = -7.187; // mm
         this.init();
     }
 
     async init() {
-        const preset = window.NURBSPresets.generateCantilever();
+        const preset = window.NURBSPresets.generateRectangle(0.35, 0.02);
+        preset.constraints = [{ type: 'clamp', side: 'left' }];
         this.engine = new window.NURBS2D();
         this.patch = preset;
         this.h = 2; // Default to level 2
@@ -35,6 +38,7 @@ class TransientLab {
         this.fom = new window.IGANonlinearSolver(this.engine);
         this.fom.E = this.E;
         this.fom.nu = this.nu;
+        this.fom.analysisType = 'plane-strain';
 
         this.dyn = new DynamicsSolver(this.patch, this.fom);
         this.dyn.rho = this.rho;
@@ -111,38 +115,20 @@ class TransientLab {
             this.responseChart.data.datasets[0].data = [];
         }
         
-        const timeScale = parseFloat(document.getElementById('input-timescale').value) || 1.0;
+        const timeScaleEl = document.getElementById('input-timescale');
+        const timeScale = timeScaleEl ? (parseFloat(timeScaleEl.value) || 1.0) : 1.0;
         const startTime = performance.now() - (this.currentTime / timeScale) * 1000;
         
         while (this.isRunning) {
-            const F0 = parseFloat(document.getElementById('input-f0').value);
-            const forceType = document.getElementById('input-force-type').value;
+            const gy = parseFloat(document.getElementById('input-gravity').value);
             this.dyn.alpha = parseFloat(document.getElementById('input-alpha').value);
             this.dyn.betaR = parseFloat(document.getElementById('input-beta').value);
-            const dt = parseFloat(document.getElementById('input-dt').value);
+            const dt = 0.005; // Force dt for benchmark stability
 
-            const Fext = new Float64Array(this.dyn.dofs);
-            let mag = 0;
-            if (forceType === 'step') mag = F0;
-            else if (forceType === 'impulse') mag = (this.currentTime < 0.05) ? F0 : 0;
-            else if (forceType === 'harmonic') mag = F0 * Math.sin(2 * Math.PI * 2 * this.currentTime);
+            // 1. Calculate Body Forces (Gravity)
+            const Fext = this.fom.calculateBodyForces(this.patch, this.rho, 0, gy);
 
-            // Apply Distributed Shear to right edge (i = nU-1)
-            const nU = this.patch.controlPoints.length;
-            const nV = this.patch.controlPoints[0].length;
-            
-            for (let j = 0; j < nV; j++) {
-                const dofIdx = ((nU - 1) * nV + j) * 2 + 1; // Y-DOF
-                
-                // EXACT IGA CONSISTENT FORCE DISTRIBUTION:
-                // \int N_{j,q} d\eta = (V_{j+q+1} - V_j) / (q + 1)
-                const q = this.patch.q;
-                const V = this.patch.V;
-                const weight = (V[j + q + 1] - V[j]) / (q + 1);
-                
-                Fext[dofIdx] = -mag * weight;
-            }
-
+            // 2. Solve Step
             const result = await this.dyn.solveStep(dt, Fext);
             this.currentTime += dt;
             
@@ -150,7 +136,8 @@ class TransientLab {
             this.trace.push({ t: this.currentTime, disp: tipDisp, u: new Float64Array(this.dyn.u) });
             if (this.trace.length > 10000) this.trace.shift();
             
-            const currentTimeScale = parseFloat(document.getElementById('input-timescale').value) || 1.0;
+            const currentTimeScaleEl = document.getElementById('input-timescale');
+            const currentTimeScale = currentTimeScaleEl ? (parseFloat(currentTimeScaleEl.value) || 1.0) : 1.0;
             const elapsedWallTime = (performance.now() - startTime) / 1000;
             const targetWallTime = this.currentTime / currentTimeScale;
             
@@ -162,24 +149,36 @@ class TransientLab {
             // Dynamic UI Skip: Render less frequently as timescale increases to save CPU
             const skipRate = Math.max(1, Math.floor(timeScale * 2));
             if (Math.round(this.currentTime / dt) % skipRate === 0) {
-                this.updateUI(result, tipDisp, mag);
+                this.updateUI(result, tipDisp, gy);
                 this.viz.updateMesh(this.dyn.u);
                 await new Promise(requestAnimationFrame);
             }
         }
     }
 
-    updateUI(result, tipDisp, forceMag) {
+    updateUI(result, tipDisp, gravity) {
         document.getElementById('curr-time').innerText = this.currentTime.toFixed(3) + 's';
         document.getElementById('iters-val').innerText = result.iters;
-        document.getElementById('tip-disp').innerText = (tipDisp * 1000).toFixed(2) + 'mm';
+        document.getElementById('tip-disp').innerText = (tipDisp * 1000).toFixed(3) + 'mm';
         
+        // Update Error
+        const currentY = tipDisp * 1000;
+        const error = Math.abs((currentY - this.targetY) / this.targetY) * 100;
+        document.getElementById('error-val').innerText = error.toFixed(2) + '%';
+
+        // Frequency Estimation for CSM3
+        if (this.trace.length > 500) {
+            const freq = this.calculateFrequency();
+            const freqEl = document.getElementById('freq-val');
+            if (freqEl) freqEl.innerText = freq.toFixed(3) + ' Hz';
+        }
+
         const timeStr = this.currentTime.toFixed(2);
         this.mainChart.data.labels.push(timeStr);
         this.mainChart.data.datasets[0].data.push(tipDisp * 1000);
         
         this.responseChart.data.labels.push(timeStr);
-        this.responseChart.data.datasets[0].data.push(forceMag);
+        this.responseChart.data.datasets[0].data.push(gravity);
 
         if (this.mainChart.data.labels.length > 5000) {
             this.mainChart.data.labels.shift();
@@ -198,12 +197,14 @@ class TransientLab {
         this.isRunning = false;
         this.h = h;
         if (p !== null) this.p = p;
-        const preset = window.NURBSPresets.generateCantilever();
+        const preset = window.NURBSPresets.generateRectangle(0.35, 0.02);
+        preset.constraints = [{ type: 'clamp', side: 'left' }];
         this.patch = preset;
         window.RefineUtils.apply(this.engine, this.patch, { h: this.h, p: this.p || this.patch.p });
         this.fom = new window.IGANonlinearSolver(this.engine);
         this.fom.E = this.E;
         this.fom.nu = this.nu;
+        this.fom.analysisType = 'plane-strain';
 
         this.dyn = new DynamicsSolver(this.patch, this.fom);
         this.dyn.rho = this.rho;
@@ -219,6 +220,20 @@ class TransientLab {
         this.mainChart.data.labels = [];
         this.mainChart.data.datasets[0].data = [];
         this.mainChart.update();
+    }
+
+    calculateFrequency() {
+        if (this.trace.length < 100) return 0;
+        const data = this.trace.slice(-500); 
+        let peaks = [];
+        for (let i = 1; i < data.length - 1; i++) {
+            if (data[i].disp > data[i-1].disp && data[i].disp > data[i+1].disp) {
+                peaks.push(data[i].t);
+            }
+        }
+        if (peaks.length < 2) return 0;
+        const avgPeriod = (peaks[peaks.length - 1] - peaks[0]) / (peaks.length - 1);
+        return 1.0 / avgPeriod;
     }
 
 }

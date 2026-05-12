@@ -33,11 +33,14 @@ class TransientVisuals {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(this.renderer.domElement);
 
-        this.camera.position.set(5, 1, 25);
+        this.camera.position.set(5, 1, 15);
         this.camera.lookAt(5, 1, 0);
         
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.controls.target.set(5, 1, 0);
+        
+        // Auto-focus logic for different scales
+        setTimeout(() => this.focusOnModel(), 500);
         this.controls.enableRotate = true; 
         this.controls.mouseButtons = {
             LEFT: THREE.MOUSE.PAN,
@@ -67,6 +70,26 @@ class TransientVisuals {
         this.renderer.render(this.scene, this.camera);
     }
 
+    focusOnModel() {
+        if (!this.app.patch) return;
+        const patch = this.app.patch;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        patch.controlPoints.forEach(row => row.forEach(cp => {
+            minX = Math.min(minX, cp.x); maxX = Math.max(maxX, cp.x);
+            minY = Math.min(minY, cp.y); maxY = Math.max(maxY, cp.y);
+        }));
+        
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const maxDim = Math.max(width, height, 0.1);
+        
+        this.camera.position.set(centerX, centerY, maxDim * 1.5);
+        this.controls.target.set(centerX, centerY, 0);
+        this.camera.updateProjectionMatrix();
+    }
+
     drawMarkers() {
         this.markersGroup.clear();
         const dyn = this.app.dyn;
@@ -76,7 +99,17 @@ class TransientVisuals {
         const nV = patch.controlPoints[0].length;
         const nU = patch.controlPoints.length;
 
-        const coneGeo = new THREE.ConeGeometry(0.15, 0.35, 4); 
+        // Adaptive scaling based on model height
+        let minY = Infinity, maxY = -Infinity;
+        patch.controlPoints.forEach(row => row.forEach(cp => {
+            minY = Math.min(minY, cp.y); maxY = Math.max(maxY, cp.y);
+        }));
+        const h = Math.max(0.01, maxY - minY);
+        const markerSize = h * 0.8;
+        const markerRadius = h * 0.3;
+        const offset = h * 0.5;
+
+        const coneGeo = new THREE.ConeGeometry(markerRadius, markerSize, 4); 
         const coneMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, depthTest: false });
 
         const constraint = patch.constraints?.[0] || { side: 'left' };
@@ -97,10 +130,10 @@ class TransientVisuals {
                     cone.renderOrder = 999;
                     
                     let offsetX = 0, offsetY = 0, rotZ = 0;
-                    if (side === 'left') { offsetX = -0.3; rotZ = -Math.PI/2; }
-                    else if (side === 'right') { offsetX = 0.3; rotZ = Math.PI/2; }
-                    else if (side === 'bottom') { offsetY = -0.3; rotZ = 0; }
-                    else if (side === 'top') { offsetY = 0.3; rotZ = Math.PI; }
+                    if (side === 'left') { offsetX = -offset; rotZ = -Math.PI/2; }
+                    else if (side === 'right') { offsetX = offset; rotZ = Math.PI/2; }
+                    else if (side === 'bottom') { offsetY = -offset; rotZ = 0; }
+                    else if (side === 'top') { offsetY = offset; rotZ = Math.PI; }
 
                     cone.position.set(cp.x + offsetX, cp.y + offsetY, cp.z);
                     cone.rotation.z = rotZ;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase 4.0 | Nonlinear Transient FOM</title>
+    <title>Phase 4.2 | CSM Benchmark Suite</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -79,36 +79,40 @@
 
     <!-- Left Panel -->
     <div id="ui-panel" class="glass-panel">
-        <a href="../../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
-        <div class="panel-title">Phase 4.0 <span style="color:#10b981">Live</span></div>
-        <div class="panel-sub">Nonlinear IGA Dynamics · Digital Twin</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <a href="../../index.html" class="back-link" style="margin-bottom:0;"><i class="fa-solid fa-arrow-left"></i> Hub</a>
+            <a href="theory-4.2.html" class="back-link" style="margin-bottom:0; color:#f59e0b;"><i class="fa-solid fa-book"></i> Theory</a>
+        </div>
+        <div class="panel-title">Phase 4.2 <span style="color:#f59e0b">Benchmark</span></div>
+        <div class="panel-sub">Turek CSM Benchmark · IGA Validation</div>
         <hr class="divider">
 
         <div class="control-group">
-            <span class="section-label">1 · Real-Time Clock</span>
+            <span class="section-label">1 · Benchmark Case</span>
+            <select id="input-csm-case" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:12px; font-size:0.75rem; padding:10px; color:#f8fafc; outline:none; cursor:pointer; margin-bottom:15px;">
+                <option value="csm1">CSM1 (Steady, E=1.4e6)</option>
+                <option value="csm2">CSM2 (Steady, E=5.6e6)</option>
+                <option value="csm3">CSM3 (Transient, E=1.4e6, g=2.0)</option>
+            </select>
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Step Size (&Delta;t)</span><span class="val" id="dt-val">0.005s</span></div>
-                <input type="range" id="input-dt" min="0.001" max="0.1" step="0.001" value="0.005">
-            </div>
-            <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Simulation Speed</span><span class="val" id="timescale-val">1.0x</span></div>
-                <input type="range" id="input-timescale" min="0.1" max="10.0" step="0.1" value="1.0">
+                <div class="label-row"><span class="lbl">Gravity (g<sub>y</sub>)</span><span class="val" id="gravity-val">-2.0 m/s&sup2;</span></div>
+                <input type="range" id="input-gravity" min="-10" max="10" step="0.1" value="-2.0">
             </div>
         </div>
 
         <div class="control-group">
-            <span class="section-label">1 · Material Model</span>
+            <span class="section-label">2 · Material Properties</span>
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Young's Modulus (E)</span><span class="val" id="young-val">100k MPa</span></div>
-                <input type="range" id="input-young" min="10000" max="1000000" step="10000" value="100000">
+                <div class="label-row"><span class="lbl">Young's Modulus (E)</span><span class="val" id="young-val">1.40e6</span></div>
+                <input type="range" id="input-young" min="100000" max="10000000" step="100000" value="1400000">
             </div>
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Poisson Ratio (&nu;)</span><span class="val" id="poisson-val">0.30</span></div>
-                <input type="range" id="input-poisson" min="0" max="0.49" step="0.01" value="0.30">
+                <div class="label-row"><span class="lbl">Poisson Ratio (&nu;)</span><span class="val" id="poisson-val">0.40</span></div>
+                <input type="range" id="input-poisson" min="0" max="0.49" step="0.01" value="0.40">
             </div>
             <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Density (&rho;)</span><span class="val" id="rho-val">1000kg/m&sup3;</span></div>
-                <input type="range" id="input-rho" min="500" max="15000" step="100" value="1000">
+                <div class="label-row"><span class="lbl">Density (&rho;)</span><span class="val" id="rho-val">1100kg/m&sup3;</span></div>
+                <input type="range" id="input-rho" min="500" max="15000" step="100" value="1100">
             </div>
         </div>
 
@@ -127,16 +131,14 @@
         <hr class="divider">
 
         <div class="control-group">
-            <span class="section-label">3 · External Force</span>
-            <div style="margin-bottom: 14px;">
-                <div class="label-row"><span class="lbl">Amplitude (F<sub>0</sub>)</span><span class="val" id="f0-val">400N</span></div>
-                <input type="range" id="input-f0" min="0" max="2000" step="50" value="400">
+            <span class="section-label">4 · Benchmark Analysis</span>
+            <div style="padding:10px; background:rgba(0,0,0,0.2); border-radius:12px; font-size:0.65rem; color:#94a3b8; line-height:1.4;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Target Disp (y)</span><span style="color:#f59e0b" id="target-y">-7.187 mm</span></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Target Freq (f)</span><span style="color:#f59e0b" id="target-f">0 Hz</span></div>
+                <hr style="border:none; border-top:1px solid rgba(255,255,255,0.05); margin:6px 0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Current Error</span><span style="color:#f59e0b" id="error-val">0.0%</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>Current Freq</span><span style="color:#f59e0b" id="freq-val">0.00 Hz</span></div>
             </div>
-            <select id="input-force-type" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:12px; font-size:0.75rem; padding:10px; color:#f8fafc; outline:none; cursor:pointer; margin-bottom:15px;">
-                <option value="step">Step Force</option>
-                <option value="impulse">Short Impulse</option>
-                <option value="harmonic">Harmonic Oscillation</option>
-            </select>
         </div>
 
         <div class="control-group">
@@ -206,8 +208,8 @@
     <!-- App Logic -->
     <script src="../../shared/performance.js"></script>
     <script src="src/app-visuals-40.js"></script>
-    <script src="src/app-core-40.js"></script>
-    <script src="src/app-ui-40.js"></script>
-    <script src="src/audit-40.js"></script>
+    <script src="src/app-core-42.js"></script>
+    <script src="src/app-ui-42.js"></script>
+    <script src="src/audit-42.js"></script>
 </body>
 </html>

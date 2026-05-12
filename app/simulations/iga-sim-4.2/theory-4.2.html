@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory | CSM Benchmark (Phase 4.2)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root { --primary:#f59e0b; --bg:#0f172a; --card:#1e293b; --text:#f8fafc; --text-dim:#94a3b8; }
+        body { background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; line-height:1.6; padding:40px; max-width:900px; margin:0 auto; }
+        h1, h2, h3 { font-family:'Outfit', sans-serif; color:var(--primary); }
+        h1 { font-size:2.5rem; margin-bottom:10px; }
+        .subtitle { color:var(--text-dim); margin-bottom:40px; font-weight:500; }
+        .card { background:var(--card); border-radius:20px; padding:30px; margin-bottom:30px; border:1px solid rgba(245,158,11,0.1); }
+        code { font-family:'JetBrains Mono', monospace; background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px; color:var(--primary); }
+        .reference { font-style:italic; color:var(--text-dim); border-left:4px solid var(--primary); padding-left:20px; margin:20px 0; }
+        .target-table { width:100%; border-collapse:collapse; margin-top:20px; }
+        .target-table th, .target-table td { padding:12px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
+        .target-table th { color:var(--primary); font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; }
+        .back-link { color:var(--text-dim); text-decoration:none; display:flex; align-items:center; gap:8px; font-weight:600; margin-bottom:20px; transition:color 0.2s; }
+        .back-link:hover { color:var(--primary); }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Simulation</a>
+    <h1>CSM Benchmark Theory</h1>
+    <p class="subtitle">Numerical Verification of Nonlinear Isogeometric Analysis (IGA)</p>
+
+    <div class="card">
+        <h2>Objective</h2>
+        <p>
+            The primary objective of <strong>Phase 4.2</strong> is to verify the mathematical correctness, numerical stability, and convergence properties of the 
+            Nonlinear IGA solver. By comparing the computed results against high-precision reference solutions from the established 
+            <strong>CSM (Computational Structural Mechanics)</strong> benchmark, we ensure that the internal force assembly, 
+            tangent stiffness derivation, and time-integration schemes are physically consistent and accurate.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Benchmark Definition</h2>
+        <p>
+            The test case consists of a cantilever beam with length \(L = 0.35\) m and height \(H = 0.02\) m, clamped on the left side. 
+            The material follows a St. Venant-Kirchhoff nonlinear hyperelastic model. The loading is purely gravitational, 
+            modeled as a constant body force density \( \mathbf{b} = (0, \rho g)^T \).
+        </p>
+        <div class="reference">
+            <strong>Reference:</strong> Turek, S., & Hron, J. (2006). "Proposal for numerical benchmarking of fluid-structure interaction between an elastic object and laminar incompressible flow." 
+            <em>Fluid-Structure Interaction</em>, LNCSE 53, Springer, pp. 371-385.
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Reference Values</h2>
+        <table class="target-table">
+            <thead>
+                <tr>
+                    <th>Test Case</th>
+                    <th>Young's Modulus (E)</th>
+                    <th>Gravity (g)</th>
+                    <th>Target Tip Y [m]</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>CSM1</strong> (Static)</td>
+                    <td>1.4 \(\times 10^6\) Pa</td>
+                    <td>2.0 m/s²</td>
+                    <td>-7.187 \(\times 10^{-3}\)</td>
+                </tr>
+                <tr>
+                    <td><strong>CSM2</strong> (Static)</td>
+                    <td>5.6 \(\times 10^6\) Pa</td>
+                    <td>2.0 m/s²</td>
+                    <td>-1.897 \(\times 10^{-3}\)</td>
+                </tr>
+                <tr>
+                    <td><strong>CSM3</strong> (Transient)</td>
+                    <td>1.4 \(\times 10^6\) Pa</td>
+                    <td>2.0 m/s²</td>
+                    <td>Mean: -3.42 \(\times 10^{-3}\)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Body Force Integration</h2>
+        <p>
+            The equivalent nodal forces for gravity are calculated by integrating the shape functions over the physical volume (or area in 2D):
+            \[ \mathbf{F}_i^{body} = \int_{\Omega} N_i(u,v) \cdot \rho \cdot \mathbf{g} \cdot \text{det}(\mathbf{J}) \cdot t \, du \, dv \]
+            Where \(N_i\) are the NURBS basis functions, \(\rho\) is the material density, and \(t\) is the thickness. 
+            This phase verifies that our quadrature rules correctly capture the full mass of the structure.
+        </p>
+    </div>
+</body>
+</html>

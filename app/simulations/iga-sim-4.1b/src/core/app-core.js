@@ -43,7 +43,10 @@ class OnlineSimulator {
                 responsive: true, 
                 maintainAspectRatio: false, 
                 plugins: { legend: { display: false } },
-                scales: { x: { display: false }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }
+                scales: { 
+                    x: { display: true, title: { display: true, text: 'Time (s)', color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }, 
+                    y: { display: true, title: { display: true, text: 'Disp (mm)', color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } } 
+                }
             }
         });
     }
@@ -60,14 +63,28 @@ class OnlineSimulator {
         // 2. Setup ECSW
         this.rom.weights = data.ecsw.weights;
         this.rom.indices = data.ecsw.indices;
-        if (data.ecsw.Kp_red) {
-            this.Kp_red_mat = new Matrix(data.ecsw.Kp_red);
-        }
         
         // 3. Initialize Mesh State
         this.patch = window.NURBSPresets.generateCantilever();
-        // Match refinement used in training
         window.RefineUtils.apply(this.engine, this.patch, { h: data.mesh.h, p: data.mesh.p });
+
+        // 4. Pre-extract Local Basis Matrices (Optimization)
+        // Must happen AFTER refinement to ensure activeDofs match the ROM basis
+        this.rom.localPhis = this.rom.indices.map(elemIdx => {
+            const activeDofs = this.getElementDofs(this.patch, elemIdx);
+            const nLocal = activeDofs.length;
+            const Phi_e = new Matrix(nLocal, this.rom.k);
+            for (let r = 0; r < nLocal; r++) {
+                for (let c = 0; c < this.rom.k; c++) {
+                    Phi_e.set(r, c, this.rom.phi.get(activeDofs[r], c));
+                }
+            }
+            return { Phi_e, Phi_eT: Phi_e.transpose(), activeDofs };
+        });
+
+        if (data.ecsw.Kp_red) {
+            this.Kp_red_mat = new Matrix(data.ecsw.Kp_red);
+        }
         
         this.rom.u = new Float64Array(this.rom.phi.rows);
         this.viz.updateMesh(this.rom.u, 0);
@@ -79,6 +96,11 @@ class OnlineSimulator {
         document.getElementById('sampled-val').innerText = data.snapshots;
         document.getElementById('energy-val').innerText = (data.pod_energy * 100).toFixed(2) + "%";
         document.getElementById('sparse-val').innerText = this.rom.indices.length;
+
+        // Initialize trace at zero
+        this.traceChart.data.labels = ["0.00"];
+        this.traceChart.data.datasets[0].data = [0];
+        this.traceChart.update();
     }
 
     async toggle() {
@@ -90,14 +112,25 @@ class OnlineSimulator {
 
     async run() {
         while (this.isRunning) {
-            this.solveStep();
+            const tStart = performance.now();
+            const iters = this.solveStep(this.t);
+            const tEnd = performance.now();
+
             this.t += this.dt;
             
             this.viz.updateMesh(this.rom.u, this.t);
             this.updateTrace(this.t, this.rom.u[this.rom.u.length - 1]);
+            this.updateLiveStats(this.t, this.rom.u[this.rom.u.length - 1], tEnd - tStart, iters);
             
             await new Promise(r => requestAnimationFrame(r));
         }
+    }
+
+    updateLiveStats(t, tipDisp, latency, iters) {
+        document.getElementById('curr-time').innerText = t.toFixed(3) + 's';
+        document.getElementById('tip-disp').innerText = (tipDisp * 1000).toFixed(2) + 'mm';
+        document.getElementById('latency-val').innerText = latency.toFixed(2) + 'ms';
+        document.getElementById('iters-val').innerText = iters;
     }
 
     /**
@@ -105,9 +138,15 @@ class OnlineSimulator {
      * For now, we'll do a simple Quasi-Static Online Solver for demonstration
      * f_red(q) = f_ext_red
      */
-    solveStep() {
+    solveStep(t = 0) {
         const { Matrix } = window.mlMatrix;
-        const mag = parseFloat(document.getElementById('input-fy').value);
+        const F0 = parseFloat(document.getElementById('input-fy').value);
+        const forceType = document.getElementById('input-force-type').value;
+        
+        let mag = 0;
+        if (forceType === 'step') mag = F0;
+        else if (forceType === 'impulse') mag = (t < 0.05) ? F0 : 0;
+        else if (forceType === 'harmonic') mag = F0 * Math.sin(2 * Math.PI * 2 * t);
         
         // f_ext_red = Phi^T * f_ext
         const f_ext_full = new Float64Array(this.rom.phi.rows);
@@ -133,27 +172,19 @@ class OnlineSimulator {
             const K_red_tangent = new Matrix(this.rom.k, this.rom.k);
 
             // ECSW ELEMENT LOOP (Hyper-Reduction)
-            this.rom.indices.forEach((elemIdx, i) => {
+            this.rom.localPhis.forEach((local, i) => {
                 const w = this.rom.weights[i];
-                const res = this.fom.calculateElementContribution(this.patch, u_full, elemIdx);
+                const res = this.fom.calculateElementContribution(this.patch, u_full, this.rom.indices[i]);
                 
-                const { f_e, k_e, activeDofs } = res;
-                const nLocal = activeDofs.length;
-
-                // Extract Phi_e [nLocal x k] for active DOFs
-                const Phi_e = new Matrix(nLocal, this.rom.k);
-                for (let r = 0; r < nLocal; r++) {
-                    for (let c = 0; c < this.rom.k; c++) {
-                        Phi_e.set(r, c, this.rom.phi.get(activeDofs[r], c));
-                    }
-                }
+                const { f_e, k_e } = res;
+                const { Phi_e, Phi_eT } = local;
 
                 const f_e_mat = new Matrix([Array.from(f_e)]).transpose();
-                const k_e_mat = new Matrix(k_e);
+                const k_e_mat = new Matrix(k_e.map(r => Array.from(r)));
 
                 // Project element force and stiffness: Phi_e^T * f_e and Phi_e^T * k_e * Phi_e
-                const f_red_e = Phi_e.transpose().mmul(f_e_mat);
-                const k_red_e = Phi_e.transpose().mmul(k_e_mat).mmul(Phi_e);
+                const f_red_e = Phi_eT.mmul(f_e_mat);
+                const k_red_e = Phi_eT.mmul(k_e_mat).mmul(Phi_e);
 
                 for (let r = 0; r < this.rom.k; r++) {
                     f_red_int.set(r, 0, f_red_int.get(r, 0) + w * f_red_e.get(r, 0));
@@ -187,7 +218,35 @@ class OnlineSimulator {
             // Reconstruct displacement for visualization
             const u_final = this.rom.phi.mmul(this.rom.q).to2DArray().map(r => r[0]);
             this.rom.u = new Float64Array(u_final);
+            
+            if (norm < 1e-6) return iter + 1;
         }
+        return 3; // Max iters
+    }
+
+    /**
+     * Helper to get global DOFs associated with a specific element.
+     */
+    getElementDofs(patch, elemIdx) {
+        const { U, V } = patch;
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const nSpanV = uniqueV.length - 1;
+        const iSpan = Math.floor(elemIdx / nSpanV);
+        const jSpan = elemIdx % nSpanV;
+        
+        const uMid = (uniqueU[iSpan] + uniqueU[iSpan+1]) / 2;
+        const vMid = (uniqueV[jSpan] + uniqueV[jSpan+1]) / 2;
+        
+        const derivCenter = this.engine.getSurfaceDerivatives(patch, uMid, vMid);
+        const { activeIndices } = this.fom.getBParametric(patch, uMid, vMid, derivCenter);
+        
+        const nLocalBasis = activeIndices.length;
+        const globalDofMap = new Uint32Array(nLocalBasis * 2);
+        for(let i=0; i<nLocalBasis; i++) {
+            globalDofMap[i*2] = activeIndices[i] * 2;
+            globalDofMap[i*2+1] = activeIndices[i] * 2 + 1;
+        }
+        return globalDofMap;
     }
 
     updateTrace(t, disp) {
@@ -206,8 +265,8 @@ class OnlineSimulator {
         if (this.rom.u) this.rom.u.fill(0);
         if (this.rom.q) this.rom.q.fill(0);
         this.viz.updateMesh(this.rom.u || new Float64Array(0), 0);
-        this.traceChart.data.labels = [];
-        this.traceChart.data.datasets[0].data = [];
+        this.traceChart.data.labels = ["0.00"];
+        this.traceChart.data.datasets[0].data = [0];
         this.traceChart.update();
     }
 }

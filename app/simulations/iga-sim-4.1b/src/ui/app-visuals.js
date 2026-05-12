@@ -15,7 +15,7 @@ class TransientVisuals {
         this.forceArrow = null;
         this.scene.add(this.markersGroup);
         
-        this.defScale = 10;
+        this.defScale = 1;
         this.showActiveElements = false;
         this.activeElementsGroup = new THREE.Group();
         this.scene.add(this.activeElementsGroup);
@@ -113,34 +113,31 @@ class TransientVisuals {
         }
         this.forceArrowsGroup.clear();
 
-        const load = this.app.dyn ? this.app.dyn.load : (this.app.patch ? this.app.patch.load : null);
-        if (!load) return;
-
-        const timeFactor = load.timeFunction ? load.timeFunction(t) : 1.0;
-        const engine = this.app.engine;
+        const F0 = parseFloat(document.getElementById('input-fy').value);
+        const forceType = document.getElementById('input-force-type').value;
         const patch = this.app.patch;
+        if (!patch) return;
 
-        const renderArrow = (pos, magX, magY) => {
-            const mag = Math.sqrt(magX*magX + magY*magY);
-            if (mag < 1e-3) return;
-            const dir = new THREE.Vector3(magX, magY, 0).normalize();
-            const arrow = new THREE.ArrowHelper(dir, pos, mag * 0.5, 0xf43f5e, 0.4, 0.2);
+        let mag = 0;
+        if (forceType === 'step') mag = F0;
+        else if (forceType === 'impulse') mag = (t < 0.05) ? F0 : 0;
+        else if (forceType === 'harmonic') mag = F0 * Math.sin(2 * Math.PI * 2 * t);
+
+        const engine = this.app.engine;
+        const renderArrow = (pos, magY) => {
+            if (Math.abs(magY) < 1e-3) return;
+            const dir = new THREE.Vector3(0, magY > 0 ? -1 : 1, 0);
+            const arrow = new THREE.ArrowHelper(dir, pos, Math.abs(magY) * 0.005, 0xf43f5e, 0.4, 0.2);
             arrow.renderOrder = 1000;
             this.forceArrowsGroup.add(arrow);
         };
 
-        if (load.type === 'distributed') {
-            const res = 5; 
-            for (let k = 0; k <= res; k++) {
-                const eta = k / res;
-                const st = engine.getSurfaceState(patch, 1.0, eta); 
-                const pos = new THREE.Vector3(st.position.x, st.position.y, st.position.z);
-                renderArrow(pos, load.magnitude.x * timeFactor, load.magnitude.y * timeFactor);
-            }
-        } else if (load.type === 'point') {
-            const st = engine.getSurfaceState(patch, load.xi, load.eta);
+        const res = 5; 
+        for (let k = 0; k <= res; k++) {
+            const eta = k / res;
+            const st = engine.getSurfaceState(patch, 1.0, eta); 
             const pos = new THREE.Vector3(st.position.x, st.position.y, st.position.z);
-            renderArrow(pos, load.magnitude.x * timeFactor, load.magnitude.y * timeFactor);
+            renderArrow(pos, mag);
         }
     }
 

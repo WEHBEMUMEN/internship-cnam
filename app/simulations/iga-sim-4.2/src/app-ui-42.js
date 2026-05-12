@@ -16,9 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'input-p', valId: 'p-val', suffix: '' },
         { id: 'input-timescale', valId: 'timescale-val', suffix: 'x' },
         { id: 'input-defscale', valId: 'defscale-val', suffix: 'x' },
-        { id: 'input-young', valId: 'young-val', suffix: ' MPa' },
+        { id: 'input-young', valId: 'young-val', suffix: '' },
         { id: 'input-poisson', valId: 'poisson-val', suffix: '' },
-        { id: 'input-rho', valId: 'rho-val', suffix: 'kg/m³' }
+        { id: 'input-rho', valId: 'rho-val', suffix: 'kg/m³' },
+        { id: 'input-gravity', valId: 'gravity-val', suffix: ' m/s²' }
     ];
 
     inputs.forEach(cfg => {
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!app.isRunning) app.viz.updateMesh(app.dyn.u);
             } else if (cfg.id === 'input-young') {
                 const val = parseFloat(el.value);
-                valEl.innerText = (val/1000).toFixed(0) + 'k MPa';
+                valEl.innerText = val.toExponential(2);
                 app.E = val;
                 app.fom.E = val;
             } else if (cfg.id === 'input-poisson') {
@@ -159,11 +160,47 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('run-dot').style.background = '#10b981';
     });
 
+    // CSM Case Selector
+    const caseSelect = document.getElementById('input-csm-case');
+    caseSelect.addEventListener('change', () => {
+        const csmCase = caseSelect.value;
+        const youngInput = document.getElementById('input-young');
+        const gravityInput = document.getElementById('input-gravity');
+        const targetLabel = document.getElementById('target-y');
+        const targetFreqLabel = document.getElementById('target-f');
+        
+        if (csmCase === 'csm1') {
+            app.targetY = -7.187;
+            youngInput.value = 1400000;
+            gravityInput.value = 2.0;
+            targetLabel.innerText = '-7.187 mm';
+            targetFreqLabel.innerText = '0 Hz (Static)';
+        } else if (csmCase === 'csm2') {
+            app.targetY = -1.897;
+            youngInput.value = 5600000;
+            gravityInput.value = 2.0;
+            targetLabel.innerText = '-1.897 mm';
+            targetFreqLabel.innerText = '0 Hz (Static)';
+        } else if (csmCase === 'csm3') {
+            app.targetY = -3.421; // Transient mean
+            youngInput.value = 1400000;
+            gravityInput.value = 2.0;
+            targetLabel.innerText = 'Mean: -3.42 mm';
+            targetFreqLabel.innerText = '1.0995 Hz';
+        }
+        
+        // Trigger inputs
+        youngInput.dispatchEvent(new Event('input'));
+        gravityInput.dispatchEvent(new Event('input'));
+        
+        if (!app.isRunning) app.viz.updateMesh(app.dyn.u);
+    });
+
     // Audit Button
     const btnAudit = document.getElementById('btn-audit');
     if (btnAudit) {
         btnAudit.addEventListener('click', () => {
-            window.Audit40.run(window.app);
+            window.Audit42.run(window.app);
         });
     }
 });

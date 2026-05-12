@@ -30,6 +30,17 @@ class IGANonlinearSolver {
         this.E = 100000; // Benchmark (MPa)
         this.nu = 0.3;
         this.thickness = 1.0;
+        this.analysisType = 'plane-strain'; // Default to strain for benchmarks
+        this._debugMath = true;
+    }
+
+    getPlaneStrainD() {
+        const factor = this.E / ((1 + this.nu) * (1 - 2 * this.nu));
+        return [
+            [factor * (1 - this.nu), factor * this.nu, 0],
+            [factor * this.nu, factor * (1 - this.nu), 0],
+            [0, 0, factor * (1 - 2 * this.nu) / 2]
+        ];
     }
 
     getPlaneStressD() {
@@ -122,12 +133,19 @@ class IGANonlinearSolver {
                         const Eyy = dvdy + 0.5 * (dudy*dudy + dvdy*dvdy);
                         const Exy2 = (dudy + dvdx) + (dudx*dudy + dvdx*dvdy); // 2Exy
                         
-                        const D = this.getPlaneStressD();
+                        const D = this.analysisType === 'plane-strain' ? this.getPlaneStrainD() : this.getPlaneStressD();
                         const Sxx = D[0][0]*Exx + D[0][1]*Eyy;
                         const Syy = D[1][0]*Exx + D[1][1]*Eyy;
                         const Sxy = D[2][2]*Exy2;
 
                         const factor = detJ * wu * wv * this.thickness;
+
+                        if (this._debugMath) {
+                            console.log(`[MathAudit] detJ: ${detJ.toExponential(3)}, wu*wv: ${(wu*wv).toExponential(3)}`);
+                            const D = this.analysisType === 'plane-strain' ? this.getPlaneStrainD() : this.getPlaneStressD();
+                            console.log(`[MathAudit] D[0][0]: ${D[0][0].toExponential(3)}`);
+                            this._debugMath = false; // Only once
+                        }
 
                         for (let a = 0; a < activeIndices.length; a++) {
                             const k = activeIndices[a];
@@ -188,7 +206,7 @@ class IGANonlinearSolver {
                             dvdy += B_param[k][1] * u_disp[k * 2 + 1];
                         }
 
-                        const D = this.getPlaneStressD();
+                        const D = this.analysisType === 'plane-strain' ? this.getPlaneStrainD() : this.getPlaneStressD();
                         const factor = detJ * wu * wv * this.thickness;
                         
                         // Assemble Linear & Material Nonlinear
@@ -209,14 +227,16 @@ class IGANonlinearSolver {
                                     [(1 + dudx) * dRdy_b + dudy * dRdx_b, (1 + dvdy) * dRdx_b + dvdx * dRdy_b]
                                 ];
 
+                                // CACHED D MATRIX MULTIPLICATION
                                 for (let ri = 0; ri < 2; ri++) {
                                     for (let rj = 0; rj < 2; rj++) {
                                         let kab = 0;
-                                        for (let r = 0; r < 3; r++) {
-                                            for (let c = 0; c < 3; c++) {
-                                                kab += B_a[r][ri] * D[r][c] * B_b[c][rj];
-                                            }
-                                        }
+                                        kab += B_a[0][ri] * D[0][0] * B_b[0][rj];
+                                        kab += B_a[0][ri] * D[0][1] * B_b[1][rj];
+                                        kab += B_a[1][ri] * D[1][0] * B_b[0][rj];
+                                        kab += B_a[1][ri] * D[1][1] * B_b[1][rj];
+                                        kab += B_a[2][ri] * D[2][2] * B_b[2][rj];
+                                        
                                         Kt[a * 2 + ri][b * 2 + rj] += kab * factor;
                                     }
                                 }
@@ -610,6 +630,73 @@ class IGANonlinearSolver {
             if (isNaN(x[i])) x[i] = 0;
         }
         return x;
+    }
+
+    /**
+     * Calculates body forces (e.g., gravity) across the entire domain.
+     * F_i = \int N_i * \rho * g d\Omega
+     */
+    calculateBodyForces(patch, rho, gx = 0, gy = 0) {
+        const { p, q, U, V, weights, controlPoints } = patch;
+        const nU = controlPoints.length;
+        const nV = controlPoints[0].length;
+        const F_body = new Float64Array(nU * nV * 2).fill(0);
+
+        const uniqueU = [...new Set(U)], uniqueV = [...new Set(V)];
+        const gRule = window.GaussQuadrature2D.getPoints(Math.max(p, q) + 1);
+
+        let totalForceX = 0, totalForceY = 0;
+        console.log("--- Body Force Integration Diagnostic ---");
+        console.log(`Input: rho=${rho}, gx=${gx}, gy=${gy}, t=${this.thickness}`);
+
+        for (let i = 0; i < uniqueU.length - 1; i++) {
+            const uMin = uniqueU[i], uMax = uniqueU[i+1];
+            if (uMax - uMin < 1e-10) continue;
+            for (let j = 0; j < uniqueV.length - 1; j++) {
+                const vMin = uniqueV[j], vMax = uniqueV[j+1];
+                if (vMax - vMin < 1e-10) continue;
+
+                for (let gu = 0; gu < gRule.points.length; gu++) {
+                    const u = ((uMax - uMin) * gRule.points[gu] + (uMax + uMin)) / 2;
+                    const wu = gRule.weights[gu] * (uMax - uMin) / 2;
+                    for (let gv = 0; gv < gRule.points.length; gv++) {
+                        const v = ((vMax - vMin) * gRule.points[gv] + (vMax + vMin)) / 2;
+                        const wv = gRule.weights[gv] * (vMax - vMin) / 2;
+
+                        const deriv = this.engine.getSurfaceDerivatives(patch, u, v);
+                        const { detJ } = this.getBParametric(patch, u, v, deriv);
+                        
+                        const spanU = this.engine.findSpan(nU - 1, p, u, U);
+                        const spanV = this.engine.findSpan(nV - 1, q, v, V);
+                        const Nu = this.engine.basisFuns(spanU, u, p, U);
+                        const Nv = this.engine.basisFuns(spanV, v, q, V);
+                        
+                        const factor = detJ * wu * wv * this.thickness * rho;
+
+                        for (let iu = 0; iu <= p; iu++) {
+                            const cpI = spanU - p + iu;
+                            for (let iv = 0; iv <= q; iv++) {
+                                const cpJ = spanV - q + iv;
+                                // Simplified: Assumes weights = 1 for benchmark rectangles.
+                                // For full NURBS, we'd divide by W(u,v).
+                                const Ri = (Nu[iu] * Nv[iv] * weights[cpI][cpJ]) / deriv.W;
+                                
+                                const idx = (cpI * nV + cpJ) * 2;
+                                F_body[idx] += Ri * gx * factor;
+                                F_body[idx+1] += Ri * gy * factor;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        for(let i=0; i<F_body.length; i+=2) { totalForceX += F_body[i]; totalForceY += F_body[i+1]; }
+        console.log(`Integrated Total Force: X=${totalForceX.toFixed(4)}N, Y=${totalForceY.toFixed(4)}N`);
+        console.log(`Expected (Mass * G): ${(rho * 0.35 * 0.02 * gx).toFixed(4)}N, ${(rho * 0.35 * 0.02 * gy).toFixed(4)}N`);
+        console.log("-----------------------------------------");
+
+        return F_body;
     }
 }
 
