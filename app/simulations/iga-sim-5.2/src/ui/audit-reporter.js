@@ -1,0 +1,114 @@
+/**
+ * Phase 5.1a - Audit Reporter
+ * Handles the display of training analytics and system logs.
+ */
+
+class AuditReporter {
+    constructor(logId) {
+        this.logElement = document.getElementById(logId);
+    }
+
+    log(type, message) {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        let icon = '<i class="fa-solid fa-info-circle"></i>';
+        
+        if (type === 'system') icon = '<i class="fa-solid fa-microchip"></i>';
+        if (type === 'success') icon = '<i class="fa-solid fa-check-circle" style="color: #10b981;"></i>';
+        if (type === 'warning') icon = '<i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i>';
+        
+        entry.innerHTML = `
+            <span class="log-time">[${timestamp}]</span>
+            <span class="log-icon">${icon}</span>
+            <span class="log-msg">${message}</span>
+        `;
+        
+        this.logElement.prepend(entry);
+    }
+
+    logSpeedup(fomTime, romTime, speedup) {
+        this.log('system', `Performance Benchmark: FOM Solve: ${fomTime.toFixed(2)}ms | ROM Solve: ${romTime.toFixed(2)}ms | <strong style="color: var(--primary);">Speedup: ${speedup.toFixed(1)}x</strong>`);
+    }
+
+    logProfile(data) {
+        const solveColor = data.solve < 5 ? '#10b981' : '#f59e0b';
+        const vizColor = data.viz < 16 ? '#10b981' : '#ef4444';
+        
+        let msg = `Performance Profile [${data.mode.toUpperCase()}]: `;
+        msg += `<span style="color:${solveColor}">Solve: ${data.solve.toFixed(1)}ms</span> | `;
+        msg += `<span style="color:${vizColor}">Render: ${data.viz.toFixed(1)}ms</span>`;
+        
+        if (data.mode !== 'fom') {
+            msg += ` | <strong style="color:var(--primary)">Speedup: ${data.speedup.toFixed(1)}x</strong>`;
+        }
+        
+        this.log('system', msg);
+    }
+
+    clear() {
+        this.logElement.innerHTML = '';
+    }
+
+    reportStats(stats) {
+        if (document.getElementById('stat-dofs')) {
+            document.getElementById('stat-dofs').textContent = stats.nDofs;
+        }
+        if (document.getElementById('stat-snaps')) {
+            document.getElementById('stat-snaps').textContent = stats.nSnaps;
+        }
+        
+        // Reduction Ratio
+        if (document.getElementById('stat-ratio')) {
+            const ratio = ((stats.nDofs - stats.k) / stats.nDofs) * 100;
+            document.getElementById('stat-ratio').textContent = `${ratio.toFixed(1)}%`;
+        }
+
+        // Mode Indicator
+        const modeVal = document.getElementById('stat-ratio');
+        const spdVal = document.getElementById('stat-speedup');
+        const errorContainer = document.getElementById('stat-rom-container');
+        const errVal = document.getElementById('stat-error');
+
+        if (modeVal) {
+            if (stats.mode === 'ecsw') {
+                modeVal.style.color = '#f59e0b'; // Amber for ECSW
+                modeVal.textContent = 'ECSW';
+            } else if (stats.mode === 'rom') {
+                modeVal.style.color = 'var(--primary)';
+                modeVal.textContent = 'ROM';
+            } else {
+                modeVal.style.color = '#fff';
+                modeVal.textContent = 'FULL';
+            }
+        }
+
+        // FPS Factor
+        const fpsVal = document.getElementById('stat-fps');
+        if (fpsVal && stats.fps) {
+            fpsVal.textContent = stats.fps.toFixed(1);
+        }
+
+        // Speedup Factor
+        if (spdVal) {
+            if ((stats.mode === 'rom' || stats.mode === 'ecsw')) {
+                spdVal.textContent = `${stats.speedup.toFixed(1)}x`;
+            } else {
+                spdVal.textContent = `1.0x`;
+            }
+        }
+
+        // Error Handling
+        if (errorContainer) {
+            if (stats.mode !== 'fom') {
+                errorContainer.style.display = 'block';
+                if (errVal) errVal.textContent = `${(stats.error * 100).toFixed(4)}%`;
+            } else {
+                errorContainer.style.display = 'none';
+            }
+        }
+    }
+}
+
+window.AuditReporter = AuditReporter;

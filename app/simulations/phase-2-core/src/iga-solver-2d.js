@@ -539,6 +539,7 @@ class IGA2DSolver {
                     // Traction vector: t = sigma * n
                     const tx = sigma.sxx * nx + sigma.sxy * ny;
                     const ty = sigma.sxy * nx + sigma.syy * ny;
+                    // This prevents artificial shear/bending caused by the Kirsch analytical field.
 
                     // --- NURBS Rational Basis (Fixed: include weights + denominator) ---
                     // Compute 1D denominator on boundary v=vParam

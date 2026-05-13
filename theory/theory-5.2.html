@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theory | Phase 5.1a - Geometric ROM</title>
+    <title>Theory | Phase 5.2 - Geometric Defect ROM</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -68,8 +68,8 @@
             font-size: 3.5rem;
             font-weight: 800;
             background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-            -webkit-background-clip: text;
             background-clip: text;
+            -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
             letter-spacing: -0.04em;
@@ -175,100 +175,113 @@
 </head>
 <body>
     <div class="theory-container">
-        <a href="../app/simulations/iga-sim-5.1a/index.html" class="back-link">← Return to Simulation</a>
+        <a href="../app/simulations/iga-sim-5.2/index.html" class="back-link">← Return to Simulation</a>
         
-        <h1>Phase 5.1a: Geometric POD-Galerkin</h1>
-        <p class="subtitle">Detailed Mathematical Framework and Computational Algorithms</p>
+        <h1>Phase 5.2: Geometric Defect ROM</h1>
+        <p class="subtitle">Parametrizing Material Loss and Structural Failure in Cantilever Beams</p>
         
         <div class="highlight-box">
-            <p style="margin:0"><strong>Objective:</strong> To solve parametric structural problems where the geometry $\Omega(\mathbf{\theta})$ is variable, enabling real-time Digital Twins for shape optimization and structural health monitoring.</p>
+            <p style="margin:0"><strong>Objective:</strong> To simulate the structural response of a cantilever beam with a variable geometric defect. The parameters $\mathbf{\mu} = [\text{pos}, \text{depth}]$ define the location and severity of the material loss. <strong>ECSW</strong> is used to maintain real-time performance across the entire defect parameter space.</p>
         </div>
 
-        <h2>1. Exact Geometric Mapping (NURBS)</h2>
+        <h2>1. Defect Parametrization</h2>
         <p>
-            In IGA, the physical point $\mathbf{x}$ is a function of the parametric coordinate $\mathbf{\xi} = (\xi, \eta)$ and the shape parameter $\mathbf{\theta}$:
+            The geometry is defined by a mapping $\mathbf{x}(\xi, \eta; \mathbf{\mu})$ where $\mathbf{\mu} = [\mu_{pos}, r_{depth}]$. The control points $\mathbf{P}_{i,j}$ are displaced at the notch location to represent the material loss:
         </p>
-        
         <div class="math-block">
-            $$\mathbf{x}(\mathbf{\xi}; \mathbf{\theta}) = \frac{\sum_{i,j} \omega_{i,j} \mathbf{P}_{i,j}(\mathbf{\theta}) B_i^p(\xi) B_j^q(\eta)}{\sum_{i,j} \omega_{i,j} B_i^p(\xi) B_j^q(\eta)}$$
+            $$\mathbf{P}_{i,j}(\mathbf{\mu}) = \begin{cases} 
+            \mathbf{P}_{i,j}^0 - r \cdot \mathbf{n} & \text{if } x_i \approx \mu_{pos} \text{ and } j \in \{0, n_v\} \\
+            \mathbf{P}_{i,j}^0 & \text{otherwise}
+            \end{cases}$$
         </div>
+        <p>
+            This parametrization allows the Digital Twin to explore "What-if" failure scenarios by moving the defect along the beam span.
+        </p>
 
-        <p>The **Jacobian Matrix** $\mathbf{J}$ represents the covariant basis of the transformation:</p>
+        <h2>2. Hyper-reduced Assembly</h2>
+        <p>
+            Because the mesh must be refined around the notch to capture stress concentrations, the number of elements $N_e$ increases. ECSW ensures that the assembly cost remains constant:
+        </p>
         <div class="math-block">
-            $$\mathbf{J} = \frac{\partial \mathbf{x}}{\partial \mathbf{\xi}} = \begin{bmatrix} \frac{\partial x}{\partial \xi} & \frac{\partial x}{\partial \eta} \\ \frac{\partial y}{\partial \xi} & \frac{\partial y}{\partial \eta} \end{bmatrix}$$
+            $$\mathbf{k}_r(\mathbf{\mu}) \approx \sum_{e \in E^*} \xi_e \left( \mathbf{\Phi}_e^T \mathbf{k}_e(\mathbf{\mu}) \mathbf{\Phi}_e \right)$$
         </div>
+        <p>
+            where $\xi_e > 0$ are the non-negative weights and $\mathbf{\Phi}_e$ is the basis restricted to element $e$.
+        </p>
 
-        <h2>2. Strain-Displacement Operator in Variable Domains</h2>
-        <p>The infinitesimal strain $\mathbf{\epsilon}$ is related to the control point displacements $\mathbf{d}$ via the $\mathbf{B}$-matrix. For a geometric twin, $\mathbf{B}$ is a function of $\mathbf{\theta}$ because it depends on the physical gradients of the shape functions:</p>
-        
-        <div class="math-block">
-            $$\nabla_{\mathbf{x}} R = \mathbf{J}^{-1}(\mathbf{\theta}) \nabla_{\mathbf{\xi}} R$$
-            $$\mathbf{B}(\mathbf{\xi}; \mathbf{\theta}) = \begin{bmatrix} \frac{\partial R}{\partial x} & 0 \\ 0 & \frac{\partial R}{\partial y} \\ \frac{\partial R}{\partial y} & \frac{\partial R}{\partial x} \end{bmatrix} = \text{op}(\mathbf{J}^{-1} \nabla_{\mathbf{\xi}} R)$$
-        </div>
-
-        <p>The differential area element also scales with the geometry:</p>
-        <div class="math-block">
-            $$dA = |\text{det}(\mathbf{J}(\mathbf{\xi}; \mathbf{\theta}))| d\xi d\eta$$
-        </div>
-
-        <h2>3. Proper Orthogonal Decomposition (POD) Algorithm</h2>
-        <p>The Reduced Basis $\mathbf{\Phi}$ is computed using the method of snapshots. This algorithm compresses the high-dimensional displacement manifold into a low-dimensional subspace.</p>
+        <h2>3. Offline Training: Sparse Optimization</h2>
+        <p>
+            The weights are found by solving a Non-Negative Least Squares (NNLS) problem that ensures the reduced internal force is preserved for all training snapshots.
+        </p>
 
         <div class="algo-block">
-            <div class="algo-title">Algorithm 1: Offline POD Training</div>
-            1. <strong>Input:</strong> Parameter space $\mathcal{D}$, Number of snapshots $N_s$.<br>
-            2. <strong>Sampling:</strong> Generate $\Theta = \{\mathbf{\theta}_1, \dots, \mathbf{\theta}_{N_s}\}$ using Latin Hypercube Sampling (LHS).<br>
-            3. <strong>Full Solves:</strong> For each $\mathbf{\theta}_i \in \Theta$:<br>
-            &nbsp;&nbsp;&nbsp;a. Morph control points: $\mathbf{P}_i = \mathcal{M}(\mathbf{P}_{ref}, \mathbf{\theta}_i)$.<br>
-            &nbsp;&nbsp;&nbsp;b. Assemble Stiffness: $\mathbf{K}(\mathbf{\theta}_i)$.<br>
-            &nbsp;&nbsp;&nbsp;c. Solve: $\mathbf{u}_i = \mathbf{K}(\mathbf{\theta}_i)^{-1} \mathbf{f}$.<br>
-            4. <strong>Snapshot Matrix:</strong> Construct $\mathbf{S} = [\mathbf{u}_1, \dots, \mathbf{u}_{N_s}] \in \mathbb{R}^{N_{dof} \times N_s}$.<br>
-            5. <strong>Economy SVD:</strong> Compute $\mathbf{S} = \mathbf{U}\mathbf{\Sigma}\mathbf{V}^T$.<br>
-            6. <strong>Truncation:</strong> Retain $k$ columns of $\mathbf{U}$ s.t. $\sum_{j=1}^k \sigma_j^2 / \sum \sigma^2 > \text{tol}$.<br>
-            7. <strong>Output:</strong> Reduced Basis $\mathbf{\Phi} = \mathbf{U}[:, 1:k]$.
+            <div class="algo-title">Algorithm 1: ECSW Training (Greedy NNLS)</div>
+            1. <strong>Assemble G-Matrix:</strong> For each training snapshot $s$ and each element $e$:<br>
+            &nbsp;&nbsp;&nbsp;$\mathbf{G}_{s,e} = \text{vec}(\mathbf{\Phi}_e^T \mathbf{f}_{int,e}(u_s))$ <br>
+            2. <strong>Target Vector b:</strong> $\mathbf{b}_s = \text{vec}(\mathbf{\Phi}^T \mathbf{f}_{int,full}(u_s))$ <br>
+            3. <strong>Solve NNLS:</strong> $\min_{\mathbf{w} \geq 0} \|\mathbf{G}\mathbf{w} - \mathbf{b}\|_2$<br>
+            4. <strong>Sparsify:</strong> Select elements where $w_e > 0$.<br>
+            5. <strong>Output:</strong> Sampled indices $E^*$ and weights $\xi_e$.
         </div>
 
-        <h2>4. Galerkin Projection and Real-Time Solve</h2>
-        <p>The online solver approximates the solution as a linear combination of the POD modes: $\mathbf{u} \approx \mathbf{\Phi}\mathbf{a}$. Substituting this into the balance equation $\mathbf{K}(\mathbf{\theta})\mathbf{u} = \mathbf{f}$ and applying the Galerkin projection (pre-multiplying by $\mathbf{\Phi}^T$):</p>
-        
-        <div class="math-block">
-            $$\underbrace{(\mathbf{\Phi}^T \mathbf{K}(\mathbf{\theta}) \mathbf{\Phi})}_{\mathbf{k}_r(\mathbf{\theta})} \mathbf{a} = \underbrace{\mathbf{\Phi}^T \mathbf{f}}_{\mathbf{f}_r}$$
-        </div>
+        <h2>4. Online Hyper-reduction</h2>
+        <p>
+            In the online phase, the solver <strong>only</strong> visits the elements in $E^*$. For a plate with 10,000 elements, $E^*$ might only contain 100 elements, leading to a theoretical speedup of $100\times$.
+        </p>
 
         <div class="algo-block">
-            <div class="algo-title">Algorithm 2: Online Geometric Solve</div>
-            1. <strong>Input:</strong> New shape $\mathbf{\theta}_{new}$, Basis $\mathbf{\Phi}$.<br>
-            2. <strong>Operator Assembly:</strong><br>
-            &nbsp;&nbsp;&nbsp;a. Efficiently compute $\mathbf{K}(\mathbf{\theta}_{new})$ or its interpolation.<br>
-            &nbsp;&nbsp;&nbsp;b. Project to reduced space: $\mathbf{k}_r = \mathbf{\Phi}^T \mathbf{K} \mathbf{\Phi}$.<br>
-            &nbsp;&nbsp;&nbsp;c. Project force vector: $\mathbf{f}_r = \mathbf{\Phi}^T \mathbf{f}$.<br>
-            3. <strong>Reduced Solve:</strong> Solve $k \times k$ system $\mathbf{k}_r \mathbf{a} = \mathbf{f}_r$.<br>
-            4. <strong>Reconstruct:</strong> $\mathbf{u}_{ROM} = \mathbf{\Phi} \mathbf{a}$.<br>
-            5. <strong>Output:</strong> Real-time displacement/stress field.
+            <div class="algo-title">Algorithm 2: Online ECSW Solve</div>
+            1. <strong>Input:</strong> New shape $\mathbf{\theta}$, Weights $\mathbf{\xi}$, Basis $\mathbf{\Phi}$.<br>
+            2. <strong>Sparse Assembly:</strong><br>
+            &nbsp;&nbsp;&nbsp;$\mathbf{k}_r = \mathbf{0}_{k \times k}$ <br>
+            &nbsp;&nbsp;&nbsp;For $e \in E^*$:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Compute $\mathbf{k}_e(\mathbf{\theta})$ for the morphed element.<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Accumulate: $\mathbf{k}_r += \xi_e (\mathbf{\Phi}_e^T \mathbf{k}_e \mathbf{\Phi}_e)$.<br>
+            3. <strong>Reduced Solve:</strong> $\mathbf{k}_r \mathbf{a} = \mathbf{f}_r$.<br>
+            4. <strong>Output:</strong> Instantaneous result.
         </div>
 
-        <h2>5. Numerical Verification: Kirsch Benchmark</h2>
-        <p>We use the relative $L_2$ error to certify the ROM against the Full Order Model (FOM):</p>
+        <h2>5. Comparison Table</h2>
         <div class="math-block">
-            $$\text{Error} = \frac{\sqrt{(\mathbf{u}_{f} - \mathbf{u}_{r})^T \mathbf{M} (\mathbf{u}_{f} - \mathbf{u}_{r})}}{\sqrt{\mathbf{u}_{f}^T \mathbf{M} \mathbf{u}_{f}}}$$
+            <table style="width:100%; color:#fff; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--primary);">
+                        <th style="padding:15px; text-align:left;">Method</th>
+                        <th style="padding:15px; text-align:left;">Complexity</th>
+                        <th style="padding:15px; text-align:left;">Target Use-case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:15px;"><strong>FOM (Full)</strong></td>
+                        <td style="padding:15px;">$O(N^3)$</td>
+                        <td style="padding:15px;">Precision Baseline</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:15px;"><strong>Galerkin ROM</strong></td>
+                        <td style="padding:15px;">$O(N)$</td>
+                        <td style="padding:15px;">Linear / Fixed Domains</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:15px; color:var(--accent);"><strong>ECSW Hyper</strong></td>
+                        <td style="padding:15px; color:var(--accent);">$O(k^3 + |E^*|)$</td>
+                        <td style="padding:15px;">Shape Twins / Nonlinearity</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <p>where $\mathbf{M}$ is the mass (or identity) matrix. For the notched plate, we target an error $< 1\%$ across the entire geometric sweep.</p>
 
         <h2>6. Bibliography</h2>
         <ul class="reference-list">
             <li class="reference-item">
-                <strong>Lassila, T. (2010)</strong>
-                Reduced Basis methods for shape optimization and design. 
+                <strong>Farhat, C. (2014)</strong>
+                A dimensional reduction method for simulating non-linear structural dynamics. 
+                <em>Int. J. Num. Meth. Eng.</em>.
+            </li>
+            <li class="reference-item">
+                <strong>Amsallem, D. (2012)</strong>
+                Energy-conserving sampling and weighting for stabilizing hyper-reduced models. 
                 <em>CMAME</em>.
-            </li>
-            <li class="reference-item">
-                <strong>Stein, K. (2003)</strong>
-                Mesh moving techniques for fluid-structure interaction. 
-                <em>J. Applied Mechanics</em>.
-            </li>
-            <li class="reference-item">
-                <strong>Hesthaven, J. S. (2015)</strong>
-                <em>Certified Reduced Basis Methods for Parameterized PDEs</em>.
             </li>
         </ul>
     </div>
