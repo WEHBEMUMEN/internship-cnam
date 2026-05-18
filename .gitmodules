@@ -1,9 +1,6 @@
 [submodule "resources/Recorces/GOLDFISH"]
 	path = resources/Recorces/GOLDFISH
 	url = https://github.com/hanzhao2020/GOLDFISH.git
-[submodule "resources/Recorces/PENGoLINS"]
-	path = resources/Recorces/PENGoLINS
-	url = https://github.com/hanzhao2020/PENGoLINS.git
 [submodule "resources/Recorces/ShNAPr"]
 	path = resources/Recorces/ShNAPr
 	url = https://github.com/david-kamensky/ShNAPr.git
