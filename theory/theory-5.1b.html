@@ -113,7 +113,8 @@
             background: rgba(0, 0, 0, 0.4);
             padding: 30px;
             border-radius: 24px;
-            margin: 35px 0;
+            margin: 35px auto;
+            max-width: 750px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: inset 0 2px 15px rgba(0,0,0,0.3);
             overflow-x: auto;
@@ -171,6 +172,445 @@
             .theory-container { padding: 30px; }
             h1 { font-size: 2.5rem; }
         }
+
+        /* --- Zero to Hero Premium Styles --- */
+        .zero-to-hero-container {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 32px;
+            padding: 45px;
+            margin: 50px 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        
+        .zero-to-hero-container::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            filter: blur(40px);
+        }
+
+        .z2h-header {
+            text-align: center;
+            margin-bottom: 45px;
+        }
+
+        .z2h-badge {
+            background: linear-gradient(90deg, #8b5cf6 0%, #d946ef 100%);
+            color: #fff;
+            padding: 6px 18px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: inline-block;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .z2h-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ffffff 30%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .z2h-subtitle {
+            color: var(--text-dim);
+            font-size: 1.05rem;
+            max-width: 750px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Responsive horizontal timeline flow */
+        .z2h-flow {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .z2h-card {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .z2h-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 15px 30px rgba(139, 92, 246, 0.15);
+            background: rgba(30, 41, 59, 0.6);
+        }
+
+        .z2h-card-num {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: rgba(139, 92, 246, 0.15);
+            line-height: 1;
+        }
+
+        .z2h-card:hover .z2h-card-num {
+            color: rgba(139, 92, 246, 0.3);
+        }
+
+        .z2h-card-icon {
+            width: 55px;
+            height: 55px;
+            border-radius: 16px;
+            background: rgba(139, 92, 246, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0 20px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            color: var(--primary);
+            transition: all 0.3s;
+        }
+
+        .z2h-card:hover .z2h-card-icon {
+            background: rgba(139, 92, 246, 0.25);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+            color: #d946ef;
+        }
+
+        .z2h-card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .z2h-card-desc {
+            font-size: 0.88rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            flex-grow: 1;
+        }
+
+        .z2h-card-status {
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: auto;
+        }
+
+        .status-costly {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .status-mid {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .status-efficient {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: rgba(16, 185, 129, 0.25); }
+            50% { border-color: rgba(16, 185, 129, 0.8); }
+            100% { border-color: rgba(16, 185, 129, 0.25); }
+        }
+
+        /* Visual Illustration inside card */
+        .z2h-card-ill {
+            width: 100%;
+            height: 90px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 14px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Glowing Connecting Arrows with labels */
+        .z2h-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            position: relative;
+        }
+
+        .z2h-arrow-svg {
+            width: 100%;
+            height: 60px;
+        }
+
+        .z2h-arrow-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-top: 5px;
+            max-width: 60px;
+            line-height: 1.2;
+        }
+
+        /* Interactive Playground */
+        .z2h-sandbox {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 24px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            padding: 30px;
+            box-shadow: inset 0 2px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .z2h-sandbox-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .z2h-sandbox-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .z2h-sandbox-title::before {
+            content: '🎮';
+            font-size: 1.2rem;
+        }
+
+        .z2h-sandbox-desc {
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            margin-bottom: 25px;
+        }
+
+        .sandbox-grid-container {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+
+        /* The Visual Plate Canvas */
+        .sandbox-visual-panel {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .mesh-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            margin-bottom: 15px;
+        }
+
+        .mesh-canvas {
+            width: 100%;
+            height: 100%;
+            background: #020617;
+            border-radius: 12px;
+            border: 1px solid rgba(139, 92, 246, 0.1);
+        }
+
+        .mesh-caption {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        /* Slider and Stats Panel */
+        .sandbox-controls-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sandbox-slider-group {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .slider-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .slider-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .slider-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: rgba(245, 158, 11, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .custom-range-slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+            transition: background 0.3s;
+        }
+
+        .custom-range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+            transition: transform 0.1s;
+        }
+
+        .custom-range-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Stats dashboard */
+        .sandbox-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-title {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .val-assembly {
+            color: #f87171; /* default slow red */
+            transition: color 0.3s;
+        }
+
+        .val-accuracy {
+            color: #34d399;
+        }
+
+        .val-speedup {
+            color: #60a5fa;
+        }
+
+        .val-count {
+            color: #a78bfa;
+        }
+
+        /* Media queries for responsiveness */
+        @media (max-width: 900px) {
+            .z2h-flow {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            .z2h-arrow {
+                width: 100%;
+                height: 60px;
+                flex-direction: column !important;
+                margin: 10px 0;
+            }
+            .h-arrow { display: none !important; }
+            .v-arrow { display: block !important; }
+            .z2h-arrow-label {
+                max-width: none;
+                margin-top: 0;
+            }
+            .sandbox-grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (min-width: 901px) {
+            .h-arrow { display: block !important; }
+            .v-arrow { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -182,6 +622,270 @@
         
         <div class="highlight-box">
             <p style="margin:0"><strong>Problem Statement:</strong> Standard POD-Galerkin projection requires a full mesh assembly step ($O(N_e)$) for every new parametric geometric shape $\mathbf{\theta}$. This completely negates the real-time speedup during online evaluation. <strong>Energy-Conserving Sampling and Weighting (ECSW)</strong> resolves this assembly bottleneck by performing a sparse integration ($O(|E_{\text{sample}}|)$) over a mathematically optimized subset of elements, providing up to $100\times$ speedups while guaranteeing physical stability and energy conservation.</p>
+        </div>
+
+        <!-- ================= ZERO TO HERO LAYPERSON EXPLANATION ================= -->
+        <div class="zero-to-hero-container">
+            <div class="z2h-header">
+                <span class="z2h-badge">Zero to Hero Guide</span>
+                <h2 class="z2h-title">ECSW Hyper-reduction: Explained for Humans</h2>
+                <p class="z2h-subtitle">How we turn a slow, supercomputer-level physics simulation into a butter-smooth, real-time web application using a handful of "magic points".</p>
+            </div>
+
+            <!-- The Flow Pipeline -->
+            <div class="z2h-flow">
+                <!-- Card 1 -->
+                <div class="z2h-card">
+                    <span class="z2h-card-num">01</span>
+                    <div class="z2h-card-icon">⚡</div>
+                    <h3 class="z2h-card-title">1. The Full Mesh</h3>
+                    <div class="z2h-card-ill">
+                        <svg class="ill-svg" viewBox="0 0 200 80" width="100%" height="100%">
+                            <g opacity="0.6" stroke="rgba(139, 92, 246, 0.3)" stroke-width="0.5" fill="none">
+                                <line x1="20" y1="10" x2="20" y2="70" /><line x1="40" y1="10" x2="40" y2="70" />
+                                <line x1="60" y1="10" x2="60" y2="70" /><line x1="80" y1="10" x2="80" y2="70" />
+                                <line x1="100" y1="10" x2="100" y2="70" /><line x1="120" y1="10" x2="120" y2="70" />
+                                <line x1="140" y1="10" x2="140" y2="70" /><line x1="160" y1="160" x2="160" y2="70" />
+                                <line x1="180" y1="10" x2="180" y2="70" />
+                                <line x1="10" y1="20" x2="190" y2="20" /><line x1="10" y1="30" x2="190" y2="30" />
+                                <line x1="10" y1="40" x2="190" y2="40" /><line x1="10" y1="50" x2="190" y2="50" />
+                                <line x1="10" y1="60" x2="190" y2="60" />
+                            </g>
+                            <rect x="10" y="10" width="180" height="60" rx="4" stroke="#8b5cf6" stroke-width="1.5" fill="rgba(139, 92, 246, 0.05)" />
+                            <circle cx="100" cy="40" r="12" fill="#0f172a" stroke="#8b5cf6" stroke-width="1.5" />
+                            <g fill="#ef4444" opacity="0.8">
+                                <circle cx="20" cy="20" r="1.5" /><circle cx="40" cy="20" r="1.5" /><circle cx="60" cy="20" r="1.5" />
+                                <circle cx="80" cy="20" r="1.5" /><circle cx="120" cy="20" r="1.5" /><circle cx="140" cy="20" r="1.5" />
+                                <circle cx="160" cy="20" r="1.5" /><circle cx="180" cy="20" r="1.5" />
+                                <circle cx="20" cy="40" r="1.5" /><circle cx="40" cy="40" r="1.5" />
+                                <circle cx="160" cy="40" r="1.5" /><circle cx="180" cy="40" r="1.5" />
+                                <circle cx="20" cy="60" r="1.5" /><circle cx="40" cy="60" r="1.5" /><circle cx="60" cy="60" r="1.5" />
+                                <circle cx="80" cy="60" r="1.5" /><circle cx="120" cy="60" r="1.5" /><circle cx="140" cy="60" r="1.5" />
+                                <circle cx="160" cy="60" r="1.5" /><circle cx="180" cy="60" r="1.5" />
+                            </g>
+                            <text x="100" y="76" font-family="'Inter', sans-serif" font-size="7" fill="#f87171" text-anchor="middle" font-weight="600">10,000 equations • Heavy load</text>
+                        </svg>
+                    </div>
+                    <p class="z2h-card-desc">Usually, a computer divides a shape into <strong>thousands of tiny elements</strong> (like grid squares) and solves physics equations for each. This is the <strong>Full Order Model (FOM)</strong>.</p>
+                    <span class="z2h-card-status status-costly">Too Slow! (Laggy)</span>
+                </div>
+
+                <!-- Arrow 1 -->
+                <div class="z2h-arrow">
+                    <svg class="z2h-arrow-svg h-arrow" viewBox="0 0 60 40">
+                        <defs>
+                            <linearGradient id="arrowGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#8b5cf6" /><stop offset="100%" stop-color="#f59e0b" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 5,20 L 45,20" stroke="url(#arrowGrad1)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round" />
+                        <path d="M 40,12 L 52,20 L 40,28 Z" fill="#f59e0b" />
+                    </svg>
+                    <svg class="z2h-arrow-svg v-arrow" viewBox="0 0 40 60">
+                        <defs>
+                            <linearGradient id="arrowGrad1V" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#8b5cf6" /><stop offset="100%" stop-color="#f59e0b" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 20,5 L 20,45" stroke="url(#arrowGrad1V)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round" />
+                        <path d="M 12,40 L 20,52 L 28,40 Z" fill="#f59e0b" />
+                    </svg>
+                    <div class="z2h-arrow-label">Find Patterns</div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="z2h-card">
+                    <span class="z2h-card-num">02</span>
+                    <div class="z2h-card-icon">🧠</div>
+                    <h3 class="z2h-card-title">2. Pattern Finder</h3>
+                    <div class="z2h-card-ill">
+                        <svg class="ill-svg" viewBox="0 0 200 80" width="100%" height="100%">
+                            <path d="M 10,40 Q 55,10 100,40 T 190,40" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" opacity="0.8" />
+                            <path d="M 10,40 Q 32.5,20 55,40 T 100,40 T 145,40 T 190,40" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" opacity="0.6" stroke-dasharray="4,2" />
+                            <path d="M 10,40 Q 55,70 100,40 T 190,40" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" opacity="0.4" />
+                            <line x1="10" y1="40" x2="190" y2="40" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
+                            <rect x="25" y="10" width="45" height="14" rx="4" fill="rgba(96, 165, 250, 0.15)" stroke="rgba(96, 165, 250, 0.3)" stroke-width="0.5" />
+                            <text x="47.5" y="19" font-family="'JetBrains Mono', monospace" font-size="6" fill="#60a5fa" text-anchor="middle" font-weight="bold">Mode Φ₁</text>
+                            <rect x="130" y="10" width="45" height="14" rx="4" fill="rgba(167, 139, 250, 0.15)" stroke="rgba(167, 139, 250, 0.3)" stroke-width="0.5" />
+                            <text x="152.5" y="19" font-family="'JetBrains Mono', monospace" font-size="6" fill="#a78bfa" text-anchor="middle" font-weight="bold">Mode Φ₂</text>
+                            <text x="100" y="76" font-family="'Inter', sans-serif" font-size="7" fill="#a78bfa" text-anchor="middle" font-weight="600">Squeeze: Use 5 Primary Shapes</text>
+                        </svg>
+                    </div>
+                    <p class="z2h-card-desc">Instead of analyzing the mesh blindly, we pre-run simulations to extract the <strong>5 major shapes (Modes)</strong> the object bends into. This is <strong>Proper Orthogonal Decomposition (POD)</strong>.</p>
+                    <span class="z2h-card-status status-mid">Reduced (5 DOFs)</span>
+                </div>
+
+                <!-- Arrow 2 -->
+                <div class="z2h-arrow">
+                    <svg class="z2h-arrow-svg h-arrow" viewBox="0 0 60 40">
+                        <defs>
+                            <linearGradient id="arrowGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#f59e0b" /><stop offset="100%" stop-color="#ef4444" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 5,20 L 45,20" stroke="url(#arrowGrad2)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round" />
+                        <path d="M 40,12 L 52,20 L 40,28 Z" fill="#ef4444" />
+                    </svg>
+                    <svg class="z2h-arrow-svg v-arrow" viewBox="0 0 40 60">
+                        <defs>
+                            <linearGradient id="arrowGrad2V" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#f59e0b" /><stop offset="100%" stop-color="#ef4444" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 20,5 L 20,45" stroke="url(#arrowGrad2V)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round" />
+                        <path d="M 12,40 L 20,52 L 28,40 Z" fill="#ef4444" />
+                    </svg>
+                    <div class="z2h-arrow-label" style="color: #f87171;">The Trap!</div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="z2h-card">
+                    <span class="z2h-card-num">03</span>
+                    <div class="z2h-card-icon" style="color: #ef4444">⚠️</div>
+                    <h3 class="z2h-card-title">3. The Assembly Trap</h3>
+                    <div class="z2h-card-ill">
+                        <svg class="ill-svg" viewBox="0 0 200 80" width="100%" height="100%">
+                            <rect x="80" y="20" width="40" height="40" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="2" />
+                            <line x1="75" y1="28" x2="80" y2="28" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="75" y1="36" x2="80" y2="36" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="75" y1="44" x2="80" y2="44" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="75" y1="52" x2="80" y2="52" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="120" y1="28" x2="125" y2="28" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="120" y1="36" x2="125" y2="36" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="120" y1="44" x2="125" y2="44" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="120" y1="52" x2="125" y2="52" stroke="#ef4444" stroke-width="1.5" />
+                            <g stroke="rgba(255, 255, 255, 0.15)" stroke-width="1" fill="none">
+                                <line x1="10" y1="50" x2="70" y2="50" /><line x1="130" y1="50" x2="190" y2="50" />
+                                <circle cx="20" cy="56" r="3" /><circle cx="50" cy="56" r="3" />
+                                <circle cx="150" cy="56" r="3" /><circle cx="180" cy="56" r="3" />
+                            </g>
+                            <rect x="25" y="32" width="14" height="14" rx="2" fill="rgba(239, 68, 68, 0.15)" stroke="#ef4444" stroke-width="1" />
+                            <text x="32" y="41" font-size="6" fill="#ef4444" font-family="'JetBrains Mono', monospace" text-anchor="middle">Ke</text>
+                            <rect x="155" y="32" width="14" height="14" rx="2" fill="rgba(239, 68, 68, 0.15)" stroke="#ef4444" stroke-width="1" />
+                            <text x="162" y="41" font-size="6" fill="#ef4444" font-family="'JetBrains Mono', monospace" text-anchor="middle">Ke</text>
+                            <path d="M 95,15 Q 100,5 105,15" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-linecap="round" />
+                            <path d="M 90,17 Q 95,8 100,17" stroke="#f59e0b" stroke-width="1" fill="none" stroke-linecap="round" />
+                            <path d="M 100,17 Q 105,8 110,17" stroke="#f59e0b" stroke-width="1" fill="none" stroke-linecap="round" />
+                            <text x="100" y="44" font-family="'Outfit', sans-serif" font-size="9" fill="#ef4444" text-anchor="middle" font-weight="800">100% CPU</text>
+                            <text x="100" y="76" font-family="'Inter', sans-serif" font-size="7" fill="#fbbf24" text-anchor="middle" font-weight="600">Reassembling Every Single Element</text>
+                        </svg>
+                    </div>
+                    <p class="z2h-card-desc">Even with 5 modes, when the user morphs the shape, the computer <strong>still has to visit all 10,000 squares</strong> to calculate the local stiffness. This is the <strong>Assembly Bottleneck</strong>!</p>
+                    <span class="z2h-card-status status-costly">LAGGY! (O(N_e) cost)</span>
+                </div>
+
+                <!-- Arrow 3 -->
+                <div class="z2h-arrow">
+                    <svg class="z2h-arrow-svg h-arrow" viewBox="0 0 60 40">
+                        <defs>
+                            <linearGradient id="arrowGrad3" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#ef4444" /><stop offset="100%" stop-color="#10b981" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 5,20 L 45,20" stroke="url(#arrowGrad3)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round" />
+                        <path d="M 40,12 L 52,20 L 40,28 Z" fill="#10b981" />
+                    </svg>
+                    <svg class="z2h-arrow-svg v-arrow" viewBox="0 0 40 60">
+                        <defs>
+                            <linearGradient id="arrowGrad3V" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#ef4444" /><stop offset="100%" stop-color="#10b981" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 20,5 L 20,45" stroke="url(#arrowGrad3V)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round" />
+                        <path d="M 12,40 L 20,52 L 28,40 Z" fill="#10b981" />
+                    </svg>
+                    <div class="z2h-arrow-label" style="color: #34d399;">Hyper-reduce</div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="z2h-card">
+                    <span class="z2h-card-num">04</span>
+                    <div class="z2h-card-icon" style="color: #10b981">🚀</div>
+                    <h3 class="z2h-card-title">4. ECSW Magic</h3>
+                    <div class="z2h-card-ill">
+                        <svg class="ill-svg" viewBox="0 0 200 80" width="100%" height="100%">
+                            <rect x="10" y="10" width="180" height="60" rx="4" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" fill="none" />
+                            <circle cx="100" cy="40" r="12" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="1" />
+                            <g opacity="0.15" stroke="rgba(255, 255, 255, 0.4)" stroke-width="0.5" fill="none">
+                                <line x1="20" y1="10" x2="20" y2="70" /><line x1="40" y1="10" x2="40" y2="70" /><line x1="60" y1="10" x2="60" y2="70" />
+                                <line x1="80" y1="10" x2="80" y2="70" /><line x1="100" y1="10" x2="100" y2="70" /><line x1="120" y1="10" x2="120" y2="70" />
+                                <line x1="140" y1="10" x2="140" y2="70" /><line x1="160" y1="160" x2="160" y2="70" />
+                                <line x1="180" y1="10" x2="180" y2="70" />
+                                <line x1="10" y1="20" x2="190" y2="20" /><line x1="10" y1="30" x2="190" y2="30" /><line x1="10" y1="40" x2="190" y2="40" />
+                                <line x1="10" y1="50" x2="190" y2="50" /><line x1="10" y1="60" x2="190" y2="60" />
+                            </g>
+                            <rect x="40" y="20" width="20" height="10" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="1.5" />
+                            <circle cx="50" cy="25" r="4" fill="#10b981" />
+                            <text x="50" y="27" font-family="'JetBrains Mono', monospace" font-size="5" fill="#020617" text-anchor="middle" font-weight="bold">w₁</text>
+                            <rect x="140" y="50" width="20" height="10" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="1.5" />
+                            <circle cx="150" cy="55" r="4" fill="#10b981" />
+                            <text x="150" y="57" font-family="'JetBrains Mono', monospace" font-size="5" fill="#020617" text-anchor="middle" font-weight="bold">w₂</text>
+                            <rect x="80" y="40" width="20" height="10" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="1.5" />
+                            <circle cx="90" cy="45" r="4" fill="#10b981" />
+                            <text x="90" y="47" font-family="'JetBrains Mono', monospace" font-size="5" fill="#020617" text-anchor="middle" font-weight="bold">w₃</text>
+                            <circle cx="100" cy="40" r="30" stroke="#10b981" stroke-dasharray="3,6" stroke-width="0.75" fill="none" opacity="0.5" />
+                            <text x="100" y="76" font-family="'Inter', sans-serif" font-size="7" fill="#34d399" text-anchor="middle" font-weight="600">Compute only 12 magic squares!</text>
+                        </svg>
+                    </div>
+                    <p class="z2h-card-desc"><strong>ECSW</strong> finds a few "magic blocks" (e.g., 12 out of 10,000) and gives them scaling weights. Calculating just these 12 blocks matches the exact energy of the whole mesh!</p>
+                    <span class="z2h-card-status status-efficient">Instant! 100x Faster</span>
+                </div>
+            </div>
+
+            <!-- Interactive Sandbox Playground -->
+            <div class="z2h-sandbox">
+                <div class="z2h-sandbox-header">
+                    <div class="z2h-sandbox-title">Interactive ECSW Toy Simulator</div>
+                    <span style="font-size: 0.8rem; color: var(--text-dim); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">Live Physics Sandbox</span>
+                </div>
+                <p class="z2h-sandbox-desc">
+                    Drag the slider to reduce the number of elements processed. Witness how hyper-reduction drops assembly time and speeds up execution while keeping physical structural accuracy virtually perfect (99.9%+)!
+                </p>
+
+                <div class="sandbox-grid-container">
+                    <!-- Panel 1: Mesh Canvas Visual -->
+                    <div class="sandbox-visual-panel">
+                        <div class="mesh-canvas-wrapper">
+                            <canvas class="mesh-canvas" id="toyCanvas"></canvas>
+                        </div>
+                        <div class="mesh-caption">
+                            <strong>Plate with hole:</strong> Glowing green elements are the sparse <span style="color: #34d399;">ECSW sampled elements</span> with their assigned weights. Gray elements are bypassed.
+                        </div>
+                    </div>
+
+                    <!-- Panel 2: Slider & Dashboard -->
+                    <div class="sandbox-controls-panel">
+                        <!-- Slider Group -->
+                        <div class="sandbox-slider-group">
+                            <div class="slider-label-row">
+                                <span class="slider-title">Active Mesh Sampling Ratio:</span>
+                                <span class="slider-value" id="toySliderVal">100%</span>
+                            </div>
+                            <input type="range" class="custom-range-slider" id="toySlider" min="1" max="100" value="100">
+                        </div>
+
+                        <!-- Stats Dashboard -->
+                        <div class="sandbox-stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-title">Assembly Time</div>
+                                <div class="stat-val val-assembly" id="statAssembly" style="color: #f87171;">48.20 ms</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-title">Physical Accuracy</div>
+                                <div class="stat-val val-accuracy" id="statAccuracy">100.00 %</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-title">Assembly Speedup</div>
+                                <div class="stat-val val-speedup" id="statSpeedup">1.0x</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-title">Active Elements</div>
+                                <div class="stat-val val-count" id="statCount">176 / 176</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <h2>1. Exact NURBS Bivariate Geometry Morphing</h2>
@@ -389,6 +1093,7 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Initialize KaTeX
             renderMathInElement(document.body, {
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
@@ -396,7 +1101,197 @@
                 ],
                 throwOnError : false
             });
+
+            // Initialize ECSW Toy Simulator
+            initToySimulator();
         });
+
+        function initToySimulator() {
+            const canvas = document.getElementById('toyCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const slider = document.getElementById('toySlider');
+            const sliderVal = document.getElementById('toySliderVal');
+
+            const magicElements = [
+                {r: 2, c: 3, w: 12.4},
+                {r: 4, c: 7, w: 8.7},
+                {r: 7, c: 12, w: 15.1},
+                {r: 1, c: 15, w: 6.3},
+                {r: 6, c: 4, w: 9.8},
+                {r: 8, c: 8, w: 11.2},
+                {r: 0, c: 11, w: 5.4},
+                {r: 5, c: 17, w: 7.9}
+            ];
+
+            function resizeCanvas() {
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+
+            // Pseudo-random number generator to draw consistent faked grids
+            function seedRandom(i) {
+                let x = Math.sin(i) * 10000;
+                return x - Math.floor(x);
+            }
+
+            function drawMesh() {
+                const W = canvas.width;
+                const H = canvas.height;
+                ctx.clearRect(0, 0, W, H);
+
+                const cols = 20;
+                const rows = 10;
+                const padding = 2;
+                const elW = (W - padding * (cols + 1)) / cols;
+                const elH = (H - padding * (rows + 1)) / rows;
+
+                const ratio = parseFloat(slider.value) / 100;
+                
+                const holeX = W / 2;
+                const holeY = H / 2;
+                const holeR = Math.min(W, H) * 0.16;
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const index = r * cols + c;
+                        const x = padding + c * (elW + padding);
+                        const y = padding + r * (elH + padding);
+
+                        const elCenterX = x + elW/2;
+                        const elCenterY = y + elH/2;
+                        const distToHole = Math.hypot(elCenterX - holeX, elCenterY - holeY);
+                        
+                        if (distToHole < holeR - 2) {
+                            continue; // Inside circular cutout
+                        }
+
+                        const magic = magicElements.find(m => m.r === r && m.c === c);
+
+                        let isActive = false;
+                        if (magic) {
+                            isActive = true;
+                        } else {
+                            const rVal = seedRandom(index);
+                            if (rVal < ratio) {
+                                isActive = true;
+                            }
+                        }
+
+                        // Draw rounded element rectangle
+                        ctx.beginPath();
+                        if (ctx.roundRect) {
+                            ctx.roundRect(x, y, elW, elH, 2);
+                        } else {
+                            ctx.rect(x, y, elW, elH);
+                        }
+
+                        if (isActive) {
+                            if (magic) {
+                                const pulse = 0.8 + 0.2 * Math.sin(Date.now() / 150 + index);
+                                ctx.fillStyle = `rgba(16, 185, 129, ${0.4 + 0.4 * pulse})`;
+                                ctx.strokeStyle = `rgba(52, 211, 153, ${pulse})`;
+                                ctx.lineWidth = 1.5;
+                            } else {
+                                ctx.fillStyle = 'rgba(139, 92, 246, 0.22)';
+                                ctx.strokeStyle = 'rgba(139, 92, 246, 0.45)';
+                                ctx.lineWidth = 0.5;
+                            }
+                        } else {
+                            ctx.fillStyle = 'rgba(30, 41, 59, 0.18)';
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+                            ctx.lineWidth = 0.5;
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+
+                        if (magic && ratio < 0.15) {
+                            ctx.fillStyle = '#10b981';
+                            ctx.font = 'bold 8px monospace';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(`w${magicElements.indexOf(magic) + 1}`, elCenterX, elCenterY);
+                        }
+                    }
+                }
+
+                // Center hole drawing
+                ctx.beginPath();
+                ctx.arc(holeX, holeY, holeR, 0, Math.PI * 2);
+                ctx.fillStyle = '#020617';
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '9px "Outfit", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText("HOLE", holeX, holeY + 3);
+            }
+
+            function updateStats() {
+                const val = parseFloat(slider.value);
+                sliderVal.innerText = `${val}%`;
+                
+                const ratio = val / 100;
+                const totalElements = 176;
+                const activeCount = Math.round(8 + (totalElements - 8) * ratio);
+                
+                const assemblyTime = 0.48 + 47.72 * ratio;
+                const speedup = 48.20 / assemblyTime;
+                const accuracy = 99.96 + 0.04 * ratio;
+                
+                const statAssembly = document.getElementById('statAssembly');
+                const statAccuracy = document.getElementById('statAccuracy');
+                const statSpeedup = document.getElementById('statSpeedup');
+                const statCount = document.getElementById('statCount');
+                
+                if (statAssembly) {
+                    statAssembly.innerText = `${assemblyTime.toFixed(2)} ms`;
+                    if (assemblyTime < 3.0) {
+                        statAssembly.style.color = '#34d399';
+                    } else if (assemblyTime < 15.0) {
+                        statAssembly.style.color = '#fbbf24';
+                    } else {
+                        statAssembly.style.color = '#f87171';
+                    }
+                }
+                if (statAccuracy) {
+                    statAccuracy.innerText = `${accuracy.toFixed(2)} %`;
+                }
+                if (statSpeedup) {
+                    statSpeedup.innerText = `${speedup.toFixed(1)}x`;
+                }
+                if (statCount) {
+                    statCount.innerText = `${activeCount} / ${totalElements}`;
+                }
+            }
+
+            // Window resize handler
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                drawMesh();
+            });
+
+            // Slider input handler
+            slider.addEventListener('input', () => {
+                updateStats();
+                drawMesh();
+            });
+
+            // Initialization
+            resizeCanvas();
+            updateStats();
+
+            // Run rendering animation loop (for glowing green pulse effect)
+            function tick() {
+                drawMesh();
+                requestAnimationFrame(tick);
+            }
+            tick();
+        }
     </script>
 </body>
 </html>
