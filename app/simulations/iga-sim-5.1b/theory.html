@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theory | Phase 5.1a - Geometric ROM</title>
+    <title>Theory | Phase 5.1b - Geometric ROM (ECSW)</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -176,11 +176,11 @@
     <div class="theory-container">
         <a href="index.html" class="back-link">← Return to Simulation</a>
         
-        <h1>Phase 5.1a: Geometric POD-Galerkin</h1>
-        <p class="subtitle">Detailed Mathematical Framework and Computational Algorithms</p>
+        <h1>Phase 5.1b: Geometric POD-Galerkin with ECSW</h1>
+        <p class="subtitle">Detailed Mathematical Framework of Energy-Conserving Hyper-reduction</p>
         
         <div class="highlight-box">
-            <p style="margin:0"><strong>Objective:</strong> To solve parametric structural problems where the geometry $\Omega(\mathbf{\theta})$ is variable, enabling real-time Digital Twins for shape optimization and structural health monitoring.</p>
+            <p style="margin:0"><strong>Objective:</strong> To solve parametric structural problems where the geometry $\Omega(\mathbf{\theta})$ is variable, using <strong>Energy-Conserving Sampling and Weighting (ECSW)</strong> to bypass the high-cost full mesh assembly during real-time online evaluations.</p>
         </div>
 
         <h2>1. Exact Geometric Mapping (NURBS)</h2>
@@ -227,43 +227,123 @@
             7. <strong>Output:</strong> Reduced Basis $\mathbf{\Phi} = \mathbf{U}[:, 1:k]$.
         </div>
 
-        <h2>4. Galerkin Projection and Real-Time Solve</h2>
-        <p>The online solver approximates the solution as a linear combination of the POD modes: $\mathbf{u} \approx \mathbf{\Phi}\mathbf{a}$. Substituting this into the balance equation $\mathbf{K}(\mathbf{\theta})\mathbf{u} = \mathbf{f}$ and applying the Galerkin projection (pre-multiplying by $\mathbf{\Phi}^T$):</p>
+        </div>
+
+        <h2>4. Galerkin Projection and Hyper-reduction Bottleneck</h2>
+        <p>
+            The online solver approximates the solution as a linear combination of the POD modes: $\mathbf{u} \approx \mathbf{\Phi}\mathbf{a}$. Substituting this into the balance equation $\mathbf{K}(\mathbf{\theta})\mathbf{u} = \mathbf{f}$ and applying the standard Galerkin projection yields a reduced system:
+        </p>
         
         <div class="math-block">
             $$\underbrace{(\mathbf{\Phi}^T \mathbf{K}(\mathbf{\theta}) \mathbf{\Phi})}_{\mathbf{k}_r(\mathbf{\theta})} \mathbf{a} = \underbrace{\mathbf{\Phi}^T \mathbf{f}}_{\mathbf{f}_r}$$
         </div>
 
-        <div class="algo-block">
-            <div class="algo-title">Algorithm 2: Online Geometric Solve</div>
-            1. <strong>Input:</strong> New shape $\mathbf{\theta}_{new}$, Basis $\mathbf{\Phi}$.<br>
-            2. <strong>Operator Assembly:</strong><br>
-            &nbsp;&nbsp;&nbsp;a. Efficiently compute $\mathbf{K}(\mathbf{\theta}_{new})$ or its interpolation.<br>
-            &nbsp;&nbsp;&nbsp;b. Project to reduced space: $\mathbf{k}_r = \mathbf{\Phi}^T \mathbf{K} \mathbf{\Phi}$.<br>
-            &nbsp;&nbsp;&nbsp;c. Project force vector: $\mathbf{f}_r = \mathbf{\Phi}^T \mathbf{f}$.<br>
-            3. <strong>Reduced Solve:</strong> Solve $k \times k$ system $\mathbf{k}_r \mathbf{a} = \mathbf{f}_r$.<br>
-            4. <strong>Reconstruct:</strong> $\mathbf{u}_{ROM} = \mathbf{\Phi} \mathbf{a}$.<br>
-            5. <strong>Output:</strong> Real-time displacement/stress field.
+        <p>
+            Although the projected system is small ($k \times k$), the reduced stiffness matrix $\mathbf{k}_r(\mathbf{\theta})$ is defined as the sum of all element stiffness matrix contributions projected onto the basis:
+        </p>
+
+        <div class="math-block">
+            $$\mathbf{k}_r(\mathbf{\theta}) = \sum_{e=1}^{N_e} \mathbf{\Phi}^T \mathbf{K}_e(\mathbf{\theta}) \mathbf{\Phi}$$
         </div>
 
-        <h2>5. Numerical Verification: Kirsch Benchmark</h2>
-        <p>We use the relative $L_2$ error to certify the ROM against the Full Order Model (FOM):</p>
+        <p>
+            <strong>The Bottleneck:</strong> Computing $\mathbf{k}_r(\mathbf{\theta})$ for a new geometric state $\mathbf{\theta}$ requires assembling all $N_e$ element stiffness matrices and projecting them. This operation scales with the full mesh size $N_e$, making real-time computation impossible on standard hardware.
+        </p>
+
+        <h2>5. Energy-Conserving Sampling and Weighting (ECSW)</h2>
+        <p>
+            ECSW bypasses the full mesh assembly by approximating the reduced stiffness matrix using a small, sparse subset of elements $E_{\text{sample}} \subset \{1, \dots, N_e\}$ along with a set of non-negative scaling weights $w_e > 0$:
+        </p>
+
+        <div class="math-block">
+            $$\mathbf{k}_{r, \text{ECSW}}(\mathbf{\theta}) = \sum_{e \in E_{\text{sample}}} w_e \mathbf{\Phi}^T \mathbf{K}_e(\mathbf{\theta}) \mathbf{\Phi}$$
+        </div>
+
+        <h3>The Virtual Force System ($A w \approx b$)</h3>
+        <p>
+            To compute the weights $w_e$, we formulate a system of equations by matching the action of the stiffness matrix on the basis vectors across all training snapshots. For each snapshot $i = 1, \dots, N_{snaps}$ and basis vector $\mathbf{\phi}_j$ ($j = 1, \dots, k$):
+        </p>
+
+        <div class="math-block">
+            $$\mathbf{A}_{e, i, j} = \mathbf{\Phi}^T \mathbf{K}_e(\mathbf{\theta}_i) \mathbf{\phi}_j \in \mathbb{R}^k$$
+            $$\mathbf{b}_{i, j} = \mathbf{\Phi}^T \mathbf{K}(\mathbf{\theta}_i) \mathbf{\phi}_j \in \mathbb{R}^k$$
+        </div>
+
+        <p>
+            By concatenating these vectors for all basis columns and training snapshots, we define a global virtual force matrix $\mathbf{A} \in \mathbb{R}^{D \times N_e}$ and a target vector $\mathbf{b} \in \mathbb{R}^D$ where $D = N_{snaps} \cdot k^2$:
+        </p>
+
+        <div class="math-block">
+            $$\mathbf{A} = \begin{bmatrix} \mathbf{A}_1 & \mathbf{A}_2 & \dots & \mathbf{A}_{N_e} \end{bmatrix}, \quad \mathbf{b} = \sum_{e=1}^{N_e} \mathbf{A}_e$$
+        </div>
+
+        <p>
+            The optimal weights are found by solving a Non-Negative Least Squares (NNLS) optimization problem to promote sparsity:
+        </p>
+
+        <div class="math-block">
+            $$\min_{\mathbf{w} \ge \mathbf{0}} \left\| \sum_{e=1}^{N_e} w_e \mathbf{A}_e - \mathbf{b} \right\|_2^2$$
+        </div>
+
+        <h2>6. Greedy OMP-NNLS Algorithm</h2>
+        <p>The ECSW weights are solved using a greedy, Orthogonal Matching Pursuit (OMP) style active-set strategy to select the most energetic elements first:</p>
+
+        <div class="algo-block">
+            <div class="algo-title">Algorithm 2: Offline ECSW Hyper-reduction Training</div>
+            1. <strong>Input:</strong> Target vectors $\mathbf{A}$, $\mathbf{b}$, Training Tolerance $\text{tol}$.<br>
+            2. <strong>Initialization:</strong> Active Set $\mathcal{I} = \emptyset$, Residual $\mathbf{r} = \mathbf{b}$, weights $\mathbf{w} = \mathbf{0}$.<br>
+            3. <strong>Loop:</strong> For $\text{iter} = 1$ to $\min(N_e, 200)$:<br>
+            &nbsp;&nbsp;&nbsp;a. Find element with max projection on residual: $e^* = \arg\max_{e \notin \mathcal{I}} \left( \mathbf{A}_e^T \mathbf{r} \right)$.<br>
+            &nbsp;&nbsp;&nbsp;b. If $e^*$ projection $\le 0$, break loop.<br>
+            &nbsp;&nbsp;&nbsp;c. Update Active Set: $\mathcal{I} = \mathcal{I} \cup \{e^*\}$.<br>
+            &nbsp;&nbsp;&nbsp;d. Solve Least Squares on active set: $\mathbf{w}_{\mathcal{I}} = \arg\min \|\mathbf{A}_{\mathcal{I}}\mathbf{w}_{\mathcal{I}} - \mathbf{b}\|_2^2$.<br>
+            &nbsp;&nbsp;&nbsp;e. Enforce non-negativity (clip): $\mathbf{w}_{\mathcal{I}} = \max(\mathbf{0}, \mathbf{w}_{\mathcal{I}})$.<br>
+            &nbsp;&nbsp;&nbsp;f. Update residual: $\mathbf{r} = \mathbf{b} - \sum_{e \in \mathcal{I}} w_e \mathbf{A}_e$.<br>
+            &nbsp;&nbsp;&nbsp;g. Check convergence: if $\|\mathbf{r}\|_2 / \|\mathbf{b}\|_2 < \text{tol}$, break.<br>
+            4. <strong>Output:</strong> Sampled elements $E_{\text{sample}} = \mathcal{I}$, weights $\mathbf{w}_{E_{\text{sample}}}$.
+        </div>
+
+        <h2>7. Real-Time Online Hyper-reduced Solve</h2>
+        <p>In the online stage, when a user morphs the geometry (changing shape parameter $\mathbf{\theta}_{\text{new}}$), the solver bypasses full mesh assembly entirely:</p>
+
+        <div class="algo-block">
+            <div class="algo-title">Algorithm 3: Online ECSW Hyper-reduced Solve</div>
+            1. <strong>Input:</strong> Shape parameter $\mathbf{\theta}_{\text{new}}$, basis $\mathbf{\Phi}$, sampled elements $E_{\text{sample}}$, weights $\mathbf{w}$.<br>
+            2. <strong>Local Stiffness Assembly:</strong><br>
+            &nbsp;&nbsp;&nbsp;For each $e \in E_{\text{sample}}$:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Compute local shape mapping $\mathbf{J}_e(\mathbf{\theta}_{\text{new}})$.<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Evaluate local strain operator $\mathbf{B}_e(\mathbf{\theta}_{\text{new}})$ and volume element $dA_e$.<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. Assemble local element stiffness: $\mathbf{K}_e(\mathbf{\theta}_{\text{new}})$.<br>
+            3. <strong>Weighted Projection:</strong> Assemble projected stiffness $\mathbf{k}_{r} = \sum_{e \in E_{\text{sample}}} w_e \mathbf{\Phi}^T \mathbf{K}_e(\mathbf{\theta}_{\text{new}}) \mathbf{\Phi}$.<br>
+            4. <strong>Project Load Vector:</strong> $\mathbf{f}_r = \mathbf{\Phi}^T \mathbf{f}$.<br>
+            5. <strong>Reduced Solve:</strong> Solve $k \times k$ system $\mathbf{k}_{r} \mathbf{a} = \mathbf{f}_r$.<br>
+            6. <strong>Reconstruction:</strong> Reconstruct full displacement field: $\mathbf{u}_{ROM} = \mathbf{\Phi} \mathbf{a}$.<br>
+            7. <strong>Output:</strong> Real-time displacement and stress visualizer.
+        </div>
+
+        <h2>8. Numerical Verification: Kirsch Benchmark</h2>
+        <p>We use the relative $L_2$ error to certify the ROM and ECSW models against the Full Order Model (FOM):</p>
         <div class="math-block">
             $$\text{Error} = \frac{\sqrt{(\mathbf{u}_{f} - \mathbf{u}_{r})^T \mathbf{M} (\mathbf{u}_{f} - \mathbf{u}_{r})}}{\sqrt{\mathbf{u}_{f}^T \mathbf{M} \mathbf{u}_{f}}}$$
         </div>
-        <p>where $\mathbf{M}$ is the mass (or identity) matrix. For the notched plate, we target an error $< 1\%$ across the entire geometric sweep.</p>
+        <p>where $\mathbf{M}$ is the mass (or identity) matrix. For the notched plate, we target an error $< 1\%$ across the entire geometric sweep, while enjoying speedups of $10\text{x}$ to $100\text{x}$.</p>
 
-        <h2>6. Bibliography</h2>
+        <h2>9. Bibliography</h2>
         <ul class="reference-list">
+            <li class="reference-item">
+                <strong>Farhat, C., Chapman, T., & Avery, P. (2015)</strong>
+                A multidimensional energy-conserving sampling and weighting method for topology-preserving hyper-reduction of nonlinear structural dynamics models. 
+                <em>International Journal for Numerical Methods in Engineering</em>, 102(5), 1077-1108.
+            </li>
+            <li class="reference-item">
+                <strong>Hernandez, J. A., Oliver, J., Dialami, N., Way, M. E., & Caicedo, M. A. (2017)</strong>
+                Sparsity-promoting hyper-reduction method for structural dynamics.
+                <em>Computer Methods in Applied Mechanics and Engineering</em>, 317, 752-786.
+            </li>
             <li class="reference-item">
                 <strong>Lassila, T. (2010)</strong>
                 Reduced Basis methods for shape optimization and design. 
                 <em>CMAME</em>.
-            </li>
-            <li class="reference-item">
-                <strong>Stein, K. (2003)</strong>
-                Mesh moving techniques for fluid-structure interaction. 
-                <em>J. Applied Mechanics</em>.
             </li>
             <li class="reference-item">
                 <strong>Hesthaven, J. S. (2015)</strong>
