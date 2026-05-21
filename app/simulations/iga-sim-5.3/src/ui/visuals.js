@@ -137,7 +137,7 @@ class VisualsEngine {
     /**
      * Update the viewport with the solved state
      */
-    update(solver, patch, displacement = null) {
+    update(solver, patch, displacement = null, physicalPatch = null) {
         if (this.mesh) this.scene.remove(this.mesh);
         if (this.wireframe) this.scene.remove(this.wireframe);
         if (this.cpNetGroup) this.scene.remove(this.cpNetGroup);
@@ -159,6 +159,8 @@ class VisualsEngine {
         const nV = cp[0].length;
         const nNodes = cp.length * cp[0].length;
 
+        const stressPatch = (this.isMapped && physicalPatch) ? physicalPatch : patch;
+
         // Evaluate max values for colormap
         let maxVal = 0.0;
         const vals = new Float32Array(positions.count);
@@ -177,7 +179,7 @@ class VisualsEngine {
                 for (let i = 0; i < positions.count; i += 8) {
                     const cache = this.basisCache[i];
                     try {
-                        const s = stressSolver.getNumericalStress(patch, displacement, cache.u, cache.v, solver.E, solver.nu);
+                        const s = stressSolver.getNumericalStress(stressPatch, displacement, cache.u, cache.v, solver.E, solver.nu);
                         if (s.vonMises > tempMax) tempMax = s.vonMises;
                     } catch(e) {}
                 }
@@ -236,7 +238,7 @@ class VisualsEngine {
             if (displacement) {
                 if (this.viewMode === 'stress') {
                     try {
-                        const s = stressSolver.getNumericalStress(patch, displacement, cache.u, cache.v, solver.E, solver.nu);
+                        const s = stressSolver.getNumericalStress(stressPatch, displacement, cache.u, cache.v, solver.E, solver.nu);
                         vals[idx] = s.vonMises;
                     } catch(e) {
                         vals[idx] = 0;
@@ -317,9 +319,15 @@ class VisualsEngine {
                 let x = cp[i][j].x;
                 let y = cp[i][j].y;
 
-                if (this.isMapped && !this.warpToPhysical) {
-                    x = (i / (nU - 1)) * solver.L;
-                    y = (j / (nV - 1) - 0.5) * solver.H;
+                if (this.isMapped) {
+                    if (this.warpToPhysical) {
+                        const morphed = this.evaluatePullbackMapping(x, y, solver.mu, solver.r, solver.H);
+                        x = morphed.x;
+                        y = morphed.y;
+                    } else {
+                        x = (i / (nU - 1)) * solver.L;
+                        y = (j / (nV - 1) - 0.5) * solver.H;
+                    }
                 }
 
                 if (displacement) {
@@ -385,9 +393,15 @@ class VisualsEngine {
             let x = cp[0][j].x;
             let y = cp[0][j].y;
 
-            if (this.isMapped && !this.warpToPhysical) {
-                x = 0.0;
-                y = (j / (nV - 1) - 0.5) * solver.H;
+            if (this.isMapped) {
+                if (this.warpToPhysical) {
+                    const morphed = this.evaluatePullbackMapping(x, y, solver.mu, solver.r, solver.H);
+                    x = morphed.x;
+                    y = morphed.y;
+                } else {
+                    x = 0.0;
+                    y = (j / (nV - 1) - 0.5) * solver.H;
+                }
             }
 
             const anchor = new THREE.Mesh(triangleGeo, triangleMat);

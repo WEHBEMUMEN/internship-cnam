@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update Viewports
         naiveVisuals.update(solver, naivePatch, solver.uNaive);
-        mappedVisuals.update(solver, solver.referencePatch, solver.uMapped);
+        mappedVisuals.update(solver, solver.referencePatch, solver.uMapped, naivePatch);
     }
 
     function updateSVDStatus() {
