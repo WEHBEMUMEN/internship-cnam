@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory | Phase 5.3 - Reference Configuration Mapping</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #06b6d4;
+            --primary-dark: #0891b2;
+            --accent: #f59e0b;
+            --bg: #0b0f19;
+            --card: rgba(17, 24, 39, 0.7);
+            --border: rgba(6, 182, 212, 0.2);
+            --glass: blur(20px);
+            --text-dim: #9ca3af;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+
+        .theory-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 50px;
+            background: var(--card);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        .back-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .back-link:hover { 
+            color: var(--primary); 
+            transform: translateX(-4px);
+        }
+
+        header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 35px;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #9ca3af 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+        }
+        .subtitle { 
+            color: var(--text-dim); 
+            font-size: 1.15rem; 
+            font-weight: 400; 
+        }
+
+        .tabs-nav {
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: #0b0f19;
+            background: var(--primary);
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 25px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        h2::before {
+            content: '';
+            width: 30px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            color: #fff;
+            margin: 35px 0 15px;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 1.05rem;
+            color: #cbd5e1;
+            margin-bottom: 24px;
+        }
+
+        .math-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 30px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 2px 15px rgba(0,0,0,0.3);
+            overflow-x: auto;
+        }
+
+        .algo-block {
+            background: #030712;
+            border: 1px dashed var(--primary);
+            padding: 25px;
+            border-radius: 20px;
+            margin: 30px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .algo-title { 
+            color: var(--primary); 
+            font-weight: 800; 
+            margin-bottom: 15px; 
+            text-transform: uppercase; 
+            border-bottom: 1px solid rgba(6, 182, 212, 0.2); 
+            padding-bottom: 10px; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .highlight-box {
+            background: rgba(6, 182, 212, 0.07);
+            border-left: 4px solid var(--primary);
+            padding: 25px;
+            border-radius: 0 20px 20px 0;
+            margin: 30px 0;
+            border-top: 1px solid rgba(6, 182, 212, 0.1);
+            border-bottom: 1px solid rgba(6, 182, 212, 0.1);
+            border-right: 1px solid rgba(6, 182, 212, 0.1);
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.07);
+            border-left: 4px solid #ef4444;
+            padding: 25px;
+            border-radius: 0 20px 20px 0;
+            margin: 30px 0;
+            border-top: 1px solid rgba(239, 68, 68, 0.1);
+            border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+            border-right: 1px solid rgba(239, 68, 68, 0.1);
+        }
+
+        .success-box {
+            background: rgba(16, 185, 129, 0.07);
+            border-left: 4px solid #10b981;
+            padding: 25px;
+            border-radius: 0 20px 20px 0;
+            margin: 30px 0;
+            border-top: 1px solid rgba(16, 185, 129, 0.1);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+            border-right: 1px solid rgba(16, 185, 129, 0.1);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .grid-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+        .grid-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border);
+            transform: translateY(-2px);
+        }
+        .grid-card h4 {
+            color: #fff;
+            margin-bottom: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        ul, ol {
+            margin-bottom: 30px;
+            padding-left: 20px;
+        }
+        li {
+            padding: 8px 0;
+            color: #cbd5e1;
+        }
+
+        .reference-list { list-style: none; padding: 0; }
+        .reference-item { 
+            background: rgba(255,255,255,0.02); 
+            border-left: 4px solid var(--accent); 
+            padding: 20px; 
+            margin-bottom: 15px; 
+            border-radius: 0 16px 16px 0; 
+            font-size: 0.95rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-right: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .reference-item strong { color: var(--accent); display: block; margin-bottom: 6px; }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.07);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #a5f3fc;
+            font-size: 0.9em;
+        }
+
+        .interactive-matrix {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 16px;
+            margin-top: 25px;
+        }
+        
+        .matrix-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .matrix-row:last-child { border-bottom: none; }
+        .matrix-label { font-weight: 600; color: #fff; }
+        .matrix-value { font-family: 'JetBrains Mono', monospace; color: var(--primary); }
+
+        @media (max-width: 768px) {
+            .theory-container { padding: 30px; }
+            h1 { font-size: 2.3rem; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .tabs-nav { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="theory-container">
+        <a href="../app/index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Return to Simulation Hub</a>
+        
+        <header>
+            <h1>Phase 5.3: The Reference Configuration Mapping Paradigm</h1>
+            <p class="subtitle">Mathematical Pullbacks and Hyper-reduction in Shape-Parametric Digital Twins</p>
+        </header>
+
+        <!-- Segmented Controls / Tabs Navigation -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab(event, 'step1')">
+                <i class="fa-solid fa-border-none"></i> Step 1: Naive FOM
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step2')">
+                <i class="fa-solid fa-arrows-spin"></i> Step 2: Reference Pullback
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step3')">
+                <i class="fa-solid fa-compress"></i> Step 3: ECSW Integration
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step4')">
+                <i class="fa-solid fa-graduation-cap"></i> Step 4: Mathematical Proof
+            </button>
+        </nav>
+
+        <!-- ==================== STEP 1 CONTENT ==================== -->
+        <div id="step1" class="tab-content active">
+            <h2>Step 1: Physical-Domain FOM (The Naive Remeshing Approach)</h2>
+            <p>
+                In standard shape-parametric simulations, the most intuitive approach is to solve the Full Order Model (FOM) equations of motion directly on the morphed, physical geometry $\Omega(\mathbf{\mu})$ for each design parameter vector $\mathbf{\mu}$:
+            </p>
+            
+            <div class="math-block">
+                $$\mathbf{M}(\mathbf{\mu})\ddot{\mathbf{u}}(t) + \mathbf{C}(\mathbf{\mu})\dot{\mathbf{u}}(t) + \mathbf{K}(\mathbf{\mu})\mathbf{u}(t) = \mathbf{f}_{\text{ext}}(t; \mathbf{\mu})$$
+            </div>
+            
+            <p>
+                Under this formulation, the global stiffness matrix $\mathbf{K}(\mathbf{\mu})$ is obtained by re-generating the NURBS patch mesh and integrating shape functions over the physical coordinates $\mathbf{x} \in \Omega(\mathbf{\mu})$:
+            </p>
+
+            <div class="math-block">
+                $$K_{ij}(\mathbf{\mu}) = \int_{\Omega(\mathbf{\mu})} \nabla R_i(\mathbf{x}; \mathbf{\mu}) : \mathbf{D} : \nabla R_j(\mathbf{x}; \mathbf{\mu}) \, \mathrm{d}\Omega$$
+            </div>
+
+            <div class="warning-box">
+                <p style="margin:0">
+                    <strong style="color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Critical Blind Spots of the Naive Approach:</strong>
+                </p>
+                <ul style="margin: 15px 0 0; padding-left: 20px;">
+                    <li><strong>Vector Space Incompatibility:</strong> Projection-based reduced-order models (such as POD) require all snapshot vectors to reside in the <em>same algebraic vector space</em>. If the physical mesh is redone at each parameter state, the number of degrees of freedom $N$ and control point positions change. SVD cannot be applied to a snapshot matrix with varying sizes!</li>
+                    <li><strong>Destructive Computational Assembly:</strong> Re-discretizing the domain and re-evaluating shape function integrals online destroys the sub-millisecond real-time performance mandatory for Digital Twins.</li>
+                    <li><strong>Loss of Continuity:</strong> Regenerating the mesh introduces numerical discontinuities with respect to the shape parameter $\mathbf{\mu}$, breaking gradient-based sensitivity and shape optimization algorithms.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ==================== STEP 2 CONTENT ==================== -->
+        <div id="step2" class="tab-content">
+            <h2>Step 2: Pullback Mapping on a Static Reference Domain</h2>
+            <p>
+                To secure algebraic compatibility, we pull back the governing physical equations from the parameter-dependent domain $\Omega(\mathbf{\mu})$ to a permanently static, undeformed reference configuration $\hat{\Omega}$ using a smooth bijective geometric mapping $\mathbf{\Phi}$:
+            </p>
+            
+            <div class="math-block">
+                $$\mathbf{x} = \mathbf{\Phi}(\hat{\mathbf{x}}; \mathbf{\mu}), \quad \mathbf{x} \in \Omega(\mathbf{\mu}), \quad \hat{\mathbf{x}} \in \hat{\Omega}$$
+            </div>
+
+            <p>
+                The spatial gradients in physical coordinates are pulled back to the reference coordinates via the inverse transpose of the mapping's Jacobian tensor $\mathbf{J}_{\mathbf{\Phi}} = \frac{\partial \mathbf{\Phi}}{\partial \hat{\mathbf{x}}}$:
+            </p>
+
+            <div class="math-block">
+                $$\nabla_{\mathbf{x}} R_i(\hat{\mathbf{x}}) = \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}(\hat{\mathbf{x}}; \mathbf{\mu}) \nabla_{\hat{\mathbf{x}}} \hat{R}_i(\hat{\mathbf{x}})$$
+            </div>
+
+            <p>
+                Transforming the integral boundaries yields the mapped stiffness matrix, computed entirely on the static reference domain $\hat{\Omega}$:
+            </p>
+
+            <div class="math-block">
+                $$K_{ij}(\mathbf{\mu}) = \int_{\hat{\Omega}} \left( \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_i \right) : \mathbf{D} : \left( \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_j \right) \det(\mathbf{J}_{\mathbf{\Phi}}) \, \mathrm{d}\hat{\Omega}$$
+            </div>
+
+            <div class="grid-2">
+                <div class="grid-card">
+                    <h4 style="color:#ef4444;"><i class="fa-solid fa-minus-circle"></i> Estimated Drawbacks</h4>
+                    <p style="font-size:0.9rem; margin:0; color:#cbd5e1;">
+                        <strong>1. Formulation Complexity:</strong> The weak form becomes algebraically complex, introducing the parameter-dependent terms $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}(\mathbf{\mu})$ and $\det(\mathbf{J}_{\mathbf{\Phi}}(\mathbf{\mu}))$ inside the integrals.<br><br>
+                        <strong>2. Post-processing Overhead:</strong> Resulting displacements and stresses are computed on the reference grid and must be pushed forward via $\mathbf{\Phi}$ to physical space for rendering.
+                    </p>
+                </div>
+                <div class="grid-card" style="border-color: var(--primary);">
+                    <h4 style="color:var(--primary);"><i class="fa-solid fa-plus-circle"></i> Key Advantages</h4>
+                    <p style="font-size:0.9rem; margin:0; color:#cbd5e1;">
+                        <strong>1. Unified Mesh Structure:</strong> The reference domain is discretized exactly once. No node displacement or mesh regeneration occurs online.<br><br>
+                        <strong>2. Constant Basis Weights:</strong> The reference NURBS shape functions $\hat{R}_i(\hat{\mathbf{x}})$ and control point weights are static, preserving perfect mathematical exactness.
+                    </p>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <p style="margin:0">
+                    <i class="fa-solid fa-lightbulb"></i> <strong>Offline Precomputability (Connection to Tiso & Rixen):</strong><br>
+                    Because the reference shape functions and their gradients are parameter-independent, they can be pre-evaluated at the Gauss integration points and stored. For affine mappings, we decompose:
+                    $$\mathbf{K}(\mathbf{\mu}) = \sum_{q=1}^Q \theta_q(\mathbf{\mu}) \mathbf{K}_q^{\text{ref}}$$
+                    allowing $\mathbf{K}(\mathbf{\mu})$ to be assembled online in microseconds as a simple linear combination of pre-assembled reference matrices. This mirrors the seminal work by <strong>Tiso & Rixen</strong> on structural components with circular shape changes.
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== STEP 3 CONTENT ==================== -->
+        <div id="step3" class="tab-content">
+            <h2>Step 3: ECSW on Non-Mapped vs. Mapped Configurations</h2>
+            <p>
+                The Energy-Conserving Sampling and Weighting (ECSW) hyper-reduction algorithm accelerates nonlinear structural dynamics by replacing full-mesh spatial integration with a weighted sum over a sparse subset of elements $E^* \subset E$:
+            </p>
+
+            <div class="math-block">
+                $$\mathbf{k}_r(\mathbf{\mu}) \approx \sum_{e \in E^*} w_e \left( \mathbf{\Phi}_e^T \mathbf{k}_e(\mathbf{\mu}) \mathbf{\Phi}_e \right)$$
+            </div>
+
+            <div class="grid-2">
+                <div class="grid-card">
+                    <h4 style="color:#ef4444;"><i class="fa-solid fa-ban"></i> ECSW on Non-Mapped Domain</h4>
+                    <p style="font-size:0.9rem; margin:0; color:#cbd5e1;">
+                        If the physical mesh is redone for each parameter, the physical boundaries and element spans are non-static. The trained sparse integration rule $E^*$ and weights $w_e$ become invalid, requiring a highly expensive online optimization that defeats the reduced-order speedup.
+                    </p>
+                </div>
+                <div class="grid-card" style="border-color: #10b981;">
+                    <h4 style="color:#10b981;"><i class="fa-solid fa-circle-check"></i> ECSW on Mapped Domain</h4>
+                    <p style="font-size:0.9rem; margin:0; color:#cbd5e1;">
+                        By pulling the equations back to the static reference domain, the elements are geometrically fixed. The ECSW training can select a <strong>single, static reference element subset</strong> $E^*$ that remains structurally optimal across the entire parameter space.
+                    </p>
+                </div>
+            </div>
+
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Algorithm: Reference-Mapped ECSW Training</div>
+                1. <strong>Assemble Snapshots:</strong> Collect $S$ training displacement vectors on reference domain.<br>
+                2. <strong>Construct G-Matrix:</strong> Assemble the virtual work representation for each reference element $e$:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;$\mathbf{G}_{s,e} = \text{vec}\left( \mathbf{\Phi}_e^T \mathbf{f}_{int,e}^{\text{ref}}(u_s) \right)$<br>
+                3. <strong>Assemble Target:</strong> Compute full reference domain force: $\mathbf{b}_s = \text{vec}\left( \mathbf{\Phi}^T \mathbf{f}_{int,full}^{\text{ref}}(u_s) \right)$<br>
+                4. <strong>Solve NNLS:</strong> Solve the constrained optimization: $\min_{\mathbf{w} \geq 0} \|\mathbf{G}\mathbf{w} - \mathbf{b}\|_2$<br>
+                5. <strong>Sparsify:</strong> Select the indices $E^* = \{e \in E \mid w_e > 0\}$ and store reference integration weights.
+            </div>
+        </div>
+
+        <!-- ==================== STEP 4 CONTENT ==================== -->
+        <div id="step4" class="tab-content">
+            <h2>Step 4: Justifying the Mapping on Reference Configuration</h2>
+            <p>
+                To provide a mathematically watertight framework for the Digital Twin, the reference configuration mapping is justified as a <strong>strict mathematical requirement</strong> through three fundamental pillars:
+            </p>
+
+            <div class="success-box">
+                <h4 style="color:#10b981; margin-bottom:10px;"><i class="fa-solid fa-shield-halved"></i> The Three Pillars of Justification:</h4>
+                <ol style="margin-bottom:0">
+                    <li>
+                        <strong>Pillar 1: Hilbert Space Homogeneity</strong><br>
+                        Snapshot-based projection (POD) relies on the mathematical assumption that all displacement states reside in a unified, constant-dimensional Hilbert space:
+                        $$\mathbf{u}(t; \mathbf{\mu}) \in \mathcal{H}(\hat{\Omega}) \quad \forall \mathbf{\mu} \in \mathcal{P}$$
+                        The pullback mapping $\mathbf{\Phi}$ acts as the mathematical coordinate transform that projects varying physical manifolds $\mathcal{H}(\Omega(\mathbf{\mu}))$ onto the unified coordinate domain $\mathcal{H}(\hat{\Omega})$.
+                    </li>
+                    <li style="margin-top:15px">
+                        <strong>Pillar 2: Mathematical Offline/Online Splitting</strong><br>
+                        By mapping to a reference space, the spatial differential operators ($\nabla_{\hat{\mathbf{x}}}$) are decoupled from the parameter vector $\mathbf{\mu}$. The parameter is entirely isolated inside the algebraic Jacobian tensor $\mathbf{J}_{\mathbf{\Phi}}(\mathbf{\mu})$, ensuring that heavy spatial integrals can be pre-computed offline.
+                    </li>
+                    <li style="margin-top:15px">
+                        <strong>Pillar 3: Mathematical Coercivity & Stability</strong><br>
+                        Using a smooth, bijective diffeomorphism $\mathbf{\Phi}$ guarantees that the geometric transformation preserves the coercivity and boundedness of the bilinear form, ensuring that the reduced tangent stiffness matrix remains positive-definite and algebraically stable.
+                    </li>
+                </ol>
+            </div>
+
+            <h3>Dynamic Mapping Interface Representation</h3>
+            <p>
+                The mapping coordinates the transformation between reference elements and the physical morphed shape. Under a circular notch shape parameter change:
+            </p>
+            
+            <div class="interactive-matrix">
+                <div class="matrix-row">
+                    <span class="matrix-label">Reference Coordinates ($\hat{x}, \hat{y}$)</span>
+                    <span class="matrix-value">Static [0, 1] &times; [0, 1]</span>
+                </div>
+                <div class="matrix-row">
+                    <span class="matrix-label">Physical Position ($x, y$)</span>
+                    <span class="matrix-value">Morphed: $\mathbf{\Phi}(\hat{\mathbf{x}}; \mu)$</span>
+                </div>
+                <div class="matrix-row">
+                    <span class="matrix-label">Jacobian Determinant $\det(\mathbf{J}_{\mathbf{\Phi}})$</span>
+                    <span class="matrix-value">Parameter-dependent Scale</span>
+                </div>
+                <div class="matrix-row">
+                    <span class="matrix-label">NURBS Basis Functions</span>
+                    <span class="matrix-value">Static &amp; Parameter-Independent</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top:40px">Works Cited</h3>
+            <ul class="reference-list">
+                <li class="reference-item">
+                    <strong>Rozza, G., Huynh, D. B. P., & Patera, A. T. (2008)</strong>
+                    Reduced basis approximation and a posteriori error estimation for affinely parametrized elliptic coercive partial differential equations.
+                    <em>Archives of Computational Methods in Engineering</em>.
+                </li>
+                <li class="reference-item">
+                    <strong>Tiso, F., & Rixen, D. J. (2013)</strong>
+                    Reduced order modeling of structural dynamics with geometric parameter changes in reference configuration.
+                    <em>Proceedings of the International Conference on Structural Dynamics</em>.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- JavaScript to handle interactive tabs switching -->
+    <script>
+        function switchTab(evt, tabId) {
+            // Hide all tab contents
+            const contents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < contents.length; i++) {
+                contents[i].classList.remove("active");
+            }
+
+            // Remove active class from all buttons
+            const buttons = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove("active");
+            }
+
+            // Show current tab content and make button active
+            document.getElementById(tabId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError : false
+            });
+        });
+    </script>
+</body>
+</html>

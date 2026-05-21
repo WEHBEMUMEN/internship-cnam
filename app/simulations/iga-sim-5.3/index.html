@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 5.3 | Reference Configuration Mapping Lab</title>
+    <link rel="stylesheet" href="../../index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-dark: #7c3aed;
+            --accent: #f59e0b;
+            --cyan: #06b6d4;
+            --bg: #090d1a;
+            --card: rgba(17, 24, 39, 0.7);
+            --border: rgba(139, 92, 246, 0.2);
+            --glass: blur(16px);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: #f1f5f9;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Top Header Glass Banner */
+        #header-banner {
+            position: absolute;
+            top: 20px;
+            left: 380px;
+            right: 20px;
+            height: 80px;
+            padding: 16px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .header-title h1 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.01em;
+        }
+
+        .header-title p {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Glass Panels */
+        .glass-panel {
+            background: var(--card);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        /* Sidebar Control Panel */
+        #control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 340px;
+            bottom: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .back-link {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            margin-bottom: 16px;
+            transition: color 0.2s;
+            font-weight: 700;
+        }
+        .back-link:hover { color: var(--primary); }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
+            border-radius: 6px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* Controls styling */
+        .section-label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            margin: 20px 0 12px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+            padding-bottom: 6px;
+        }
+
+        .control-item {
+            margin-bottom: 14px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .label-row label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .value-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #c084fc;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Custom Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 32px;
+            height: 18px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 34px;
+            transition: .3s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #fff;
+            border-radius: 50%;
+            transition: .3s;
+        }
+
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(14px); }
+
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.75rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Buttons styling */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        #btn-play {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 10px 20px -5px rgba(124, 58, 237, 0.3);
+        }
+
+        #btn-play:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 22px -5px rgba(124, 58, 237, 0.4);
+        }
+
+        #btn-reset {
+            background: rgba(255, 255, 255, 0.06);
+            color: #f1f5f9;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #btn-reset:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        #btn-step {
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        #btn-step:hover {
+            background: rgba(139, 92, 246, 0.2);
+        }
+
+        /* Main Viewports Split Area */
+        #viewports-container {
+            position: absolute;
+            top: 120px;
+            left: 380px;
+            right: 20px;
+            bottom: 240px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .viewport-box {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .viewport-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Viewport Labels */
+        .viewport-header {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .viewport-lbl {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+
+        .naive-lbl {
+            background: rgba(6, 182, 212, 0.15);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .mapped-lbl {
+            background: rgba(139, 92, 246, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* SVD Status Badges */
+        .svd-badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(8px);
+        }
+
+        .svd-badge.incompatible {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .svd-badge.compatible {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        /* Colorbar Legend overlay */
+        .colorbar-box {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            padding: 10px 14px;
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 50;
+            pointer-events: none;
+            width: 180px;
+        }
+
+        .colorbar-title {
+            font-size: 0.55rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .colorbar-gradient {
+            height: 10px;
+            width: 100%;
+            border-radius: 4px;
+            background: linear-gradient(to right, #00b4d8 0%, #8b5cf6 50%, #f97316 100%);
+        }
+
+        .colorbar-labels {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: #f1f5f9;
+        }
+
+        /* Performance & Metrics Glass Board */
+        #metrics-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 380px;
+            right: 20px;
+            height: 200px;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            flex: 1;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .metric-lbl {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+        .metric-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #f1f5f9;
+            margin-top: 4px;
+        }
+
+        .stat-val.speedup-extreme {
+            color: #10b981;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+
+        .stat-val.speedup-good {
+            color: #8b5cf6;
+        }
+
+        .stat-val.speedup-low {
+            color: #94a3b8;
+        }
+
+        .chart-box {
+            flex: 1.4;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 10px;
+            position: relative;
+            height: 100%;
+        }
+
+        /* Floating theory link */
+        .theory-float {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #a78bfa;
+            text-decoration: none;
+            padding: 10px 18px;
+            transition: all 0.2s;
+            margin-top: auto;
+            border-radius: 10px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            background: rgba(139, 92, 246, 0.08);
+            justify-content: center;
+        }
+
+        .theory-float:hover {
+            background: rgba(139, 92, 246, 0.16);
+            transform: translateY(-1px);
+        }
+
+        /* Scrollbar aesthetics */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.5); }
+    </style>
+</head>
+<body>
+
+    <!-- CONTROL SIDEBAR -->
+    <aside id="control-panel" class="glass-panel">
+        <a href="../../index.html" class="back-link">
+            <i class="fa-solid fa-arrow-left"></i> Digital Twin Hub
+        </a>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span class="phase-badge">Phase 5.3</span>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8; font-weight: 700;" id="stat-dofs">--</div>
+        </div>
+
+        <h2 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.01em;">Reference Mapping</h2>
+        <p style="font-size: 0.75rem; color: #94a3b8; line-height: 1.4; margin-bottom: 18px;">
+            Side-by-side online assembly benchmark. Move sliders to evaluate coordinate pullback stiffness integrals against physical remeshing.
+        </p>
+
+        <!-- Dynamic Controls -->
+        <span class="section-label">Shape Parameterization</span>
+        
+        <div class="control-item">
+            <div class="label-row">
+                <label for="param-mu">Notch Center (μ)</label>
+                <span class="value-display" id="val-mu">5.0</span>
+            </div>
+            <input type="range" id="param-mu" min="2.5" max="7.5" step="0.1" value="5.0">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label for="param-r">Notch Depth (r)</label>
+                <span class="value-display" id="val-r">0.3</span>
+            </div>
+            <input type="range" id="param-r" min="0.0" max="0.75" step="0.05" value="0.3">
+        </div>
+
+        <span class="section-label">Material & Mechanics</span>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label for="param-E">Young's Modulus (E)</label>
+                <span class="value-display" id="val-E">200000</span>
+            </div>
+            <input type="range" id="param-E" min="50000" max="400000" step="10000" value="200000">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label for="param-nu">Poisson's Ratio (ν)</label>
+                <span class="value-display" id="val-nu">0.30</span>
+            </div>
+            <input type="range" id="param-nu" min="0.1" max="0.48" step="0.02" value="0.30">
+        </div>
+
+        <span class="section-label">Harmonic Excitation</span>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label for="param-amp">Shear Force Amp (F)</label>
+                <span class="value-display" id="val-amp">150</span>
+            </div>
+            <input type="range" id="param-amp" min="10" max="300" step="10" value="150">
+        </div>
+
+        <div class="control-item">
+            <div class="label-row">
+                <label for="param-freq">Force Frequency (ω)</label>
+                <span class="value-display" id="val-freq">1.2</span>
+            </div>
+            <input type="range" id="param-freq" min="0.2" max="3.0" step="0.1" value="1.2">
+        </div>
+
+        <!-- Render Controls -->
+        <span class="section-label">Rendering Overlays</span>
+
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Control net mesh</label>
+            <label class="switch">
+                <input type="checkbox" id="toggle-cp">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Support BC locks</label>
+            <label class="switch">
+                <input type="checkbox" id="toggle-bc" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Warp reference grid</label>
+            <label class="switch">
+                <input type="checkbox" id="toggle-warp" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="control-item" style="margin-top: 10px;">
+            <label style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 6px;">Contour Scalar</label>
+            <select id="select-viewmode">
+                <option value="stress">von Mises Equivalent Stress</option>
+                <option value="displacement">Displacement Magnitude</option>
+            </select>
+        </div>
+
+        <!-- Sim Buttons -->
+        <div class="btn-group">
+            <button id="btn-play" class="btn-action">
+                <i class="fa-solid fa-play"></i> Run Simulation
+            </button>
+        </div>
+        <div class="btn-group">
+            <button id="btn-step" class="btn-action">
+                <i class="fa-solid fa-forward-step"></i> Step
+            </button>
+            <button id="btn-reset" class="btn-action">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+        </div>
+
+        <a href="../../theory/theory-5.3.html" class="theory-float">
+            <i class="fa-solid fa-book-open"></i> Mapping Theory
+        </a>
+    </aside>
+
+    <!-- HEADER GLAS BANNER -->
+    <header id="header-banner" class="glass-panel">
+        <div class="header-title">
+            <h1>Reference Configuration Mapping Lab</h1>
+            <p>Evaluating standard geometric transformations vs coordinate pullback manifolds for SVD compatibility</p>
+        </div>
+        <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #10b981; font-weight: 700;">
+                Solver Status: <span style="color: #fff;">Newmark-β Active</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- SIDE-BY-SIDE VIEWPORTS -->
+    <main id="viewports-container">
+        <!-- NAIVE VIEWPORT -->
+        <div class="viewport-box">
+            <div class="viewport-header">
+                <span class="viewport-lbl naive-lbl">Naive Physical Domain Ω(μ)</span>
+                <span class="svd-badge incompatible" id="svd-naive-status">--</span>
+            </div>
+            
+            <div id="naive-viewport" class="viewport-canvas"></div>
+
+            <!-- Legend -->
+            <div class="colorbar-box">
+                <span class="colorbar-title" id="naive-legend-title">von Mises Stress</span>
+                <div class="colorbar-gradient"></div>
+                <div class="colorbar-labels">
+                    <span id="naive-legend-min">0.0</span>
+                    <span id="naive-legend-max">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAPPED VIEWPORT -->
+        <div class="viewport-box">
+            <div class="viewport-header">
+                <span class="viewport-lbl mapped-lbl">Mapped Pullback Domain \hat{Ω}</span>
+                <span class="svd-badge compatible" id="svd-mapped-status">--</span>
+            </div>
+
+            <div id="mapped-viewport" class="viewport-canvas"></div>
+
+            <!-- Legend -->
+            <div class="colorbar-box">
+                <span class="colorbar-title" id="mapped-legend-title">von Mises Stress</span>
+                <div class="colorbar-gradient"></div>
+                <div class="colorbar-labels">
+                    <span id="mapped-legend-min">0.0</span>
+                    <span id="mapped-legend-max">--</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PERFORMANCE & METRICS glass BOARD -->
+    <footer id="metrics-panel" class="glass-panel">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <span class="metric-lbl">Naive Online Assembly</span>
+                <span class="metric-val" id="stat-naive-time">--</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-lbl">Mapped Online Assembly</span>
+                <span class="metric-val" id="stat-mapped-time" style="color: #c084fc;">--</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-lbl">Quadrature Acceleration</span>
+                <span class="metric-val stat-val" id="stat-speedup">--</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-lbl">Graphics Render FPS</span>
+                <span class="metric-val" id="stat-fps" style="color: #10b981;">--</span>
+            </div>
+        </div>
+
+        <div class="chart-box">
+            <canvas id="chart-comparison"></canvas>
+        </div>
+    </footer>
+
+    <!-- EXTERNAL LIBRARIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Phase 2 Core Shared (Linked) -->
+    <script src="../phase-2-core/src/nurbs-2d.js"></script>
+    <script src="../phase-2-core/src/iga-solver-2d.js"></script>
+
+    <!-- Atomic Source Files (Phase 5.3) -->
+    <script src="src/core/geometry-factory.js"></script>
+    <script src="src/core/solver.js"></script>
+    <script src="src/ui/visuals.js"></script>
+    <script src="src/ui/ui-manager.js"></script>
+
+</body>
+</html>
