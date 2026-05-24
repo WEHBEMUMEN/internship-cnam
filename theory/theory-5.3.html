@@ -383,6 +383,46 @@
                 flex-direction: column;
             }
         }
+
+        /* Verification Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th, td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(6, 182, 212, 0.1);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        td {
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+        }
     </style>
 </head>
 
@@ -409,6 +449,9 @@
             </button>
             <button class="tab-btn" onclick="switchTab(event, 'step4')">
                 <i class="fa-solid fa-graduation-cap"></i> Step 4: Mathematical Proof
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step5')">
+                <i class="fa-solid fa-circle-check"></i> Step 5: Code Verification Audit
             </button>
         </nav>
 
@@ -808,6 +851,368 @@
                     <em>Proceedings of the International Conference on Structural Dynamics</em>.
                 </li>
             </ul>
+        </div>
+
+        <!-- ==================== STEP 5 CONTENT ==================== -->
+        <div id="step5" class="tab-content">
+            <h2>Step 5: Code Verification Audit & Equivalence Proof</h2>
+            <p>
+                To guarantee that the simulator code matches the reference configuration mapping theory, we document a formula-by-formula verification. Below, the mathematical forms are mapped directly to their implementations in the source codebase.
+            </p>
+
+            <div class="success-box">
+                <p style="margin:0">
+                    <strong style="color:#10b981;"><i class="fa-solid fa-square-check"></i> Overall Audit Verdict: Faithful Implementation Verified</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height:1.6;">
+                    A rigorous mathematical audit comparing the theoretical formulation of the shape-parametric Reduced Order Model against the Javascript simulator code shows <strong>perfect alignment (100% match)</strong>. No mathematical discrepancies or code implementation bugs were identified. Every theoretical tensor, pullback Jacobian, strain-displacement operator, constitutive law, and time integration step is faithfully represented in the source files.
+                </p>
+            </div>
+
+            <h3>1. The Coordinate Mapping $\boldsymbol{\Phi}$ and Gaussian Notch Shape</h3>
+            <p>
+                The mapping morphs the static reference coordinates $(\hat{x}, \hat{y})$ to the physical coordinates $(x, y)$. The notch is a symmetric Gaussian squeezing: the bottom surface moves up by displacement $disp$, and the top surface moves down by $disp$, while the mid-plane stays fixed. The physical $y$ coordinate is linearly interpolated between the top/bottom notch displacements as a function of the reference coordinate $\hat{y}$:
+            </p>
+            <div class="math-block">
+                $$\mathbf{x} = \boldsymbol{\Phi}(\hat{\mathbf{x}}; \mu, \sigma, r) = \begin{bmatrix} \hat{x} \\ \hat{y} \cdot \left(1 - \frac{2d(\hat{x}; \mu, \sigma, r)}{H}\right) \end{bmatrix}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{x} = (x, y)$ is the physical coordinates vector.<br>
+                • $\hat{\mathbf{x}} = (\hat{x}, \hat{y})$ is the reference coordinates vector.<br>
+                • $d(\hat{x}; \mu, \sigma, r)$ is the local vertical displacement field induced by the Gaussian notch shape at reference coordinate $\hat{x}$, defined as:<br>
+                $$d(\hat{x}; \mu, \sigma, r) = r \exp\left(-\frac{1}{2} \left(\frac{|\hat{x} - \mu|}{\sigma}\right)^2\right)$$<br>
+                • $\mu$ is the horizontal center coordinate of the notch.<br>
+                • $\sigma$ is the influence radius/width of the notch, computed in code as $\sigma = \max(r, 0.4)$.<br>
+                • $r$ is the maximum notch depth parameter.<br>
+                • $H$ is the total height of the beam in the reference configuration.
+            </p>
+            
+            <p>
+                In the geometry factory, this mapping directly translates NURBS control points. At a general reference coordinate $\hat{y} \in [-H/2, H/2]$, the physical vertical position is scaled. In the solver and visuals files, this matches the vertical scaling factor:
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementations</div>
+                // geometry-factory.js (Lines 35-61) - Control point displacement<br>
+                let dist = Math.abs(x - mu);<br>
+                let sigma = Math.max(r, 0.4);<br>
+                let disp = r * Math.exp(-0.5 * Math.pow(dist / sigma, 2));<br>
+                if (j === 0) y += disp; // Bottom notch goes up<br>
+                if (j === 2) y -= disp; // Top notch goes down<br><br>
+                
+                // solver.js (Lines 222-227) - Scale factor detJphi<br>
+                const dist = Math.abs(hx - mu);<br>
+                const disp = r * Math.exp(-0.5 * Math.pow(dist / sigma, 2));<br>
+                const detJphi = 1.0 - (2.0 * disp / H);<br><br>
+                
+                // visuals.js (Lines 124-134) - Rendering coordinate scale<br>
+                const scaleFactor = 1.0 - (2.0 * disp / H);<br>
+                y = hy * scaleFactor;
+            </div>
+
+            <h3>2. The Jacobian Determinant $\det(\mathbf{J}_{\boldsymbol{\Phi}})$</h3>
+            <p>
+                The Jacobian matrix of the coordinate mapping $\boldsymbol{\Phi}$ is the gradient of physical coordinates with respect to reference coordinates:
+            </p>
+            <div class="math-block">
+                $$\mathbf{J}_{\boldsymbol{\Phi}} = \frac{\partial \boldsymbol{\Phi}}{\partial \hat{\mathbf{x}}} = \begin{bmatrix} 1 & 0 \\ -\frac{2\hat{y}}{H} d'(\hat{x}) & 1 - \frac{2d(\hat{x})}{H} \end{bmatrix}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{J}_{\boldsymbol{\Phi}}$ is the $2 \times 2$ Jacobian tensor of the coordinate transformation mapping.<br>
+                • $d'(\hat{x})$ is the spatial derivative of the notch shape displacement function $d$ with respect to the reference coordinate $\hat{x}$.<br>
+                • $H$ is the reference beam height, and $\hat{y}$ is the vertical reference coordinate.
+            </p>
+            <p>
+                The determinant $\det(\mathbf{J}_{\boldsymbol{\Phi}})$ represents the local area scaling factor of the mapping, which simplifies to:
+            </p>
+            <div class="math-block">
+                $$\det(\mathbf{J}_{\boldsymbol{\Phi}}) = 1 - \frac{2d(\hat{x})}{H}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\det(\mathbf{J}_{\boldsymbol{\Phi}})$ is the determinant of the Jacobian matrix.<br>
+                • $d(\hat{x})$ is the notch shape displacement field.<br>
+                • $H$ is the reference beam height.
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
+                // solver.js (Line 227)<br>
+                const detJphi = 1.0 - (2.0 * disp / H);
+            </div>
+
+            <h3>3. Inverse-Transpose Jacobian and Gradient Pullback</h3>
+            <p>
+                Spatial derivatives are pulled back from the physical coordinates to the reference coordinates using the inverse-transpose of the mapping's Jacobian tensor $\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}}$:
+            </p>
+            <div class="math-block">
+                $$\nabla_{\mathbf{x}} R_i = \mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_i$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\nabla_{\mathbf{x}} R_i$ is the spatial gradient vector of the $i$-th shape function in physical coordinates.<br>
+                • $\nabla_{\hat{\mathbf{x}}} \hat{R}_i$ is the spatial gradient vector of the $i$-th shape function in reference coordinates.<br>
+                • $\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}}$ is the transpose of the inverse Jacobian matrix of the coordinate mapping.
+            </p>
+            <p>
+                The explicit expression for $\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}}$ is:
+            </p>
+            <div class="math-block">
+                $$\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}} = \begin{bmatrix} 1 & \frac{2\hat{y} d'(\hat{x})}{H \left(1 - \frac{2d(\hat{x})}{H}\right)} \\ 0 & \frac{1}{1 - \frac{2d(\hat{x})}{H}} \end{bmatrix}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $d'(\hat{x})$ is the derivative of the Gaussian displacement function, mathematically expressed as:<br>
+                $$d'(\hat{x}) = -\frac{(\hat{x} - \mu)}{\sigma^2} d(\hat{x})$$
+            </p>
+            <p>
+                Applying this multiplication yields the physical shape function gradients:
+            </p>
+            <div class="math-block">
+                $$\frac{\partial R_i}{\partial x} = \frac{\partial \hat{R}_i}{\partial \hat{x}} + \frac{2\hat{y} d'(\hat{x})}{H \det(\mathbf{J}_{\boldsymbol{\Phi}})} \frac{\partial \hat{R}_i}{\partial \hat{y}}, \quad \frac{\partial R_i}{\partial y} = \frac{1}{\det(\mathbf{J}_{\boldsymbol{\Phi}})} \frac{\partial \hat{R}_i}{\partial \hat{y}}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\frac{\partial R_i}{\partial x}$ and $\frac{\partial R_i}{\partial y}$ are the physical shape function derivatives.<br>
+                • $\frac{\partial \hat{R}_i}{\partial \hat{x}}$ and $\frac{\partial \hat{R}_i}{\partial \hat{y}}$ are the reference shape function derivatives.<br>
+                • $\det(\mathbf{J}_{\boldsymbol{\Phi}})$ is the Jacobian determinant.<br>
+                • $d'(\hat{x})$ is the notch derivative.
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
+                // solver.js (Lines 225-241)<br>
+                const dispDeriv = -((hx - mu) / (sigma * sigma)) * disp; // d'(x̂)<br>
+                const shearTerm = (2.0 / H) * hy * dispDeriv / safeDetJphi; // 2 * ŷ * d' / (H * detJ)<br>
+                const yTerm = 1.0 / safeDetJphi; // 1 / detJ<br>
+                const dRdx_phys = node.dRdx_ref + shearTerm * node.dRdy_ref;<br>
+                const dRdy_phys = yTerm * node.dRdy_ref;
+            </div>
+
+            <h3>4. The Stiffness Integrand and B-matrix (Voigt Notation)</h3>
+            <p>
+                The global stiffness matrix is integrated over the reference domain. The B-matrix represents strain-displacement relations using the computed physical gradients:
+            </p>
+            <div class="math-block">
+                $$K_{ij}(\mu) = \int_{\hat{\Omega}} \mathbf{B}_i^{\mathrm{T}} \mathbf{D} \mathbf{B}_j \det(\mathbf{J}_{\boldsymbol{\Phi}}) \det(\mathbf{J}_{\text{ref}}) \, w_g \, t \, \mathrm{d}\hat{\Omega}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $K_{ij}(\mu)$ is the global stiffness matrix entry.<br>
+                • $\mathbf{B}_i$ is the strain-displacement B-matrix in Voigt notation for the $i$-th basis function.<br>
+                • $\mathbf{D}$ is the material constitutive elasticity matrix.<br>
+                • $\det(\mathbf{J}_{\boldsymbol{\Phi}})$ is the pullback mapping Jacobian determinant.<br>
+                • $\det(\mathbf{J}_{\text{ref}})$ is the reference-to-parent domain Jacobian determinant.<br>
+                • $w_g$ is the Gauss quadrature point integration weight.<br>
+                • $t$ is the physical beam thickness.
+            </p>
+            <p>
+                The strain-displacement matrix $\mathbf{B}_i$ is defined as:
+            </p>
+            <div class="math-block">
+                $$\mathbf{B}_i = \begin{bmatrix} \frac{\partial R_i}{\partial x} & 0 \\ 0 & \frac{\partial R_i}{\partial y} \\ \frac{\partial R_i}{\partial y} & \frac{\partial R_i}{\partial x} \end{bmatrix}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\frac{\partial R_i}{\partial x}$ and $\frac{\partial R_i}{\partial y}$ are the spatial derivatives of the shape functions in physical coordinates.
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
+                // solver.js (Lines 244-274)<br>
+                B_phys[bidx][0][0] = dRdx_phys; // ε_xx<br>
+                B_phys[bidx][1][1] = dRdy_phys; // ε_yy<br>
+                B_phys[bidx][2][0] = dRdy_phys; // γ_xy (row 2, col 0)<br>
+                B_phys[bidx][2][1] = dRdx_phys; // γ_xy (row 2, col 1)<br><br>
+                
+                // Integration factor assembly<br>
+                const factor = safeDetJphi * detJ_ref * weightFactor * this.thickness;
+            </div>
+
+            <h3>5. Plane Stress Constitutive Matrix $\mathbf{D}$</h3>
+            <p>
+                For isotropic linear elasticity under plane stress, the stress-strain relation is governed by:
+            </p>
+            <div class="math-block">
+                $$\mathbf{D} = \frac{E}{1-\nu^2}\begin{bmatrix} 1 & \nu & 0 \\ \nu & 1 & 0 \\ 0 & 0 & \frac{1-\nu}{2} \end{bmatrix}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{D}$ is the plane stress constitutive elasticity tensor in matrix form.<br>
+                • $E$ is Young's Modulus of the material.<br>
+                • $\nu$ is the Poisson's Ratio of the material.
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
+                // solver.js (Lines 165-172)<br>
+                const factor = this.E / (1 - this.nu * this.nu);<br>
+                return [<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;[factor, factor * this.nu, 0],<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;[factor * this.nu, factor, 0],<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;[0, 0, factor * (1 - this.nu) / 2]<br>
+                ];
+            </div>
+
+            <h3>6. Implicit Newmark-$\beta$ Time Integration</h3>
+            <p>
+                Dynamic equations are solved using the implicit Newmark-$\beta$ scheme. The average acceleration rule ($\beta = 0.25, \gamma = 0.5$) provides unconditional stability:
+            </p>
+            <div class="math-block">
+                $$\mathbf{u}_{n+1}^{\text{pred}} = \mathbf{u}_n + \Delta t \mathbf{v}_n + \frac{\Delta t^2}{2} (1 - 2\beta) \mathbf{a}_n, \quad \mathbf{v}_{n+1}^{\text{pred}} = \mathbf{v}_n + \Delta t (1 - \gamma) \mathbf{a}_n$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{u}_n, \mathbf{v}_n, \mathbf{a}_n$ are displacement, velocity, and acceleration vectors at step $n$.<br>
+                • $\mathbf{u}_{n+1}^{\text{pred}}, \mathbf{v}_{n+1}^{\text{pred}}$ are the predictor vectors.<br>
+                • $\Delta t$ is the time step size.<br>
+                • $\beta, \gamma$ are the integration parameters.
+            </p>
+            <div class="math-block">
+                $$\mathbf{a}_{n+1} = \frac{\mathbf{u}_{n+1} - \mathbf{u}_{n+1}^{\text{pred}}}{\beta \Delta t^2}, \quad \mathbf{v}_{n+1} = \mathbf{v}_{n+1}^{\text{pred}} + \gamma \Delta t \mathbf{a}_{n+1}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{a}_{n+1}, \mathbf{v}_{n+1}$ are the corrected acceleration and velocity vectors at step $n+1$.
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
+                // solver.js (Lines 373-427)<br>
+                const beta = 0.25;<br>
+                const gamma = 0.5;<br><br>
+                
+                // Predictor step<br>
+                uPred[i] = u[i] + this.dt * v[i] + (this.dt * this.dt) * (0.5 - beta) * a[i];<br>
+                vPred[i] = v[i] + this.dt * (1.0 - gamma) * a[i];<br><br>
+                
+                // Corrector step (after solving for uNext)<br>
+                aNext[i] = (uNext[i] - u[i] - this.dt * v[i]) / (beta * this.dt * this.dt) - ((1.0 - 2.0 * beta) / (2.0 * beta)) * a[i];<br>
+                vNext[i] = vPred[i] + gamma * this.dt * aNext[i];
+            </div>
+
+            <h3>7. Rayleigh Damping</h3>
+            <p>
+                Rayleigh damping defines a viscous damping matrix as a linear combination of mass and stiffness matrices:
+            </p>
+            <div class="math-block">
+                $$\mathbf{C} = \alpha_M \mathbf{M} + \beta_K \mathbf{K}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{C}$ is the global damping matrix.<br>
+                • $\mathbf{M}$ is the diagonal lumped mass matrix.<br>
+                • $\mathbf{K}$ is the stiffness matrix.<br>
+                • $\alpha_M, \beta_K$ are mass and stiffness damping factors.
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
+                // solver.js (Line 389) - Lumped diagonal implementation<br>
+                C_uPred[i] = this.alphaM * M[i] * vPred[i] + this.betaK * k_up;
+            </div>
+
+            <h3>8. Reference Configuration Construction</h3>
+            <p>
+                The reference domain $\hat{\Omega}$ represents the flat beam configuration, corresponding to setting the notch depth parameter $r = 0.0$:
+            </p>
+            <div class="math-block">
+                $$\boldsymbol{\Phi}(\hat{\mathbf{x}}; \mu, \sigma, 0.0) = \hat{\mathbf{x}}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\boldsymbol{\Phi}$ is the coordinate mapping coordinate field output, matching the reference coordinates $\hat{\mathbf{x}}$ exactly when notch depth is zero.
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
+                // solver.js (Line 52)<br>
+                const flatPatch = window.GeometryFactory.generateNotchedBeam(this.L, this.H, this.mu, 0.0);
+            </div>
+
+            <h3>9. Mathematical Audit Verification Summary</h3>
+            <p>
+                The table below provides a full map of the audited equations and source files:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Theoretical Formulation</th>
+                        <th>Source Code Reference</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Coordinate Mapping $\boldsymbol{\Phi}$</strong></td>
+                        <td>$y = \hat{y}\,(1 - 2d/H)$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/geometry-factory.js#L35" style="color: var(--primary);">geometry-factory.js:L35-61</a>, <a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L222" style="color: var(--primary);">solver.js:L222-227</a>, <a href="../app/simulations/iga-sim-5.3/src/ui/visuals.js#L124" style="color: var(--primary);">visuals.js:L124-134</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gaussian Notch Shape</strong></td>
+                        <td>$d = r\,e^{-\frac{1}{2}(|\hat{x}-\mu|/\sigma)^2}$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/geometry-factory.js#L35" style="color: var(--primary);">geometry-factory.js:L35-61</a>, <a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L222" style="color: var(--primary);">solver.js:L222-227</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Jacobian Determinant</strong></td>
+                        <td>$\det(\mathbf{J}_{\boldsymbol{\Phi}}) = 1 - 2d/H$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L227" style="color: var(--primary);">solver.js:L227</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Notch Shape Derivative</strong></td>
+                        <td>$d' = -\frac{(\hat{x}-\mu)}{\sigma^2}\,d$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L225" style="color: var(--primary);">solver.js:L225</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inverse-Transpose Jacobian</strong></td>
+                        <td>$\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}} = \begin{bmatrix} 1 & \frac{2\hat{y}d'}{\det(\mathbf{J}_{\boldsymbol{\Phi}})H} \\ 0 & \frac{1}{\det(\mathbf{J}_{\boldsymbol{\Phi}})} \end{bmatrix}$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L225" style="color: var(--primary);">solver.js:L225-236</a> (via <code>shearTerm</code>, <code>yTerm</code>)</td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Physical Gradients</strong></td>
+                        <td>$\frac{\partial R}{\partial x} = \frac{\partial \hat{R}}{\partial \hat{x}} + \text{shearTerm}\frac{\partial \hat{R}}{\partial \hat{y}}$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L239" style="color: var(--primary);">solver.js:L239-241</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>B-matrix (Voigt Layout)</strong></td>
+                        <td>$\mathbf{B}_i = \begin{bmatrix} \partial_x R_i & 0 \\ 0 & \partial_y R_i \\ \partial_y R_i & \partial_x R_i \end{bmatrix}$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L244" style="color: var(--primary);">solver.js:L244-255</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>D-matrix (Hooke plane stress)</strong></td>
+                        <td>$\mathbf{D} = \frac{E}{1-\nu^2}\begin{bmatrix} 1 & \nu & 0 \\ \nu & 1 & 0 \\ 0 & 0 & \frac{1-\nu}{2} \end{bmatrix}$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L165" style="color: var(--primary);">solver.js:L165-172</a> (via <code>getPlaneStressD()</code>)</td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Integration Factor</strong></td>
+                        <td>$\det(\mathbf{J}_{\boldsymbol{\Phi}})\det(\mathbf{J}_{\text{ref}}) w_g t$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L274" style="color: var(--primary);">solver.js:L274</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Newmark-$\beta$ Time Integration</strong></td>
+                        <td>$\beta=0.25,\;\gamma=0.5$ average acceleration</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L373" style="color: var(--primary);">solver.js:L373-427</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rayleigh Damping</strong></td>
+                        <td>$\mathbf{C} = \alpha_M \mathbf{M} + \beta_K \mathbf{K}$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L389" style="color: var(--primary);">solver.js:L389</a> (diagonal lumped format)</td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Reference Configuration</strong></td>
+                        <td>Flat beam, setting notch parameter $r=0.0$</td>
+                        <td><a href="../app/simulations/iga-sim-5.3/src/core/solver.js#L52" style="color: var(--primary);">solver.js:L52</a></td>
+                        <td><span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Match</span></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
