@@ -17,8 +17,8 @@ class MappingSolver {
         this.H = 2.0;
 
         // Shape parameter limits
-        this.mu = 5.0;        // Notch center
-        this.r = 0.3;         // Notch depth
+        this._mu = 5.0;        // Notch center
+        this._r = 0.3;         // Notch depth
         this.sigma = 0.6;     // Notch width factor
 
         // State trackers
@@ -57,6 +57,72 @@ class MappingSolver {
         
         // Verifier step tracker
         this.stepCount = 0;
+    }
+
+    get mu() {
+        return this._mu;
+    }
+    set mu(val) {
+        if (this._mu === val) return;
+        this._mu = val;
+        this.handleGeometryParameterChange();
+    }
+
+    get r() {
+        return this._r;
+    }
+    set r(val) {
+        if (this._r === val) return;
+        this._r = val;
+        this.handleGeometryParameterChange();
+    }
+
+    handleGeometryParameterChange() {
+        if (!this.referencePatch) return; // Not initialized yet
+
+        const hasExistingBasis = (this.Phi && this.Phi[0] && this.Phi[1]);
+        const nDofs = this.referencePatch.controlPoints.length * this.referencePatch.controlPoints[0].length * 2;
+        
+        // Temporarily store physical states to project them
+        let uTemp = null, vTemp = null, aTemp = null;
+        if (hasExistingBasis && this.uMapped) {
+            uTemp = new Float64Array(this.uMapped);
+            vTemp = new Float64Array(this.vMapped);
+            aTemp = new Float64Array(this.aMapped);
+        }
+
+        // Re-train ECSW and recompute basis Phi and ecswWeights for the new shape parameter state
+        this.trainECSW();
+
+        // Project the physical states back into the new coordinate space
+        if (hasExistingBasis && uTemp && this.qMapped) {
+            let q1 = 0, q2 = 0;
+            let dq1 = 0, dq2 = 0;
+            let d2q1 = 0, d2q2 = 0;
+
+            for (let i = 0; i < nDofs; i++) {
+                q1 += uTemp[i] * this.Phi[0][i];
+                q2 += uTemp[i] * this.Phi[1][i];
+                dq1 += vTemp[i] * this.Phi[0][i];
+                dq2 += vTemp[i] * this.Phi[1][i];
+                d2q1 += aTemp[i] * this.Phi[0][i];
+                d2q2 += aTemp[i] * this.Phi[1][i];
+            }
+
+            this.qMapped[0] = q1;
+            this.qMapped[1] = q2;
+            this.dqMapped[0] = dq1;
+            this.dqMapped[1] = dq2;
+            this.d2qMapped[0] = d2q1;
+            this.d2qMapped[1] = d2q2;
+
+            // Reconstruct full displacement fields immediately using the new basis and projected coordinates to prevent jump discontinuities
+            for (let i = 0; i < nDofs; i++) {
+                this.uMapped[i] = this.Phi[0][i] * this.qMapped[0] + this.Phi[1][i] * this.qMapped[1];
+                this.vMapped[i] = this.Phi[0][i] * this.dqMapped[0] + this.Phi[1][i] * this.dqMapped[1];
+                this.aMapped[i] = this.Phi[0][i] * this.d2qMapped[0] + this.Phi[1][i] * this.d2qMapped[1];
+            }
+        }
     }
 
     /**
