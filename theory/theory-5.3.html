@@ -453,6 +453,9 @@
             <button class="tab-btn" onclick="switchTab(event, 'step5')">
                 <i class="fa-solid fa-circle-check"></i> Step 5: Code Verification Audit
             </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step6')">
+                <i class="fa-solid fa-gauge-high"></i> Step 6: QOI - Von Mises Stress
+            </button>
         </nav>
 
         <!-- ==================== STEP 1 CONTENT ==================== -->
@@ -520,438 +523,200 @@
                     <strong style="color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Critical Blind Spots of the Naive Approach:</strong>
                 </p>
                 <ul style="margin: 15px 0 0; padding-left: 20px;">
-                    <li style="margin-bottom: 12px;"><strong>Vector Space Incompatibility (Mathematical SVD Failure):</strong> Projection-based Reduced Order Models, such as Proper Orthogonal Decomposition (POD), operate under the assumption that all displacement snapshots reside in a unified, parameter-independent vector space $\mathbb{R}^N$. If the physical mesh is regenerated at each parameter state $\mathbf{\mu}_k$, the dimension of the state vector becomes parameter-dependent, $N = N(\mathbf{\mu}_k)$, and control point indexing changes. Consequently, the snapshot matrix:
-                    $$\mathbf{S} = [\mathbf{u}(\mathbf{\mu}_1), \mathbf{u}(\mathbf{\mu}_2), \dots, \mathbf{u}(\mathbf{\mu}_S)]$$
-                    possesses columns of varying dimensions ($N(\mathbf{\mu}_i) \neq N(\mathbf{\mu}_j)$). This makes the Singular Value Decomposition (SVD) of $\mathbf{S}$ algebraically impossible. Here, $\mathbf{S} \in \mathbb{R}^{N \times S}$ is the <strong>snapshot matrix</strong> containing displacement columns, $\mathbf{u}(\mathbf{\mu}_k)$ is the displacement solution vector for the $k$-th parameter sample, and $S$ is the total number of snapshots. Furthermore, any spatial interpolation onto a common grid changes the coordinates of the nodes themselves, destroying the physical meaning of the basis vectors and the correlation between snapshots.</li>
+                    <li style="margin-bottom: 12px;"><strong>Vector Space Incompatibility & Non-Constant Basis Functions:</strong> 
+                        Projection-based Reduced Order Models, such as Proper Orthogonal Decomposition (POD), operate under the assumption that all displacement snapshots reside in a unified, parameter-independent vector space $\mathbb{R}^N$. If the physical mesh is regenerated or morphed at each parameter state $\mathbf{\mu}_k$:
+                        <ul style="margin: 10px 0 10px 20px; list-style-type: circle;">
+                            <li style="padding: 2px 0;"><strong>If $N$ varies ($N(\mathbf{\mu}_i) \neq N(\mathbf{\mu}_j)$):</strong> The dimension of the state vector becomes parameter-dependent and control point indexing changes. The snapshot matrix $\mathbf{S} = [\mathbf{u}(\mathbf{\mu}_1), \mathbf{u}(\mathbf{\mu}_2), \dots]$ possesses columns of varying dimensions, making Singular Value Decomposition (SVD) algebraically impossible.</li>
+                            <li style="padding: 2px 0;"><strong>If $N$ is fixed ($N(\mathbf{\mu}_i) = N(\mathbf{\mu}_j) = N$):</strong> Although SVD becomes mathematically possible, the naive approach still fails fundamentally due to <strong>non-constant basis functions</strong>. Because the physical mesh coordinates morph, the underlying NURBS shape functions $R_a(\mathbf{x}; \mathbf{\mu})$ change their spatial support and spans in physical space. A POD projection basis $\mathbf{\Phi}$ assumes a static physical space representation. When shape functions continuously shift, projecting snapshots onto a static basis $\mathbf{\Phi}$ loses its spatial meaning, rendering the linear space approximation physically inconsistent.</li>
+                        </ul>
+                    </li>
                     
                     <li style="margin-bottom: 12px;"><strong>Destructive Computational Assembly (Online Complexity $\mathcal{O}(N_{el})$):</strong> To evaluate the global stiffness matrix $\mathbf{K}(\mathbf{\mu})$ online, the domain must be re-discretized. This requires computing parameter-dependent NURBS coordinates and evaluating the shape functions $R_i(\mathbf{x}; \mathbf{\mu})$ and their gradients $\nabla R_i(\mathbf{x}; \mathbf{\mu})$ at the Gauss integration points for all elements:
                     $$K_{ij}(\mathbf{\mu}) = \sum_{e=1}^{N_{el}} \int_{\Omega_e(\mathbf{\mu})} \nabla R_i(\mathbf{x}; \mathbf{\mu}) : \mathbf{D} : \nabla R_j(\mathbf{x}; \mathbf{\mu}) \, \mathrm{d}\Omega$$
-                    where $N_{el}$ is the number of elements in the mesh, $\Omega_e(\mathbf{\mu})$ is the physical domain of the $e$-th element, $n_g$ is the number of Gauss points, and $n_{en}$ is the number of local node functions. The online complexity of this process scales as $\mathcal{O}(N_{el} \cdot n_g \cdot n_{en}^2)$. This assembly takes seconds or minutes, completely violating the sub-millisecond response time required for real-time Digital Twins.</li>
-                    
-                    <li><strong>Loss of Parameter Differentiability (Discontinuous Sensitivities):</strong> Many engineering applications rely on gradient-based optimization and parameter sensitivity calculations, which require the existence of derivatives like $\frac{\partial \mathbf{K}}{\partial \mathbf{\mu}}$ and $\frac{\partial \mathbf{u}}{\partial \mathbf{\mu}}$. Because mesh regeneration is a discrete topological operation, changes in $\mathbf{\mu}$ introduce abrupt jumps in node locations and mesh connectivity. The mapping $\mathbf{\mu} \mapsto \mathbf{K}(\mathbf{\mu})$ is therefore discontinuous:
-                    $$\lim_{\delta \mathbf{\mu} \to \mathbf{0}} \left( \mathbf{K}(\mathbf{\mu} + \delta \mathbf{\mu}) - \mathbf{K}(\mathbf{\mu}) \right) \neq \mathbf{0}$$
-                    where $\delta\mathbf{\mu}$ is an infinitesimal parameter change vector. This lack of differentiability introduces severe numerical noise and causes sensitivity calculations to fail or diverge.</li>
-                </ul>
+                    <strong style="color:#ef4444;"><i class="fa-solid fa-ban"></i> Drawbacks of Naive FOM:</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    For every change in the defect shape parameter $\mathbf{\mu}$, the mesh coordinates must be fully reconstructed, the stiffness matrix completely integrated and re-assembled, and an $N \times N$ system of equations solved at each timestep. This process is too slow to achieve interactive framerates.
+                </p>
+            </div>
+
+            <h3>The Reference Pullback Paradigm</h3>
+            <p>
+                To avoid regenerating mesh structures, Phase 5.3 maps all physical configurations $\Omega(\mathbf{\mu})$ to a single, static reference domain $\hat{\Omega}$ using a smooth bijective coordinate mapping $\mathbf{x} = \mathbf{\Phi}(\hat{\mathbf{x}}; \mathbf{\mu})$:
+            </p>
+            <div class="math-block">
+                $$\mathbf{J}_{\mathbf{\Phi}} = \frac{\partial \mathbf{\Phi}}{\partial \hat{\mathbf{x}}}, \quad \det(\mathbf{J}_{\mathbf{\Phi}}) = 1 - \frac{2d(\hat{x})}{H}$$
+            </div>
+            <p>
+                By pulling back shape derivatives and integration bounds using the inverse transpose Jacobian $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}$ and determinant $\det(\mathbf{J}_{\mathbf{\Phi}})$, all spatial integrals are evaluated on the static reference grid:
+                $$K_{kl}(\mathbf{\mu}) = \sum_{e=1}^{N_{\text{elem}}} \sum_{g=1}^{n_g} \left( \mathbf{B}_k^{\mathrm{T}}(\hat{\mathbf{x}}_g; \mathbf{\mu}) \mathbf{D} \mathbf{B}_l(\hat{\mathbf{x}}_g; \mathbf{\mu}) \right) \det(\mathbf{J}_{\mathbf{\Phi}}) \det(\mathbf{J}_{\text{ref}}) \, w_g \, t$$
+            </p>
+
+            <h3>Standard Galerkin ROM Projection & Cramer's Analytical Solve</h3>
+            <p>
+                Using a Proper Orthogonal Decomposition (POD) basis $\mathbf{\Phi} \in \mathbb{R}^{N \times n}$ ($n \ll N$), the displacement field is projected into a low-dimensional subspace:
+                $$\mathbf{u}(t) \approx \mathbf{\Phi} \mathbf{q}(t)$$
+                This yields a highly compact, projected system of equations:
+                $$\mathbf{M}_r \ddot{\mathbf{q}}(t) + \mathbf{C}_r \dot{\mathbf{q}}(t) + \mathbf{K}_r(\mathbf{\mu}) \mathbf{q}(t) = \mathbf{f}_r(t)$$
+            </p>
+            <div class="success-box">
+                <p style="margin:0">
+                    <strong style="color:#10b981;"><i class="fa-solid fa-bolt"></i> Speedup Impact: Cramer's Analytical Solve (~30x Solve Speedup)</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    Because $n = 2$ in our reduced coordinates space, the effective stiffness equations at each integration timestep are solved analytically in $\mathcal{O}(1)$ operations using Cramer's rule:
+                    $$\mathrm{d}q_1 = \frac{R_1 K_{22} - R_2 K_{12}}{\det(\mathbf{K}_{\text{eff}, r})}, \quad \mathrm{d}q_2 = \frac{K_{11} R_2 - K_{21} R_1}{\det(\mathbf{K}_{\text{eff}, r})}$$
+                    By completely bypassing the $N \times N$ global system solver in favor of Cramer's rule, Standard Galerkin projection delivers a **~30x speedup** on the transient equations solve compared to direct Full Order Model (FOM) solvers.
+                </p>
+            </div>
+            
+            <div class="highlight-box">
+                <p style="margin:0">
+                    <strong style="color:var(--primary);"><i class="fa-solid fa-lightbulb"></i> The Non-Affine Assembly Bottleneck:</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    Even though the transient coordinate solver is 30x faster, standard Galerkin ROM still requires evaluating the warped gradients and Jacobian pullbacks over the entire mesh online. Because our notch profile is non-affine, we cannot separate parameters and space using offline matrices: a standard affine decomposition ($\mathbf{K}(\mathbf{\mu}) = \sum \theta_q \mathbf{K}_q$) is algebraically impossible. To eliminate this assembly bottleneck, **ECSW hyper-reduction is mathematically mandatory**.
+                </p>
             </div>
         </div>
 
         <!-- ==================== STEP 2 CONTENT ==================== -->
         <div id="step2" class="tab-content">
-            <h2>Step 2: Pullback Mapping on a Static Reference Domain</h2>
+            <h2>Step 2: ECSW Hyper-reduction (Dimensional + Integration Reduction)</h2>
             <p>
-                To secure algebraic compatibility, we pull back the governing physical equations from the
-                parameter-dependent domain $\Omega(\mathbf{\mu})$ to a permanently static, undeformed reference
-                configuration $\hat{\Omega}$ using a smooth bijective geometric mapping $\mathbf{\Phi}$:
+                The Energy-Conserving Sampling and Weighting (ECSW) hyper-reduction method reduces the online assembly cost by integrating only over a sparse subset of elements $\widetilde{E} \subset E$. The sparse weights $\mathbf{w}$ are trained to solve the Non-Negative Least Squares (NNLS) system:
             </p>
-
             <div class="math-block">
-                $$\mathbf{x} = \mathbf{\Phi}(\hat{\mathbf{x}}; \mathbf{\mu}), \quad \mathbf{x} \in \Omega(\mathbf{\mu}),
-                \quad \hat{\mathbf{x}} \in \hat{\Omega}$$
+                $$\min_{\mathbf{w} \geq \mathbf{0}} \left\| \mathbf{b} - \sum_{e \in E} w_e \mathbf{G}_e \right\|_2$$
             </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\mathbf{\Phi}$ is the smooth, bijective coordinate morphing mapping (diffeomorphism).<br>
-                • $\hat{\mathbf{x}} = (\hat{x}, \hat{y}, \hat{z})$ is the coordinate vector in the static reference domain $\hat{\Omega}$.<br>
-                • $\mathbf{x} = (x, y, z)$ is the mapped coordinate vector in the parameter-dependent physical domain $\Omega(\mathbf{\mu})$.
-            </p>
-
             <p>
-                The spatial gradients in physical coordinates are pulled back to the reference coordinates via the
-                inverse transpose of the mapping's Jacobian tensor $\mathbf{J}_{\mathbf{\Phi}} = \frac{\partial
-                \mathbf{\Phi}}{\partial \hat{\mathbf{x}}}$:
+                Swapping projection and summation, we assemble the reduced stiffness directly in microseconds:
+                $$\mathbf{K}_{r, \text{ECSW}}(\mathbf{\mu}) \approx \sum_{e \in \widetilde{E}} w_e \mathbf{K}_{r, e}(\mathbf{\mu}) \quad \text{where} \quad \mathbf{K}_{r, e}(\mathbf{\mu}) = \mathbf{\Phi}_e^{\mathrm{T}} \mathbf{K}_{e}(\mathbf{\mu}) \mathbf{\Phi}_e$$
             </p>
-
-            <div class="math-block">
-                $$\nabla_{\mathbf{x}} R_i(\hat{\mathbf{x}}) = \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}(\hat{\mathbf{x}};
-                \mathbf{\mu}) \nabla_{\hat{\mathbf{x}}} \hat{R}_i(\hat{\mathbf{x}})$$
-            </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\nabla_{\mathbf{x}}$ is the gradient operator with respect to physical coordinates $\mathbf{x}$.<br>
-                • $\nabla_{\hat{\mathbf{x}}}$ is the gradient operator with respect to reference coordinates $\hat{\mathbf{x}}$.<br>
-                • $\hat{R}_i(\hat{\mathbf{x}})$ is the $i$-th NURBS shape function evaluated in reference space.<br>
-                • $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}$ is the transpose of the inverse Jacobian matrix of the coordinate mapping $\mathbf{\Phi}$, where the Jacobian matrix is defined as $\mathbf{J}_{\mathbf{\Phi}} = \frac{\partial \mathbf{\Phi}}{\partial \hat{\mathbf{x}}} \in \mathbb{R}^{d \times d}$ (with $d$ being the spatial dimension).
-            </p>
-
-            <p>
-                Transforming the integral boundaries yields the mapped stiffness matrix, computed entirely on the static
-                reference domain $\hat{\Omega}$:
-            </p>
-
-            <div class="math-block">
-                $$K_{ij}(\mathbf{\mu}) = \int_{\hat{\Omega}} \left( \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}
-                \nabla_{\hat{\mathbf{x}}} \hat{R}_i \right) : \mathbf{D} : \left(
-                \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_j \right)
-                \det(\mathbf{J}_{\mathbf{\Phi}}) \, \mathrm{d}\hat{\Omega}$$
-            </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\det(\mathbf{J}_{\mathbf{\Phi}})$ is the determinant of the Jacobian matrix, representing the local volume/area change factor under the coordinate transformation.<br>
-                • $\mathrm{d}\hat{\Omega}$ is the differential integration element on the static reference configuration domain $\hat{\Omega}$.
-            </p>
-
-            <div class="success-box" style="background: rgba(6, 182, 212, 0.05); border-left-color: var(--primary); border-top: 1px solid rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.1); border-right: 1px solid rgba(6, 182, 212, 0.1); margin: 30px 0;">
-                <p style="margin:0">
-                    <strong style="color:var(--primary);"><i class="fa-solid fa-gears"></i> Workflow: How Reference Pullback Works</strong>
-                </p>
-                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
-                    The reference domain pullback avoids regenerating the mesh structure by mapping the equations to a static domain:
-                </p>
-                <ol style="margin: 15px 0 0; padding-left: 20px; font-size:0.95rem; color:#cbd5e1;">
-                    <li style="margin-bottom: 8px;"><strong>Define Reference Domain $\hat{\Omega}$:</strong> Build a single, permanently static grid discretization over $\hat{\Omega}$.</li>
-                    <li style="margin-bottom: 8px;"><strong>Formulate Coordinate Pullback $\mathbf{\Phi}$:</strong> Write a smooth mapping $\mathbf{x} = \mathbf{\Phi}(\hat{\mathbf{x}}; \mathbf{\mu})$ that maps reference coordinates to physical coordinate spaces.</li>
-                    <li style="margin-bottom: 8px;"><strong>Transform Operators:</strong> Evaluate local Jacobian tensors $\mathbf{J}_{\mathbf{\Phi}}$ and determinants $\det(\mathbf{J}_{\mathbf{\Phi}})$ to pull back gradients and integration bounds entirely on the static configuration.</li>
-                    <li style="margin-bottom: 8px;"><strong>Solve Reduced System:</strong> Project the global equations onto the Proper Orthogonal Decomposition (POD) basis $\mathbf{V}$ and solve the low-dimensional system for reduced coefficients $\mathbf{a}$.</li>
-                </ol>
-            </div>
-
-            <div class="grid-2">
-                <div class="grid-card" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.02);">
-                    <h4 style="color:#ef4444;"><i class="fa-solid fa-minus-circle"></i> Estimated Drawbacks (Why Pullback Alone Fails)</h4>
-                    <p style="font-size:0.9rem; margin:0; color:#cbd5e1; line-height: 1.6;">
-                        <strong>1. The "Lifting" Bottleneck ($\mathcal{O}(N_{el})$ Online Scaling):</strong> Although mapping to $\hat{\Omega}$ fixes the grid size $N$, the parameter-dependent inverse Jacobian transpose $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}(\hat{\mathbf{x}}_g; \mathbf{\mu})$ and Jacobian determinant $\det(\mathbf{J}_{\mathbf{\Phi}}(\hat{\mathbf{x}}_g; \mathbf{\mu}))$ appear inside the integral. Consequently, we must re-evaluate these tensors at <em>every single Gauss point</em> $\hat{\mathbf{x}}_g$ of the full mesh online. Even if the system is projected onto a small POD basis $\mathbf{V} \in \mathbb{R}^{N \times r}$ ($r \ll N$), the assembly of the reduced-order stiffness matrix:
-                        $$\mathbf{K}_r(\mathbf{\mu}) = \mathbf{V}^{\mathrm{T}} \mathbf{K}(\mathbf{\mu}) \mathbf{V}$$
-                        where $\mathbf{K}_r(\mathbf{\mu}) \in \mathbb{R}^{r \times r}$ is the reduced-order stiffness matrix, $\mathbf{V} \in \mathbb{R}^{N \times r}$ is the Proper Orthogonal Decomposition (POD) basis projection matrix containing $r$ spatial modes (with $r \ll N$), and $\mathbf{K}(\mathbf{\mu}) \in \mathbb{R}^{N \times N}$ is the high-dimensional stiffness matrix. The assembly still requires constructing the full $N \times N$ matrix $\mathbf{K}(\mathbf{\mu})$ first. The integration complexity remains $\mathcal{O}(N_{el} \cdot n_g \cdot n_{en}^2)$, which scales with the Full Order Model, destroying real-time speeds.<br><br>
-                        <strong>2. Post-processing Coordinate Mapping:</strong> The displacement solutions $\mathbf{u}(\hat{\mathbf{x}})$ are computed in the reference coordinate space and must be pushed forward via $\mathbf{x} = \mathbf{\Phi}(\hat{\mathbf{x}}; \mathbf{\mu})$ to the physical space for stresses and visualization, adding a spatial transformation overhead.
-                    </p>
-                </div>
-                <div class="grid-card" style="border-color: var(--primary);">
-                    <h4 style="color:var(--primary);"><i class="fa-solid fa-plus-circle"></i> Key Advantages</h4>
-                    <p style="font-size:0.9rem; margin:0; color:#cbd5e1;">
-                        <strong>1. Unified Mesh Structure:</strong> The reference domain is discretized exactly once. No
-                        node displacement or mesh regeneration occurs online.<br><br>
-                        <strong>2. Constant Basis Weights:</strong> The reference NURBS shape functions
-                        $\hat{R}_i(\hat{\mathbf{x}})$ and control point weights are static, preserving perfect
-                        mathematical exactness.
-                    </p>
-                </div>
-            </div>
-
-            <div class="highlight-box">
-                <p style="margin:0">
-                    <i class="fa-solid fa-lightbulb"></i> <strong>Offline Precomputability (Connection to Tiso &
-                        Rixen):</strong><br>
-                    Because the reference shape functions and their gradients are parameter-independent, they can be
-                    pre-evaluated at the Gauss integration points and stored. For affine mappings, we decompose:
-                    $$\mathbf{K}(\mathbf{\mu}) = \sum_{q=1}^Q \theta_q(\mathbf{\mu}) \mathbf{K}_q^{\text{ref}}$$
-                    where $Q$ is the total number of affine expansion terms, $\theta_q(\mathbf{\mu})$ are parameter-dependent scalar coefficients, and $\mathbf{K}_q^{\text{ref}} \in \mathbb{R}^{N \times N}$ are pre-assembled parameter-independent stiffness matrices, allowing $\mathbf{K}(\mathbf{\mu})$ to be assembled online in microseconds as a simple linear
-                    combination of pre-assembled reference matrices. This mirrors the seminal work by <strong>Tiso &
-                        Rixen</strong> on structural components with circular shape changes.
-                </p>
-            </div>
-        </div>
-
-        <!-- ==================== STEP 3 CONTENT ==================== -->
-        <div id="step3" class="tab-content">
-            <h2>Step 3: ECSW on Non-Mapped vs. Mapped Configurations</h2>
-            <p>
-                The Energy-Conserving Sampling and Weighting (ECSW) hyper-reduction algorithm accelerates nonlinear
-                structural dynamics by replacing full-mesh spatial integration with a weighted sum over a sparse subset
-                of elements $E^* \subset E$:
-            </p>
-
-            <div class="math-block">
-                $$\mathbf{k}_r(\mathbf{\mu}) \approx \sum_{e \in E^*} w_e \left( \mathbf{\Phi}_e^T
-                \mathbf{k}_e(\mathbf{\mu}) \mathbf{\Phi}_e \right)$$
-            </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\mathbf{k}_r(\mathbf{\mu}) \in \mathbb{R}^{r \times r}$ is the hyper-reduced stiffness matrix.<br>
-                • $E^*$ is the <strong>sparse element subset</strong> (active elements) selected during offline training.<br>
-                • $w_e > 0$ is the optimized positive <strong>integration weight</strong> for element $e$.<br>
-                • $\mathbf{\Phi}_e \in \mathbb{R}^{n_{dof, e} \times r}$ is the reduced POD basis matrix restricted to the degrees of freedom associated with element $e$.<br>
-                • $\mathbf{k}_e(\mathbf{\mu}) \in \mathbb{R}^{n_{dof, e} \times n_{dof, e}}$ is the mapped element stiffness matrix of element $e$.
-            </p>
-
-            <div class="success-box" style="background: rgba(6, 182, 212, 0.05); border-left-color: var(--primary); border-top: 1px solid rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.1); border-right: 1px solid rgba(6, 182, 212, 0.1); margin: 30px 0;">
-                <p style="margin:0">
-                    <strong style="color:var(--primary);"><i class="fa-solid fa-gears"></i> Workflow: How ECSW Hyper-reduction Works</strong>
-                </p>
-                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
-                    The Energy-Conserving Sampling and Weighting (ECSW) workflow isolates a tiny subset of elements that represent the structural energy:
-                </p>
-                <ol style="margin: 15px 0 0; padding-left: 20px; font-size:0.95rem; color:#cbd5e1;">
-                    <li style="margin-bottom: 8px;"><strong>Offline Training Assembly:</strong> Compute and stack projected element internal forces for all training snapshot states to construct the virtual work system matrix $\mathbf{G}$.</li>
-                    <li style="margin-bottom: 8px;"><strong>NNLS Optimization:</strong> Solve the Non-Negative Least Squares (NNLS) problem to identify a sparse subset of elements $E^*$ and positive integration weights $w_e > 0$ that match the full model's virtual forces.</li>
-                    <li style="margin-bottom: 8px;"><strong>Online Sparse Assembly:</strong> During the parametric sweeps, compute local element stiffnesses and forces *only* for elements in $E^*$. Multiply by the optimized weights $w_e$ to build the reduced system in microseconds, bypassing full-mesh evaluation.</li>
-                </ol>
-            </div>
 
             <div class="grid-2">
                 <div class="grid-card" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.02);">
                     <h4 style="color:#ef4444;"><i class="fa-solid fa-ban"></i> ECSW on Non-Mapped Domain (Why it Fails)</h4>
                     <p style="font-size:0.9rem; margin:0; color:#cbd5e1; line-height: 1.6;">
-                        <strong>1. Sparse Integration Rule Invalidation:</strong> ECSW training identifies a sparse subset of elements $E^*$ and positive weights $w_e$ by minimizing the projection error of the internal forces:
-                        $$\min_{\mathbf{w} \geq \mathbf{0}} \sum_{s=1}^S \left\| \sum_{e \in E} w_e \mathbf{V}_e^{\mathrm{T}} \mathbf{f}_{int, e}(\mathbf{u}_s) - \mathbf{V}^{\mathrm{T}} \mathbf{f}_{int, full}(\mathbf{u}_s) \right\|_2^2$$
-                        where $\mathbf{w} \geq \mathbf{0}$ represents the non-negativity constraint on element integration weights (ensuring physical and numerical stability), $S$ is the number of training displacement snapshots, $E$ is the set of all elements in the full order mesh, $\mathbf{V}$ is the global Proper Orthogonal Decomposition (POD) basis matrix, $\mathbf{V}_e$ is the POD basis restricted to the DOFs of element $e$, $\mathbf{f}_{int, e}(\mathbf{u}_s)$ is the internal force vector of element $e$ evaluated at snapshot state $\mathbf{u}_s$, $\mathbf{f}_{int, full}(\mathbf{u}_s)$ is the global internal force vector of the full order model at snapshot state $\mathbf{u}_s$, and $\|\cdot\|_2$ is the Euclidean $L_2$ norm. If the physical mesh changes with $\mathbf{\mu}$, the element layout shifts. An element index $e$ that was selected offline points to incorrect physical coordinates for a new parameter $\mathbf{\mu}$, rendering the sparse rule geometrically and structurally invalid.<br><br>
-                        <strong>2. Prohibitive Online Optimization:</strong> To resolve this, one must solve the Non-Negative Least Squares (NNLS) problem online for every parameter change. Since the NNLS training matrix $\mathbf{G}(\mathbf{\mu})$ has dimension $S \cdot r \times N_{el}$ (where $S$ is the number of training states, $r$ is the reduced dimension, and $N_{el}$ is the number of elements), solving this online takes seconds or minutes, defeating the hyper-reduction speedup.
+                        If elements are selected on a morphing physical mesh, the active elements shift in physical space. A static subset of weights $w_e$ trained offline becomes geometrically invalid under new parameters $\mathbf{\mu}$, causing high projection errors and solver instability.
                     </p>
                 </div>
                 <div class="grid-card" style="border-color: #10b981;">
                     <h4 style="color:#10b981;"><i class="fa-solid fa-circle-check"></i> ECSW on Mapped Domain</h4>
                     <p style="font-size:0.9rem; margin:0; color:#cbd5e1;">
-                        By pulling the equations back to the static reference domain, the elements are geometrically
-                        fixed. The ECSW training can select a <strong>single, static reference element subset</strong>
-                        $E^*$ that remains structurally optimal across the entire parameter space.
+                        By pulling the equations back to the static reference domain $\hat{\Omega}$, the grid is permanently fixed. The ECSW training selects a <strong>single, static reference element subset</strong> $\widetilde{E}$ that remains optimal across all geometric parameter changes.
                     </p>
                 </div>
             </div>
 
-            <div class="highlight-box" style="border-left-color: var(--accent); background: rgba(245, 158, 11, 0.04); border-top: 1px solid rgba(245, 158, 11, 0.1); border-bottom: 1px solid rgba(245, 158, 11, 0.1); border-right: 1px solid rgba(245, 158, 11, 0.1); margin: 30px 0;">
+            <div class="highlight-box" style="border-left-color: var(--accent); background: rgba(245, 158, 11, 0.04); margin: 30px 0;">
                 <p style="margin:0">
                     <strong style="color:var(--accent);"><i class="fa-solid fa-book-open"></i> Side Note: Mathematical Retrospective on Phase 5.1 & 5.2 (Direct Physical-Domain Hyper-reduction)</strong>
                 </p>
                 <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
-                    In <strong>Phase 5.1</strong> (Geometric POD-Galerkin & basic ECSW) and <strong>Phase 5.2</strong> (Geometric Defect ROM), model reduction and hyper-reduction were formulated directly on the parameter-dependent physical domain $\Omega(\mathbf{\mu})$:
+                    In Phase 5.1 (Direct Coordinate Morphing) and 5.2 (Direct Physical ECSW), model reduction was formulated directly on the morphing physical domain $\Omega(\mathbf{\mu})$. Because control points and integration limits shifted dynamically, the sparse integration rules trained offline completely missed stress concentration fields as they moved, causing high numerical errors and structural singularities. Phase 5.3 resolves this completely by pulling the entire formulation back to the static reference domain $\hat{\Omega}$.
                 </p>
-                <ul style="margin: 15px 0 0; padding-left: 20px; font-size:0.95rem; color:#cbd5e1;">
-                    <li style="margin-bottom: 10px;"><strong>Phase 5.1a (Direct Coordinate Morphing):</strong> The physical coordinates were defined by NURBS mapping $\mathbf{x}(\mathbf{\xi}; \mathbf{\theta}) = \sum R_{i,j}(\mathbf{\xi})\mathbf{P}_{i,j}(\mathbf{\theta})$ using morphed control points $\mathbf{P}_{i,j}(\mathbf{\theta})$. This direct mapping meant that the snapshot vectors $\mathbf{u}_i$ were defined on varying coordinate spaces $\mathbb{R}^{N(\mathbf{\theta}_i)}$.</li>
-                    <li style="margin-bottom: 10px;"><strong>Phase 5.1b & 5.2 (Direct Physical ECSW):</strong> The ECSW weights $w_e$ were optimized directly on these morphed coordinate zones. The element stiffness contributions $\mathbf{K}_e(\mathbf{\mu})$ were assembled by integrating over physical elements $\Omega_e(\mathbf{\mu})$.</li>
-                </ul>
-                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
-                    <strong>The Failure Mechanism under Parameter Sweeps:</strong> Because the physical coordinates and shape functions changed with $\mathbf{\mu}$, the element virtual force contributions $\mathbf{A}_{e}(\mathbf{\mu}) = \mathbf{\Phi}^{\mathrm{T}}\mathbf{K}_e(\mathbf{\mu})\mathbf{\Phi}$ were parameter-dependent. As a result, the global system matrix $\mathbf{G}(\mathbf{\mu})$ was highly dynamic. Sticking to a static set of weights $\mathbf{w}$ trained offline introduces a severe geometric projection error when the shape sweeps to a new state $\mathbf{\mu}_{\text{new}}$:
-                    $$\mathbf{r}(\mathbf{\mu}_{\text{new}}) = \mathbf{b}(\mathbf{\mu}_{\text{new}}) - \sum_{e \in E^*} w_e \mathbf{A}_e(\mathbf{\mu}_{\text{new}}) \neq \mathbf{0}$$
-                    where $\mathbf{r}(\mathbf{\mu}_{\text{new}})$ is the residual virtual force error vector at a new shape parameter state $\mathbf{\mu}_{\text{new}}$, $\mathbf{b}(\mathbf{\mu}_{\text{new}}) = \mathbf{\Phi}^{\mathrm{T}}\mathbf{f}_{int, full}(\mathbf{\mu}_{\text{new}})$ is the projected target internal force vector of the full order model, and $\mathbf{A}_e(\mathbf{\mu}_{\text{new}}) = \mathbf{\Phi}_e^{\mathrm{T}}\mathbf{f}_{int, e}(\mathbf{\mu}_{\text{new}})$ is the projected virtual force vector contribution of element $e$. Because the spatial support $\Omega_e(\mathbf{\mu})$ shifted, the sparse integration rule $E^*$ completely missed stress concentration fields (like the shifting defect notch in 5.2) as they moved, causing solver instability and high numerical errors.
-                </p>
-                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
-                    To resolve this, in <strong>Phase 5.3</strong>, we use the following mathematical formulations to substitute the physical-domain approaches of the previous phases:
-                </p>
-                <ul style="margin: 15px 0 0; padding-left: 20px; font-size:0.95rem; color:#cbd5e1;">
-                    <li style="margin-bottom: 10px;"><strong>Static Reference Configuration $\hat{\Omega}$:</strong> We integrate over a permanently fixed reference coordinate space $\hat{\Omega}$ <em>instead of</em> the parameter-dependent, continuously morphing physical domain $\Omega(\mathbf{\mu})$ used in Phases 5.1 and 5.2.</li>
-                    <li style="margin-bottom: 10px;"><strong>Bijective Diffeomorphism $\mathbf{\Phi}$:</strong> We pull back equations via coordinate mapping $\mathbf{x} = \mathbf{\Phi}(\hat{\mathbf{x}}; \mathbf{\mu})$ <em>instead of</em> direct, unstructured physical control point coordinates morphing.</li>
-                    <li style="margin-bottom: 10px;"><strong>Jacobian Pullback Tensor $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}$:</strong> We map the gradients via $\nabla_{\mathbf{x}} R_i = \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_i$ <em>instead of</em> using parameter-dependent, physical gradients $\nabla_{\mathbf{x}} R_i(\mathbf{x}; \mathbf{\mu})$. This cleanly isolates the parametric dependency algebraically.</li>
-                    <li style="margin-bottom: 10px;"><strong>Reference-Mapped ECSW Weights:</strong> We train the NNLS system using static reference state virtual forces $\mathbf{f}_{int, e}^{\text{ref}}(\mathbf{u}_s)$ <em>instead of</em> parameter-dependent physical forces $\mathbf{f}_{int, e}(\mathbf{u}_s)$. This yields a single, static reference element subset $E^*$ that remains optimal across all geometric parameter changes.</li>
-                </ul>
             </div>
 
             <div class="algo-block">
                 <div class="algo-title"><i class="fa-solid fa-code"></i> Algorithm: Reference-Mapped ECSW Training</div>
-                1. <strong>Assemble Snapshots:</strong> Collect $S$ training displacement vectors on reference
-                domain.<br>
-                2. <strong>Construct G-Matrix:</strong> Assemble the virtual work representation for each reference
-                element $e$:<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;$\mathbf{G}_{s,e} = \text{vec}\left( \mathbf{\Phi}_e^T
-                \mathbf{f}_{int,e}^{\text{ref}}(u_s) \right)$<br>
-                3. <strong>Assemble Target:</strong> Compute full reference domain force: $\mathbf{b}_s =
-                \text{vec}\left( \mathbf{\Phi}^T \mathbf{f}_{int,full}^{\text{ref}}(u_s) \right)$<br>
-                4. <strong>Solve NNLS:</strong> Solve the constrained optimization: $\min_{\mathbf{w} \geq 0}
-                \|\mathbf{G}\mathbf{w} - \mathbf{b}\|_2$<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;<em>(where $\mathbf{G} \in \mathbb{R}^{S \cdot r \times N_{el}}$ is the global virtual force matrix, $\mathbf{w}$ is the integration weights vector, $\mathbf{b}$ is the stacked target vector, and $\text{vec}(\cdot)$ is the vectorization operator converting a matrix into a column vector)</em>.<br>
-                5. <strong>Sparsify:</strong> Select the indices $E^* = \{e \in E \mid w_e > 0\}$ and store reference
-                integration weights.
+                1. <strong>Assemble Snapshots:</strong> Collect $S$ training displacement vectors on reference domain.<br>
+                2. <strong>Construct G-Matrix:</strong> Assemble the virtual work representation for each reference element $e$:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;$\mathbf{G}_{s,e} = \text{vec}\left( \mathbf{\Phi}_e^{\mathrm{T}} \mathbf{f}_{int,e}^{\text{ref}}(u_s) \right)$<br>
+                3. <strong>Assemble Target:</strong> Compute full reference domain force: $\mathbf{b}_s = \text{vec}\left( \mathbf{\Phi}^{\mathrm{T}} \mathbf{f}_{int,full}^{\text{ref}}(u_s) \right)$<br>
+                4. <strong>Solve NNLS:</strong> Solve the constrained optimization: $\min_{\mathbf{w} \geq 0} \|\mathbf{G}\mathbf{w} - \mathbf{b}\|_2$<br>
+                5. <strong>Sparsify:</strong> Select the indices $\widetilde{E} = \{e \in E \mid w_e > 0\}$ and store reference integration weights.
             </div>
+
+            <h3>Quantities of Interest (QOI) & Von Mises Stress Pullback Warp</h3>
+            <p>
+                Extracting physical stresses is highly non-trivial because stress depends directly on spatial gradients. Under mapping pullbacks, these gradients are geometrically warped by the parameter-dependent inverse transpose Jacobian $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}$ and the determinant $\det(\mathbf{J}_{\mathbf{\Phi}})$.
+            </p>
+            <div class="math-block">
+                $$\epsilon_{xx}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sum_{a=1}^{N} \left( \frac{\partial \hat{R}_a}{\partial \hat{x}} + \frac{2\hat{y} d'(\hat{x}; \mathbf{\mu})}{H \det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{x, a}$$
+                
+                $$\epsilon_{yy}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sum_{a=1}^{N} \left( \frac{1}{\det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{y, a}$$
+                
+                $$2\epsilon_{xy}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sum_{a=1}^{N} \left[ \left( \frac{1}{\det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{x, a} + \left( \frac{\partial \hat{R}_a}{\partial \hat{x}} + \frac{2\hat{y} d'(\hat{x}; \mathbf{\mu})}{H \det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{y, a} \right]$$
+            </div>
+            <p>
+                Hooke's Plane Stress constitutive relation evaluates the stresses, which are then used to reconstruct the equivalent Von Mises Stress $\sigma_{vM}$:
+                $$\sigma_{vM}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sqrt{\sigma_{xx}^2 - \sigma_{xx}\sigma_{yy} + \sigma_{yy}^2 + 3\sigma_{xy}^2}$$
+            </p>
         </div>
 
-        <!-- ==================== STEP 4 CONTENT ==================== -->
-        <div id="step4" class="tab-content">
-            <h2>Step 4: Justifying the Mapping on Reference Configuration</h2>
+        <!-- ==================== STEP 3 CONTENT ==================== -->
+        <div id="step3" class="tab-content">
+            <h2>Step 3: Verification & Stability</h2>
             <p>
-                To provide a mathematically watertight framework for the Digital Twin, the reference configuration
-                mapping is justified as a <strong>strict mathematical requirement</strong> through three fundamental
-                pillars:
+                To provide a mathematically watertight framework for the Digital Twin, we verify the implementation through rigorous complexity comparisons, code audits, and stability analysis.
             </p>
 
+            <h3>Rigorous Computational FLOP Complexity Scaling</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Phase / Step</th>
+                        <th>Standard Galerkin ROM</th>
+                        <th>ECSW Hyper-reduced ROM</th>
+                        <th>Theoretical Speedup Factor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1. Local Integration</strong></td>
+                        <td>$N_{\text{elem}} \cdot n_g \cdot (n_{en}^2 \cdot d^2)$ FLOPs</td>
+                        <td>$\mathbf{N_{\text{active}}} \cdot n_g \cdot (n_{en}^2 \cdot d^2)$ FLOPs</td>
+                        <td>$\frac{N_{\text{elem}}}{N_{\text{active}}} \approx \mathbf{2.4x}$ assembly speedup</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2. Global Assembly</strong></td>
+                        <td>$\mathcal{O}(N_{\text{elem}} \cdot n_g \cdot n_{en}^2)$ scatter operations</td>
+                        <td>$\mathbf{0}$ scattering operations (Direct project)</td>
+                        <td>Infinite (Bypassed entirely)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3. Basis Projection</strong></td>
+                        <td>$\mathcal{O}(n \cdot N^2) + \mathcal{O}(n^2 \cdot N)$ FLOPs</td>
+                        <td>$\mathbf{N_{\text{active}} \cdot \mathcal{O}(n \cdot n_{en})}$ local FLOPs</td>
+                        <td>$\mathcal{O}(N^2)$ vs $\mathcal{O}(N_{\text{active}})$ (**Massive**)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>4. Transient Solver</strong></td>
+                        <td>$\mathcal{O}(n^3)$ Cramer's solve ($\approx \mathbf{30x}$ speedup)</td>
+                        <td>$\mathcal{O}(n^3)$ Cramer's solve ($\approx \mathbf{30x}$ speedup)</td>
+                        <td>Identical solve speeds</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Global Assembly Cost</strong></td>
+                        <td>Scales with **Full Mesh size** $\mathcal{O}(N)$</td>
+                        <td>Scales with **Sparse Set** $\mathcal{O}(N_{\text{active}})$</td>
+                        <td>Independent of mesh refinement size!</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Three Pillars of Mathematical Justification</h3>
             <div class="success-box">
-                <h4 style="color:#10b981; margin-bottom:10px;"><i class="fa-solid fa-shield-halved"></i> The Three
-                    Pillars of Justification:</h4>
+                <h4 style="color:#10b981; margin-bottom:10px;"><i class="fa-solid fa-shield-halved"></i> Structural Guarantees:</h4>
                 <ol style="margin-bottom:0">
                     <li>
-                        <strong>Pillar 1: Hilbert Space Homogeneity</strong><br>
-                        Snapshot-based projection (POD) relies on the mathematical assumption that all displacement
-                        states reside in a unified, constant-dimensional Hilbert space:
-                        $$\mathbf{u}(t; \mathbf{\mu}) \in \mathcal{H}(\hat{\Omega}) \quad \forall \mathbf{\mu} \in
-                        \mathcal{P}$$
-                        where $\mathbf{u}(t; \mathbf{\mu})$ is the displacement vector field, $\mathcal{H}(\hat{\Omega}) = H^1_0(\hat{\Omega})$ is the Sobolev Hilbert space (where functions and their gradients are square-integrable and vanish at the Dirichlet boundaries) defined on the static reference domain, and $\mathcal{P}$ is the parameter space domain. The pullback mapping $\mathbf{\Phi}$ acts as the mathematical coordinate transform that projects
-                        varying physical manifolds $\mathcal{H}(\Omega(\mathbf{\mu}))$ onto the unified coordinate
-                        domain $\mathcal{H}(\hat{\Omega})$.
+                        <strong>Pillar 1: Hilbert Space Homogeneity:</strong> Pullback coordinate mappings project varying physical manifolds $\mathcal{H}(\Omega(\mathbf{\mu}))$ onto a unified Sobolev Hilbert space $\mathcal{H}(\hat{\Omega}) = H^1_0(\hat{\Omega})$ defined on the static reference domain.
                     </li>
                     <li style="margin-top:15px">
-                        <strong>Pillar 2: Mathematical Offline/Online Splitting</strong><br>
-                        By mapping to a reference space, the spatial differential operators
-                        ($\nabla_{\hat{\mathbf{x}}}$) are decoupled from the parameter vector $\mathbf{\mu}$. The
-                        parameter is entirely isolated inside the algebraic Jacobian tensor
-                        $\mathbf{J}_{\mathbf{\Phi}}(\mathbf{\mu})$, ensuring that heavy spatial integrals can be
-                        pre-computed offline.
+                        <strong>Pillar 2: Mathematical Offline/Online Splitting:</strong> The parameter $\mathbf{\mu}$ is isolated from the spatial differential operators ($\nabla_{\hat{\mathbf{x}}}$) and placed entirely inside the pullback Jacobian tensor $\mathbf{J}_{\mathbf{\Phi}}(\mathbf{\mu})$, allowing spatial elements to remain fixed.
                     </li>
                     <li style="margin-top:15px">
-                        <strong>Pillar 3: Mathematical Coercivity & Stability</strong><br>
-                        Using a smooth, bijective diffeomorphism $\mathbf{\Phi}$ guarantees that the geometric
-                        transformation preserves the coercivity and boundedness of the bilinear form, ensuring that the
-                        reduced tangent stiffness matrix remains positive-definite and algebraically stable.
+                        <strong>Pillar 3: Lax-Milgram Coercivity & Stability:</strong> Bijective diffeomorphism guarantees that the geometric transformation preserves coercivity ($a(\hat{v}, \hat{v}; \mathbf{\mu}) \geq \alpha \|\hat{v}\|^2$), ensuring numerical stability.
                     </li>
                 </ol>
             </div>
 
-            <div class="success-box" style="background: rgba(6, 182, 212, 0.05); border-left-color: var(--primary); border-top: 1px solid rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.1); border-right: 1px solid rgba(6, 182, 212, 0.1); margin: 30px 0;">
+            <div class="warning-box" style="margin-top:30px;">
                 <p style="margin:0">
-                    <strong style="color:var(--primary);"><i class="fa-solid fa-gears"></i> Workflow: Mathematical Stability & Lax-Milgram Convergence</strong>
-                </p>
-                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
-                    The mathematical framework relies on these conditions to guarantee structural convergence and unique solutions:
-                </p>
-                <ol style="margin: 15px 0 0; padding-left: 20px; font-size:0.95rem; color:#cbd5e1;">
-                    <li style="margin-bottom: 8px;"><strong>Smooth Diffeomorphism:</strong> The mapping $\mathbf{\Phi}$ behaves as a smooth diffeomorphism, meaning the Jacobian determinant satisfies $\det(\mathbf{J}_{\mathbf{\Phi}}) \geq \delta > 0$ everywhere, guaranteeing that elements do not invert or overlap.</li>
-                    <li style="margin-bottom: 8px;"><strong>Sobolev Space Coercivity:</strong> The bilinear form $a(\hat{u}, \hat{v}; \mathbf{\mu})$ remains coercive, meaning there exists a parameter-dependent constant $\alpha(\mathbf{\mu}) \geq \alpha_0 > 0$ preventing singular structural states.</li>
-                    <li style="margin-bottom: 8px;"><strong>Lax-Milgram Guarantee:</strong> Under these two conditions, the Lax-Milgram theorem guarantees the existence of a unique, stable, and bounded displacement field solution $\mathbf{u} \in \mathcal{H}(\hat{\Omega})$ for any parameter state.</li>
-                </ol>
-            </div>
-
-            <div class="warning-box" style="margin-top: 30px; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.02);">
-                <p style="margin:0">
-                    <strong style="color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Critical Failure Modes: Loss of Diffeomorphism & Coercivity</strong>
-                </p>
-                <ul style="margin: 15px 0 0; padding-left: 20px;">
-                    <li style="margin-bottom: 12px;"><strong>Jacobian Singularities & Topology Folding ($\det(\mathbf{J}_{\mathbf{\Phi}}) \leq 0$):</strong> The coordinate transformation mapping $\mathbf{\Phi}: \hat{\Omega} \to \Omega(\mathbf{\mu})$ must represent a smooth, bijective diffeomorphism. If the shape parameters $\mathbf{\mu}$ are driven beyond physical or mathematical limits (e.g., notch radius or mesh warping parameters are too large), elements fold or overlap. In these cases:
-                    $$\exists \hat{\mathbf{x}} \in \hat{\Omega} \quad \text{s.t.} \quad \det(\mathbf{J}_{\mathbf{\Phi}}(\hat{\mathbf{x}}; \mathbf{\mu})) \leq 0$$
-                    where $\det(\mathbf{J}_{\mathbf{\Phi}}(\hat{\mathbf{x}}; \mathbf{\mu}))$ is the Jacobian determinant evaluated at reference coordinates $\hat{\mathbf{x}}$ and parameter $\mathbf{\mu}$. This causes the inverse Jacobian tensor $\mathbf{J}_{\mathbf{\Phi}}^{-1}$ to be singular or diverge towards infinity, resulting in numerical division-by-zero errors in the gradient pullback $\nabla_{\mathbf{x}} R_i = \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_i$.</li>
-                    
-                    <li><strong>Loss of Coercivity ($\alpha(\mathbf{\mu}) \to 0$):</strong> For the structural partial differential equations to have a unique, stable, and bounded numerical solution, the mapped bilinear form $a(\hat{v}, \hat{v}; \mathbf{\mu})$ must satisfy coercivity in the Sobolev space $H^1_0(\hat{\Omega})$:
-                    $$a(\hat{v}, \hat{v}; \mathbf{\mu}) \geq \alpha(\mathbf{\mu}) \|\hat{v}\|_{H^1(\hat{\Omega})}^2 \quad \forall \hat{v} \in H^1_0(\hat{\Omega}) \quad \text{where } \alpha(\mathbf{\mu}) > 0$$
-                    where $a(\hat{v}, \hat{v}; \mathbf{\mu})$ is the bilinear strain energy form representing virtual work, $\alpha(\mathbf{\mu})$ is the parameter-dependent coercivity stability constant, and $\|\hat{v}\|_{H^1(\hat{\Omega})}$ is the Sobolev $H^1$ norm measuring the energy of the displacement function. If the mapping $\mathbf{\Phi}$ ceases to be a diffeomorphism, the minimum eigenvalue of the mapped elasticity tensor approaches zero, forcing the stability constant $\alpha(\mathbf{\mu}) \to 0$. The mapped stiffness matrix loses positive-definiteness, becoming singular or indefinite, causing the online numerical solver to crash, produce infinite displacements, or output NaN values.</li>
-                </ul>
-            </div>
-
-            <h3 style="margin-top:40px">Dynamic Mapping Interface Representation</h3>
-            <p>
-                The mapping coordinates the transformation between reference elements and the physical morphed shape.
-                Under a circular notch shape parameter change:
-            </p>
-
-            <div class="interactive-matrix">
-                <div class="matrix-row">
-                    <span class="matrix-label">Reference Coordinates ($\hat{x}, \hat{y}$)</span>
-                    <span class="matrix-value">Static [0, 1] &times; [0, 1]</span>
-                </div>
-                <div class="matrix-row">
-                    <span class="matrix-label">Physical Position ($x, y$)</span>
-                    <span class="matrix-value">Morphed: $\mathbf{\Phi}(\hat{\mathbf{x}}; \mu)$</span>
-                </div>
-                <div class="matrix-row">
-                    <span class="matrix-label">Jacobian Determinant $\det(\mathbf{J}_{\mathbf{\Phi}})$</span>
-                    <span class="matrix-value">Parameter-dependent Scale</span>
-                </div>
-                <div class="matrix-row">
-                    <span class="matrix-label">NURBS Basis Functions</span>
-                    <span class="matrix-value">Static &amp; Parameter-Independent</span>
-                </div>
-            </div>
-
-            <h3 style="margin-top:40px">Works Cited</h3>
-            <ul class="reference-list">
-                <li class="reference-item">
-                    <strong>Rozza, G., Huynh, D. B. P., & Patera, A. T. (2008)</strong>
-                    Reduced basis approximation and a posteriori error estimation for affinely parametrized elliptic
-                    coercive partial differential equations.
-                    <em>Archives of Computational Methods in Engineering</em>.
-                </li>
-                <li class="reference-item">
-                    <strong>Tiso, F., & Rixen, D. J. (2013)</strong>
-                    Reduced order modeling of structural dynamics with geometric parameter changes in reference
-                    configuration.
-                    <em>Proceedings of the International Conference on Structural Dynamics</em>.
-                </li>
-            </ul>
-        </div>
-
-        <!-- ==================== STEP 5 CONTENT ==================== -->
-        <div id="step5" class="tab-content">
-            <h2>Step 5: Code Verification Audit & Equivalence Proof</h2>
-            <p>
-                To guarantee that the simulator code matches the reference configuration mapping theory, we document a formula-by-formula verification. Below, the mathematical forms are mapped directly to their implementations in the source codebase.
-            </p>
-
-            <div class="success-box">
-                <p style="margin:0">
-                    <strong style="color:#10b981;"><i class="fa-solid fa-square-check"></i> Overall Audit Verdict: Faithful Implementation Verified</strong>
+                    <strong style="color:#ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Critical Failure Modes:</strong>
                 </p>
                 <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height:1.6;">
-                    A rigorous mathematical audit comparing the theoretical formulation of the shape-parametric Reduced Order Model against the Javascript simulator code shows <strong>perfect alignment (100% match)</strong>. No mathematical discrepancies or code implementation bugs were identified. Every theoretical tensor, pullback Jacobian, strain-displacement operator, constitutive law, and time integration step is faithfully represented in the source files.
-                </p>
-            </div>
-
-            <h3>1. The Coordinate Mapping $\boldsymbol{\Phi}$ and Gaussian Notch Shape</h3>
-            <p>
-                The mapping morphs the static reference coordinates $(\hat{x}, \hat{y})$ to the physical coordinates $(x, y)$. The notch is a symmetric Gaussian squeezing: the bottom surface moves up by displacement $disp$, and the top surface moves down by $disp$, while the mid-plane stays fixed. The physical $y$ coordinate is linearly interpolated between the top/bottom notch displacements as a function of the reference coordinate $\hat{y}$:
-            </p>
-            <div class="math-block">
-                $$\mathbf{x} = \boldsymbol{\Phi}(\hat{\mathbf{x}}; \mu, \sigma, r) = \begin{bmatrix} \hat{x} \\ \hat{y} \cdot \left(1 - \frac{2d(\hat{x}; \mu, \sigma, r)}{H}\right) \end{bmatrix}$$
-            </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\mathbf{x} = (x, y)$ is the physical coordinates vector.<br>
-                • $\hat{\mathbf{x}} = (\hat{x}, \hat{y})$ is the reference coordinates vector.<br>
-                • $d(\hat{x}; \mu, \sigma, r)$ is the local vertical displacement field induced by the Gaussian notch shape at reference coordinate $\hat{x}$, defined as:<br>
-                $$d(\hat{x}; \mu, \sigma, r) = r \exp\left(-\frac{1}{2} \left(\frac{|\hat{x} - \mu|}{\sigma}\right)^2\right)$$<br>
-                • $\mu$ is the horizontal center coordinate of the notch.<br>
-                • $\sigma$ is the influence radius/width of the notch, computed in code as $\sigma = \max(r, 0.4)$.<br>
-                • $r$ is the maximum notch depth parameter.<br>
-                • $H$ is the total height of the beam in the reference configuration.
-            </p>
-            
-            <p>
-                In the geometry factory, this mapping directly translates NURBS control points. At a general reference coordinate $\hat{y} \in [-H/2, H/2]$, the physical vertical position is scaled. In the solver and visuals files, this matches the vertical scaling factor:
-            </p>
-            <div class="algo-block">
-                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementations</div>
-                // geometry-factory.js (Lines 35-61) - Control point displacement<br>
-                let dist = Math.abs(x - mu);<br>
-                let sigma = Math.max(r, 0.4);<br>
-                let disp = r * Math.exp(-0.5 * Math.pow(dist / sigma, 2));<br>
-                if (j === 0) y += disp; // Bottom notch goes up<br>
-                if (j === 2) y -= disp; // Top notch goes down<br><br>
-                
-                // solver.js (Lines 222-227) - Scale factor detJphi<br>
-                const dist = Math.abs(hx - mu);<br>
-                const disp = r * Math.exp(-0.5 * Math.pow(dist / sigma, 2));<br>
-                const detJphi = 1.0 - (2.0 * disp / H);<br><br>
-                
-                // visuals.js (Lines 124-134) - Rendering coordinate scale<br>
-                const scaleFactor = 1.0 - (2.0 * disp / H);<br>
-                y = hy * scaleFactor;
-            </div>
-
-            <h3>2. The Jacobian Determinant $\det(\mathbf{J}_{\boldsymbol{\Phi}})$</h3>
-            <p>
-                The Jacobian matrix of the coordinate mapping $\boldsymbol{\Phi}$ is the gradient of physical coordinates with respect to reference coordinates:
-            </p>
-            <div class="math-block">
-                $$\mathbf{J}_{\boldsymbol{\Phi}} = \frac{\partial \boldsymbol{\Phi}}{\partial \hat{\mathbf{x}}} = \begin{bmatrix} 1 & 0 \\ -\frac{2\hat{y}}{H} d'(\hat{x}) & 1 - \frac{2d(\hat{x})}{H} \end{bmatrix}$$
-            </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\mathbf{J}_{\boldsymbol{\Phi}}$ is the $2 \times 2$ Jacobian tensor of the coordinate transformation mapping.<br>
-                • $d'(\hat{x})$ is the spatial derivative of the notch shape displacement function $d$ with respect to the reference coordinate $\hat{x}$.<br>
-                • $H$ is the reference beam height, and $\hat{y}$ is the vertical reference coordinate.
-            </p>
-            <p>
-                The determinant $\det(\mathbf{J}_{\boldsymbol{\Phi}})$ represents the local area scaling factor of the mapping, which simplifies to:
-            </p>
-            <div class="math-block">
-                $$\det(\mathbf{J}_{\boldsymbol{\Phi}}) = 1 - \frac{2d(\hat{x})}{H}$$
-            </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\det(\mathbf{J}_{\boldsymbol{\Phi}})$ is the determinant of the Jacobian matrix.<br>
-                • $d(\hat{x})$ is the notch shape displacement field.<br>
-                • $H$ is the reference beam height.
-            </p>
-            <div class="algo-block">
-                <div class="algo-title"><i class="fa-solid fa-code"></i> Source Code Implementation</div>
-                // solver.js (Line 227)<br>
-                const detJphi = 1.0 - (2.0 * disp / H);
-            </div>
-
-            <h3>3. Inverse-Transpose Jacobian and Gradient Pullback</h3>
-            <p>
-                Spatial derivatives are pulled back from the physical coordinates to the reference coordinates using the inverse-transpose of the mapping's Jacobian tensor $\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}}$:
-            </p>
-            <div class="math-block">
-                $$\nabla_{\mathbf{x}} R_i = \mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_i$$
-            </div>
-            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
-                <strong>Where:</strong><br>
-                • $\nabla_{\mathbf{x}} R_i$ is the spatial gradient vector of the $i$-th shape function in physical coordinates.<br>
-                • $\nabla_{\hat{\mathbf{x}}} \hat{R}_i$ is the spatial gradient vector of the $i$-th shape function in reference coordinates.<br>
                 • $\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}}$ is the transpose of the inverse Jacobian matrix of the coordinate mapping.
             </p>
             <p>
@@ -1213,6 +978,67 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- ==================== STEP 6 CONTENT ==================== -->
+        <div id="step6" class="tab-content">
+            <h2>Step 6: Quantities of Interest (QOI) & Von Mises Stress Pullback</h2>
+            <p>
+                In engineering structural simulations, computing displacement fields $\mathbf{u}(\hat{\mathbf{x}})$ is rarely the final goal. The ultimate <strong>Quantities of Interest (QOI)</strong> are the physical stress fields, specifically the **Von Mises equivalent stress** $\sigma_{vM}$, to evaluate structural yield safety.
+            </p>
+            <p>
+                While reconstructing physical displacement from the reference coordinate solve is straightforward ($\mathbf{u} = \mathbf{\Phi}\mathbf{q}$ or $\mathbf{u}_{\text{phys}} = \mathbf{u}_{\text{ref}}$), extracting physical stresses is highly non-trivial because stress depends directly on spatial gradients. Under mapping pullbacks, these gradients are geometrically warped by the parameter-dependent inverse transpose Jacobian $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}$ and the determinant $\det(\mathbf{J}_{\mathbf{\Phi}})$.
+            </p>
+
+            <div class="warning-box" style="margin-top: 30px; border-color: var(--accent); background: rgba(245, 158, 11, 0.02);">
+                <p style="margin:0">
+                    <strong style="color:var(--accent);"><i class="fa-solid fa-triangle-exclamation"></i> The Strain Pullback warp:</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    Physical strains are defined by derivatives in the morphed spatial coordinates $\mathbf{x}$. By pulling these back to the reference coordinate space $\hat{\mathbf{x}}$, we find that the strain components explicitly involve parameter terms that warp the gradients:
+                    $$\boldsymbol{\epsilon} = \begin{bmatrix} \epsilon_{xx} \\ \epsilon_{yy} \\ 2\epsilon_{xy} \end{bmatrix} = \begin{bmatrix} \frac{\partial u_x}{\partial x} \\ \frac{\partial u_y}{\partial y} \\ \frac{\partial u_x}{\partial y} + \frac{\partial u_y}{\partial x} \end{bmatrix}$$
+                    Applying the pullback derivative operator $\nabla_{\mathbf{x}} R_i = \mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}} \nabla_{\hat{\mathbf{x}}} \hat{R}_i$, the physical strains expand to:
+                </p>
+            </div>
+
+            <div class="math-block">
+                $$\epsilon_{xx}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sum_{a=1}^{N} \left( \frac{\partial \hat{R}_a}{\partial \hat{x}} + \frac{2\hat{y} d'(\hat{x}; \mathbf{\mu})}{H \det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{x, a}$$
+                
+                $$\epsilon_{yy}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sum_{a=1}^{N} \left( \frac{1}{\det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{y, a}$$
+                
+                $$2\epsilon_{xy}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sum_{a=1}^{N} \left[ \left( \frac{1}{\det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{x, a} + \left( \frac{\partial \hat{R}_a}{\partial \hat{x}} + \frac{2\hat{y} d'(\hat{x}; \mathbf{\mu})}{H \det(\mathbf{J}_{\mathbf{\Phi}})} \frac{\partial \hat{R}_a}{\partial \hat{y}} \right) u_{y, a} \right]$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $u_{x, a}, u_{y, a}$ are the displacement degrees of freedom at control point $a$.<br>
+                • $d'(\hat{x}; \mathbf{\mu}) = -\frac{(\hat{x} - \mu)}{\sigma^2} d(\hat{x})$ is the notch shape derivative.<br>
+                • $\det(\mathbf{J}_{\mathbf{\Phi}}) = 1 - \frac{2d(\hat{x})}{H}$ is the mapping Jacobian determinant.
+            </p>
+
+            <h3>Constitutive Stress Reconstruction</h3>
+            <p>
+                Once the physical strain vector $\boldsymbol{\epsilon}(\hat{\mathbf{x}}; \mathbf{\mu})$ is computed at a reference coordinate $\hat{\mathbf{x}}$, the stress tensor components in physical coordinates $\boldsymbol{\sigma} = [\sigma_{xx}, \sigma_{yy}, \sigma_{xy}]^{\mathrm{T}}$ are evaluated using Hooke's Plane Stress constitutive relation:
+            </p>
+            <div class="math-block">
+                $$\begin{bmatrix} \sigma_{xx} \\ \sigma_{yy} \\ \sigma_{xy} \end{bmatrix} = \frac{E}{1-\nu^2} \begin{bmatrix} 1 & \nu & 0 \\ \nu & 1 & 0 \\ 0 & 0 & \frac{1-\nu}{2} \end{bmatrix} \begin{bmatrix} \epsilon_{xx}(\hat{\mathbf{x}}; \mathbf{\mu}) \\ \epsilon_{yy}(\hat{\mathbf{x}}; \mathbf{\mu}) \\ 2\epsilon_{xy}(\hat{\mathbf{x}}; \mathbf{\mu}) \end{bmatrix}$$
+            </div>
+
+            <h3>Reconstruction of the Von Mises QOI</h3>
+            <p>
+                Finally, the equivalent Von Mises Stress $\sigma_{vM}$ is calculated at reference points using these warped physical stress tensor entries:
+            </p>
+            <div class="math-block">
+                $$\sigma_{vM}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sqrt{\sigma_{xx}^2 - \sigma_{xx}\sigma_{yy} + \sigma_{yy}^2 + 3\sigma_{xy}^2}$$
+            </div>
+            
+            <div class="success-box" style="background: rgba(16, 185, 129, 0.05); border-left-color: #10b981; margin: 30px 0;">
+                <p style="margin:0">
+                    <strong style="color:#10b981;"><i class="fa-solid fa-circle-check"></i> High-Stress Concentration Mapping</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    Because the mapping pulls the Gaussian notch depth $r$ dynamically into the terms $d'(\hat{x})$ and $\det(\mathbf{J}_{\mathbf{\Phi}})$, the stress equation naturally scales and concentrates stress around the notch tip. At the bottom notch apex where $\hat{y} = -H/2$ and $\hat{x} = \mu$, the Jacobian determinant reduces to its minimum value $\det(\mathbf{J}_{\mathbf{\Phi}}) = 1 - 2r/H$, which mathematically scales up local strains and captures stress concentration peaks with absolute precision.
+                </p>
+            </div>
         </div>
     </div>
 

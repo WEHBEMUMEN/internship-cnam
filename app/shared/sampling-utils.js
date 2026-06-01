@@ -1,6 +1,6 @@
 /**
- * Sampling Utilities for IGA-ROM
- * Phase 2C | Offline State Generation
+ * Parameter Sampling Utilities for IGA-ROM
+ * Centralizes LHS sampling and high-performance shuffling.
  */
 
 class SamplingUtils {
@@ -51,7 +51,7 @@ class SamplingUtils {
     }
 }
 
-// Export for browser
+// Export for environment compatibility
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { SamplingUtils };
 } else {

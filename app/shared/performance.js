@@ -1,22 +1,31 @@
 /**
- * Performance Monitoring Utility
- * Tracks FPS and CPU Processing Time
+ * Performance Analytics and Frame Monitor Overlay
+ * Centralizes Framerate (FPS) and CPU processing benchmark timers.
  */
+
 class PerformanceMonitor {
-    constructor() {
+    constructor(options = {}) {
         this.fps = 0;
         this.cpuTime = 0;
         this.lastTime = performance.now();
         this.frameCount = 0;
         this.startTime = 0;
         
-        this.createOverlay();
+        this.containerId = options.containerId || 'performance-overlay';
+        this.hideOverlay = options.hideOverlay || false;
+        
+        if (!this.hideOverlay) {
+            this.createOverlay();
+        }
         this.tick();
     }
 
     createOverlay() {
+        // Prevent duplicate overlays
+        if (document.getElementById(this.containerId)) return;
+
         const overlay = document.createElement('div');
-        overlay.id = 'performance-overlay';
+        overlay.id = this.containerId;
         overlay.style.cssText = `
             position: fixed;
             top: 20px;
@@ -58,7 +67,10 @@ class PerformanceMonitor {
     endMeasure() {
         const duration = performance.now() - this.startTime;
         this.cpuTime = duration;
-        document.getElementById('perf-cpu').textContent = `${duration.toFixed(2)} ms`;
+        const elem = document.getElementById('perf-cpu');
+        if (elem) {
+            elem.textContent = `${duration.toFixed(2)} ms`;
+        }
     }
 
     tick() {
@@ -67,7 +79,10 @@ class PerformanceMonitor {
         
         if (now - this.lastTime >= 1000) {
             this.fps = Math.round((this.frameCount * 1000) / (now - this.lastTime));
-            document.getElementById('perf-fps').textContent = this.fps;
+            const elem = document.getElementById('perf-fps');
+            if (elem) {
+                elem.textContent = this.fps;
+            }
             this.frameCount = 0;
             this.lastTime = now;
         }
@@ -76,7 +91,14 @@ class PerformanceMonitor {
     }
 }
 
-// Initialize on load
+// Export/Initialize for environment compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PerformanceMonitor;
+} else {
+    window.PerformanceMonitor = PerformanceMonitor;
+}
+
+// Automatically initialize on DOM load for HTML compatibility
 window.addEventListener('DOMContentLoaded', () => {
     window.perfMonitor = new PerformanceMonitor();
 });
