@@ -628,6 +628,27 @@
                 </p>
             </div>
 
+            <h3>Dynamic Basis Projection Continuity (Parametric Sweeps)</h3>
+            <p>
+                A core challenge of using parametric ROMs is ensuring physical state continuity during shape transformations (parametric sweeps). When a geometric notch parameters ($\mu$ or $r$) are updated mid-simulation, the structural domain $\Omega(\mu, r)$ changes, requiring a recomputation of the Reduced Basis:
+                $$\mathbf{\Phi}_{\text{old}} \quad \longrightarrow \quad \mathbf{\Phi}_{\text{new}}$$
+            </p>
+            <div class="warning-box" style="border-color: var(--accent); background: rgba(245, 158, 11, 0.02);">
+                <p style="margin:0">
+                    <strong style="color:var(--accent);"><i class="fa-solid fa-triangle-exclamation"></i> The Discontinuity Jump Problem:</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    Directly applying the old coordinate amplitudes $\mathbf{q} = [q_1, q_2]^{\mathrm{T}}$ to the new basis results in a sudden, non-physical jump in the reconstructed spatial displacement field:
+                    $$\mathbf{u}(t) = \mathbf{\Phi}_{\text{old}} \mathbf{q} \quad \neq \quad \mathbf{\Phi}_{\text{new}} \mathbf{q}$$
+                    This mismatch violates physical state continuity and instantly introduces numerical singularities, causing the dynamic solver to crash.
+                </p>
+            </div>
+            <p>
+                To resolve this, Phase 5.3a enforces $C^0$ physical continuity by performing a <strong>transient state projection</strong>. The existing high-dimensional displacement $\mathbf{u}_{\text{phys}}(t)$ and velocity $\mathbf{v}_{\text{phys}}(t)$ fields are projected onto the newly computed orthonormal basis functions $\boldsymbol{\phi}_{i, \text{new}}$:
+                $$q_{i, \text{new}}(t) = \sum_{k=1}^N \phi_{i, k, \text{new}} u_{\text{phys}, k}(t), \quad \dot{q}_{i, \text{new}}(t) = \sum_{k=1}^N \phi_{i, k, \text{new}} v_{\text{phys}, k}(t)$$
+                This maps the transient states dynamically across the parameter-dependent manifolds, securing perfect physical continuity and absolute numerical stability during arbitrary real-time sweeps.
+            </p>
+
             <h3>Quantities of Interest (QOI) & Von Mises Stress Pullback Warp</h3>
             <p>
                 Extracting physical stresses is highly non-trivial because stress depends directly on spatial gradients. Under mapping pullbacks, these gradients are geometrically warped by the parameter-dependent inverse transpose Jacobian $\mathbf{J}_{\mathbf{\Phi}}^{-\mathrm{T}}$ and the determinant $\det(\mathbf{J}_{\mathbf{\Phi}})$.
