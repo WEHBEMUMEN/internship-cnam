@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theory | Phase 5.3b - Reference-Mapped Non-Linear ECSW Hyper-reduction</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-dark: #7c3aed;
+            --accent: #f59e0b;
+            --bg: #090d1a;
+            --card: rgba(17, 24, 39, 0.7);
+            --border: rgba(139, 92, 246, 0.2);
+            --glass: blur(20px);
+            --text-dim: #94a3b8;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+
+        .theory-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 50px;
+            background: var(--card);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        .back-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--primary);
+            transform: translateX(-4px);
+        }
+
+        header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 35px;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 1.15rem;
+            font-weight: 400;
+        }
+
+        .tabs-nav {
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: #0b0f19;
+            background: var(--primary);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 25px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h2::before {
+            content: '';
+            width: 30px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            color: #fff;
+            margin: 35px 0 15px;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 1.05rem;
+            color: #cbd5e1;
+            margin-bottom: 24px;
+        }
+
+        .math-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 30px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 2px 15px rgba(0, 0, 0, 0.3);
+            overflow-x: auto;
+        }
+
+        .algo-block {
+            background: #030712;
+            border: 1px dashed var(--primary);
+            padding: 25px;
+            border-radius: 20px;
+            margin: 30px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .algo-title {
+            color: var(--primary);
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .highlight-box {
+            background: rgba(139, 92, 246, 0.07);
+            border-left: 4px solid var(--primary);
+            padding: 25px;
+            border-radius: 0 20px 20px 0;
+            margin: 30px 0;
+            border-top: 1px solid rgba(139, 92, 246, 0.1);
+            border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+            border-right: 1px solid rgba(139, 92, 246, 0.1);
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.07);
+            border-left: 4px solid #ef4444;
+            padding: 25px;
+            border-radius: 0 20px 20px 0;
+            margin: 30px 0;
+            border-top: 1px solid rgba(239, 68, 68, 0.1);
+            border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+            border-right: 1px solid rgba(239, 68, 68, 0.1);
+        }
+
+        .success-box {
+            background: rgba(16, 185, 129, 0.07);
+            border-left: 4px solid #10b981;
+            padding: 25px;
+            border-radius: 0 20px 20px 0;
+            margin: 30px 0;
+            border-top: 1px solid rgba(16, 185, 129, 0.1);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+            border-right: 1px solid rgba(16, 185, 129, 0.1);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .grid-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .grid-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border);
+            transform: translateY(-2px);
+        }
+
+        .grid-card h4 {
+            color: #fff;
+            margin-bottom: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        ul,
+        ol {
+            margin-bottom: 30px;
+            padding-left: 20px;
+        }
+
+        li {
+            padding: 8px 0;
+            color: #cbd5e1;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.07);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #a78bfa;
+            font-size: 0.9em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th, td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(139, 92, 246, 0.1);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        td {
+            font-size: 0.95rem;
+            color: #cbd5e1;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .flowchart-pre {
+            background: #030712;
+            border: 1px solid var(--border);
+            padding: 25px;
+            border-radius: 20px;
+            margin: 30px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            overflow-x: auto;
+            color: #c084fc;
+            white-space: pre;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="theory-container">
+        <a href="../app/index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Return to Simulation Hub</a>
+
+        <header>
+            <h1>Phase 5.3b: Parametric Non-Linear Pullback & Hyper-reduction</h1>
+            <p class="subtitle">Green-Lagrange Strains, Tangent Stiffness Operators, and Non-Linear ECSW Calibration</p>
+        </header>
+
+        <!-- Segmented Controls / Tabs Navigation -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab(event, 'step1')">
+                <i class="fa-solid fa-compress"></i> Step 1: Non-Linear Kinematics
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step2')">
+                <i class="fa-solid fa-arrows-spin"></i> Step 2: Tangent Assembly
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step3')">
+                <i class="fa-solid fa-bolt"></i> Step 3: Newton-Raphson Solver
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'step4')">
+                <i class="fa-solid fa-weight-hanging"></i> Step 4: ECSW ROM Optimization
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'flowcharts')">
+                <i class="fa-solid fa-diagram-project"></i> Architecture & Flowcharts
+            </button>
+        </nav>
+
+        <!-- ==================== STEP 1 CONTENT ==================== -->
+        <div id="step1" class="tab-content active">
+            <h2>Step 1: Kinematic Non-Linearity & Pullbacks</h2>
+            <p>
+                To simulate large-deflection dynamics of notched structures, Phase 5.3b introduces <strong>geometric non-linearity</strong>. Displacements are modeled using the non-linear <strong>Green-Lagrange strain tensor</strong> $\mathbf{E}$, which maps strains to the reference configuration:
+            </p>
+            <div class="math-block">
+                $$\mathbf{E} = \frac{1}{2}\left(\mathbf{F}^{\mathrm{T}}\mathbf{F} - \mathbf{I}\right)$$
+            </div>
+            <p>
+                In Voigt notation for a bivariate plane stress element, the Green-Lagrange strain components pulled back to physical coordinates are:
+            </p>
+            <div class="math-block">
+                $$\begin{aligned}
+                E_{xx} &= \frac{\partial u_x}{\partial x} + \frac{1}{2}\left[\left(\frac{\partial u_x}{\partial x}\right)^2 + \left(\frac{\partial u_y}{\partial x}\right)^2\right] \\
+                E_{yy} &= \frac{\partial u_y}{\partial y} + \frac{1}{2}\left[\left(\frac{\partial u_x}{\partial y}\right)^2 + \left(\frac{\partial u_y}{\partial y}\right)^2\right] \\
+                2E_{xy} &= \left(\frac{\partial u_x}{\partial y} + \frac{\partial u_y}{\partial x}\right) + \left(\frac{\partial u_x}{\partial x}\frac{\partial u_x}{\partial y} + \frac{\partial u_y}{\partial x}\frac{\partial u_y}{\partial y}\right)
+                \end{aligned}$$
+            </div>
+            <p>
+                The corresponding energetically conjugate stress is the **Second Piola-Kirchhoff (PK2) stress tensor** $\mathbf{S}$, which maintains a linear constitutive relation with $\mathbf{E}$:
+            </p>
+            <div class="math-block">
+                $$\mathbf{S} = \mathbf{D} \mathbf{E}$$
+            </div>
+            
+            <div class="highlight-box">
+                <p style="margin:0">
+                    <strong style="color:var(--primary);"><i class="fa-solid fa-bezier-curve"></i> Non-Linear Strain-Displacement Relation</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    The virtual strain increments relate to displacement increments via the non-linear strain-displacement matrix:
+                    $$\mathbf{B}_L(\mathbf{u}) = \mathbf{B}_0 + \mathbf{B}_{NL}(\mathbf{u})$$
+                    where $\mathbf{B}_0$ represents the standard linear shape derivatives matrix, and $\mathbf{B}_{NL}(\mathbf{u})$ scales linearly with current displacement gradients, providing the stress-stiffening coupling terms.
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== STEP 2 CONTENT ==================== -->
+        <div id="step2" class="tab-content">
+            <h2>Step 2: Tangent Stiffness & Residual Assembly</h2>
+            <p>
+                In non-linear mechanics, solving the equilibrium equations requires calculating the internal force vector $\mathbf{f}_{\text{int}}(\mathbf{u})$ and the tangent stiffness matrix $\mathbf{K}_T(\mathbf{u})$ at each iterative state.
+            </p>
+            <p>
+                The internal force vector evaluates the virtual work of PK2 stresses:
+            </p>
+            <div class="math-block">
+                $$\mathbf{f}_{\text{int}}(\mathbf{u}) = \int_{\hat{\Omega}} \mathbf{B}_L^{\mathrm{T}}(\mathbf{u}) \mathbf{S} \det(\mathbf{J}_{\mathbf{\Phi}}) \det(\mathbf{J}_{\text{ref}}) \, \mathrm{d}\hat{\Omega}$$
+            </div>
+            <p>
+                The tangent stiffness matrix $\mathbf{K}_T(\mathbf{u})$ is split into material and geometric contributions:
+            </p>
+            <div class="math-block">
+                $$\mathbf{K}_T(\mathbf{u}) = \mathbf{K}_M(\mathbf{u}) + \mathbf{K}_G(\mathbf{u})$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{K}_M(\mathbf{u}) = \int \mathbf{B}_L^{\mathrm{T}} \mathbf{D} \mathbf{B}_L \, d\Omega$ is the material tangent stiffness matrix representing strain changes.<br>
+                • $\mathbf{K}_G(\mathbf{u}) = \int \mathbf{G}_L^{\mathrm{T}} \mathbf{M}_{\text{stress}} \mathbf{G}_L \, d\Omega$ is the geometric (initial stress) stiffness matrix containing stress terms $S_{xx}, S_{yy}, S_{xy}$, representing local stiffening under load.
+            </p>
+
+            <div class="success-box">
+                <p style="margin:0">
+                    <strong style="color:#10b981;"><i class="fa-solid fa-arrows-spin"></i> Single-Pass Unified Assembly</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    To optimize runtime evaluation, <code>assembleMappedNonlinearForceAndStiffness</code> evaluates the strains, stresses, B-matrices, internal forces, and both stiffness matrices in a single quadrature loop over the reference coordinates, cutting integration overhead in half.
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== STEP 3 CONTENT ==================== -->
+        <div id="step3" class="tab-content">
+            <h2>Step 3: Newton-Raphson Transient ROM Solver</h2>
+            <p>
+                Applying the Newmark-$\beta$ method to non-linear dynamic equations leads to an iterative optimization problem at each timestep:
+            </p>
+            <div class="math-block">
+                $$\mathbf{M} \mathbf{a}_{n+1}^{(i)} + \mathbf{C} \mathbf{v}_{n+1}^{(i)} + \mathbf{f}_{\text{int}}(\mathbf{u}_{n+1}^{(i)}) = \mathbf{f}_{\text{ext}}(t_{n+1})$$
+            </div>
+            <p>
+                We resolve this using a <strong>Newton-Raphson loop</strong> that updates displacement increments iteratively:
+            </p>
+            <div class="math-block">
+                $$\mathbf{K}_{\text{eff}}^{(i)} \mathrm{d}\mathbf{u} = \mathbf{R}^{(i)}, \quad \mathbf{u}^{(i+1)} = \mathbf{u}^{(i)} + \mathrm{d}\mathbf{u}$$
+            </div>
+            <p style="font-size: 0.9rem; margin-top: -15px; margin-bottom: 25px; color: #94a3b8; line-height: 1.6;">
+                <strong>Where:</strong><br>
+                • $\mathbf{K}_{\text{eff}}^{(i)} = \mathbf{K}_T(\mathbf{u}^{(i)}) \cdot \left(1 + \frac{\gamma \beta_K}{\beta \Delta t}\right) + \mathbf{M} \cdot \left(\frac{1}{\beta \Delta t^2} + \frac{\gamma \alpha_M}{\beta \Delta t}\right)$ is the effective tangent operator.<br>
+                • $\mathbf{R}^{(i)} = \mathbf{f}_{\text{ext}} - \mathbf{f}_{\text{int}}(\mathbf{u}^{(i)}) - \mathbf{M}\mathbf{a}^{(i)} - \mathbf{C}\mathbf{v}^{(i)}$ is the residual forces vector.
+            </p>
+
+            <div class="highlight-box">
+                <p style="margin:0">
+                    <strong style="color:var(--primary);"><i class="fa-solid fa-code"></i> Dynamic n-DOF Reduced Coordinate Solver</strong>
+                </p>
+                <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
+                    Unlike linear ROMs that can solve low-DOF systems analytically using Cramer's rule, non-linear dynamics with multi-mode snapshots requires general coordinate handling. Phase 5.3b implements a general <strong>$n$-DOF Gaussian elimination solver</strong> in reduced coordinate space, resolving arbitrary modal dimensions $\boldsymbol{\Phi} \in \mathbb{R}^{N \times n}$ dynamically (e.g. Mode 1 bending, Mode 2 tension, and Mode 3 mid-span compliance).
+                </p>
+            </div>
+        </div>
+
+        <!-- ==================== STEP 4 CONTENT ==================== -->
+        <div id="step4" class="tab-content">
+            <h2>Step 4: ECSW ROM Optimization & Calibration</h2>
+            <p>
+                To avoid evaluating stiffnesses and force vectors over the entire mesh at each Newton iteration, Phase 5.3b implements **ECSW hyper-reduction** on the non-linear operators:
+            </p>
+            <div class="math-block">
+                $$\mathbf{f}_{r}^{\text{int}}(\mathbf{q}) \approx \sum_{e \in \widetilde{E}} w_e \boldsymbol{\Phi}_e^{\mathrm{T}} \mathbf{f}_{\text{int},e}(\boldsymbol{\Phi}_e\mathbf{q})$$
+            </div>
+            
+            <h3>Virtual Force Fitting & OMP Training</h3>
+            <p>
+                To train the sparse element weights, virtual force signatures are evaluated using the true non-linear internal forces of compliance snapshots:
+            </p>
+            <div class="algo-block">
+                <div class="algo-title"><i class="fa-solid fa-diagram-project"></i> ECSW Non-Linear Signature Training</div>
+                1. <strong>Project Force Signatures:</strong> Evaluate element forces $\mathbf{F}_{e}^{\text{int}}(\mathbf{u}^{(s)})$ and project them to the reduced coordinates space:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;$G_{e, s, m} = \sum_{i=1}^N \Phi_m[i] F_{e, i}^{\text{int}}(\mathbf{u}^{(s)})$<br>
+                2. <strong>Construct NNLS target:</strong> $\mathbf{b} = \sum_e \mathbf{G}_e$<br>
+                3. <strong>Run Orthogonal Matching Pursuit (OMP)</strong> to select $k$ active elements (up to $k=12$).<br>
+                4. <strong>Assign Calibrated Weights:</strong> Store OMP-fitted weights $\mathbf{w}$ directly.
+            </div>
+
+            <h3>Operating Point Stiffness Calibration</h3>
+            <p>
+                To guarantee natural frequency alignment during parametric notch sweeps, the sparse weights are dynamically scaled at the operating configuration:
+            </p>
+            <div class="math-block">
+                $$\gamma = \frac{\boldsymbol{\phi}_1^{\mathrm{T}} \mathbf{K}_{\text{Full}}(\mu, r) \boldsymbol{\phi}_1}{\boldsymbol{\phi}_1^{\mathrm{T}} \mathbf{K}_{\text{ECSW}}(\mu, r) \boldsymbol{\phi}_1}, \quad w_e \leftarrow \gamma \cdot w_e$$
+            </div>
+        </div>
+
+        <!-- ==================== FLOWCHARTS CONTENT ==================== -->
+        <div id="flowcharts" class="tab-content">
+            <h2>Non-Linear ROM Execution Flowcharts</h2>
+            <pre class="flowchart-pre">
+===============================================================================================
+                     NON-LINEAR DYNAMIC ROM SOLVER (NEWTON-RAPHSON LOOP)
+===============================================================================================
+
+                               [ OFFLINE BASIS TRAINING ]
+                        Collect snapshots, perform SVD, run OMP 
+                        to extract active subset E_sparse & weights w_e.
+                                           |
+                                           v
+                             [ INITIALIZE RUNTIME STATES ]
+                          Allocate qMapped, dqMapped, d2qMapped
+                                           |
+                                           v
+                          === START TIME LOOP: t = t + dt ===
+                                           |
+                                           v
+                         [ PREDICT NEW STATE (NEWMARK PREDICTOR) ]
+                         q_pred = q_n + dt*dq_n + dt^2*(0.5-beta)*d2q_n
+                         dq_pred = dq_n + dt*(1-gamma)*d2q_n
+                                           |
+                                           v
+                          === START NEWTON-RAPHSON ITERATION ===
+                                           |
+                                           v
+                       [ ASSEMBLE NON-LINEAR FORCE & STIFFNESS (ECSW) ]
+                       Loop ONLY over E_sparse elements to compute:
+                       - Internal force: F_intM_ecsw
+                       - Tangent stiffness: K_ecsw
+                                           |
+                                           v
+                       [ PROJECT TANGENT OPERATOR TO REDUCED SPACE ]
+                       Kr = Phi^T * K_ecsw * Phi (n x n Matrix)
+                       Fr_int = Phi^T * F_intM_ecsw
+                                           |
+                                           v
+                       [ COMPUTE REDUCED RESIDUAL & EFFECTIVE LHS ]
+                       Rr = Fr_ext - Fr_int - Mr*d2qM - Cr*dqM
+                       K_eff_r = Kr * factorK + Mr * factorM
+                                           |
+                                           v
+                        [ SOLVE SYSTEM VIA GAUSSIAN ELIMINATION ]
+                        Solve K_eff_r * dq = Rr (n x n solve)
+                                           |
+                                           v
+                                [ UPDATE COORDINATE STATE ]
+                                qM = qM + dq
+                                           |
+                                           v
+                                  Check Convergence:
+                                  Is ||Rr|| < tol?
+                                       /    \
+                                 (No) /      \ (Yes)
+                                     /        \
+                                    v          v
+                            Iterate again.   [ CORRECTOR STEP ]
+                                             Update Velocities & Accelerations:
+                                             d2qM = (qM - q_pred)/(beta*dt^2)
+                                             dqM = dq_pred + gamma*dt*d2qM
+                                             Reconstruct Physical Field:
+                                             uMapped = Phi * qM
+                                                       |
+                                                       v
+                                            Proceed to next timestep.
+            </pre>
+        </div>
+    </div>
+
+    <!-- JavaScript to handle interactive tabs switching -->
+    <script>
+        function switchTab(evt, tabId) {
+            const contents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < contents.length; i++) {
+                contents[i].classList.remove("active");
+            }
+
+            const buttons = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove("active");
+            }
+
+            document.getElementById(tabId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                throwOnError: false
+            });
+        });
+    </script>
+</body>
+
+</html>
