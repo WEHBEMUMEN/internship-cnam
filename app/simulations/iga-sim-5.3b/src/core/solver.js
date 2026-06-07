@@ -1,6 +1,6 @@
 /**
- * Phase 5.3b - Reference Configuration Mapping Solver with ECSW Hyper-reduction
- * Parallel physical (Naive) and pullback (Mapped) linear elastic structural dynamics,
+ * Phase 5.3b - Reference Configuration Mapping Solver with ECSW Hyper-reduction (Non-Linear)
+ * Parallel physical (Naive) and pullback (Mapped) non-linear elastic structural dynamics,
  * with optional Energy-Conserving Sampling and Weighting (ECSW) hyper-reduction on a POD Reduced Basis.
  */
 
@@ -80,7 +80,7 @@ class MappingSolver {
     handleGeometryParameterChange() {
         if (!this.referencePatch) return; // Not initialized yet
 
-        const hasExistingBasis = (this.Phi && this.Phi[0] && this.Phi[1]);
+        const hasExistingBasis = (this.Phi && this.Phi.length > 0);
         const nDofs = this.referencePatch.controlPoints.length * this.referencePatch.controlPoints[0].length * 2;
         
         // Temporarily store physical states to project them
@@ -96,31 +96,34 @@ class MappingSolver {
 
         // Project the physical states back into the new coordinate space
         if (hasExistingBasis && uTemp && this.qMapped) {
-            let q1 = 0, q2 = 0;
-            let dq1 = 0, dq2 = 0;
-            let d2q1 = 0, d2q2 = 0;
+            const nModes = this.Phi.length;
+            this.qMapped.fill(0);
+            this.dqMapped.fill(0);
+            this.d2qMapped.fill(0);
 
-            for (let i = 0; i < nDofs; i++) {
-                q1 += uTemp[i] * this.Phi[0][i];
-                q2 += uTemp[i] * this.Phi[1][i];
-                dq1 += vTemp[i] * this.Phi[0][i];
-                dq2 += vTemp[i] * this.Phi[1][i];
-                d2q1 += aTemp[i] * this.Phi[0][i];
-                d2q2 += aTemp[i] * this.Phi[1][i];
+            for (let m = 0; m < nModes; m++) {
+                let q_m = 0, dq_m = 0, d2q_m = 0;
+                const phi_m = this.Phi[m];
+                for (let i = 0; i < nDofs; i++) {
+                    q_m += uTemp[i] * phi_m[i];
+                    dq_m += vTemp[i] * phi_m[i];
+                    d2q_m += aTemp[i] * phi_m[i];
+                }
+                this.qMapped[m] = q_m;
+                this.dqMapped[m] = dq_m;
+                this.d2qMapped[m] = d2q_m;
             }
 
-            this.qMapped[0] = q1;
-            this.qMapped[1] = q2;
-            this.dqMapped[0] = dq1;
-            this.dqMapped[1] = dq2;
-            this.d2qMapped[0] = d2q1;
-            this.d2qMapped[1] = d2q2;
-
             // Reconstruct full displacement fields immediately using the new basis and projected coordinates to prevent jump discontinuities
+            this.uMapped.fill(0);
+            this.vMapped.fill(0);
+            this.aMapped.fill(0);
             for (let i = 0; i < nDofs; i++) {
-                this.uMapped[i] = this.Phi[0][i] * this.qMapped[0] + this.Phi[1][i] * this.qMapped[1];
-                this.vMapped[i] = this.Phi[0][i] * this.dqMapped[0] + this.Phi[1][i] * this.dqMapped[1];
-                this.aMapped[i] = this.Phi[0][i] * this.d2qMapped[0] + this.Phi[1][i] * this.d2qMapped[1];
+                for (let m = 0; m < nModes; m++) {
+                    this.uMapped[i] += this.Phi[m][i] * this.qMapped[m];
+                    this.vMapped[i] += this.Phi[m][i] * this.dqMapped[m];
+                    this.aMapped[i] += this.Phi[m][i] * this.d2qMapped[m];
+                }
             }
         }
     }
@@ -266,10 +269,9 @@ class MappingSolver {
     }
 
     /**
-     * Physical stiffness assembly on morphed mesh Ω(μ, r)
-     * Direct integration on physical coordinates
+     * Physical non-linear internal forces and tangent stiffness assembly on morphed mesh Ω(μ, r)
      */
-    assembleNaiveStiffness(mu, r) {
+    assembleNaiveNonlinearForceAndStiffness(mu, r, u) {
         const morphedPatchBase = window.GeometryFactory.generateNotchedBeam(this.L, this.H, mu, r);
         const nU_ref = this.referencePatch.controlPoints.length;
         const nV_ref = this.referencePatch.controlPoints[0].length;
@@ -285,20 +287,29 @@ class MappingSolver {
         solver.nu = this.nu;
         solver.thickness = this.thickness;
 
-        const K = solver.assembleStiffness(refinedPatch);
+        const K = solver.calculateTangentStiffness(refinedPatch, u);
         solver.applyPenaltyConstraints(K, refinedPatch);
-        return K;
+        
+        const F_int = solver.calculateInternalForce(refinedPatch, u);
+        return { K, F_int };
+    }
+
+    assembleNaiveStiffness(mu, r) {
+        const nDofs = this.referencePatch.controlPoints.length * this.referencePatch.controlPoints[0].length * 2;
+        const zeroU = new Float64Array(nDofs);
+        return this.assembleNaiveNonlinearForceAndStiffness(mu, r, zeroU).K;
     }
 
     /**
-     * Mapped stiffness assembly via pullback coordinates, optionally using ECSW hyper-reduction
+     * Mapped non-linear internal forces and tangent stiffness assembly via pullback coordinates, optionally using ECSW hyper-reduction
      */
-    assembleMappedStiffness(mu, r, useECSW = false) {
+    assembleMappedNonlinearForceAndStiffness(mu, r, u, useECSW = false) {
         const nU = this.referencePatch.controlPoints.length;
         const nV = this.referencePatch.controlPoints[0].length;
         const nDofs = nU * nV * 2;
 
         const K = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
+        const F_int = new Float64Array(nDofs).fill(0);
         const D = this.getPlaneStressD();
 
         const H = this.H;
@@ -328,43 +339,90 @@ class MappingSolver {
                 const shearTerm = (2.0 / H) * hy * dispDeriv / safeDetJphi;
                 const yTerm = 1.0 / safeDetJphi;
 
-                // Physical gradients via Jacobian Pullback
-                const B_phys = Array(nU * nV).fill(0).map(() => [[0, 0], [0, 0], [0, 0]]);
-
+                // Physical shape derivatives
+                const dRdx_phys = new Float64Array(activeNodes.length);
+                const dRdy_phys = new Float64Array(activeNodes.length);
                 for (let a = 0; a < activeNodes.length; a++) {
                     const node = activeNodes[a];
-                    const dRdx_phys = node.dRdx_ref + shearTerm * node.dRdy_ref;
-                    const dRdy_phys = yTerm * node.dRdy_ref;
-
-                    const bidx = node.nodeIdx;
-                    B_phys[bidx][0][0] = dRdx_phys;
-                    B_phys[bidx][1][1] = dRdy_phys;
-                    B_phys[bidx][2][0] = dRdy_phys;
-                    B_phys[bidx][2][1] = dRdx_phys;
+                    dRdx_phys[a] = node.dRdx_ref + shearTerm * node.dRdy_ref;
+                    dRdy_phys[a] = yTerm * node.dRdy_ref;
                 }
 
-                // Scale by weight factor and optimized ECSW weight w_e
+                // Compute displacement gradients: du/dx, du/dy, dv/dx, dv/dy
+                let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+                for (let a = 0; a < activeNodes.length; a++) {
+                    const node = activeNodes[a];
+                    const ux = u[node.dofIdx];
+                    const uy = u[node.dofIdx + 1];
+                    dudx += dRdx_phys[a] * ux;
+                    dudy += dRdy_phys[a] * ux;
+                    dvdx += dRdx_phys[a] * uy;
+                    dvdy += dRdy_phys[a] * uy;
+                }
+
+                // Green-Lagrange Strain Vector E = [Exx, Eyy, 2Exy]
+                const Exx = dudx + 0.5 * (dudx * dudx + dvdx * dvdx);
+                const Eyy = dvdy + 0.5 * (dudy * dudy + dvdy * dvdy);
+                const Exy2 = (dudy + dvdx) + (dudx * dudy + dvdx * dvdy); // 2Exy
+
+                // 2nd Piola-Kirchhoff Stress S = D * E
+                const Sxx = D[0][0] * Exx + D[0][1] * Eyy;
+                const Syy = D[1][0] * Exx + D[1][1] * Eyy;
+                const Sxy = D[2][2] * Exy2;
+
                 const factor = w_e * safeDetJphi * detJ_ref * weightFactor * this.thickness;
 
+                // Nonlinear strain-displacement matrix B_NL for each active node
+                const B_NL = Array(activeNodes.length).fill(0).map(() => [[0, 0], [0, 0], [0, 0]]);
+                for (let a = 0; a < activeNodes.length; a++) {
+                    const dx = dRdx_phys[a];
+                    const dy = dRdy_phys[a];
+                    B_NL[a][0][0] = (1.0 + dudx) * dx;
+                    B_NL[a][0][1] = dvdx * dx;
+                    B_NL[a][1][0] = dudy * dy;
+                    B_NL[a][1][1] = (1.0 + dvdy) * dy;
+                    B_NL[a][2][0] = (1.0 + dudx) * dy + dudy * dx;
+                    B_NL[a][2][1] = (1.0 + dvdy) * dx + dvdx * dy;
+                }
+
+                // Accumulate Internal Force F_int
+                for (let a = 0; a < activeNodes.length; a++) {
+                    const node = activeNodes[a];
+                    const Ba = B_NL[a];
+                    F_int[node.dofIdx]     += (Ba[0][0] * Sxx + Ba[1][0] * Syy + Ba[2][0] * Sxy) * factor;
+                    F_int[node.dofIdx + 1] += (Ba[0][1] * Sxx + Ba[1][1] * Syy + Ba[2][1] * Sxy) * factor;
+                }
+
+                // Accumulate Tangent Stiffness K = K_material + K_geometric
                 for (let a = 0; a < activeNodes.length; a++) {
                     const na = activeNodes[a];
-                    const Ba = B_phys[na.nodeIdx];
+                    const Ba = B_NL[a];
+                    const dx_a = dRdx_phys[a];
+                    const dy_a = dRdy_phys[a];
 
                     for (let b = 0; b < activeNodes.length; b++) {
                         const nb = activeNodes[b];
-                        const Bb = B_phys[nb.nodeIdx];
+                        const Bb = B_NL[b];
+                        const dx_b = dRdx_phys[b];
+                        const dy_b = dRdy_phys[b];
 
+                        // 1. Material tangent stiffness (Ba' * D * Bb)
                         for (let i = 0; i < 2; i++) {
                             for (let j = 0; j < 2; j++) {
-                                let kab = 0;
+                                let k_mat = 0;
                                 for (let row = 0; row < 3; row++) {
                                     for (let col = 0; col < 3; col++) {
-                                        kab += Ba[row][i] * D[row][col] * Bb[col][j];
+                                        k_mat += Ba[row][i] * D[row][col] * Bb[col][j];
                                     }
                                 }
-                                K[na.dofIdx + i][nb.dofIdx + j] += kab * factor;
+                                K[na.dofIdx + i][nb.dofIdx + j] += k_mat * factor;
                             }
                         }
+
+                        // 2. Geometric stiffness (initial stress)
+                        const k_geo = (dx_a * Sxx * dx_b + dy_a * Syy * dy_b + dx_a * Sxy * dy_b + dy_a * Sxy * dx_b) * factor;
+                        K[na.dofIdx][nb.dofIdx] += k_geo;
+                        K[na.dofIdx + 1][nb.dofIdx + 1] += k_geo;
                     }
                 }
             }
@@ -374,7 +432,95 @@ class MappingSolver {
         const solver = new window.IGA2DSolver(this.engine);
         solver.applyPenaltyConstraints(K, this.referencePatch);
 
-        return K;
+        return { K, F_int };
+    }
+
+    assembleMappedStiffness(mu, r, useECSW = false) {
+        const nDofs = this.referencePatch.controlPoints.length * this.referencePatch.controlPoints[0].length * 2;
+        const zeroU = new Float64Array(nDofs);
+        return this.assembleMappedNonlinearForceAndStiffness(mu, r, zeroU, useECSW).K;
+    }
+
+    getElementNonlinearInternalForce(mu, r, u, eIdx) {
+        const nU = this.referencePatch.controlPoints.length;
+        const nV = this.referencePatch.controlPoints[0].length;
+        const nDofs = nU * nV * 2;
+        const F_int_e = new Float64Array(nDofs).fill(0);
+        const D = this.getPlaneStressD();
+        const H = this.H;
+        const sigma = Math.max(r, 0.4);
+
+        const elementData = this.precomputedGauss[eIdx];
+
+        for (let g = 0; g < elementData.gaussPoints.length; g++) {
+            const gp = elementData.gaussPoints[g];
+            const { hx, hy, detJ_ref, weightFactor, activeNodes } = gp;
+
+            // Pullback mapping terms
+            const dist = Math.abs(hx - mu);
+            const disp = r * Math.exp(-0.5 * Math.pow(dist / sigma, 2));
+            const dispDeriv = -((hx - mu) / (sigma * sigma)) * disp;
+
+            const detJphi = 1.0 - (2.0 * disp / H);
+            const safeDetJphi = Math.abs(detJphi) < 1e-12 ? 1e-12 : detJphi;
+
+            const shearTerm = (2.0 / H) * hy * dispDeriv / safeDetJphi;
+            const yTerm = 1.0 / safeDetJphi;
+
+            // Physical shape derivatives
+            const dRdx_phys = new Float64Array(activeNodes.length);
+            const dRdy_phys = new Float64Array(activeNodes.length);
+            for (let a = 0; a < activeNodes.length; a++) {
+                const node = activeNodes[a];
+                dRdx_phys[a] = node.dRdx_ref + shearTerm * node.dRdy_ref;
+                dRdy_phys[a] = yTerm * node.dRdy_ref;
+            }
+
+            // Compute displacement gradients
+            let dudx = 0, dudy = 0, dvdx = 0, dvdy = 0;
+            for (let a = 0; a < activeNodes.length; a++) {
+                const node = activeNodes[a];
+                const ux = u[node.dofIdx];
+                const uy = u[node.dofIdx + 1];
+                dudx += dRdx_phys[a] * ux;
+                dudy += dRdy_phys[a] * ux;
+                dvdx += dRdx_phys[a] * uy;
+                dvdy += dRdy_phys[a] * uy;
+            }
+
+            // Green-Lagrange Strain
+            const Exx = dudx + 0.5 * (dudx * dudx + dvdx * dvdx);
+            const Eyy = dvdy + 0.5 * (dudy * dudy + dvdy * dvdy);
+            const Exy2 = (dudy + dvdx) + (dudx * dudy + dvdx * dvdy);
+
+            // PK2 Stress
+            const Sxx = D[0][0] * Exx + D[0][1] * Eyy;
+            const Syy = D[1][0] * Exx + D[1][1] * Eyy;
+            const Sxy = D[2][2] * Exy2;
+
+            const factor = safeDetJphi * detJ_ref * weightFactor * this.thickness;
+
+            // B_NL
+            const B_NL = Array(activeNodes.length).fill(0).map(() => [[0, 0], [0, 0], [0, 0]]);
+            for (let a = 0; a < activeNodes.length; a++) {
+                const dx = dRdx_phys[a];
+                const dy = dRdy_phys[a];
+                B_NL[a][0][0] = (1.0 + dudx) * dx;
+                B_NL[a][0][1] = dvdx * dx;
+                B_NL[a][1][0] = dudy * dy;
+                B_NL[a][1][1] = (1.0 + dvdy) * dy;
+                B_NL[a][2][0] = (1.0 + dudx) * dy + dudy * dx;
+                B_NL[a][2][1] = (1.0 + dvdy) * dx + dvdx * dy;
+            }
+
+            for (let a = 0; a < activeNodes.length; a++) {
+                const node = activeNodes[a];
+                const Ba = B_NL[a];
+                F_int_e[node.dofIdx]     += (Ba[0][0] * Sxx + Ba[1][0] * Syy + Ba[2][0] * Sxy) * factor;
+                F_int_e[node.dofIdx + 1] += (Ba[0][1] * Sxx + Ba[1][1] * Syy + Ba[2][1] * Sxy) * factor;
+            }
+        }
+        return F_int_e;
     }
 
     /**
@@ -386,20 +532,30 @@ class MappingSolver {
         const nDofs = this.referencePatch.controlPoints.length * this.referencePatch.controlPoints[0].length * 2;
         const snapshots = [];
         
-        // Generate Mode 1: Static solution of the actual mapped beam under unit tip load
-        // This captures the EXACT structural compliance shape, unlike a synthetic polynomial
         const nU = this.referencePatch.controlPoints.length;
         const nV = this.referencePatch.controlPoints[0].length;
-        
-        const K_static = this.assembleMappedStiffness(this.mu, this.r, false);
+        const igaSolver = new window.IGA2DSolver(this.engine);
+
+        // Generate Mode 1 (Non-linear bending compliance) via static NR solves
+        const u_static = new Float64Array(nDofs);
         const F_static = new Float64Array(nDofs).fill(0);
         for (let j = 0; j < nV; j++) {
             const idx = ((nU - 1) * nV + j) * 2 + 1; // Y-direction at right edge
-            F_static[idx] = 1.0 / nV;
+            F_static[idx] = 1.5 / nV; // Scaled load
         }
-        this.applyClamping(K_static, F_static);
-        const igaSolver = new window.IGA2DSolver(this.engine);
-        const snap1 = igaSolver.gaussianElimination(K_static, F_static);
+        for (let iter = 0; iter < 5; iter++) {
+            const { K: K_stat, F_int: F_int_stat } = this.assembleMappedNonlinearForceAndStiffness(this.mu, this.r, u_static, false);
+            const R_stat = new Float64Array(nDofs);
+            for (let i = 0; i < nDofs; i++) {
+                R_stat[i] = F_static[i] - F_int_stat[i];
+            }
+            this.applyClamping(K_stat, R_stat);
+            const du_stat = igaSolver.gaussianElimination(K_stat, R_stat);
+            for (let i = 0; i < nDofs; i++) {
+                u_static[i] += du_stat[i];
+            }
+        }
+        const snap1 = u_static;
         console.log(`[ECSW] Static solve snap1 tip Y: ${snap1[((nU-1)*nV + nV-1)*2 + 1].toExponential(4)}`);
         
         // Generate Mode 2: Pure Tension
@@ -411,91 +567,74 @@ class MappingSolver {
                 snap2[dofX] = (x / this.L) * 0.5;
             }
         }
-        snapshots.push(snap1, snap2);
+
+        // Generate Mode 3 (Non-linear mid-span bending/shear compliance)
+        const u_mid = new Float64Array(nDofs);
+        const F_mid = new Float64Array(nDofs).fill(0);
+        const midU = Math.floor(nU / 2);
+        for (let j = 0; j < nV; j++) {
+            const idx = (midU * nV + j) * 2 + 1; // Y direction at mid-span
+            F_mid[idx] = 1.5 / nV;
+        }
+        for (let iter = 0; iter < 5; iter++) {
+            const { K: K_stat, F_int: F_int_stat } = this.assembleMappedNonlinearForceAndStiffness(this.mu, this.r, u_mid, false);
+            const R_stat = new Float64Array(nDofs);
+            for (let i = 0; i < nDofs; i++) {
+                R_stat[i] = F_mid[i] - F_int_stat[i];
+            }
+            this.applyClamping(K_stat, R_stat);
+            const du_stat = igaSolver.gaussianElimination(K_stat, R_stat);
+            for (let i = 0; i < nDofs; i++) {
+                u_mid[i] += du_stat[i];
+            }
+        }
+        const snap3 = u_mid;
+
+        snapshots.push(snap1, snap2, snap3);
 
         // Orthonormalize snapshots via Gram-Schmidt to construct POD Reduced Basis
-        let norm1 = 0;
-        for (let i = 0; i < nDofs; i++) norm1 += snap1[i] * snap1[i];
-        norm1 = Math.sqrt(norm1) || 1.0;
-        const phi1 = snap1.map(val => val / norm1);
+        const Phi = [];
+        for (let s = 0; s < snapshots.length; s++) {
+            const snap = snapshots[s];
+            const phi_unnorm = new Float64Array(snap);
 
-        let dot = 0;
-        for (let i = 0; i < nDofs; i++) dot += snap2[i] * phi1[i];
-        const phi2_unnorm = new Float64Array(nDofs);
-        for (let i = 0; i < nDofs; i++) phi2_unnorm[i] = snap2[i] - dot * phi1[i];
+            for (let b = 0; b < Phi.length; b++) {
+                const phi_b = Phi[b];
+                let dot = 0;
+                for (let i = 0; i < nDofs; i++) {
+                    dot += snap[i] * phi_b[i];
+                }
+                for (let i = 0; i < nDofs; i++) {
+                    phi_unnorm[i] -= dot * phi_b[i];
+                }
+            }
 
-        let norm2 = 0;
-        for (let i = 0; i < nDofs; i++) norm2 += phi2_unnorm[i] * phi2_unnorm[i];
-        norm2 = Math.sqrt(norm2) || 1.0;
-        const phi2 = phi2_unnorm.map(val => val / norm2);
-
-        this.Phi = [phi1, phi2];
+            let norm = 0;
+            for (let i = 0; i < nDofs; i++) norm += phi_unnorm[i] * phi_unnorm[i];
+            norm = Math.sqrt(norm);
+            if (norm > 1e-12) {
+                for (let i = 0; i < nDofs; i++) phi_unnorm[i] /= norm;
+                Phi.push(phi_unnorm);
+            }
+        }
+        this.Phi = Phi;
         
         // Zero out boundary DOFs to prevent penalty projection numeric pollution
-        for (let j = 0; j < nV; j++) {
-            const baseDof = j * 2;
-            this.Phi[0][baseDof] = 0.0;
-            this.Phi[0][baseDof + 1] = 0.0;
-            this.Phi[1][baseDof] = 0.0;
-            this.Phi[1][baseDof + 1] = 0.0;
-        }
-        
-        // Assemble element stiffness matrices Ke on reference configuration
-        const nElements = this.precomputedGauss.length;
-        const Ke_list = Array.from({ length: nElements }, () => Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0)));
-        const D = this.getPlaneStressD();
-        
-        for (let eIdx = 0; eIdx < nElements; eIdx++) {
-            const elementData = this.precomputedGauss[eIdx];
-            const K_e = Ke_list[eIdx];
-            
-            for (let g = 0; g < elementData.gaussPoints.length; g++) {
-                const gp = elementData.gaussPoints[g];
-                const { detJ_ref, weightFactor, activeNodes } = gp;
-                
-                const B_phys = Array(nU * nV).fill(0).map(() => [[0, 0], [0, 0], [0, 0]]);
-                for (let a = 0; a < activeNodes.length; a++) {
-                    const node = activeNodes[a];
-                    B_phys[node.nodeIdx][0][0] = node.dRdx_ref;
-                    B_phys[node.nodeIdx][1][1] = node.dRdy_ref;
-                    B_phys[node.nodeIdx][2][0] = node.dRdy_ref;
-                    B_phys[node.nodeIdx][2][1] = node.dRdx_ref;
-                }
-                
-                const factor = detJ_ref * weightFactor * this.thickness;
-                
-                for (let a = 0; a < activeNodes.length; a++) {
-                    const na = activeNodes[a];
-                    const Ba = B_phys[na.nodeIdx];
-                    for (let b = 0; b < activeNodes.length; b++) {
-                        const nb = activeNodes[b];
-                        const Bb = B_phys[nb.nodeIdx];
-                        for (let i = 0; i < 2; i++) {
-                            for (let j = 0; j < 2; j++) {
-                                let kab = 0;
-                                for (let row = 0; row < 3; row++) {
-                                    for (let col = 0; col < 3; col++) {
-                                        kab += Ba[row][i] * D[row][col] * Bb[col][j];
-                                    }
-                                }
-                                K_e[na.dofIdx + i][nb.dofIdx + j] += kab * factor;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Remove BC clamping entries to avoid NNLS numeric scaling dominance
-        Ke_list.forEach(Ke => {
+        for (let b = 0; b < this.Phi.length; b++) {
             for (let j = 0; j < nV; j++) {
                 const baseDof = j * 2;
-                Ke[baseDof][baseDof] = 0;
-                Ke[baseDof + 1][baseDof + 1] = 0;
+                this.Phi[b][baseDof] = 0.0;
+                this.Phi[b][baseDof + 1] = 0.0;
             }
-        });
+        }
+
+        // Initialize state vectors for reduced order model dynamically based on Phi length
+        this.qMapped = new Float64Array(this.Phi.length).fill(0);
+        this.dqMapped = new Float64Array(this.Phi.length).fill(0);
+        this.d2qMapped = new Float64Array(this.Phi.length).fill(0);
         
-        // Construct virtual force fitting matrix G and target vector b
+        // Construct virtual force fitting matrix G and target vector b using true non-linear forces
+        const nElements = this.precomputedGauss.length;
         const dim = snapshots.length * nDofs;
         const G = Array.from({ length: nElements }, () => new Float64Array(dim));
         const b = new Float64Array(dim);
@@ -503,20 +642,22 @@ class MappingSolver {
         snapshots.forEach((snap, sIdx) => {
             const offset = sIdx * nDofs;
             for (let eIdx = 0; eIdx < nElements; eIdx++) {
-                const Ke = Ke_list[eIdx];
+                const Fe_nonlinear = this.getElementNonlinearInternalForce(this.mu, this.r, snap, eIdx);
+                // Remove clamping entries from signature fitting to avoid NNLS dominance
+                for (let j = 0; j < nV; j++) {
+                    const baseDof = j * 2;
+                    Fe_nonlinear[baseDof] = 0;
+                    Fe_nonlinear[baseDof + 1] = 0;
+                }
                 for (let i = 0; i < nDofs; i++) {
-                    let force = 0;
-                    for (let j = 0; j < nDofs; j++) {
-                        force += Ke[i][j] * snap[j];
-                    }
-                    G[eIdx][offset + i] = force;
-                    b[offset + i] += force;
+                    G[eIdx][offset + i] = Fe_nonlinear[i];
+                    b[offset + i] += Fe_nonlinear[i];
                 }
             }
         });
         
-        // Seeding Clamp boundary elements [0, 1] and center notch elements [8, 9, 10]
-        const selected = [0, 1, 8, 9, 10];
+        // Seeding Clamp boundary elements [0, 1], notch elements [8, 9, 10], and load tip elements [17, 18]
+        const selected = [0, 1, 8, 9, 10, 17, 18];
         let solInit = this.leastSquaresOMP(selected.map(e => G[e]), b);
         let iterWeightsInit = solInit.map(w => Math.max(0.1, w));
         
@@ -531,7 +672,7 @@ class MappingSolver {
         
         const bNorm = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
         
-        const maxSelected = 8; // Target a stable active set of 8 elements across clamp, notch, and tip
+        const maxSelected = 10; // Try 10 elements for a slightly larger and more representative uniform subset
         for (let iter = selected.length; iter < maxSelected; iter++) {
             let bestIdx = -1;
             let maxProj = -1e-10;
@@ -571,14 +712,13 @@ class MappingSolver {
         }
         
         // Set robust, physically-justified uniform domain-representative weights
-        // This ensures the sparse integration matches the total physical volume of the beam (sum of weights = nElements)
         this.ecswElements = selected;
         const uniformWeight = nElements / selected.length;
         const tempWeights = Array(selected.length).fill(uniformWeight);
+        this.ecswWeights = tempWeights;
         
         // Dynamic Stiffness Calibration: scale weights so Kr (ECSW) matches Kr (Full) exactly for the bending mode
         // Calibrate at the ACTUAL operating configuration (mu, r), not the flat reference (mu, 0.0)
-        this.ecswWeights = tempWeights; // Temp assign to evaluate
         const KMappedFull = this.assembleMappedStiffness(this.mu, this.r, false);
         const KMappedECSW = this.assembleMappedStiffness(this.mu, this.r, true);
         let kr_full = 0, kr_ecsw = 0;
@@ -705,12 +845,6 @@ class MappingSolver {
     stepDynamics(mu, r) {
         this.time += this.dt;
 
-        // Naive FOM integration step
-        const tNaiveStart = performance.now();
-        const KNaive = this.assembleNaiveStiffness(mu, r);
-        const tNaiveEnd = performance.now();
-        const tNaiveAssembly = tNaiveEnd - tNaiveStart;
-
         // Mass and Damping matrix
         const M = this.assembleMassMatrix();
         const nDofs = M.length;
@@ -719,98 +853,100 @@ class MappingSolver {
         const beta = 0.25;
         const gamma = 0.5;
 
-        // NAIVE FOM SOLVE
+        const factorK = 1.0 + (gamma * this.betaK) / (beta * this.dt);
+        const factorM = 1.0 / (beta * this.dt * this.dt) + (gamma * this.alphaM) / (beta * this.dt);
+        const F_ext = this.calculateExternalForceVector(this.time);
+        const maxIter = 5;
+        const tol = 1e-3;
+
+        let KNaive = null;
+
+        // NAIVE FOM SOLVE (Newton-Raphson Loop)
+        const tNaiveStart = performance.now();
         const uPredN = new Float64Array(nDofs);
         const vPredN = new Float64Array(nDofs);
         for (let i = 0; i < nDofs; i++) {
             uPredN[i] = this.uNaive[i] + this.dt * this.vNaive[i] + (this.dt * this.dt) * (0.5 - beta) * this.aNaive[i];
             vPredN[i] = this.vNaive[i] + this.dt * (1.0 - gamma) * this.aNaive[i];
         }
-        const C_uPredN = new Float64Array(nDofs);
-        const K_uPredN = new Float64Array(nDofs);
-        for (let i = 0; i < nDofs; i++) {
-            let k_up = 0;
-            for (let j = 0; j < nDofs; j++) k_up += KNaive[i][j] * uPredN[j];
-            K_uPredN[i] = k_up;
-            C_uPredN[i] = this.alphaM * M[i] * vPredN[i] + this.betaK * k_up;
-        }
-        const F_ext = this.calculateExternalForceVector(this.time);
-        const RN = new Float64Array(nDofs);
-        for (let i = 0; i < nDofs; i++) {
-            RN[i] = F_ext[i] - C_uPredN[i] - K_uPredN[i] - M[i] * this.aNaive[i] * (1.0 - 2.0 * beta) / (2.0 * beta);
-        }
-        const K_effN = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
-        const factorK = 1.0 + (gamma * this.betaK) / (beta * this.dt);
-        const factorM = 1.0 / (beta * this.dt * this.dt) + (gamma * this.alphaM) / (beta * this.dt);
-        for (let i = 0; i < nDofs; i++) {
-            for (let j = 0; j < nDofs; j++) K_effN[i][j] = KNaive[i][j] * factorK;
-            K_effN[i][i] += M[i] * factorM;
-        }
-        this.applyClamping(K_effN, RN);
-        const igaSolver = new window.IGA2DSolver(this.engine);
-        const duNaive = igaSolver.gaussianElimination(K_effN, RN);
 
-        for (let i = 0; i < nDofs; i++) {
-            this.uNaive[i] = uPredN[i] + duNaive[i];
-            this.aNaive[i] = duNaive[i] / (beta * this.dt * this.dt);
-            this.vNaive[i] = vPredN[i] + gamma * this.dt * this.aNaive[i];
+        let uN = new Float64Array(uPredN);
+        let vN = new Float64Array(vPredN);
+        let aN = new Float64Array(this.aNaive);
+
+        const updateNaiveState = (uCurrent) => {
+            for (let i = 0; i < nDofs; i++) {
+                aN[i] = (uCurrent[i] - this.uNaive[i] - this.dt * this.vNaive[i]) / (beta * this.dt * this.dt) - (this.aNaive[i] * (0.5 - beta) / beta);
+                vN[i] = vPredN[i] + gamma * this.dt * aN[i];
+            }
+        };
+
+        for (let iter = 0; iter < maxIter; iter++) {
+            updateNaiveState(uN);
+            const { K: KNaive_temp, F_int: F_intN } = this.assembleNaiveNonlinearForceAndStiffness(mu, r, uN);
+            KNaive = KNaive_temp;
+            
+            // Residual: RN = F_ext - F_intN - M * aN - C * vN
+            const RN = new Float64Array(nDofs);
+            for (let i = 0; i < nDofs; i++) {
+                let cv_i = this.alphaM * M[i] * vN[i];
+                for (let j = 0; j < nDofs; j++) {
+                    cv_i += this.betaK * KNaive[i][j] * vN[j];
+                }
+                RN[i] = F_ext[i] - F_intN[i] - M[i] * aN[i] - cv_i;
+            }
+
+            // Zero out Dirichlet BCs in residual for norm evaluation
+            let rNorm = 0;
+            const nV = this.referencePatch.controlPoints[0].length;
+            for (let j = 0; j < nV; j++) {
+                RN[j * 2] = 0;
+                RN[j * 2 + 1] = 0;
+            }
+            for (let i = 0; i < nDofs; i++) rNorm += RN[i] * RN[i];
+            rNorm = Math.sqrt(rNorm);
+
+            if (rNorm < tol && iter > 0) break;
+
+            const K_effN = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
+            for (let i = 0; i < nDofs; i++) {
+                for (let j = 0; j < nDofs; j++) K_effN[i][j] = KNaive[i][j] * factorK;
+                K_effN[i][i] += M[i] * factorM;
+            }
+            this.applyClamping(K_effN, RN);
+            
+            const igaSolver = new window.IGA2DSolver(this.engine);
+            const duNaive = igaSolver.gaussianElimination(K_effN, RN);
+
+            for (let i = 0; i < nDofs; i++) {
+                uN[i] += duNaive[i];
+            }
         }
+        updateNaiveState(uN);
+        this.uNaive.set(uN);
+        this.vNaive.set(vN);
+        this.aNaive.set(aN);
+
+        const tNaiveEnd = performance.now();
+        const tNaiveAssembly = tNaiveEnd - tNaiveStart;
 
         // MAPPED SOLVE
         const tMappedStart = performance.now();
-        
-        if (this.mappedSolverType === 'ECSW' || this.mappedSolverType === 'Galerkin') {
+        const igaSolver = new window.IGA2DSolver(this.engine);
+                if (this.mappedSolverType === 'ECSW' || this.mappedSolverType === 'Galerkin') {
             // REDUCED ORDER MODEL SOLVE (ECSW or Standard Galerkin)
-            // In ROM mode, we solve the dynamic equations projected onto the POD Basis this.Phi (2 DOFs: q = [q1, q2])
-            // ECSW uses sparse hyper-reduced assembly; Galerkin uses unreduced full-mesh assembly.
             const useECSWAssembly = (this.mappedSolverType === 'ECSW');
-            const KMappedECSW = this.assembleMappedStiffness(mu, r, useECSWAssembly);
+            const nModes = this.Phi.length;
             
-            // Project Mass, Stiffness, Rayleigh Damping onto 2-DOF Reduced space
-            const Mr = Array.from({length: 2}, () => new Float64Array(2).fill(0));
-            const Kr = Array.from({length: 2}, () => new Float64Array(2).fill(0));
-            
-            // M_r = Phi' * M * Phi, K_r = Phi' * K * Phi
-            for (let rIdx = 0; rIdx < 2; rIdx++) {
-                const phiR = this.Phi[rIdx];
-                
-                // M_r is diagonal-like
-                for (let cIdx = 0; cIdx < 2; cIdx++) {
-                    const phiC = this.Phi[cIdx];
-                    let mVal = 0;
-                    let kVal = 0;
-                    for (let d = 0; d < nDofs; d++) {
-                        mVal += phiR[d] * M[d] * phiC[d];
-                        let kCol = 0;
-                        for (let col = 0; col < nDofs; col++) {
-                            kCol += KMappedECSW[d][col] * phiC[col];
-                        }
-                        kVal += phiR[d] * kCol;
-                    }
-                    Mr[rIdx][cIdx] = mVal;
-                    Kr[rIdx][cIdx] = kVal;
-                }
-            }
-
-            // Rayleigh Damping: C_r = alpha * M_r + beta * K_r
-            const Cr = Array.from({length: 2}, () => new Float64Array(2).fill(0));
-            for (let i = 0; i < 2; i++) {
-                for (let j = 0; j < 2; j++) {
-                    Cr[i][j] = this.alphaM * Mr[i][j] + this.betaK * Kr[i][j];
-                }
-            }
-
-            // Newmark Predictor for Reduced q coordinates
-            const qPred = new Float64Array(2);
-            const dqPred = new Float64Array(2);
-            for (let i = 0; i < 2; i++) {
+            const qPred = new Float64Array(nModes);
+            const dqPred = new Float64Array(nModes);
+            for (let i = 0; i < nModes; i++) {
                 qPred[i] = this.qMapped[i] + this.dt * this.dqMapped[i] + (this.dt * this.dt) * (0.5 - beta) * this.d2qMapped[i];
                 dqPred[i] = this.dqMapped[i] + this.dt * (1.0 - gamma) * this.d2qMapped[i];
             }
 
-            // Project external force vector: F_r = Phi' * F
-            const Fr_ext = new Float64Array(2);
-            for (let rIdx = 0; rIdx < 2; rIdx++) {
+            const Fr_ext = new Float64Array(nModes);
+            for (let rIdx = 0; rIdx < nModes; rIdx++) {
                 let fVal = 0;
                 for (let d = 0; d < nDofs; d++) {
                     fVal += this.Phi[rIdx][d] * F_ext[d];
@@ -818,80 +954,186 @@ class MappingSolver {
                 Fr_ext[rIdx] = fVal;
             }
 
-            // Residual: R_r = F_r - C_r * dqPred - K_r * qPred - M_r * d2qMapped * (1-2*beta)/(2*beta)
-            const Rr = new Float64Array(2);
-            for (let i = 0; i < 2; i++) {
-                let forceTerm = Fr_ext[i];
-                for (let j = 0; j < 2; j++) {
-                    forceTerm -= Cr[i][j] * dqPred[j] + Kr[i][j] * qPred[j] + Mr[i][j] * this.d2qMapped[j] * (1.0 - 2.0 * beta) / (2.0 * beta);
+            let qM = new Float64Array(qPred);
+            let dqM = new Float64Array(dqPred);
+            let d2qM = new Float64Array(this.d2qMapped);
+            let uM_temp = new Float64Array(nDofs);
+
+            const updateReducedState = (qCurrent) => {
+                for (let i = 0; i < nModes; i++) {
+                    d2qM[i] = (qCurrent[i] - this.qMapped[i] - this.dt * this.dqMapped[i]) / (beta * this.dt * this.dt) - (this.d2qMapped[i] * (0.5 - beta) / beta);
+                    dqM[i] = dqPred[i] + gamma * this.dt * d2qM[i];
                 }
-                Rr[i] = forceTerm;
-            }
+                uM_temp.fill(0);
+                for (let i = 0; i < nDofs; i++) {
+                    for (let m = 0; m < nModes; m++) {
+                        uM_temp[i] += this.Phi[m][i] * qCurrent[m];
+                    }
+                }
+            };
 
-            // Effective stiffness: K_eff_r = K_r * (1 + gamma * beta / (beta * dt)) + M_r * (1 / (beta * dt^2) + gamma * alpha / (beta * dt))
-            const K_eff_r = Array.from({length: 2}, () => new Float64Array(2).fill(0));
-            for (let i = 0; i < 2; i++) {
-                for (let j = 0; j < 2; j++) {
-                    K_eff_r[i][j] = Kr[i][j] * factorK + Mr[i][j] * factorM;
+            const Mr = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
+            for (let rIdx = 0; rIdx < nModes; rIdx++) {
+                const phiR = this.Phi[rIdx];
+                for (let cIdx = 0; cIdx < nModes; cIdx++) {
+                    const phiC = this.Phi[cIdx];
+                    let mVal = 0;
+                    for (let d = 0; d < nDofs; d++) {
+                        mVal += phiR[d] * M[d] * phiC[d];
+                    }
+                    Mr[rIdx][cIdx] = mVal;
                 }
             }
 
-            // Solve 2x2 system analytically (Cramer's rule)
-            const det = K_eff_r[0][0] * K_eff_r[1][1] - K_eff_r[0][1] * K_eff_r[1][0];
-            const dq = new Float64Array(2);
-            if (Math.abs(det) > 1e-12) {
-                dq[0] = (Rr[0] * K_eff_r[1][1] - Rr[1] * K_eff_r[0][1]) / det;
-                dq[1] = (K_eff_r[0][0] * Rr[1] - K_eff_r[1][0] * Rr[0]) / det;
+            for (let iter = 0; iter < maxIter; iter++) {
+                updateReducedState(qM);
+
+                // Assemble tangent stiffness and internal forces at current reconstructed displacement
+                const { K: KMappedECSW, F_int: F_intM } = this.assembleMappedNonlinearForceAndStiffness(mu, r, uM_temp, useECSWAssembly);
+
+                // Project Tangent Stiffness onto Reduced space
+                const Kr = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
+                for (let rIdx = 0; rIdx < nModes; rIdx++) {
+                    const phiR = this.Phi[rIdx];
+                    for (let cIdx = 0; cIdx < nModes; cIdx++) {
+                        const phiC = this.Phi[cIdx];
+                        let kVal = 0;
+                        for (let d = 0; d < nDofs; d++) {
+                            let kCol = 0;
+                            for (let col = 0; col < nDofs; col++) {
+                                kCol += KMappedECSW[d][col] * phiC[col];
+                            }
+                            kVal += phiR[d] * kCol;
+                        }
+                        Kr[rIdx][cIdx] = kVal;
+                    }
+                }
+
+                // Project Internal Forces onto Reduced space
+                const Fr_int = new Float64Array(nModes);
+                for (let rIdx = 0; rIdx < nModes; rIdx++) {
+                    let fVal = 0;
+                    for (let d = 0; d < nDofs; d++) {
+                        fVal += this.Phi[rIdx][d] * F_intM[d];
+                    }
+                    Fr_int[rIdx] = fVal;
+                }
+
+                // Rayleigh Damping: C_r = alpha * M_r + beta * K_r
+                const Cr = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
+                for (let i = 0; i < nModes; i++) {
+                    for (let j = 0; j < nModes; j++) {
+                        Cr[i][j] = this.alphaM * Mr[i][j] + this.betaK * Kr[i][j];
+                    }
+                }
+
+                // Reduced Residual: Rr = Fr_ext - Fr_int - Mr * d2qM - Cr * dqM
+                const Rr = new Float64Array(nModes);
+                for (let i = 0; i < nModes; i++) {
+                    let dampingTerm = 0;
+                    let massTerm = 0;
+                    for (let j = 0; j < nModes; j++) {
+                        dampingTerm += Cr[i][j] * dqM[j];
+                        massTerm += Mr[i][j] * d2qM[j];
+                    }
+                    Rr[i] = Fr_ext[i] - Fr_int[i] - massTerm - dampingTerm;
+                }
+
+                let rNorm = 0;
+                for (let i = 0; i < nModes; i++) rNorm += Rr[i] * Rr[i];
+                rNorm = Math.sqrt(rNorm);
+                if (rNorm < tol && iter > 0) break;
+
+                const K_eff_r = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
+                for (let i = 0; i < nModes; i++) {
+                    for (let j = 0; j < nModes; j++) {
+                        K_eff_r[i][j] = Kr[i][j] * factorK + Mr[i][j] * factorM;
+                    }
+                }
+
+                // Solve system using the core solver's Gaussian elimination
+                const dq = igaSolver.gaussianElimination(K_eff_r, Rr);
+
+                for (let i = 0; i < nModes; i++) {
+                    qM[i] += dq[i];
+                }
             }
 
-            // Corrector phase
-            for (let i = 0; i < 2; i++) {
-                this.qMapped[i] = qPred[i] + dq[i];
-                this.d2qMapped[i] = dq[i] / (beta * this.dt * this.dt);
-                this.dqMapped[i] = dqPred[i] + gamma * this.dt * this.d2qMapped[i];
-            }
-
-            // Reconstruct full displacement field: u = Phi * q
-            this.uMapped.fill(0);
+            updateReducedState(qM);
+            this.qMapped.set(qM);
+            this.dqMapped.set(dqM);
+            this.d2qMapped.set(d2qM);
+            this.uMapped.set(uM_temp);
+            this.vMapped.fill(0);
+            this.aMapped.fill(0);
             for (let i = 0; i < nDofs; i++) {
-                this.uMapped[i] = this.Phi[0][i] * this.qMapped[0] + this.Phi[1][i] * this.qMapped[1];
+                for (let m = 0; m < nModes; m++) {
+                    this.vMapped[i] += this.Phi[m][i] * this.dqMapped[m];
+                    this.aMapped[i] += this.Phi[m][i] * this.d2qMapped[m];
+                }
             }
 
         } else {
-            // FULL ORDER MODEL MAPPED SOLVE (All 19 elements active)
-            const KMapped = this.assembleMappedStiffness(mu, r, false);
-            
+            // FULL ORDER MODEL MAPPED SOLVE
             const uPredM = new Float64Array(nDofs);
             const vPredM = new Float64Array(nDofs);
             for (let i = 0; i < nDofs; i++) {
                 uPredM[i] = this.uMapped[i] + this.dt * this.vMapped[i] + (this.dt * this.dt) * (0.5 - beta) * this.aMapped[i];
                 vPredM[i] = this.vMapped[i] + this.dt * (1.0 - gamma) * this.aMapped[i];
             }
-            const C_uPredM = new Float64Array(nDofs);
-            const K_uPredM = new Float64Array(nDofs);
-            for (let i = 0; i < nDofs; i++) {
-                let k_up = 0;
-                for (let j = 0; j < nDofs; j++) k_up += KMapped[i][j] * uPredM[j];
-                K_uPredM[i] = k_up;
-                C_uPredM[i] = this.alphaM * M[i] * vPredM[i] + this.betaK * k_up;
-            }
-            const RM = new Float64Array(nDofs);
-            for (let i = 0; i < nDofs; i++) {
-                RM[i] = F_ext[i] - C_uPredM[i] - K_uPredM[i] - M[i] * this.aMapped[i] * (1.0 - 2.0 * beta) / (2.0 * beta);
-            }
-            const K_effM = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
-            for (let i = 0; i < nDofs; i++) {
-                for (let j = 0; j < nDofs; j++) K_effM[i][j] = KMapped[i][j] * factorK;
-                K_effM[i][i] += M[i] * factorM;
-            }
-            this.applyClamping(K_effM, RM);
-            const duMapped = igaSolver.gaussianElimination(K_effM, RM);
 
-            for (let i = 0; i < nDofs; i++) {
-                this.uMapped[i] = uPredM[i] + duMapped[i];
-                this.aMapped[i] = duMapped[i] / (beta * this.dt * this.dt);
-                this.vMapped[i] = vPredM[i] + gamma * this.dt * this.aMapped[i];
+            let uM = new Float64Array(uPredM);
+            let vM = new Float64Array(vPredM);
+            let aM = new Float64Array(this.aMapped);
+
+            const updateMappedState = (uCurrent) => {
+                for (let i = 0; i < nDofs; i++) {
+                    aM[i] = (uCurrent[i] - this.uMapped[i] - this.dt * this.vMapped[i]) / (beta * this.dt * this.dt) - (this.aMapped[i] * (0.5 - beta) / beta);
+                    vM[i] = vPredM[i] + gamma * this.dt * aM[i];
+                }
+            };
+
+            for (let iter = 0; iter < maxIter; iter++) {
+                updateMappedState(uM);
+                const { K: KMapped, F_int: F_intM } = this.assembleMappedNonlinearForceAndStiffness(mu, r, uM, false);
+
+                // Residual: RM = F_ext - F_intM - M * aM - C * vM
+                const RM = new Float64Array(nDofs);
+                for (let i = 0; i < nDofs; i++) {
+                    let cv_i = this.alphaM * M[i] * vM[i];
+                    for (let j = 0; j < nDofs; j++) {
+                        cv_i += this.betaK * KMapped[i][j] * vM[j];
+                    }
+                    RM[i] = F_ext[i] - F_intM[i] - M[i] * aM[i] - cv_i;
+                }
+
+                let rNorm = 0;
+                const nV = this.referencePatch.controlPoints[0].length;
+                for (let j = 0; j < nV; j++) {
+                    RM[j * 2] = 0;
+                    RM[j * 2 + 1] = 0;
+                }
+                for (let i = 0; i < nDofs; i++) rNorm += RM[i] * RM[i];
+                rNorm = Math.sqrt(rNorm);
+
+                if (rNorm < tol && iter > 0) break;
+
+                const K_effM = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
+                for (let i = 0; i < nDofs; i++) {
+                    for (let j = 0; j < nDofs; j++) K_effM[i][j] = KMapped[i][j] * factorK;
+                    K_effM[i][i] += M[i] * factorM;
+                }
+                this.applyClamping(K_effM, RM);
+
+                const duMapped = igaSolver.gaussianElimination(K_effM, RM);
+                for (let i = 0; i < nDofs; i++) {
+                    uM[i] += duMapped[i];
+                }
             }
+            updateMappedState(uM);
+            this.uMapped.set(uM);
+            this.vMapped.set(vM);
+            this.aMapped.set(aM);
         }
         
         const tMappedEnd = performance.now();
@@ -1003,16 +1245,17 @@ class MappingSolver {
                 console.log("d2qMapped coordinates:", Array.from(this.d2qMapped).map(v => v.toFixed(6)));
                 
                 // Let's recompute/project the matrices here to inspect them
+                const nModes = this.Phi.length;
                 const KMappedECSW = this.assembleMappedStiffness(mu, r, true);
                 const KMappedFull = this.assembleMappedStiffness(mu, r, false);
                 const M = this.assembleMassMatrix();
-                const Mr = Array.from({length: 2}, () => new Float64Array(2).fill(0));
-                const Kr = Array.from({length: 2}, () => new Float64Array(2).fill(0));
-                const KrFull = Array.from({length: 2}, () => new Float64Array(2).fill(0));
+                const Mr = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
+                const Kr = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
+                const KrFull = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
                 const nDofs = M.length;
-                for (let rIdx = 0; rIdx < 2; rIdx++) {
+                for (let rIdx = 0; rIdx < nModes; rIdx++) {
                     const phiR = this.Phi[rIdx];
-                    for (let cIdx = 0; cIdx < 2; cIdx++) {
+                    for (let cIdx = 0; cIdx < nModes; cIdx++) {
                         const phiC = this.Phi[cIdx];
                         let mVal = 0, kVal = 0, kFullVal = 0;
                         for (let d = 0; d < nDofs; d++) {
@@ -1034,18 +1277,18 @@ class MappingSolver {
                 const factorK = 1.0 + (0.5 * this.betaK) / (beta * this.dt);
                 const factorM = 1.0 / (beta * this.dt * this.dt) + (0.5 * this.alphaM) / (beta * this.dt);
                 
-                console.log("Mr:", Mr.map(r => `[${r[0].toFixed(4)}, ${r[1].toFixed(4)}]`));
-                console.log("Kr (ECSW Hyper-reduced):", Kr.map(r => `[${r[0].toFixed(4)}, ${r[1].toFixed(4)}]`));
-                console.log("KrFull (Full Unreduced):", KrFull.map(r => `[${r[0].toFixed(4)}, ${r[1].toFixed(4)}]`));
+                console.log("Mr:", Mr.map(r => `[${Array.from(r).map(v => v.toFixed(4)).join(', ')}]`));
+                console.log("Kr (ECSW Hyper-reduced):", Kr.map(r => `[${Array.from(r).map(v => v.toFixed(4)).join(', ')}]`));
+                console.log("KrFull (Full Unreduced):", KrFull.map(r => `[${Array.from(r).map(v => v.toFixed(4)).join(', ')}]`));
                 console.log(`factorK: ${factorK.toFixed(4)} | factorM: ${factorM.toFixed(4)}`);
                 
-                const K_eff_r = Array.from({length: 2}, () => new Float64Array(2).fill(0));
-                for (let i = 0; i < 2; i++) {
-                    for (let j = 0; j < 2; j++) {
+                const K_eff_r = Array.from({length: nModes}, () => new Float64Array(nModes).fill(0));
+                for (let i = 0; i < nModes; i++) {
+                    for (let j = 0; j < nModes; j++) {
                         K_eff_r[i][j] = Kr[i][j] * factorK + Mr[i][j] * factorM;
                     }
                 }
-                console.log("K_eff_r Matrix:", K_eff_r.map(r => `[${r[0].toFixed(4)}, ${r[1].toFixed(4)}]`));
+                console.log("K_eff_r Matrix:", K_eff_r.map(r => `[${Array.from(r).map(v => v.toFixed(4)).join(', ')}]`));
                 console.log("==============================================================");
             }
         }

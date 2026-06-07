@@ -423,6 +423,21 @@
         tr:hover td {
             background: rgba(255, 255, 255, 0.01);
         }
+
+        /* Flowchart pre container */
+        .flowchart-pre {
+            background: #030712;
+            border: 1px solid var(--border);
+            padding: 25px;
+            border-radius: 20px;
+            margin: 30px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            overflow-x: auto;
+            color: #a5f3fc;
+            white-space: pre;
+        }
     </style>
 </head>
 
@@ -445,6 +460,9 @@
             </button>
             <button class="tab-btn" onclick="switchTab(event, 'step3')">
                 <i class="fa-solid fa-clipboard-check"></i> Step 3: Verification & Stability
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'flowcharts')">
+                <i class="fa-solid fa-diagram-project"></i> Architecture & Flowcharts
             </button>
         </nav>
 
@@ -781,7 +799,353 @@
                 </ol>
             </div>
         </div>
-    </div>         </div>
+
+        <!-- ==================== FLOWCHARTS CONTENT ==================== -->
+        <div id="flowcharts" class="tab-content">
+            <h2>Architecture & Pipeline Flowcharts</h2>
+            <p>
+                To illustrate the difference between the physical domain tracking (Naive Approach) and the reference domain warping (Pullback Approach), as well as the execution pathways of the solvers, study the detailed pipeline architectures below.
+            </p>
+
+            <h3>1. Formulation Paradigm: Naive Physical vs. Pullback Reference</h3>
+            <p>
+                The Naive approach requires continuous re-meshing and expensive physical-space integration assembly during parameter sweeps. The Pullback approach freezes quadrature data on a flat reference geometry offline, and performs fast analytical warp projections online.
+            </p>
+            <pre class="flowchart-pre">
+===============================================================================================
+               NAIVE APPROACH                                      PULLBACK APPROACH
+===============================================================================================
+
+      +-------------------------+                       +-------------------------+
+      |  Select Initial Mesh    |                       |  Select Initial Mesh    |
+      |   (h-level, p-level)    |                       |   (h-level, p-level)    |
+      +------------+------------+                       +------------+------------+
+                   |                                                 |
+                   |                                                 v
+                   |                                    [ 1. INITIALIZE REFERENCE ] 
+                   |                                    Gen flat beam geometry (r=0)
+                   |                                                 |
+                   |                                                 v
+                   |                                    [ 2. MAPPED GAUSS QUADRATURE ]
+OFFLINE            |                                    Evaluate and freeze values for:
+PHASE              |                                    - Reference positions (hx, hy)
+                   |                                    - Shape function derivatives
+(Before            |                                    - Reference Jacobians (detJ_ref)
+Start)             |                                                 |
+                   |                                                 v
+                   |                                    +-------------------------+
+                   |                                    |  Cache precomputed data |
+                   |                                    |  to `precomputedGauss`  |
+                   |                                    +------------+------------+
+                   |                                                 |
+                   v                                                 v
+      +-------------------------+                       +-------------------------+
+      |  Allocate state vectors |                       |  Allocate state vectors |
+      |  uNaive, vNaive, aNaive |                       |  uMapped,vMapped,aMapped|
+      +------------+------------+                       +------------+------------+
+                   |                                                 |
+===================|=================================================|=========================
+                   |                                                 |
+             <<< PRESS START BUTTON / REAL-TIME REAL-TIME PARAMETER SWEEPS >>>
+                   |                                                 |
+                   v                                                 v
+      [ 1. RE-MESH & MORPH GRID ]                        [ 1. READ PARAMETER INPUT ]
+       Regenerate control points                         Grab values for (mu, r, sigma)
+                   |                                                 |
+                   v                                                 v
+      [ 2. EVALUATE ON-THE-FLY ]                         [ 2. ANALYTICAL PULLBACK ]
+      Compute dynamic physical spans                    Stream cached reference elements
+      and baseline integration terms                    through coordinate mapping:
+                   |                                    x = Phi(xhat; mu)
+                   |                                                 |
+                   v                                                 v
+ONLINE         [ 3. HEAVY NUMERICAL ASSEMBLE ]          [ 3. LIGHTWEIGHT WARPING ]
+LOOP           Evaluate active shape derivatives         Warp physical gradients using:
+               and build global stiffness matrix        - Inverse Transpose Jacobian
+(Every         K_Naive completely from scratch          - Mapping determinant (detJphi)
+Timestep)      (Online Complexity: O(N_elem))           (Online Complexity: O(N_active))
+                   |                                                 |
+                   v                                                 v
+      +-------------------------+                       +-------------------------+
+      |   Newmark Implicit Step |                       |   Newmark Implicit Step |
+      |   Solve: K_eff * du = R |                       |   Solve: K_eff * du = R |
+      +------------+------------+                       +------------+------------+
+                   |                                                 |
+                   v                                                 v
+      +-------------------------+                       +-------------------------+
+      |   Update State Field    |                       |   Update State Field    |
+      |   uNaive (Physical)     |                       |   uMapped (Reference)   |
+      +-------------------------+                       +-------------------------+
+            </pre>
+
+            <h3>2. Phase 5.3: Comprehensive Bifurcation Flowchart</h3>
+            <p>
+                The following chart details the execution branches for Case 1 &amp; 2 (Naive Physical Assembly) versus Case 3 &amp; 4 (Pullback Reference Assembly) under static vs. dynamic parameter modifications.
+            </p>
+            <pre class="flowchart-pre">
+=========================================================================================================================
+                                     PHASE 5.3 COMPREHROW BIFURCATION FLOWCHART
+=========================================================================================================================
+
+                      [ OFFLINE INITIALIZATION STAGE ] (Executed once before pressing Start)
+                                                 |
+                                                 v
+                             +---------------------------------------+
+                             |       Instantiate Flat Beam           |
+                             |    Reference Geometry (Set r = 0)     |
+                             +-------------------+-------------------+
+                                                 |
+                                                 v
+                             +---------------------------------------+
+                             | Refine Reference Patch Space (h & p)  |
+                             +-------------------+-------------------+
+                                                 |
+                                                 v
+                         ==================================================
+                         GLOBAL REFERENCE QUADRATURE PRECOMPUTATION MATRIX
+                         ==================================================
+                                                 |
+                                                 v
+                             +---------------------------------------+
+                             | For each reference Gauss point:       |
+                             | • Cache positions: (hx, hy)           |
+                             | • Cache reference Jacobian: detJ_ref  |
+                             | • Cache local shape derivatives:      |
+                             |   dRdx_ref, dRdy_ref                  |
+                             | • Freeze to `this.precomputedGauss`   |
+                             +-------------------+-------------------+
+                                                 |
+                                                 v
+                             +---------------------------------------+
+                             |  Allocate and Zero-Initialize States  |
+                             |  (uNaive, vNaive, aNaive, uMapped...) |
+                             +-------------------+-------------------+
+                                                 |
+        +----------------------------------------+----------------------------------------+
+        |                                                                                 |
+        |  <<< USER PRESSES START BUTTON / SIMULATION TIME-STEPPING INITIALIZES (t=0) >>> |
+        |                                                                                 |
+        v                                                                                 v
+=================================================               ==================================================
+     CHOOSE NAIVE PHYSICAL ASSEMBLY PIPELINE                         CHOOSE PULLBACK REFERENCE ASSEMBLY PIPELINE
+=================================================               ==================================================
+        |                                                                                 |
+        v                                                                                 v
+  Did parameters change                                                             Did parameters change
+  mid-simulation?                                                                   mid-simulation?
+        |                                                                                 |
+        +---------------+--------+                                                        +---------------+--------+
+        |                        |                                                        |                        |
+        v (No)                   v (Yes)                                                  v (No)                   v (Yes)
+  +-----------+            +-----------+                                            +-----------+            +-----------+
+  |  CASE 1   |            |  CASE 2   |                                            |  CASE 3   |            |  CASE 4   |
+  |  Static   |            |  Dynamic  |                                            |  Static   |            |  Dynamic  |
+  +-----------+            +-----------+                                            +-----------+            +-----------+
+  | • Mesh    |            | • RE-MESH |                                            | • Mesh is |            | • Mesh is |
+  |   morphed |            |   ONLINE: |                                            |   kept    |            |   kept    |
+  |   once per|            |   Control |                                            |   flat &  |            |   flat &  |
+  |   mu_0.   |            |   points  |                                            |   rectan- |            |   rectan- |
+  | • Compute |            |   forced  |                                            |   gular.  |            |   gular.  |
+  |   spline  |            |   to move |                                            | • Inject  |            | • Grab    |
+  |   shapes  |            |   at current|                                          |   fixed   |            |   new     |
+  |   on the  |            |   step.   |                                            |   mu_0    |            |   slider  |
+  |   curved  |            | • Heavy on- |                                          |   into    |            |   inputs  |
+  |   bounds. |            |   the-fly |                                            |   pullback|            |   online. |
+  | • Global  |            |   re-eval |                                            |   matrix  |            | • Run O(1)|
+  |   system  |            |   of basis|                                            |   math    |            |   algebra |
+  |   vectors |            |   spans.  |                                            |   once.   |            |   loop to |
+  |   remain  |            | • VECTORS |                                            | • Vectors |            |   warp the|
+  |   homoge- |            |   DRIFT:  |                                            |   stay    |            |   stiffness|
+  |   neous.  |            |   Nodal   |                                            |   perfect-|            |   terms   |
+  |           |            |   bases   |                                            |   ly      |            |   instantly|
+  |           |            |   reference|                                           |   homoge- |            |   using the|
+  |           |            |   different|                                           |   neous   |            |   frozen  |
+  |           |            |   physical|                                            |   on flat |            |   reference|
+  |           |            |   spaces. |                                            |   grid.   |            |   cache.  |
+  |           |            |   Causes  |                                            |           |            | • ABSOLUTE|
+  |           |            |   severe  |                                            |           |            |   STATE   |
+  |           |            |   energy  |                                            |           |            |   CONTINU-|
+  |           |            |   spikes  |                                            |           |            |   ITY:    |
+  |           |            |   and     |                                            |           |            |   No mesh |
+  |           |            |   solver  |                                            |           |            |   drift;  |
+  |           |            |   crashes.|                                            |           |            |   100%    |
+  |           |            |           |                                            |           |            |   stable. |
+  +-----------+            +-----------+                                            +-----------+            +-----------+
+        |                        |                                                        |                        |
+        v                        v                                                        v                        v
+ [Assemble K_Naive]       [Force Heavy Remesh]                                     [Stream Cache GP]        [Inject New Sliders]
+        |                 [Assemble K_New(mu)]                                            |                 [Run Pullback Math]
+        |                        |                                                        |                        |
+        +------------------------+                                                        +------------------------+
+                                 |                                                                                 |
+                                 v                                                                                 v
+                   +------------------------------+                                                 +------------------------------+
+                   | Full Assembly: K_Naive Matrix|                                                 | Analytical: K_Mapped Matrix  |
+                   | Size: N x N                  |                                                 | Size: N x N                  |
+                   +--------------+---------------+                                                 +--------------+---------------+
+                                  |                                                                                |
+                                  +---------------------------------------+----------------------------------------+
+                                                                          |
+                                                                          v
+                                                    =============================================
+                                                    TRANSIENT NEWMARK IMPLICIT DISCRETE RESOLUTION
+                                                    =============================================
+                                                                          |
+                                                                          v
+                                                    +-------------------------------------------+
+                                                    |     Newmark Predictor State Generation:   |
+                                                    |  u_pred = u_n + dt*v_n + dt^2*(0.5-beta)*a_n|
+                                                    |           v_pred = v_n + dt*(1-gamma)*a_n |
+                                                    +---------------------+---------------------+
+                                                                          |
+                                                                          v
+                                                    +-------------------------------------------+
+                                                    |      Compile Effective Dynamic LHS:      |
+                                                    |      K_eff = M / (beta * dt^2) + K        |
+                                                    +---------------------+---------------------+
+                                                    |                                           |
+                                                    v (Naive Path)                              v (Pullback Path)
+                                       +----------------------------+              +----------------------------+
+                                       | Uses K_Naive matrix directly|             | Integrates K_Mapped matrix |
+                                       +----------------------------+              +----------------------------+
+                                                                          |
+                                                                          v
+                                                    +-------------------------------------------+
+                                                    |      Solve High-Dimensional System:       |
+                                                    |           K_eff * du = R_n+1              |
+                                                    +---------------------+---------------------+
+                                                    |                                           |
+                                                    v (Naive Viewport)                          v (Pullback Viewport)
+                                       +----------------------------+              +----------------------------+
+                                       | Render explicitly distorted|              | Retain flat integration web|
+                                       | control lattice mesh grid. |              | and project stress metrics |
+                                       |                            |              | analytically onto mask.    |
+                                       +----------------------------+              +----------------------------+
+                                                                          |
+                                                                          v
+                                                    +-------------------------------------------+
+                                                    |  Time Step Incrementor: t = t + dt        |
+                                                    |  Advance snapshot loops back to next step |
+                                                    +-------------------------------------------+
+            </pre>
+
+            <h3>3. Phase 5.3a: Comprehensive Hyper-reduction Flowchart</h3>
+            <p>
+                The flowchart below traces the transition from offline snapshot training / SVD / ECSW weight extraction to the online hyper-reduced solving pipeline (Case 4).
+            </p>
+            <pre class="flowchart-pre">
+=========================================================================================================================
+                                     PHASE 5.3a COMPREHENSIVE HYPER-REDUCTION FLOWCHART
+=========================================================================================================================
+
+                      [ OFFLINE STAGE 1: REFERENCE CONFIGURATION & BASIC CACHE ]
+                                                 |
+                                                 v
+                             +---------------------------------------+
+                             |   Instantiate Flat Reference Mesh     |
+                             |   Precompute hx, hy, detJ_ref, dR_ref |
+                             +-------------------+-------------------+
+                                                 |
+                                                 v
+                      [ OFFLINE STAGE 2: SNAPSHOT COLLECTION & TRAINING TRAJECTORY ]
+                                                 |
+                                                 v
+                             +------------------------------------------+
+                             | Run full FOM sweeps over small training  |
+                             | subset parameter targets (mu_train)      |
+                             | Save snapshots to matrix S_u             |
+                             +-------------------+----------------------+
+                                                 |
+                                                 v
+                      [ OFFLINE STAGE 3: SUBSPACE PROJECTION & ECSW SELECTION ]
+                                                 |
+                                                 v
+                             +---------------------------------------+
+                             | 1. Compute SVD on S_u -> Get Basis Φ  |
+                             | 2. Run Non-Negative Least Squares     |
+                             |    (NNLS) to balance internal forces  |
+                             | 3. Extract Sparse Element Sample Set  |
+                             |    E_sparse and weights w_e           |
+                             +-------------------+-------------------+
+                                                 |
+        +----------------------------------------+----------------------------------------+
+        |                                                                                 |
+        |  <<< USER PRESSES START BUTTON / RUNTIME ONLINE SOLVER INGESTION (t=0) >>>      |
+        |                                                                                 |
+        v                                                                                 v
+=================================================               ==================================================
+     CHOOSE PHYSICAL DOMAIN PIPELINE (NAIVE)                         CHOOSE RESTRUCTED PULLBACK PIPELINE (MAPPED)
+=================================================               ==================================================
+        |                                                                                 |
+        v                                                                                 v
+   Is it running a Projected ROM?                                  Is it running ECSW Hyper-reduction?
+        |                                                                                 |
+        +---------------+--------+                                                        +---------------+--------+
+        |                        |                                                        |                        |
+        v (No)                   v (Yes)                                                  v (No)                   v (Yes)
+  +-----------+            +-----------+                                            +-----------+            +-----------+
+  |  CASE 1   |            |  CASE 2   |                                            |  CASE 3   |            |  CASE 4   |
+  | Naive FOM |            | Naive ROM |                                            |Mapped ROM |            | ECSW ROM  |
+  +-----------+            +-----------+                                            +-----------+            +-----------+
+  | • Standard|            | • Physics |                                            | • Mesh is |            | • Mesh is |
+  |   remesh  |            |   mesh    |                                            |   flat &  |            |   flat &  |
+  |   loop on |            |   warps   |                                            |   rectan- |            |   rectan- |
+  |   the fly.|            |   online. |                                            |   ular.   |            |   gular.  |
+  | • Compute |            | • Basis Φ |                                            | • Solve in|            | • STRIP   |
+  |   full K  |            |   must be |                                            |   reduced |            |   LOOP:   |
+  |   matrix  |            |   projected|                                           |   subspace|            |   Skip full|
+  |   size    |            |   onto a  |                                            |   size    |            |   cache;  |
+  |   N x N.  |            |   moving  |                                            |   n x n.  |            |   evaluate|
+  | • Slowest |            |   lattice |                                            | • Loop    |            |   only    |
+  |   tracking|            |   profile.|                                            |   scales  |            |   E_sparse|
+  |   channel.|            | • Project |                                            |   with the|            |   points. |
+  |           |            |   K_red = |                                            |   full    |            | • Apply   |
+  |           |            |   Φᵀ*K*Φ   |                                           |   mesh    |            |   weights |
+  |           |            |   (Slow). |                                            |   E_elem. |            |   w_e     |
+  +-----------+            +-----------+                                            +-----------+            +-----------+
+        |                        |                                                        |                        |
+        v                        v                                                        v                        v
+ [Assemble Full K]        [Warp Mesh Grid]                                         [Loop Full Mesh]         [Loop Sparse Set Only]
+ [ O(E_elements) ]        [ Project Basis ]                                        [ O(E_elements) ]        [ O(E_sparse) <<  ]
+        |                        |                                                        |                        |
+        +------------------------+                                                        +------------------------+
+                                 |                                                                                 |
+                                 v                                                                                 v
+                   +------------------------------+                                                 +------------------------------+
+                   | Project LHS System Operator  |                                                 | Reduced Mapped Operator Space|
+                   | Size: N x N Matrix           |                                                 | Size: n x n Compact Matrix   |
+                   +--------------+---------------+                                                 +--------------+---------------+
+                                  |                                                                                |
+                                  +---------------------------------------+----------------------------------------+
+                                                                          |
+                                                                          v
+                                                    =============================================
+                                                    TRANSIENT NEWMARK IMPLICIT DISCRETE RESOLUTION
+                                                    =============================================
+                                                                          |
+                                                                          v
+                                                    +-------------------------------------------+
+                                                    |     Newmark Predictor State Generation:   |
+                                                    |  Compute predictions in corresponding     |
+                                                    |  subspace configurations (Full vs Reduced)|
+                                                    +---------------------+---------------------+
+                                                    |                                           |
+                                                    v (Naive Paths)                             v (Mapped Paths)
+                                       +----------------------------+              +----------------------------+
+                                       | Solver Exec over N x N LHS |              | Solver Exec over n x n LHS |
+                                       +----------------------------+              +----------------------------+
+                                                                          |
+                                                                          v
+                                                    +-------------------------------------------+
+                                                    |  Update State Field & Visual Layer        |
+                                                    |  Case 4 expands: u_full = Φ * q_online    |
+                                                    |  Analytically plot stress contours        |
+                                                    +-------------------------------------------+
+                                                                          |
+                                                    +-------------------------------------------+
+                                                    | Advance Time State Step: t = t + dt       |
+                                                    +-------------------------------------------+
+            </pre>
         </div>
     </div>
 

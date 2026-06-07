@@ -539,7 +539,11 @@
                     For every change in the defect shape parameter $\mathbf{\mu}$, the mesh coordinates must be fully reconstructed, the stiffness matrix completely integrated and re-assembled, and an $N \times N$ system of equations solved at each timestep. This process is too slow to achieve interactive framerates.
                 </p>
             </div>
+        </div>
 
+        <!-- ==================== STEP 2 CONTENT ==================== -->
+        <div id="step2" class="tab-content">
+            <h2>Step 2: Reference Pullback (Coordinate Mapping & Pullbacks)</h2>
             <h3>The Reference Pullback Paradigm</h3>
             <p>
                 To avoid regenerating mesh structures, Phase 5.3 maps all physical configurations $\Omega(\mathbf{\mu})$ to a single, static reference domain $\hat{\Omega}$ using a smooth bijective coordinate mapping $\mathbf{x} = \mathbf{\Phi}(\hat{\mathbf{x}}; \mathbf{\mu})$:
@@ -577,12 +581,11 @@
                 <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height: 1.6;">
                     Even though the transient coordinate solver is 30x faster, standard Galerkin ROM still requires evaluating the warped gradients and Jacobian pullbacks over the entire mesh online. Because our notch profile is non-affine, we cannot separate parameters and space using offline matrices: a standard affine decomposition ($\mathbf{K}(\mathbf{\mu}) = \sum \theta_q \mathbf{K}_q$) is algebraically impossible. To eliminate this assembly bottleneck, **ECSW hyper-reduction is mathematically mandatory**.
                 </p>
-            </div>
         </div>
 
-        <!-- ==================== STEP 2 CONTENT ==================== -->
-        <div id="step2" class="tab-content">
-            <h2>Step 2: ECSW Hyper-reduction (Dimensional + Integration Reduction)</h2>
+        <!-- ==================== STEP 3 CONTENT ==================== -->
+        <div id="step3" class="tab-content">
+            <h2>Step 3: ECSW Integration (Energy-Conserving Sampling & Weighting)</h2>
             <p>
                 The Energy-Conserving Sampling and Weighting (ECSW) hyper-reduction method reduces the online assembly cost by integrating only over a sparse subset of elements $\widetilde{E} \subset E$. The sparse weights $\mathbf{w}$ are trained to solve the Non-Negative Least Squares (NNLS) system:
             </p>
@@ -664,11 +667,16 @@
                 Hooke's Plane Stress constitutive relation evaluates the stresses, which are then used to reconstruct the equivalent Von Mises Stress $\sigma_{vM}$:
                 $$\sigma_{vM}(\hat{\mathbf{x}}; \mathbf{\mu}) = \sqrt{\sigma_{xx}^2 - \sigma_{xx}\sigma_{yy} + \sigma_{yy}^2 + 3\sigma_{xy}^2}$$
             </p>
+
+            <h3>Phase 5.3b Extension: Geometrical Non-Linearity & Newton-Raphson</h3>
+            <p>
+                Phase 5.3b extends the reference-mapped ECSW hyper-reduction from linear to geometrically non-linear structural dynamics. Large displacements are modeled using the Green-Lagrange strain tensor pulled back to the reference configuration. Due to the non-linear stiffness relation, a Newton-Raphson iterative scheme is executed at each time step. The tangent stiffness matrix and internal force vectors are hyper-reduced by integrating only over the trained ECSW sparse elements subset, preserving the $\mathcal{O}(N_{\text{active}})$ online assembly cost.
+            </p>
         </div>
 
-        <!-- ==================== STEP 3 CONTENT ==================== -->
-        <div id="step3" class="tab-content">
-            <h2>Step 3: Verification & Stability</h2>
+        <!-- ==================== STEP 4 CONTENT ==================== -->
+        <div id="step4" class="tab-content">
+            <h2>Step 4: Mathematical Proof & Formulation</h2>
             <p>
                 To provide a mathematically watertight framework for the Digital Twin, we verify the implementation through rigorous complexity comparisons, code audits, and stability analysis.
             </p>
@@ -739,7 +747,8 @@
                 </p>
                 <p style="font-size:0.95rem; margin:15px 0 0; color:#cbd5e1; line-height:1.6;">
                 • $\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}}$ is the transpose of the inverse Jacobian matrix of the coordinate mapping.
-            </p>
+                </p>
+            </div>
             <p>
                 The explicit expression for $\mathbf{J}_{\boldsymbol{\Phi}}^{-\mathrm{T}}$ is:
             </p>
@@ -909,7 +918,11 @@
                 // solver.js (Line 52)<br>
                 const flatPatch = window.GeometryFactory.generateNotchedBeam(this.L, this.H, this.mu, 0.0);
             </div>
+        </div>
 
+        <!-- ==================== STEP 5 CONTENT ==================== -->
+        <div id="step5" class="tab-content">
+            <h2>Step 5: Code Verification Audit</h2>
             <h3>9. Mathematical Audit Verification Summary</h3>
             <p>
                 The table below provides a full map of the audited equations and source files:
