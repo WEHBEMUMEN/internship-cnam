@@ -908,10 +908,12 @@ class MappingSolver {
         this.stepCount++;
         let sumSqDiff = 0;
         let sumSqFOM = 0;
-        for (let i = 0; i < nDofs; i++) {
-            const diff = this.uMapped[i] - this.uNaive[i];
-            sumSqDiff += diff * diff;
-            sumSqFOM += this.uNaive[i] * this.uNaive[i];
+        if (runNaive && runMapped) {
+            for (let i = 0; i < nDofs; i++) {
+                const diff = this.uMapped[i] - this.uNaive[i];
+                sumSqDiff += diff * diff;
+                sumSqFOM += this.uNaive[i] * this.uNaive[i];
+            }
         }
         const relL2Error = Math.sqrt(sumSqDiff) / (Math.sqrt(sumSqFOM) || 1e-6);
 
@@ -964,10 +966,10 @@ class MappingSolver {
                 console.log(`Projected Ext Force Fr_ext: [${Fr_ext[0].toFixed(4)}, ${Fr_ext[1].toFixed(4)}]`);
                 
                 // Print FOM diagonal scaling
-                console.log(`FOM Stiffness Diagonal KNaive[50][50]: ${KNaive[50][50].toFixed(4)}`);
+                if (KNaive) console.log(`FOM Stiffness Diagonal KNaive[50][50]: ${KNaive[50][50].toFixed(4)}`);
                 console.log(`FOM Mass Diagonal M[50]: ${M[50].toFixed(4)}`);
                 console.log(`factorK: ${factorK.toFixed(4)} | factorM: ${factorM.toFixed(4)}`);
-                console.log(`Stiffness Term KNaive[50][50] * factorK: ${(KNaive[50][50] * factorK).toFixed(4)}`);
+                if (KNaive) console.log(`Stiffness Term KNaive[50][50] * factorK: ${(KNaive[50][50] * factorK).toFixed(4)}`);
                 console.log(`Mass Term M[50] * factorM: ${(M[50] * factorM).toFixed(4)}`);
                 
                 // Frequency Analysis: compare natural frequencies
