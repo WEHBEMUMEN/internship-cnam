@@ -581,7 +581,25 @@
         </div>
 
         <!-- Render Controls -->
-        <span class="section-label">Rendering Overlays</span>
+        <span class="section-label">Active Domain Solvers</span>
+
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.75rem; color: #06b6d4; font-weight: 700;">Naive Physical Domain</label>
+            <label class="switch">
+                <input type="checkbox" id="toggle-run-naive" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="control-item" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <label style="font-size: 0.75rem; color: #a78bfa; font-weight: 700;">Mapped Pullback Domain</label>
+            <label class="switch">
+                <input type="checkbox" id="toggle-run-mapped" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <span class="section-label" style="margin-top: 14px;">Rendering Overlays</span>
 
         <div class="control-item" style="display: flex; justify-content: space-between; align-items: center;">
             <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Control net mesh</label>

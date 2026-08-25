@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updateVisualizers();
 
     // 3. UI Elements References
+    const toggleRunNaive = document.getElementById('toggle-run-naive');
+    const toggleRunMapped = document.getElementById('toggle-run-mapped');
+    const naiveViewportBox = document.querySelector('#naive-viewport').closest('.viewport-box');
+    const mappedViewportBox = document.querySelector('#mapped-viewport').closest('.viewport-box');
     const sliderMu = document.getElementById('param-mu');
     const displayMu = document.getElementById('val-mu');
     const sliderR = document.getElementById('param-r');
@@ -226,16 +230,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize SVD indicators
     updateSVDStatus();
 
+    // Handle Domain Toggle Visibility & State
+    function handleDomainToggles() {
+        const runNaive = toggleRunNaive ? toggleRunNaive.checked : true;
+        const runMapped = toggleRunMapped ? toggleRunMapped.checked : true;
+
+        if (naiveViewportBox) {
+            naiveViewportBox.style.opacity = runNaive ? '1' : '0.25';
+            naiveViewportBox.style.pointerEvents = runNaive ? 'auto' : 'none';
+        }
+        if (mappedViewportBox) {
+            mappedViewportBox.style.opacity = runMapped ? '1' : '0.25';
+            mappedViewportBox.style.pointerEvents = runMapped ? 'auto' : 'none';
+        }
+
+        comparisonChart.data.datasets[0].hidden = !runNaive;
+        comparisonChart.data.datasets[1].hidden = !runMapped;
+        comparisonChart.update('none');
+    }
+
+    if (toggleRunNaive) toggleRunNaive.addEventListener('change', handleDomainToggles);
+    if (toggleRunMapped) toggleRunMapped.addEventListener('change', handleDomainToggles);
+
     // 7. Core Loop & Solves
     function runSingleStep() {
-        const result = solver.stepDynamics(solver.mu, solver.r);
+        const runNaive = toggleRunNaive ? toggleRunNaive.checked : true;
+        const runMapped = toggleRunMapped ? toggleRunMapped.checked : true;
+
+        const result = solver.stepDynamics(solver.mu, solver.r, runNaive, runMapped);
 
         // Calculate vertical displacement of the middle-right node
         // Middle right node index: i = nU-1, j = 1 (middle). Since nV = 3, j = 1 is index 1.
         // Node index: ( (nU - 1) * 3 + 1 ) * 2 + 1 (Y displacement component)
         const tipNodeIdx = ((nU - 1) * 3 + 1) * 2 + 1;
-        const dispYNaive = result.uNaive[tipNodeIdx];
-        const dispYMapped = result.uMapped[tipNodeIdx];
+        const dispYNaive = runNaive ? result.uNaive[tipNodeIdx] : null;
+        const dispYMapped = runMapped ? result.uMapped[tipNodeIdx] : null;
 
         // Update charts
         const curTime = result.time;
@@ -252,20 +281,25 @@ document.addEventListener('DOMContentLoaded', () => {
         comparisonChart.update('none'); // Update without animation for max performance
 
         // Benchmarks display
-        if (displayNaiveTime) displayNaiveTime.innerText = `${result.tNaiveAssembly.toFixed(2)} ms`;
-        if (displayMappedTime) displayMappedTime.innerText = `${(result.tMappedAssembly * 1000).toFixed(1)} µs`;
+        if (displayNaiveTime) displayNaiveTime.innerText = runNaive ? `${result.tNaiveAssembly.toFixed(2)} ms` : 'OFF';
+        if (displayMappedTime) displayMappedTime.innerText = runMapped ? `${(result.tMappedAssembly * 1000).toFixed(1)} µs` : 'OFF';
 
         if (displaySpeedup) {
-            const speedupVal = result.tNaiveAssembly / result.tMappedAssembly;
-            displaySpeedup.innerText = `${speedupVal.toFixed(1)}x`;
-            
-            // Add premium color scaling based on speedup
-            if (speedupVal > 30) {
-                displaySpeedup.className = 'stat-val speedup-extreme';
-            } else if (speedupVal > 10) {
-                displaySpeedup.className = 'stat-val speedup-good';
+            if (runNaive && runMapped && result.tMappedAssembly > 0) {
+                const speedupVal = result.tNaiveAssembly / result.tMappedAssembly;
+                displaySpeedup.innerText = `${speedupVal.toFixed(1)}x`;
+                
+                // Add premium color scaling based on speedup
+                if (speedupVal > 30) {
+                    displaySpeedup.className = 'stat-val speedup-extreme';
+                } else if (speedupVal > 10) {
+                    displaySpeedup.className = 'stat-val speedup-good';
+                } else {
+                    displaySpeedup.className = 'stat-val speedup-low';
+                }
             } else {
-                displaySpeedup.className = 'stat-val speedup-low';
+                displaySpeedup.innerText = '--';
+                displaySpeedup.className = 'metric-card';
             }
         }
 

@@ -702,62 +702,68 @@ class MappingSolver {
     /**
      * Implicit Newmark-beta Transient Dynamics Step
      */
-    stepDynamics(mu, r) {
+    stepDynamics(mu, r, runNaive = true, runMapped = true) {
         this.time += this.dt;
-
-        // Naive FOM integration step
-        const tNaiveStart = performance.now();
-        const KNaive = this.assembleNaiveStiffness(mu, r);
-        const tNaiveEnd = performance.now();
-        const tNaiveAssembly = tNaiveEnd - tNaiveStart;
 
         // Mass and Damping matrix
         const M = this.assembleMassMatrix();
         const nDofs = M.length;
-
-        // Newmark Parameters
         const beta = 0.25;
         const gamma = 0.5;
-
-        // NAIVE FOM SOLVE
-        const uPredN = new Float64Array(nDofs);
-        const vPredN = new Float64Array(nDofs);
-        for (let i = 0; i < nDofs; i++) {
-            uPredN[i] = this.uNaive[i] + this.dt * this.vNaive[i] + (this.dt * this.dt) * (0.5 - beta) * this.aNaive[i];
-            vPredN[i] = this.vNaive[i] + this.dt * (1.0 - gamma) * this.aNaive[i];
-        }
-        const C_uPredN = new Float64Array(nDofs);
-        const K_uPredN = new Float64Array(nDofs);
-        for (let i = 0; i < nDofs; i++) {
-            let k_up = 0;
-            for (let j = 0; j < nDofs; j++) k_up += KNaive[i][j] * uPredN[j];
-            K_uPredN[i] = k_up;
-            C_uPredN[i] = this.alphaM * M[i] * vPredN[i] + this.betaK * k_up;
-        }
-        const F_ext = this.calculateExternalForceVector(this.time);
-        const RN = new Float64Array(nDofs);
-        for (let i = 0; i < nDofs; i++) {
-            RN[i] = F_ext[i] - C_uPredN[i] - K_uPredN[i] - M[i] * this.aNaive[i] * (1.0 - 2.0 * beta) / (2.0 * beta);
-        }
-        const K_effN = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
         const factorK = 1.0 + (gamma * this.betaK) / (beta * this.dt);
         const factorM = 1.0 / (beta * this.dt * this.dt) + (gamma * this.alphaM) / (beta * this.dt);
-        for (let i = 0; i < nDofs; i++) {
-            for (let j = 0; j < nDofs; j++) K_effN[i][j] = KNaive[i][j] * factorK;
-            K_effN[i][i] += M[i] * factorM;
-        }
-        this.applyClamping(K_effN, RN);
+        const F_ext = this.calculateExternalForceVector(this.time);
         const igaSolver = new window.IGA2DSolver(this.engine);
-        const duNaive = igaSolver.gaussianElimination(K_effN, RN);
 
-        for (let i = 0; i < nDofs; i++) {
-            this.uNaive[i] = uPredN[i] + duNaive[i];
-            this.aNaive[i] = duNaive[i] / (beta * this.dt * this.dt);
-            this.vNaive[i] = vPredN[i] + gamma * this.dt * this.aNaive[i];
+        // Naive FOM integration step
+        let tNaiveAssembly = 0;
+        let KNaive = null;
+        if (runNaive) {
+            const tNaiveStart = performance.now();
+            KNaive = this.assembleNaiveStiffness(mu, r);
+            const tNaiveEnd = performance.now();
+            tNaiveAssembly = tNaiveEnd - tNaiveStart;
+
+            // NAIVE FOM SOLVE
+            const uPredN = new Float64Array(nDofs);
+            const vPredN = new Float64Array(nDofs);
+            for (let i = 0; i < nDofs; i++) {
+                uPredN[i] = this.uNaive[i] + this.dt * this.vNaive[i] + (this.dt * this.dt) * (0.5 - beta) * this.aNaive[i];
+                vPredN[i] = this.vNaive[i] + this.dt * (1.0 - gamma) * this.aNaive[i];
+            }
+            const C_uPredN = new Float64Array(nDofs);
+            const K_uPredN = new Float64Array(nDofs);
+            for (let i = 0; i < nDofs; i++) {
+                let k_up = 0;
+                for (let j = 0; j < nDofs; j++) k_up += KNaive[i][j] * uPredN[j];
+                K_uPredN[i] = k_up;
+                C_uPredN[i] = this.alphaM * M[i] * vPredN[i] + this.betaK * k_up;
+            }
+            const RN = new Float64Array(nDofs);
+            for (let i = 0; i < nDofs; i++) {
+                RN[i] = F_ext[i] - C_uPredN[i] - K_uPredN[i] - M[i] * this.aNaive[i] * (1.0 - 2.0 * beta) / (2.0 * beta);
+            }
+            const K_effN = Array.from({ length: nDofs }, () => new Float64Array(nDofs).fill(0));
+            for (let i = 0; i < nDofs; i++) {
+                for (let j = 0; j < nDofs; j++) K_effN[i][j] = KNaive[i][j] * factorK;
+                K_effN[i][i] += M[i] * factorM;
+            }
+            this.applyClamping(K_effN, RN);
+            const duNaive = igaSolver.gaussianElimination(K_effN, RN);
+
+            for (let i = 0; i < nDofs; i++) {
+                this.uNaive[i] = uPredN[i] + duNaive[i];
+                this.aNaive[i] = duNaive[i] / (beta * this.dt * this.dt);
+                this.vNaive[i] = vPredN[i] + gamma * this.dt * this.aNaive[i];
+            }
         }
 
         // MAPPED SOLVE
-        const tMappedStart = performance.now();
+        let tMappedStart = performance.now();
+        let tMappedEnd = performance.now();
+        let tMappedAssembly = 0;
+        if (runMapped) {
+            tMappedStart = performance.now();
         
         if (this.mappedSolverType === 'ECSW' || this.mappedSolverType === 'Galerkin') {
             // REDUCED ORDER MODEL SOLVE (ECSW or Standard Galerkin)
@@ -894,8 +900,9 @@ class MappingSolver {
             }
         }
         
-        const tMappedEnd = performance.now();
-        const tMappedAssembly = tMappedEnd - tMappedStart;
+            tMappedEnd = performance.now();
+            tMappedAssembly = tMappedEnd - tMappedStart;
+        }
 
         // Mathematical Verifier & Real-time Relative L2 Error tracker
         this.stepCount++;

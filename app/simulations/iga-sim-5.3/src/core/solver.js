@@ -344,21 +344,25 @@ class MappingSolver {
     /**
      * Implicit Newmark-beta Transient Dynamics Step
      */
-    stepDynamics(mu, r) {
+    stepDynamics(mu, r, runNaive = true, runMapped = true) {
         this.time += this.dt;
 
         // Step 1: Assemble Stiffness matrices
-        const tNaiveStart = performance.now();
-        const KNaive = this.assembleNaiveStiffness(mu, r);
-        const tNaiveEnd = performance.now();
+        let tNaiveAssembly = 0;
+        let KNaive = null;
+        if (runNaive) {
+            const tNaiveStart = performance.now();
+            KNaive = this.assembleNaiveStiffness(mu, r);
+            tNaiveAssembly = performance.now() - tNaiveStart;
+        }
 
-        const tMappedStart = performance.now();
-        const KMapped = this.assembleMappedStiffness(mu, r);
-        const tMappedEnd = performance.now();
-
-        // Save timings
-        const tNaiveAssembly = tNaiveEnd - tNaiveStart;
-        const tMappedAssembly = tMappedEnd - tMappedStart;
+        let tMappedAssembly = 0;
+        let KMapped = null;
+        if (runMapped) {
+            const tMappedStart = performance.now();
+            KMapped = this.assembleMappedStiffness(mu, r);
+            tMappedAssembly = performance.now() - tMappedStart;
+        }
 
         // Step 2: Mass & Damping matrices
         const M = this.assembleMassMatrix();
@@ -429,15 +433,19 @@ class MappingSolver {
             return { u: uNext, v: vNext, a: aNext };
         };
 
-        const resNaive = solveEngine(KNaive, this.uNaive, this.vNaive, this.aNaive);
-        this.uNaive = resNaive.u;
-        this.vNaive = resNaive.v;
-        this.aNaive = resNaive.a;
+        if (runNaive && KNaive) {
+            const resNaive = solveEngine(KNaive, this.uNaive, this.vNaive, this.aNaive);
+            this.uNaive = resNaive.u;
+            this.vNaive = resNaive.v;
+            this.aNaive = resNaive.a;
+        }
 
-        const resMapped = solveEngine(KMapped, this.uMapped, this.vMapped, this.aMapped);
-        this.uMapped = resMapped.u;
-        this.vMapped = resMapped.v;
-        this.aMapped = resMapped.a;
+        if (runMapped && KMapped) {
+            const resMapped = solveEngine(KMapped, this.uMapped, this.vMapped, this.aMapped);
+            this.uMapped = resMapped.u;
+            this.vMapped = resMapped.v;
+            this.aMapped = resMapped.a;
+        }
 
         return {
             time: this.time,
