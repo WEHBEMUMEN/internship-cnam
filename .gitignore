@@ -186,7 +186,6 @@ build/
 *.fdb_latexmk
 *.fls
 *.synctex.gz
-*.pdf
 *.acn
 *.acr
 *.alg
@@ -208,4 +207,7 @@ build/
 *.run.xml
 *.bcf
 report/svg-inkscape/
+
+# Allow report PDFs
+!report/**/*.pdf
 
