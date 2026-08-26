@@ -1,0 +1,56 @@
+% ==============================================================================
+\chapter*{Nomenclature}
+\addcontentsline{toc}{chapter}{Nomenclature}
+% ==============================================================================
+
+\noindent The primary mathematical symbols, coordinate systems, and operators utilized throughout this thesis are defined below:
+
+\section*{Geometric and Parametric Spaces}
+\begin{tabular}{p{3.0cm} p{11.0cm}}
+    $\Omega(\boldsymbol{\mu})$ & Parameterized physical domain of the notched cantilever beam \\
+    $\hat{\Omega}$              & Parameter-independent reference domain \\
+    $\hat{\Omega}_{\text{param}}$ & Parametric patch domain ($[0,1]^2$) \\
+    $\tilde{\Omega}$            & Standard parent element domain ($[-1,1]^2$) for Gauss quadrature \\
+    $\Gamma_D, \Gamma_N$        & Dirichlet and Neumann boundary zones in physical coordinates \\
+    $\hat{\Gamma}_D, \hat{\Gamma}_N$ & Dirichlet and Neumann boundary zones mapped to the reference domain \\
+    $\tilde{\boldsymbol{\xi}} = (\tilde{\xi}, \tilde{\eta})^T$ & Parent element coordinates in $[-1,1]^2$ \\
+    $\boldsymbol{\xi} = (\xi, \eta)^T$ & Parametric coordinates in the patch domain $\hat{\Omega}_{\text{param}}$ \\
+    $\hat{\vect{x}} = (\hat{x}, \hat{y})^T$ & Spatial coordinates in the reference domain $\hat{\Omega}$ \\
+    $\boldsymbol{x} = (x, y)^T$ & Spatial coordinates in the physical domain $\Omega(\boldsymbol{\mu})$ \\
+    $\boldsymbol{\Psi}$          & Diffeomorphic geometric mapping $\hat{\Omega} \to \Omega(\boldsymbol{\mu})$ \\
+    $\vect{d}(\boldsymbol{\mu})$ & Parameter-dependent control point displacement field \\
+    $\mathbf{J}_{\boldsymbol{\xi}}$ & IGA coordinate Jacobian matrix ($\frac{\partial \vect{x}}{\partial \boldsymbol{\xi}}$) \\
+    $\mathbf{J}_{\hat{\vect{x}}}$   & Continuum pullback Jacobian matrix ($\frac{\partial \boldsymbol{\Psi}}{\partial \hat{\vect{x}}}$) \\
+    $J_{\boldsymbol{\xi}, \boldsymbol{\mu}}$ & Determinant of the coordinate Jacobian matrix $\mathbf{J}_{\boldsymbol{\xi}}$ \\
+    $\boldsymbol{\mu} = (r, x_c)^T$ & Geometric design parameter vector (notch radius, center location) \\
+\end{tabular}
+
+\section*{Isogeometric Analysis (IGA) Discretization}
+\begin{tabular}{p{3.0cm} p{11.0cm}}
+    $\Xi, \mathcal{H}$          & Knot vectors defining the B-spline parameter spaces \\
+    $p, q$                      & Polynomial degrees of the B-spline basis functions in $\xi$ and $\eta$ directions \\
+    $N_{i,p}, M_{j,q}$          & Univariate B-spline basis functions \\
+    $R_{i,j}^{p,q}$             & Bivariate NURBS rational basis functions \\
+    $w_{i,j}$                   & Projective control weights corresponding to control nodes \\
+    $\vect{P}_{i,j}$            & B-spline/NURBS control points forming the physical geometry mesh lattice \\
+    $\vect{u} = [u, v]^T$       & Discretized displacement field vector \\
+    $\vect{U}$                  & Vector of physical nodal degrees of freedom \\
+    $\mat{B}$                   & Strain-displacement gradient matrix \\
+    $\mat{D}$                   & Linear elastic constitutive matrix under plane stress assumptions \\
+\end{tabular}
+
+\section*{Reduced Order Modeling (ROM) \& Hyper-Reduction}
+\begin{tabular}{p{3.0cm} p{11.0cm}}
+    $N$                         & Number of degrees of freedom in the Full Order Model (FOM) \\
+    $r$                         & Dimension of the reduced coordinate subspace ($r \ll N$) \\
+    $\boldsymbol{\Phi}$         & Orthonormal reduced basis projection matrix ($\mathbb{R}^{N \times r}$) \\
+    $\vect{q}$                  & Vector of generalized reduced coordinates ($\mathbb{R}^r$) \\
+    $\hat{\mat{M}}, \hat{\mat{K}}$ & Reference-mapped (pulled-back) global mass and stiffness matrices \\
+    $\mat{M}_r, \mat{K}_r$      & Projected reduced-order mass and stiffness matrices \\
+    $E^*$                       & Number of active selected ECSW elements ($E^* = 28$) \\
+    $\epsilon_{\text{tol}}$      & Non-Negative Least Squares (NNLS) convergence residual tolerance ($1 \times 10^{-4}$) \\
+    $\Omega_{\text{ECSW}}$       & Reduced integration domain consisting of ECSW active elements \\
+    $\vect{w} = [w_e]^T$        & Non-negative weights associated with ECSW active elements \\
+    $\omega_n$                  & Natural frequency of vibration ($\text{rad/s}$) \\
+    $\vect{F}_{\text{int}}, \vect{F}_{\text{ext}}$ & Internal elastic restoring and external load vectors \\
+\end{tabular}

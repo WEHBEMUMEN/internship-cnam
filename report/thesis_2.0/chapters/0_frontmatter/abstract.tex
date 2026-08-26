@@ -1,0 +1,27 @@
+% ==============================================================================
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+% ==============================================================================
+
+Modern engineering design, structural health monitoring, and the realization of interactive web applicationss require high-fidelity numerical models that can be evaluated in real-time. In structural dynamics, resolving transient responses under varying parameter settings typically relies on the Finite Element Method (FEM). However, high-fidelity FEM simulations of structural components demand massive computational resources and time-consuming remeshing, preventing interactive design exploration or real-time control.
+
+To address these challenges, this thesis investigates a real-time parametric simulation framework founded on three core pillars: \textbf{Isogeometric Analysis (IGA)}, \textbf{Reference Domain Pullback Mapping}, and \textbf{Energy-Conserving Sampling and Weighting (ECSW)} hyper-reduction. By using Non-Uniform Rational B-Splines (NURBS) as basis functions for both geometry representation and field approximation, IGA eliminates geometric approximation errors. Concurrently, projection-based Reduced Order Modeling (ROM) projects high-dimensional systems onto low-dimensional subspaces.
+
+A major contribution of this work is resolving the vector space incompatibility caused by shape parameter variations. By introducing a smooth geometric pullback mapping from parameter-dependent physical domains to a fixed reference configuration $\hat{\Omega}$, snapshot vectors remain structurally invariant across parameter updates. To bypass full-mesh assembly online, the ECSW hyper-reduction scheme selects a minimal sparse element subset $E^*$.
+
+Developed during an internship, the ultimate goal of this project was to design an interactive, real-time application for educational purposes, enabling teachers and students to run transient dynamic simulations effortlessly. The resulting IGA-Pullback-ECSW framework is deployed in a client-side WebGL application, achieving sub-millisecond evaluation times ($<1.5\,\text{ms}$, $\ge 60\,\text{FPS}$), a \textbf{$\mathbf{64.5\times}$ speedup} over the Full Order Model, and relative $L_2$ displacement errors under $0.054\%$.
+
+\vspace{1.5cm}
+
+% ==============================================================================
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+% ==============================================================================
+
+La conception en ingénierie moderne, la surveillance de la santé des structures et la réalisation de jumeaux numériques nécessitent des modèles numériques de haute fidélité pouvant être évalués en temps réel. En dynamique des structures, la résolution des réponses transitoires sous diverses configurations paramétriques repose généralement sur la méthode des éléments finis (MEF). Cependant, les simulations MEF de haute fidélité des composants structuraux exigent des ressources de calcul massives et un remaillage chronophage, empêchant l'exploration interactive de conception ou le contrôle en temps réel.
+
+Pour relever ces défis, cette thèse étudie un cadre de simulation paramétrique en temps réel fondé sur trois piliers fondamentaux : \textbf{l'Analyse Isogéométrique (IGA)}, \textbf{le Transport en Arrière (Pullback) vers un Domaine de Référence}, et l'hyper-réduction par \textbf{Échantillonnage et Pondération Conservant l'Énergie (ECSW)}. En utilisant des B-splines rationnelles non uniformes (NURBS) comme fonctions de forme à la fois pour la représentation géométrique et l'approximation des champs, l'IGA élimine les erreurs d'approximation géométrique. Conjointement, la réduction de modèle basée sur la projection (ROM) projette les systèmes à haute dimension sur des sous-espaces de faible dimension.
+
+Une contribution majeure de ce travail est la résolution de l'incompatibilité des espaces vectoriels causée par les variations des paramètres de forme. En introduisant une application géométrique de pullback lisse reliant les domaines physiques dépendants des paramètres à une configuration de référence fixe $\hat{\Omega}$, les vecteurs de snapshots restent structurellement invariants lors des mises à jour des paramètres. Pour contourner l'assemblage complet du maillage en ligne, le schéma d'hyper-réduction ECSW sélectionne un sous-ensemble minimal d'éléments actifs $E^*$. 
+
+Développé dans le cadre d'un stage, l'objectif ultime de ce projet était de concevoir une application interactive et en temps réel à des fins pédagogiques, permettant aux enseignants et aux étudiants d'exécuter des simulations dynamiques transitoires sans effort. Le cadre IGA-Pullback-ECSW en résultant est déployé dans un Jumeau Numérique WebGL interactif côté client, atteignant des temps d'évaluation inférieurs à la milliseconde ($<1.5\,\text{ms}$, $\ge 60\,\text{FPS}$), une \textbf{accélération de $\mathbf{64.5\times}$} par rapport au modèle d'ordre complet, et des erreurs relatives $L_2$ sur le déplacement inférieures à $0.054\%$.

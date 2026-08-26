@@ -1,0 +1,128 @@
+% ==============================================================================
+\chapter{Introduction \& State of the Art}
+\label{ch:intro}
+% ==============================================================================
+
+
+
+% ------------------------------------------------------------------------------
+\section{Introduction}
+% ------------------------------------------------------------------------------
+
+
+Modern engineering design, structural health monitoring, and the realization of interactive web applicationss\footnote{A application is a real-time virtual representation of a physical system that mirrors its operational states and dynamics through fast, data-informed numerical models \cite{chinesta2011, Farhat2014}.} necessitate a fast numerical evaluation depending on the application (real-time, uncertainties, parametric optimization, etc.). In structural dynamics, resolving the transient response of complex geometries under varying parameter settings typically relies on the Finite Element Method (FEM). However, high-dimensional FEM simulations of structural components demand important computational resources and time-consuming remeshing.
+
+To address these challenges, this master thesis combines two powerful numerical paradigms: \textbf{Isogeometric Analysis (IGA)} and projection-based \textbf{Reduced Order Modeling (ROM)}. By using Non-Uniform Rational B-Splines (NURBS) as the basis functions for both geometry representation and field approximation, IGA eliminates geometric approximation errors. Concurrently, ROM projects the high-dimensional full-order systems onto low-dimensional subspaces in order to accelerate the computational times.
+
+% ------------------------------------------------------------------------------
+\section{Key Concepts of the Study}
+% ------------------------------------------------------------------------------
+
+Before diving into variational continuum mechanics, the core numerical methods of this framework can be understood through three main categories:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Isogeometric Analysis (IGA)}: Traditional Finite Element Analysis breaks curved geometry into straight segments, resulting in geometric approximation errors. Isogeometric Analysis retains exact CAD spline curves (NURBS) directly, eliminating discretization errors.
+    \item \textbf{Reduced Order Modeling (ROM)}: Full-order simulations calculate thousands of degrees of freedom per time step. Projection-based Reduced Order Modeling via Proper Orthogonal Decomposition (POD) compresses these high-dimensional fields into a low-dimensional subspace of dominant mode shapes, capturing over $99.99\%$ of the system energy.
+    \item \textbf{Hyper-Reduction (ECSW)}: When geometrical parameters are non-affine (no separation of operators and parameters), evaluating force and stiffness integrals across every element leads to an online computational bottleneck. The Energy-Conserving Sampling and Weighting (ECSW) method overcomes this issue by selecting a sparse subset of active elements $E^*$ to evaluate reduced internal operators without full-mesh assembly.
+\end{itemize}
+
+Combining these three techniques allows real-time evaluation of a cantilever beam with a geometrical defect across varying parameters $(x_c, r)$ by performing all computations on a fixed reference domain $\hat{\Omega}$.
+
+% ------------------------------------------------------------------------------
+\section{Research Objectives}
+% ------------------------------------------------------------------------------
+
+The primary objective of this internship project is to establish an accessible, computationally efficient framework for real-time parameterized structural dynamics. Beyond mathematical rigor, the core ambition is to create an engaging pedagogical tool for classrooms, enabling teachers and students to interactively explore and visualize transient dynamic simulations with instantaneous feedback. Furthermore, the modular architecture is designed as an extensible foundation for future engineering applications (such as structural health monitoring and real-time control). 
+
+The specific contributions of this thesis are:
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Parameterized Reference Formulation}: Formulate the continuous pullback mapping $\hat{\boldsymbol{\Psi}}$ to enable constant mesh topology and vector-space compatibility across varying geometric parameters $\boldsymbol{\mu} = (x_c, r)^T$.
+    \item \textbf{Snapshot Collection \& Modal Compression}: Perform transient dynamic sweeps of the full-order IGA system and construct an optimal POD reduced basis capturing the dominant structural dynamics.
+    \item \textbf{Sparse Hyper-Reduction Optimization}: Calibrate an Energy-Conserving Sampling and Weighting (ECSW) scheme to select a minimal element subset $E^*$, achieving strict sub-millisecond assembly times.
+    \item \textbf{Interactive Pedagogical Deployment}: Implement the complete offline/online reduced solver within a standalone, client-side WebGL application (written natively in JavaScript and executed on a single processor core). This provides a zero-install, hands-on learning environment for students and teachers (\url{https://cnam-internship-mumen.netlify.app/}) and lays the technical groundwork for future web-based interactive web applications.
+\end{enumerate}
+
+% ------------------------------------------------------------------------------
+\section{State of the Art}
+% ------------------------------------------------------------------------------
+
+\subsection{Isogeometric Analysis (IGA)}
+Introduced by Hughes et al. in 2005 \cite{hughes2005}, Isogeometric Analysis (IGA) closes the gap between Computer-Aided Design (CAD) and Finite Element Analysis (FEA). By utilizing NURBS basis functions for the analysis, IGA offers several key advantages:
+\begin{itemize}[leftmargin=*]
+    \item Exact geometric representation of curved boundaries without discretization errors.
+    \item Higher-order continuity ($C^{p-1}$ for degree $p$), which leads to superior accuracy per degree of freedom compared to classical $C^0$ Lagrange finite elements.
+    \item Native support for mesh refinement techniques (knot insertion, degree elevation, and $k$-refinement) while preserving the exact CAD geometry.
+\end{itemize}
+
+\subsection{Reduced Order Modeling (ROM) for Parameterized Systems}
+Projection-based Reduced Order Modeling enables a compression of these high-dimensional systems by approximating the high-fidelity Full Order Model (FOM) solution in a low-dimensional subspace. This framework operates in an intrusive context where we have full access to the solver. The methodology is split into two phases:
+\begin{enumerate}
+    \item \textbf{Off-line Phase}: This involves data generation, basis generation, and model reduction by projection (pre-computing the necessary operators).
+    \item \textbf{On-line Phase}: This enables the fastest computation of a quantity of interest after reduction, which can be done by resolution of the reduced solution or interpolation of reduced coordinates.
+\end{enumerate}
+Standard basis generation techniques include Proper Orthogonal Decomposition (POD) \cite{berkooz1993}, Proper Generalized Decomposition (PGD) \cite{chinesta2011}, Reduced Basis (RB) methods \cite{rozza2008}, and Krylov subspace methods \cite{rutzmoser2017}. For projection-based ROM, the framework by Willcox \cite{willcox2002} provides fundamental insights. In a parameterized context, the reduced basis $\boldsymbol{\Phi}$ must capture the system's behavior across the entire parameter domain.
+
+However, geometrical parameters are most of the time non-affine, meaning there is no separation of operators and parameters. This context corresponds to the "bottleneck of ROM" because high-dimensional matrices and vectors have to be computed online despite the existence of the reduction basis.
+
+\subsection{Shape Parameterization \& Reference Configurations}
+To resolve the vector space incompatibility and avoid rebuilding the mesh, the governing equations are pulled back from the parameterized physical domain $\Omega(\boldsymbol{\mu})$ to a fixed, parameter-independent reference configuration $\hat{\Omega}$. In the literature, geometrical parameterization is often handled using Free-Form Deformation (FFD) and radial basis functions \cite{rozza2008, ballarin2015}, or through Arbitrary Lagrangian-Eulerian (ALE) formulations common in Fluid-Structure Interaction (FSI). In this work, the use of IGA allows explicit parameterization of the geometry directly through the positions and weights of the Control Points (for example, one can explicitly set a radius parameter for a circular hole). By applying a smooth geometric mapping $\boldsymbol{\Psi}(\cdot; \boldsymbol{\mu})$, the integrals are evaluated on $\hat{\Omega}$. Under IGA, the parent parametric domain $\hat{\Omega}_{\text{param}} = [0, 1]^2$ serves natively as this reference configuration, providing a mathematically elegant and structurally invariant framework for the assembly process.
+
+\subsection{Hyper-Reduction Methods}
+Even when the equations are defined on the reference configuration, geometrical parameters introduce a computational bottleneck because the full-order integrals depend on parameter-dependent Jacobians. To overcome this bottleneck, hyper-reduction methods are employed. Existing hyper-reduction techniques include the Discrete Empirical Interpolation Method (DEIM / MDEIM) \cite{Chaturantabut2010, Bonomi2017}, ECSW, and POD-GNAT. 
+
+While point-collocation techniques like DEIM are easy to implement, they do not conserve energy and can violate the symmetric positive-definite (SPD) structure of elastic stiffness matrices. In contrast, the Energy-Conserving Sampling and Weighting (ECSW) method \cite{Farhat2014, farhat2015} replaces global domain integration with a sparse, non-negatively weighted sum over a minimal active element subset $\Omega_{\text{ECSW}} \subset \hat{\Omega}$. ECSW is perfect for dynamic simulations with a specified tolerance because it strictly preserves the symmetry, coercivity, and energy conservation properties of the governing continuum equations.
+
+% ------------------------------------------------------------------------------
+\section{Thesis Roadmap \& Chapter Structure}
+% ------------------------------------------------------------------------------
+
+The manuscript is structured into the logical progression illustrated in Figure \ref{fig:thesis_roadmap}:
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+    \begin{tikzpicture}[
+            block/.style={
+                rectangle, 
+                draw=primaryblue, 
+                fill=lightbg, 
+                thick, 
+                rounded corners=5pt, 
+                text width=12.8cm, 
+                minimum height=1.1cm, 
+                align=left, 
+                font=\sffamily\small,
+                inner xsep=10pt,
+                inner ysep=6pt
+            },
+            arrow/.style={thick, ->, >=stealth, primaryblue!85!black}
+        ]
+        \node [block] (ch2) {\textbf{Chapter 2: Theory \& Problem Formulation} \\ Continuous governing equations for 2D linear plane stress structural dynamics, parameterized beam geometry, coordinate mappings.};
+        \node [block, below=0.35cm of ch2] (ch3) {\textbf{Chapter 3: Discretization via Isogeometric Analysis} \\ B-Spline and NURBS definitions, knot vectors, patches, control points and weights, convergence analysis.};
+        \node [block, below=0.35cm of ch3] (ch4) {\textbf{Chapter 4: Pullback Mapping \& Reference Domain Integration} \\ Formulation written on a reference configuration $\hat{\Omega}$ (fictitious displacement, transformation Jacobian). Comparison between problem on reference domain and parameterized domain.};
+        \node [block, below=0.35cm of ch4] (ch5) {\textbf{Chapter 5: Full Order Model (FOM) Simulation} \\ Generalized-$\alpha$ time integration, snapshot generation, convergence analysis.};
+        \node [block, below=0.35cm of ch5] (ch6) {\textbf{Chapter 6: Reduced Order Modeling } \\ Off-line phase (hyper-reduction, POD basis generation, ECSW weights pre-computation). On-line phase on an interactive webpage (WebGL architecture\footnotemark).};
+        \node [block, below=0.35cm of ch6] (ch7) {\textbf{Chapter 7: Conclusion \& Future Perspectives} \\ Outcomes, performance synthesis, primary research milestones, future optimization vectors.};
+
+        \draw [arrow] (ch2) -- (ch3);
+        \draw [arrow] (ch3) -- (ch4);
+        \draw [arrow] (ch4) -- (ch5);
+        \draw [arrow] (ch5) -- (ch6);
+        \draw [arrow] (ch6) -- (ch7);
+    \end{tikzpicture}%
+    }
+    \caption{Inter-chapter dependency and thematic workflow roadmap of the thesis.}
+    \label{fig:thesis_roadmap}
+\end{figure}
+\footnotetext{WebGL (Web Graphics Library) is a JavaScript API for rendering interactive 2D and 3D graphics within any compatible web browser without the use of plug-ins \cite{parisi2012}.}
+
+This inter-chapter workflow (Figure \ref{fig:thesis_roadmap}) connects the continuous continuum mechanics formulation directly to the real-time WebGL application execution.
+\section{Chapter Summary}
+\begin{tcolorbox}[colback=lightbg, colframe=primaryblue, title=\textbf{Chapter Summary: Objectives \& Methodological Synergy}, fonttitle=\bfseries]
+    \begin{description}[leftmargin=!, labelwidth=3.2cm]
+        \item[\textbf{Challenge}] Resolving transient structural dynamics in real time ($\ge 60\,\text{FPS}$) under changing geometry parameters without computationally expensive mesh rebuilding.
+        \item[\textbf{Core Idea}] Combine \textbf{Isogeometric Analysis (IGA)} for exact CAD geometry representation with \textbf{Reduced Order Modeling (ROM)} and \textbf{ECSW Hyper-Reduction} on a fixed reference configuration.
+        \item[\textbf{Key Targets}] Sub-millisecond online solve time ($<1.5\,\text{ms}$), high physical fidelity ($L_2$ error $<0.1\%$), and native WebGL application integration.
+    \end{description}
+\end{tcolorbox}

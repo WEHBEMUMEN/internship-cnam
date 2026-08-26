@@ -1,0 +1,221 @@
+% ==============================================================================
+\chapter{Theory: Parameterized Continuum Mechanics}
+\label{ch:theory}
+% ==============================================================================
+
+
+
+Developing reduced order models for parameterized structures requires a firm foundation in continuum elastodynamics and formal shape parameterization. This chapter establishes the strong and weak variational formulations of linear elasticity, introduces the parameter space $\boldsymbol{\mu} = (x_c, r)^T$ on an illustrative cantilever beam example with a geometrical defect used throughout the thesis (with straightforward extension to general parameterizations), and details the mathematical challenges introduced by domain variations.
+
+% ------------------------------------------------------------------------------
+\section{Geometry Configurations \& Shape Parameterization}
+% ------------------------------------------------------------------------------
+
+We begin by defining the parameterized domain geometry $\Omega(\boldsymbol{\mu})$ and establishing how shape variations alter the physical configuration of the structural beam.
+
+Let $\Omega(\boldsymbol{\mu}) \subset \mathbb{R}^2$ define the parameterized physical configuration of a structural continuum. As illustrated in Figure \ref{fig:notched_beam_geometry}, we consider a 2D plane stress problem referred to as the notched cantilever beam, featuring symmetric Gaussian notches along its upper and lower boundaries. This serves as an application example written throughout the thesis using two parameters (of course, an extension to a general case is straightforward).
+
+The shape variation is controlled by a parameter vector $\boldsymbol{\mu} = (x_c, r)^T \in \mathcal{D} \subset \mathbb{R}^2$:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Notch Position ($x_c$)}: The longitudinal position of the notch center from the clamped left support ($2.5\,\text{m} \le x_c \le 7.5\,\text{m}$ for beam length $L = 8.0\,\text{m}$).
+    \item \textbf{Notch Depth ($r$)}: The depth parameter controlling the symmetric Gaussian boundary cutouts ($0.0\,\text{m} \le r \le 0.75\,\text{m}$, where $r = 0$ corresponds to the pristine straight beam).
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[scale=1.0, >=stealth]
+        % Styles
+        \tikzset{
+            deformed/.style={thick, draw=primaryblue, fill=lightbg, fill opacity=0.8},
+            dimension/.style={primaryblue, <->, >=latex, line width=0.8pt},
+            dimline/.style={primaryblue, dashed, line width=0.5pt}
+        }
+
+        % Left Wall Hatching (Clamped Support)
+        \draw[line width=1.5pt] (0,0.8) -- (0,-0.8);
+        \foreach \y in {-0.7,-0.5,...,0.7} {
+                \draw (0,\y) -- (-0.2,\y-0.15);
+            }
+        \node[left] at (-0.25, 0) {$\Gamma_D(\boldsymbol{\mu})$};
+
+        % Parameterized Configuration \Omega(\boldsymbol{\mu})
+        \draw[deformed] (0,0.6) -- (3.0,0.6) .. controls (3.4,0.6) and (3.6,0.2) .. (3.8,0.2) .. controls (4.0,0.2) and (4.2,0.6) .. (4.6,0.6) -- (6,0.6) -- (6,-0.6) -- (4.6,-0.6) .. controls (4.2,-0.6) and (4.0,-0.2) .. (3.8,-0.2) .. controls (3.6,-0.2) and (3.4,-0.6) .. (3.0,-0.6) -- (0,-0.6) -- cycle;
+        \node[primaryblue] at (1.2, 0.0) {\textbf{$\Omega(\boldsymbol{\mu})$}};
+
+        % Dimension: x_c
+        \draw[dimline] (0, 0.6) -- (0, 1.1);
+        \draw[dimline] (3.8, 0.2) -- (3.8, 1.1);
+        \draw[dimension] (0, 1.0) -- (3.8, 1.0) node[midway, above] {$x_c$};
+
+        % Dimension: r
+        \draw[dimline] (3.0, 0.6) -- (3.8, 0.6);
+        \draw[primaryblue, ->, >=latex, line width=0.8pt] (3.8, 0.6) -- (3.8, 0.2) node[midway, right] {$r$};
+    \end{tikzpicture}
+    \caption{Schematic of the parameterized notched cantilever beam configuration $\Omega(\boldsymbol{\mu})$ showing Dirichlet boundary support $\Gamma_D(\boldsymbol{\mu})$, notch location $x_c$, and radius $r$.}
+    \label{fig:notched_beam_geometry}
+\end{figure}
+
+The structural parameterization illustrated above (Figure \ref{fig:notched_beam_geometry}) defines the design space $\mathcal{D}$ via notch position $x_c$ and cutout radius $r$.
+
+\newpage
+% ------------------------------------------------------------------------------
+\section{Governing Elastodynamic Equations \& Kinematics}
+% ------------------------------------------------------------------------------
+
+Next, we formulate the strong form balance of linear momentum and Cauchy stress-strain relationships under small-strain elastodynamics.
+
+Kinematic deformation from the initial physical configuration $\Omega(\boldsymbol{\mu})$ to the deformed state under external body forces $\vect{f}_b$ and boundary tractions $\vect{h}_N$ is illustrated below (Figure \ref{fig:continuum_kinematics}). It is crucial to note that because the problem is linear, the "deformed geometry" is confounded with the "initial state". Furthermore, to avoid any misunderstanding with nonlinear mechanics terminology (where one distinguishes between a "reference configuration" and a "current configuration"), we explicitly differentiate between the \textit{reference parameter configuration} $\hat{\Omega}$ (introduced in Chapter \ref{ch:pullback}) and the \textit{parameterized physical configuration} $\Omega(\boldsymbol{\mu})$, deliberately avoiding the term "current" throughout the text.
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[scale=0.8, >=stealth]
+            % Styles
+            \tikzset{
+                reference/.style={thick, draw=black!70, fill=gray!10},
+                deformed/.style={thick, draw=primaryblue, fill=lightbg, fill opacity=0.7},
+                dimension/.style={primaryblue, <->, >=latex, line width=0.8pt},
+                dimline/.style={primaryblue, dashed, line width=0.5pt},
+                force/.style={->, line width=1.5pt, red!70!black},
+                displ/.style={->, line width=1.2pt, green!60!black}
+            }
+
+            % --- PANEL 1: UNDEFORMED CONFIGURATION ---
+            \begin{scope}[xshift=0cm]
+                \draw[line width=1.5pt] (0,0.8) -- (0,-0.8);
+                \foreach \y in {-0.7,-0.5,...,0.7} {
+                        \draw (0,\y) -- (-0.2,\y-0.15);
+                    }
+                \node[left] at (-0.25, 0) {$\Gamma_D(\boldsymbol{\mu})$};
+
+                \draw[reference] (0,0.6) -- (2.2,0.6) .. controls (2.7,0.6) and (2.9,0.25) .. (3.25,0.25) .. controls (3.6,0.25) and (3.8,0.6) .. (4.3,0.6) -- (6,0.6) -- (6,-0.6) -- (4.3,-0.6) .. controls (3.8,-0.6) and (3.6,-0.25) .. (3.25,-0.25) .. controls (2.9,-0.25) and (2.7,-0.6) .. (2.2,-0.6) -- (0,-0.6) -- cycle;
+                \node[black] at (1.2, 0.0) {$\Omega(\boldsymbol{\mu})$};
+
+                \coordinate (X) at (4, 0.0);
+                \fill[black] (X) circle (1.5pt) node[above] {$\vect{x}$};
+                \node[below, font=\bfseries] at (2.4, -1.8) {(a) Undeformed Configuration};
+            \end{scope}
+
+            % --- PANEL 2: DEFORMED CONFIGURATION ---
+            \begin{scope}[xshift=8.5cm]
+                \draw[line width=1.5pt] (0,0.8) -- (0,-0.8);
+                \foreach \y in {-0.7,-0.5,...,0.7} {
+                        \draw (0,\y) -- (-0.2,\y-0.15);
+                    }
+                \node[left] at (-0.25, 0) {$\Gamma_D(\boldsymbol{\mu})$};
+
+                \draw[dashed, gray!40] (0,0.6) -- (2.2,0.6) .. controls (2.7,0.6) and (2.9,0.25) .. (3.25,0.25) .. controls (3.6,0.25) and (3.8,0.6) .. (4.3,0.6) -- (6,0.6) -- (6,-0.6) -- (4.3,-0.6) .. controls (3.8,-0.6) and (3.6,-0.25) .. (3.25,-0.25) .. controls (2.9,-0.25) and (2.7,-0.6) .. (2.2,-0.6) -- (0,-0.6) -- cycle;
+
+                \draw[deformed]
+                (0,0.6) .. controls (1.1,0.6) and (1.6,0.56) .. (2.2,0.52)
+                .. controls (2.7,0.52) and (2.9,0.0) .. (3.25,0.0)
+                .. controls (3.6,0.0) and (3.8,0.3) .. (4.3,0.3)
+                .. controls (5.0,0.1) and (5.5,-0.1) .. (5.8,-0.2) --
+                (5.8,-1.4)
+                .. controls (5.5,-1.3) and (5.0,-1.1) .. (4.3,-0.9)
+                .. controls (3.8,-0.9) and (3.6,-0.5) .. (3.25,-0.5)
+                .. controls (2.9,-0.5) and (2.7,-0.68) .. (2.2,-0.68)
+                .. controls (1.6,-0.68) and (1.1,-0.6) .. (0,-0.6) -- cycle;
+                \node[primaryblue] at (1.2, 0.0) {$\Omega(\boldsymbol{\mu})$};
+
+                \node[right, red!70!black] at (5.8, -0.6) {$\Gamma_N(\boldsymbol{\mu})$};
+                \draw[force] (5.8, -0.8) -- (5.8, -1.4) node[right] {$\vect{h}_N$};
+                \draw[->, line width=1.2pt, orange!80!black] (3.6, -0.25) -- (3.6, -0.85) node[right] {$\vect{f}_b$};
+                \draw[->, line width=1.0pt, purple!80!black] (5.8, -0.8) -- (6.3, -0.8) node[right] {$\vect{n}$};
+
+                \coordinate (X_ref) at (3.5, 0.0);
+                \coordinate (x) at (3.8, -0.3);
+                \fill[gray!60] (X_ref) circle (1.2pt);
+                \fill[primaryblue] (x) circle (1.5pt) node[right] {$\vect{x} + \vect{u}$};
+                \draw[displ] (X_ref) -- (x) node[midway, left] {$\vect{u}$};
+
+                \node[below, font=\bfseries] at (3.0, -1.8) {(b) Deformed Configuration};
+            \end{scope}
+        \end{tikzpicture}%
+    }
+    \caption{Kinematic mapping and boundary conditions of the parameterized notched cantilever beam.}
+    \label{fig:continuum_kinematics}
+\end{figure}
+
+Comparing the undeformed reference geometry $\Omega(\boldsymbol{\mu})$ to the deformed state under applied loads $\vect{f}_b$ and $\vect{h}_N$ (Figure \ref{fig:continuum_kinematics}) demonstrates the displacement field vector $\vect{u}(t)$.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Definition of kinematic notation and continuum domain boundaries.}
+    \label{tab:kinematic_notation}
+    \begin{tabular}{l p{10.5cm}}
+        \toprule
+        \textbf{Symbol}                           & \textbf{Physical Meaning / Definition}                                                                                  \\
+        \midrule
+        $\Omega(\boldsymbol{\mu})$                & Parameter-dependent physical domain configuration                                                                       \\
+        $\Gamma_D(\boldsymbol{\mu})$              & Fixed Dirichlet boundary at left clamped support ($\vect{u} = \vect{0}$)                                                \\
+        $\Gamma_N(\boldsymbol{\mu})$              & Neumann traction boundary subjected to dynamic loading                                                                  \\
+        $\vect{u}(\vect{x}, t; \boldsymbol{\mu})$ & Spatial displacement field vector at position $\vect{x}$ and time $t$                                                   \\
+        $\boldsymbol{\sigma}(\vect{u})$           & Cauchy stress tensor under linear elasticity                                                                            \\
+        $\boldsymbol{\varepsilon}(\vect{u})$      & Small-strain tensor: $\boldsymbol{\varepsilon}(\vect{u}) = \frac{1}{2}\left(\nabla\vect{u} + (\nabla\vect{u})^T\right)$ \\
+        $\mathbf{D}$                              & Isotropic constitutive elasticity matrix in Voigt notation                                                              \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+This formal notation (Table \ref{tab:kinematic_notation}) establishes the continuum framework used throughout the initial configuration and small-strain kinematic relations. For the sake of readability, the parametric and temporal dependency of the displacement field $\vect{u}(\vect{x}, t; \boldsymbol{\mu})$ will often be abbreviated simply as $\vect{u}$.
+
+Assuming small strains and linear isotropic elasticity, the problem considered consists in finding the displacement field $\vect{u}$ such that the strong form governing linear momentum balance on $\Omega(\boldsymbol{\mu}) \times (0, T]$ is given as:
+\begin{equation}
+    \underbrace{\rho \ddot{\vect{u}}}_{\text{Inertial Force}} - \underbrace{\nabla \cdot \boldsymbol{\sigma}(\vect{u})}_{\text{Internal Stress Divergence}} = \underbrace{\vect{f}_b}_{\text{Body Force}}
+\end{equation}
+subject to boundary conditions $\vect{u} = \vect{0}$ on $\Gamma_D(\boldsymbol{\mu})$, traction $\boldsymbol{\sigma}\cdot\vect{n} = \vect{h}_N$ on $\Gamma_N(\boldsymbol{\mu})$, and initial conditions $\vect{u}(\vect{x},0) = \vect{u}_0(\vect{x})$, $\dot{\vect{u}}(\vect{x},0) = \vect{v}_0(\vect{x})$.
+
+% ------------------------------------------------------------------------------
+\section{Weak Variational Formulation}
+% ------------------------------------------------------------------------------
+
+We now derive the weak variational form of elastodynamics, establishing the kinetic energy, strain energy, and external work forms required for numerical discretization.
+
+Multiplying by kinematically admissible test functions $\delta\vect{u} \in \mathcal{V}_0(\Omega(\boldsymbol{\mu})) = \{ \vect{v} \in [H^1(\Omega(\boldsymbol{\mu}))]^2 \mid \vect{v} = \vect{0} \text{ on } \Gamma_D(\boldsymbol{\mu}) \}$ and applying integration by parts and Green's formulas yields the weak form:
+
+\begin{equation}
+    \underbrace{m(\ddot{\vect{u}}, \delta\vect{u}; \boldsymbol{\mu})}_{\text{Virtual Kinetic Energy}} + \underbrace{k(\vect{u}, \delta\vect{u}; \boldsymbol{\mu})}_{\text{Virtual Internal Energy}} = \underbrace{f(\delta\vect{u})}_{\text{Virtual External Energy}} \quad \forall \delta\vect{u} \in \mathcal{V}_0(\Omega(\boldsymbol{\mu}))
+\end{equation}
+
+where the bilinear forms and load linear form are given as:
+\begin{align}
+    m(\ddot{\vect{u}}, \delta\vect{u}; \boldsymbol{\mu}) & = \int_{\Omega(\boldsymbol{\mu})} \rho \ddot{\vect{u}} \cdot \delta\vect{u} \, d\Omega                                                                      \\
+    k(\vect{u}, \delta\vect{u}; \boldsymbol{\mu})        & = \int_{\Omega(\boldsymbol{\mu})} \boldsymbol{\varepsilon}(\delta\vect{u})^T \mat{D} \boldsymbol{\varepsilon}(\vect{u}) \, d\Omega                          \\
+    f(\delta\vect{u})                                    & = \int_{\Omega(\boldsymbol{\mu})} \vect{f}_b \cdot \delta\vect{u} \, d\Omega + \int_{\Gamma_N(\boldsymbol{\mu})} \vect{h}_N \cdot \delta\vect{u} \, d\Gamma
+\end{align}
+Note that the geometric parameter $\boldsymbol{\mu}$ explicitly appears in the domain of integration $\Omega(\boldsymbol{\mu})$ for each of these virtual energy terms.
+
+% ------------------------------------------------------------------------------
+\section{The Shape Parameterization Challenge}
+% ------------------------------------------------------------------------------
+
+The following analysis highlights why physical domain variations break conventional snapshot POD extraction, motivating the transition to reference domain pullback integration.
+
+Evaluating $k(\vect{u}, \delta\vect{u}; \boldsymbol{\mu})$ on a varying domain $\Omega(\boldsymbol{\mu})$ introduces two critical computational hurdles at the discrete level: physical remeshing destroys mathematical consistency for the ROM using POD basis, and online assembly over the full physical mesh causes severe latency.
+
+To address these hurdles, we compare naive physical remeshing against reference pullback mapping across three key criteria:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Mathematical Consistency}: Physical remeshing alters node counts and ordering across parameters, ruining mathematical consistency for the ROM using POD basis because vectors of different dimensions cannot be combined into a single snapshot matrix. In contrast, reference pullback mapping evaluates all snapshots on an invariant domain $\hat{\Omega}$, guaranteeing SVD vector consistency.
+    \item \textbf{Online Assembly Speed}: Physical remeshing requires rebuilding and re-integrating the entire mesh at every parameter update. Pullback mapping allows precomputing reference terms, reducing online assembly to a minimal active element subset $E^*$.
+\end{itemize}
+
+To guarantee mathematical consistency and achieve sub-millisecond solves, this thesis selects the \textbf{Diffeomorphic Pullback Mapping} approach, shifting parameter dependencies entirely into integration Jacobians on a fixed reference space $\hat{\Omega}$ (detailed in Chapter \ref{ch:pullback}).
+
+% ------------------------------------------------------------------------------
+\section{Chapter Summary}
+% ------------------------------------------------------------------------------
+
+In summary, we synthesize the continuum elastodynamic foundation established in this chapter and preview the spatial discretization techniques introduced in Chapter \ref{ch:discretization}.
+
+\begin{tcolorbox}[colback=lightbg, colframe=primaryblue, title=\textbf{Chapter Summary: Continuum Mechanics \& Shape Parameterization}, fonttitle=\bfseries]
+    \begin{description}[leftmargin=!, labelwidth=3.4cm]
+        \item[\textbf{Physical Domain}] A 2D plane stress problem referred to as the notched cantilever beam, with parameterized configuration $\Omega(\boldsymbol{\mu}) \subset \mathbb{R}^2$ and design parameters $\boldsymbol{\mu} = (x_c, r)^T$ (notch location, standard deviation).
+        \item[\textbf{Governing Law}] Linear elastodynamics balance of momentum $\rho \ddot{\vect{u}} - \nabla \cdot \boldsymbol{\sigma} = \vect{f}_b$ subject to Dirichlet clamping and Neumann tractions.
+        \item[\textbf{Core Bottleneck}] Domain variation $\Omega(\boldsymbol{\mu})$ destroys vector space compatibility across parameter instances, preventing direct snapshot POD extraction.
+    \end{description}
+    
+    \vspace{0.2cm}
+    \textbf{Key Takeaway}: We established the elastodynamic continuum formulation for the notched cantilever beam and demonstrated that direct physical evaluation on $\Omega(\boldsymbol{\mu})$ breaks state vector compatibility across parameters. In Chapter \ref{ch:discretization}, we discretize this formulation using Isogeometric Analysis (IGA) prior to pulling back integration terms to a reference domain in Chapter \ref{ch:pullback}.
+\end{tcolorbox}

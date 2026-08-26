@@ -1,0 +1,316 @@
+% ==============================================================================
+\chapter{Simulation: Full Order Model (FOM)}
+\label{ch:fom}
+% ==============================================================================
+
+
+
+Equipped with the reference pullback transformation derived in Chapter \ref{ch:pullback}, high-fidelity Full Order Model (FOM) simulations can now be evaluated consistently on $\hat{\Omega}$ to collect transient snapshot datasets and benchmark reduced order approximations. This chapter formulates the implicit dynamic time integration scheme, presents baseline stress and displacement field solutions, and demonstrates the severe computational bottleneck ($\approx 450\,\text{ms}$ per time step) that prevents real-time execution without model reduction.
+
+% ------------------------------------------------------------------------------
+\section{Governing Dynamic Equations \& Flowchart}
+% ------------------------------------------------------------------------------
+
+Here, we formulate the semi-discrete dynamic equilibrium equations and compare physical-domain remeshing against reference-mapped integration.
+
+The high-fidelity transient response of the structural continuum is governed by the semi-discrete second-order system, where we solve for the control point structural displacement vector $\vect{U}(t) \in \mathbb{R}^{N_{\text{dof}}}$ (representing the discrete physical displacements defined over the invariant reference domain):
+
+\begin{equation}
+    \mat{M}(\boldsymbol{\mu}) \ddot{\vect{U}}(t) + \mat{C}(\boldsymbol{\mu}) \dot{\vect{U}}(t) + \mat{K}(\boldsymbol{\mu}) \vect{U}(t) = \lambda(t) \mathbf{F}_{\text{ext}}, \quad \text{with } \vect{U}(0) = \mathbf{0}, \, \dot{\vect{U}}(0) = \mathbf{0}
+\end{equation}
+
+where $\mat{M}$ is the consistent mass matrix, $\mat{C} = \alpha_M \mat{M} + \beta_K \mat{K}$ is the Rayleigh damping matrix, and $\mat{K}$ is the stiffness matrix. Figure \ref{fig:remesh_vs_pullback} illustrates the computational flowchart comparing classical physical remeshing with reference domain assembly.
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[
+                node distance=1.4cm,
+                row1/.style={rectangle, draw=blue!70, fill=blue!5, thick, rounded corners, minimum width=5.8cm, minimum height=0.7cm, align=center, font=\sffamily\scriptsize},
+                row2/.style={rectangle, draw=teal!70, fill=teal!5, thick, rounded corners, minimum width=5.8cm, minimum height=0.7cm, align=center, font=\sffamily\scriptsize},
+                row3/.style={rectangle, draw=orange!70, fill=orange!5, thick, rounded corners, minimum width=5.8cm, minimum height=0.7cm, align=center, font=\sffamily\scriptsize},
+                row4/.style={rectangle, draw=purple!70, fill=purple!5, thick, rounded corners, minimum width=5.8cm, minimum height=0.7cm, align=center, font=\sffamily\scriptsize},
+                row5/.style={rectangle, draw=olive!70, fill=olive!5, thick, rounded corners, minimum width=5.8cm, minimum height=0.7cm, align=center, font=\sffamily\scriptsize},
+                arrow/.style={thick,->,>=stealth}
+            ]
+            % Left Column: Classical Physical-Domain
+            \node [row1] (l1) {\textbf{Classical Physical Path} \\ Goal: $\int_{\Omega(\boldsymbol{\mu})} \dots \mathrm{d}\Omega$ (physical domain)};
+            \node [row2, below of=l1, node distance=1.7cm] (l2) {Basis Functions \\ $R_i(\boldsymbol{\mu})$ varies (mesh regenerated) \\ \textcolor{black!60}{\scriptsize($\approx 250\,$ms)}};
+            \node [row3, below of=l2, node distance=1.7cm] (l3) {Online Assembly \\ Assemble $\mat{K}(\boldsymbol{\mu})$, $\mat{M}(\boldsymbol{\mu})$ (expensive) \\ \textcolor{black!60}{\scriptsize($\approx 100\,$ms)}};
+            \node [row4, below of=l3, node distance=1.7cm] (l4) {Implicit Time Scheme \\ Newmark-$\beta$ Solver \\ \textcolor{black!60}{\scriptsize($\approx 100\,$ms)}};
+            \node [row5, below of=l4, node distance=1.7cm] (l5) {Extract QoI \\ Tip deflection $U_y(t)$ \& $\sigma_{\text{VM}}$ (variable dimensions) \\ \textcolor{red!80!black}{\scriptsize(Total: $\approx 450\,$ms/step)}};
+
+            % Right Column: Mapped Reference
+            \node [row1, right=1.6cm of l1] (r1) {\textbf{Reference Map Path} \\ Goal: $\int_{\hat{\Omega}} \dots J_{\boldsymbol{\mu}}\,\mathrm{d}\hat{\Omega}$ (fixed reference domain)};
+            \node [row2, below of=r1, node distance=1.7cm] (r2) {Bases Remain the Same \\ $\hat{R}_i$ is parameter-independent \\ \textcolor{black!60}{\scriptsize(0\,ms, Invariant)}};
+            \node [row3, below of=r2, node distance=1.7cm] (r3) {Pulled-Back Assembly \\ $\hat{\mat{K}}(\boldsymbol{\mu}), \hat{\mat{M}}(\boldsymbol{\mu})$ depend on $J(\boldsymbol{\mu})$ (online) \\ \textcolor{black!60}{\scriptsize($\approx 140\,$ms)}};
+            \node [row4, below of=r3, node distance=1.7cm] (r4) {Implicit Time Scheme \\ Newmark-$\beta$ Solver \\ \textcolor{black!60}{\scriptsize($\approx 2.1\,$ms)} \\ \textcolor{red!80!black}{\scriptsize(possibility of ill-conditioning)}};
+            \node [row5, below of=r4, node distance=1.7cm] (r5) {Extract QoI \\ Tip deflection $U_y(t)$ \& $\sigma_{\text{VM}}$ (constant dimensions) \\ \textcolor{red!80!black}{\scriptsize(Total: $\approx 142.1\,$ms/step)}};
+
+            % ROM Application Labels (Outside Flowchart, on the Right)
+            \node [red!80!black, font=\sffamily\tiny\bfseries, align=center, right=0.15cm of r3] (rom3_label) {$\gets$ Hyper-Reduction\\(reduces elements: $N_e \to M_e$)};
+            \node [red!80!black, font=\sffamily\tiny\bfseries, align=center, right=0.15cm of r4] (rom4_label) {$\gets$ Galerkin ROM\\(reduces DOFs: $N \to r$)};
+
+            % Connections
+            \draw [arrow] (l1) -- (l2);
+            \draw [arrow] (l2) -- (l3);
+            \draw [arrow] (l3) -- (l4);
+            \draw [arrow] (l4) -- (l5);
+
+            \draw [arrow] (r1) -- (r2);
+            \draw [arrow] (r2) -- (r3);
+            \draw [arrow] (r3) -- (r4);
+            \draw [arrow] (r4) -- (r5);
+        \end{tikzpicture}%
+    }
+    \caption{Visual workflow comparing physical-domain mesh regeneration (Classical) against reference-configuration pullback mapping, illustrating that online stiffness matrix assembly remains a computational bottleneck prior to model reduction.}
+    \label{fig:remesh_vs_pullback}
+\end{figure}
+
+Comparing the two assembly paths (Figure \ref{fig:remesh_vs_pullback}) highlights how reference pullback mapping replaces full physical remeshing with invariant evaluation. In the classical path, varying the shape parameters $\boldsymbol{\mu}$ forces a complete regeneration of the physical mesh and re-evaluation of the NURBS basis functions $R_i(\boldsymbol{\mu})$ on the deformed domain. The reference mapping path bypasses this remeshing step by utilizing parameter-independent reference basis functions $\hat{R}_i$, shifting the parameter dependency entirely into the integration Jacobians. However, assembling the pulled-back stiffness $\hat{\mat{K}}(\boldsymbol{\mu})$ and mass $\hat{\mat{M}}(\boldsymbol{\mu})$ matrices at each time step remains the primary computational bottleneck of the Full Order Model (requiring an assembly time of $\approx 142.1\,\text{ms}$ as detailed in Table \ref{tab:hyper_reduction_metrics}, and up to a total of $\approx 450\,\text{ms}$ per step when recovering stress fields as shown in Table \ref{tab:fom_parameters}). This bottleneck prohibits real-time dynamic simulation and directly motivates the need for Galerkin dimensionality reduction and hyper-reduction, as shown on the right of the flowchart.
+
+
+% ------------------------------------------------------------------------------
+\section{Boundary Conditions \& Implicit Dynamics Solver}
+% ------------------------------------------------------------------------------
+
+Next, we detail the penalty method for boundary clamping and present the step-by-step Newmark-$\beta$ / Generalized-$\alpha$ implicit time integration algorithm.
+
+Homogeneous Dirichlet clamping at $x=0$ is enforced via the \textbf{Penalty Method} by adding a large stiffness parameter $k_p = 10^{10}$ to diagonal entries of constrained boundary DOFs:
+\begin{equation}
+    \mat{K}_{\text{eff}}[i, i] \gets k_p, \quad \vect{F}_{\text{eff}}[i] \gets 0 \quad \text{for constrained boundary DOFs } i
+\end{equation}
+While selecting $k_p = 10^{10}$ increases the condition number of $\mat{K}_{\text{eff}}$, this is an accepted engineering trade-off that avoids complex master-slave DOF elimination while ensuring near-exact zero-displacement clamping.
+
+Algorithm \ref{alg:fom_dynamics} summarizes the step-by-step implicit dynamics solver across $N_t$ time steps.\footnote{The complete JavaScript source code implementing this dynamic time-stepping solver (including matrix assembly, penalty clamped boundary conditions, and direct Gaussian elimination) is verified and available in the repository at \href{https://github.com/WEHBEMUMEN/internship-cnam/blob/main/app/simulations/iga-sim-5.3/src/core/solver.js}{solver.js}.}
+
+\begin{algorithm}[htbp]
+    \caption{Full Order Model (FOM) Implicit Dynamics Solver}
+    \label{alg:fom_dynamics}
+    \begin{algorithmic}[1]
+        \Procedure{StepDynamicsFOM}{$x_c, r, \Delta t, N_t$}
+        \State Assemble consistent mass $\mat{M}(x_c, r)$ and stiffness matrix $\mat{K}(x_c, r)$
+        \State Compute Rayleigh damping: $\mat{C} \gets \alpha_M \mat{M} + \beta_K \mat{K}$
+        \State Set Newmark constants: $a_0 = \frac{1}{\beta \Delta t^2}$, $a_1 = \frac{\gamma}{\beta \Delta t}$, $a_2 = \frac{1}{\beta \Delta t}$, $a_3 = \frac{1}{2\beta} - 1$, $a_4 = \frac{\gamma}{\beta} - 1$, $a_5 = \Delta t \left( \frac{\gamma}{2\beta} - 1 \right)$
+        \State Formulate effective stiffness: $\mat{K}_{\text{eff}} \gets \mat{K} + a_0 \mat{M} + a_1 \mat{C}$
+        \State Apply penalty clamping at left edge ($x=0$): $\mat{K}_{\text{eff}}[i, i] \gets 10^{10}$
+        \For{$n = 0, \dots, N_t-1$}
+            \State Compute external load vector: $\vect{F}_{\text{ext}}^{n+1} \gets \text{calculateExternalForceVector}(t_{n+1})$
+            \State Formulate effective force: $\vect{F}_{\text{eff}}^{n+1} \gets \vect{F}_{\text{ext}}^{n+1} + \mat{M}(a_0 \vect{U}_n + a_2 \dot{\vect{U}}_n + a_3 \ddot{\vect{U}}_n) + \mat{C}(a_1 \vect{U}_n + a_4 \dot{\vect{U}}_n + a_5 \ddot{\vect{U}}_n)$
+            \State Apply penalty force condition: $\vect{F}_{\text{eff}}^{n+1}[i] \gets 0$
+            \State Solve linear system: $\vect{U}_{n+1} \gets \text{gaussianElimination}(\mat{K}_{\text{eff}}, \vect{F}_{\text{eff}}^{n+1})$
+            \State Compute Von Mises stress field: $\sigma_{\text{VM}}^{n+1} \gets \text{computeStress}(\vect{U}_{n+1})$
+            \State Update kinematics: $\ddot{\vect{U}}_{n+1} \gets a_0 (\vect{U}_{n+1} - \vect{U}_n) - a_2 \dot{\vect{U}}_n - a_3 \ddot{\vect{U}}_n$
+            \State Update velocity: $\dot{\vect{U}}_{n+1} \gets \dot{\vect{U}}_n + (1 - \gamma)\Delta t \ddot{\vect{U}}_n + \gamma \Delta t \ddot{\vect{U}}_{n+1}$
+        \EndFor
+        \State \Return $\vect{U}_{N_t}$
+        \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+\newpage
+
+
+% ------------------------------------------------------------------------------
+\section{Quantities of Interest (QoI) \& Full Order Responses}
+% ------------------------------------------------------------------------------
+
+Here, we extract full-order Von Mises stress distributions and tip displacement time histories to establish physical baseline benchmarks.
+
+High-fidelity Full Order Model (FOM) Von Mises stress concentrations\footnote{The equivalent Von Mises stress $\sigma_{\text{VM}}$ is computed from the displacement field $\vect{u}$ by first calculating the linear strain tensor $\boldsymbol{\varepsilon} = \frac{1}{2}(\nabla\vect{u} + (\nabla\vect{u})^T)$, applying Hooke's law $\boldsymbol{\sigma} = \mat{D}\boldsymbol{\varepsilon}$ under plane stress assumptions, and finally evaluating $\sigma_{\text{VM}} = \sqrt{\sigma_{xx}^2 + \sigma_{yy}^2 - \sigma_{xx}\sigma_{yy} + 3\tau_{xy}^2}$, where $\sigma_{xx}$, $\sigma_{yy}$ are the normal stress components and $\tau_{xy}$ is the shear stress component.} $\sigma_{\text{VM}}$ and displacement magnitude contour fields are depicted in Figure \ref{fig:fom_dynamic_response} and Figure \ref{fig:fom_displacement_response}.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[scale=1.1, >=stealth]
+        % Draw mesh first so annotations appear on top
+        \input{chapters/5_simulation/stress_mesh_raw.tex}
+
+        \draw[dashed, black!25, thick]
+        (0, 0.65) -- (2.275, 0.65)
+        .. controls (2.7625, 0.65) and (2.925, 0.26) .. (3.25, 0.26)
+        .. controls (3.575, 0.26) and (3.7375, 0.65) .. (4.225, 0.65)
+        -- (6.5, 0.65) -- (6.5, -0.65) -- (4.225, -0.65)
+        .. controls (3.7375, -0.65) and (3.575, -0.26) .. (3.25, -0.26)
+        .. controls (2.925, -0.26) and (2.7625, -0.65) .. (2.275, -0.65)
+        -- (0, -0.65) -- cycle;
+        \node[black!60, font=\scriptsize] at (4.8, 0.4) {Undeformed};
+
+        \foreach \y in {-0.65, -0.45, -0.25, -0.05, 0.15, 0.35, 0.55} {
+                \draw[thick, black!40] (-0.2, \y) -- (0, \y+0.1);
+            }
+        \draw[ultra thick, black!90] (0, -0.7) -- (0, 0.7);
+
+        \draw[->, ultra thick, red!85!black] (6.5, -0.65) -- node[right, font=\small, black] {$\mathbf{F}_{\text{ext}}(t)$} (6.5, -1.35);
+
+        \begin{scope}[xshift=8.0cm, yshift=-1.0cm]
+            \shade[bottom color=blue, top color=cyan] (0, 0) rectangle (0.25, 0.5);
+            \shade[bottom color=cyan, top color=green] (0, 0.5) rectangle (0.25, 1.0);
+            \shade[bottom color=green, top color=yellow] (0, 1.0) rectangle (0.25, 1.5);
+            \shade[bottom color=yellow, top color=red] (0, 1.5) rectangle (0.25, 2.0);
+            \draw[thick, black!50] (0, 0) rectangle (0.25, 2.0);
+            \node[right, font=\tiny] at (0.25, 2.0) {$\sigma_{\text{VM}}^{\text{max}}$ (High)};
+            \node[right, font=\tiny] at (0.25, 0.0) {$\sigma_{\text{VM}}^{\text{min}}$ (Low)};
+            \node[above, font=\tiny, align=center] at (0.12, 2.1) {Stress $\sigma_{\text{VM}}$};
+        \end{scope}
+    \end{tikzpicture}
+    \caption{Full Order Model (FOM) transient Von Mises stress concentration ($\sigma_{\text{VM}}$). The colormap indicates stress magnitude, with red denoting regions of high stress (localized near the narrow notch throats and the clamped left boundary) and blue indicating areas of low stress.}
+    \label{fig:fom_dynamic_response}
+\end{figure}
+
+Examining the full order von Mises stress distribution (Figure \ref{fig:fom_dynamic_response}) reveals severe stress concentration localized at the narrow notch throat.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[scale=1.1, >=stealth]
+        % Draw mesh first so annotations appear on top
+        \input{chapters/5_simulation/displacement_mesh_raw.tex}
+
+        \draw[dashed, black!25, thick]
+        (0, 0.65) -- (2.275, 0.65)
+        .. controls (2.7625, 0.65) and (2.925, 0.26) .. (3.25, 0.26)
+        .. controls (3.575, 0.26) and (3.7375, 0.65) .. (4.225, 0.65)
+        -- (6.5, 0.65) -- (6.5, -0.65) -- (4.225, -0.65)
+        .. controls (3.7375, -0.65) and (3.575, -0.26) .. (3.25, -0.26)
+        .. controls (2.925, -0.26) and (2.7625, -0.65) .. (2.275, -0.65)
+        -- (0, -0.65) -- cycle;
+        \node[black!60, font=\scriptsize] at (4.8, 0.4) {Undeformed};
+
+        \foreach \y in {-0.65, -0.45, -0.25, -0.05, 0.15, 0.35, 0.55} {
+                \draw[thick, black!40] (-0.2, \y) -- (0, \y+0.1);
+            }
+        \draw[ultra thick, black!90] (0, -0.7) -- (0, 0.7);
+
+        \draw[->, ultra thick, red!85!black] (6.5, -0.65) -- node[right, font=\small, black] {$\mathbf{F}_{\text{ext}}(t)$} (6.5, -1.35);
+
+        \begin{scope}[xshift=8.0cm, yshift=-1.0cm]
+            \shade[bottom color=blue, top color=cyan] (0, 0) rectangle (0.25, 0.5);
+            \shade[bottom color=cyan, top color=green] (0, 0.5) rectangle (0.25, 1.0);
+            \shade[bottom color=green, top color=yellow] (0, 1.0) rectangle (0.25, 1.5);
+            \shade[bottom color=yellow, top color=red] (0, 1.5) rectangle (0.25, 2.0);
+            \draw[thick, black!50] (0, 0) rectangle (0.25, 2.0);
+            \node[right, font=\tiny] at (0.25, 2.0) {$U_{y, \text{max}}$ (Tip)};
+            \node[right, font=\tiny] at (0.25, 0.0) {$0$ (Clamped)};
+            \node[above, font=\tiny, align=center] at (0.12, 2.1) {Displacement $U_y$};
+        \end{scope}
+    \end{tikzpicture}
+    \caption{Full Order Model displacement field showing downward deflection $U_y(t)$ concentrated at the free right tip, illustrating smooth spatial bending without mesh locking.}
+    \label{fig:fom_displacement_response}
+\end{figure}
+
+The computed displacement contour field (Figure \ref{fig:fom_displacement_response}) shows smooth vertical bending deflection accumulating toward the free right tip.
+\newline
+\\
+To validate the reference pullback transformation derived in Chapter \ref{ch:pullback}, we compare the transient tip vertical deflection response $U_y(t)$ obtained via direct physical domain assembly (Naive Physical FOM) against the reference domain pullback assembly (Mapped Pullback FOM) in Figure \ref{fig:fom_qoi_deflection}.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+                width=0.88\textwidth,
+                height=0.40\textwidth,
+                xlabel={Simulation Time $t$ [s]},
+                ylabel={Tip Vertical Deflection $U_y$ [mm]},
+                xmin=1.2, xmax=5.2,
+                ymin=-0.5, ymax=0.5,
+                grid=both,
+                grid style={line width=.1pt, draw=gray!10},
+                major grid style={line width=.2pt, draw=gray!20},
+                axis lines=left,
+                enlargelimits=false,
+                x tick label style={font=\footnotesize},
+                y tick label style={font=\footnotesize},
+                axis line style={draw=gray!50, -},
+                legend style={at={(0.5,1.03)}, anchor=south, legend columns=2, draw=gray!30, fill=white, font=\small},
+            ]
+            % Naive Physical FOM (solid blue)
+            \addplot[
+                color=blue!80!black,
+                line width=1.4pt,
+                smooth,
+                mark=none
+            ] coordinates {
+                    (1.2, 0.4014) (1.3, 0.3913) (1.4, 0.3910) (1.5, 0.3986)
+                    (1.6, 0.4077) (1.7, 0.4104) (1.8, 0.3994) (1.9, 0.3710)
+                    (2.0, 0.3256) (2.1, 0.2675) (2.2, 0.2037) (2.3, 0.1410)
+                    (2.4, 0.0811) (2.5, 0.0270) (2.6, -0.0195) (2.7, -0.0573)
+                    (2.8, -0.0858) (2.9, -0.1049) (3.0, -0.1147) (3.1, -0.1154)
+                    (3.2, -0.1077) (3.3, -0.0927) (3.4, -0.0718) (3.5, -0.0467)
+                    (3.6, -0.0192) (3.7, 0.0090) (3.8, 0.0357) (3.9, 0.0594)
+                    (4.0, 0.0789) (4.1, 0.0931) (4.2, 0.1011) (4.3, 0.1023)
+                    (4.4, 0.0965) (4.5, 0.0838) (4.6, 0.0650) (4.7, 0.0410)
+                    (4.8, 0.0130) (4.9, -0.0175) (5.0, -0.0487) (5.1, -0.0789)
+                    (5.2, -0.1062)
+                };
+            \addlegendentry{Naive Physical FOM}
+
+            % Mapped Pullback FOM (dashed orange)
+            \addplot[
+                color=orange!90!black,
+                dashed,
+                line width=1.4pt,
+                smooth,
+                mark=none
+            ] coordinates {
+                    (1.2, 0.4014) (1.3, 0.3913) (1.4, 0.3910) (1.5, 0.3986)
+                    (1.6, 0.4077) (1.7, 0.4104) (1.8, 0.3994) (1.9, 0.3710)
+                    (2.0, 0.3256) (2.1, 0.2675) (2.2, 0.2037) (2.3, 0.1410)
+                    (2.4, 0.0811) (2.5, 0.0270) (2.6, -0.0195) (2.7, -0.0573)
+                    (2.8, -0.0858) (2.9, -0.1049) (3.0, -0.1147) (3.1, -0.1154)
+                    (3.2, -0.1077) (3.3, -0.0927) (3.4, -0.0718) (3.5, -0.0467)
+                    (3.6, -0.0192) (3.7, 0.0090) (3.8, 0.0357) (3.9, 0.0594)
+                    (4.0, 0.0789) (4.1, 0.0931) (4.2, 0.1011) (4.3, 0.1023)
+                    (4.4, 0.0965) (4.5, 0.0838) (4.6, 0.0650) (4.7, 0.0410)
+                    (4.8, 0.0130) (4.9, -0.0175) (5.0, -0.0487) (5.1, -0.0789)
+                    (5.2, -0.1062)
+                };
+            \addlegendentry{Mapped Pullback FOM}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Transient vertical tip deflection $U_y(t)$ comparison proving mathematical equivalence between Naive Physical Assembly and Mapped Pullback Reference Assembly (curves overlay with zero error).}
+    \label{fig:fom_qoi_deflection}
+\end{figure}
+
+The transient response comparison (Figure \ref{fig:fom_qoi_deflection}) confirms that the mapped reference pullback assembly yields identical physical displacement trajectories to direct physical space integration (relative difference $< 0.01\%$), proving that reference domain mapping introduces no accuracy loss while eliminating full physical remeshing. Note that the dynamic simulation starts from rest at $t = 0\,\text{s}$ with $U_y(0) = 0\,\text{mm}$; Figure \ref{fig:fom_qoi_deflection} highlights a representative zoomed-in temporal window ($t \in [1.2\,\text{s}, 5.2\,\text{s}]$) to clearly depict the transient oscillatory dynamics and the exact curve overlay.
+\newpage
+% ------------------------------------------------------------------------------
+\section{FOM Bottleneck \& Model Parameters}
+% ------------------------------------------------------------------------------
+
+The following analysis quantifies the online solve times and memory demands of the FOM, highlighting the exact computational bottleneck motivating model reduction.
+
+High-fidelity Full Order Model (FOM) discretization scales and online computational demands are structured below (with comprehensive solver constants detailed in Appendix \ref{sec:appendix_sim_params}):
+
+\begin{table}[htbp]
+    \centering
+    \caption{Full Order Model (FOM) discretization parameters and online solution complexity.}
+    \label{tab:fom_parameters}
+    \begin{tabular}{l p{9.0cm}}
+        \toprule
+        \textbf{FOM Parameter}            & \textbf{Quantitative Value / Characteristic}                                              \\
+        \midrule
+        \textbf{Bivariate Elements ($E$)} & $3,200$ elements ($80 \times 40$ grid)                                                    \\
+        \textbf{Physical DOFs ($N$)}      & $6,888$ degrees of freedom                                                                \\
+        \textbf{Time Step ($\Delta t$)}   & $0.01\,\text{seconds}$ ($1,000$ time steps for $T=10\,\text{s}$)                          \\
+        \textbf{Online Matrix Solve Time} & $\approx 450\,\text{ms}$ per time step ($\approx 7.5\,\text{minutes}$ per simulation run) \\
+        \textbf{Real-Time Feasibility}    & Unsuitable for interactive WebGL applications ($<1.5\,\text{ms}$ target required for $\ge 60\,\text{FPS}$) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+These quantitative demands (Table \ref{tab:fom_parameters}) underscore the online computational bottleneck of the full order model, demonstrating the necessity of projection-based reduced order modeling. Detailed numerical solver equations and time-stepping constants are provided in Appendix \ref{sec:appendix_sim_params}.
+
+% ------------------------------------------------------------------------------
+\section{Chapter Summary}
+% ------------------------------------------------------------------------------
+
+In conclusion, we summarize the FOM baseline results and set up the POD basis extraction and ECSW hyper-reduction presented in Chapter \ref{ch:rom}.
+
+\begin{tcolorbox}[colback=lightbg, colframe=primaryblue, title=\textbf{Chapter Summary: Full Order Model (FOM) Dynamics}, fonttitle=\bfseries]
+    \begin{description}[leftmargin=!, labelwidth=3.4cm]
+        \item[\textbf{Governing System}] $\mat{M}(\boldsymbol{\mu})\ddot{\vect{U}} + \mat{C}(\boldsymbol{\mu})\dot{\vect{U}} + \mat{K}(\boldsymbol{\mu})\vect{U} = \lambda(t)\mathbf{F}_{\text{ext}}$ with Rayleigh damping $\mat{C} = \alpha_M \mat{M} + \beta_K \mat{K}$.
+        \item[\textbf{Implicit Integration}] Newmark-$\beta$ / Generalized-$\alpha$ time solver coupled with penalty Dirichlet boundary clamping ($k_p = 10^{10}$).
+        \item[\textbf{Physical QoIs}] Transient tip deflection $U_y(t)$ and maximum Von Mises stress concentrations $\sigma_{\text{VM}}$ near notch throats.
+    \end{description}
+    
+    \vspace{0.2cm}
+    \textbf{Key Takeaway}: The Full Order Model provides accurate dynamic stress and displacement fields but requires $\approx 450\,\text{ms}$ per time step ($\approx 7.5\,\text{minutes}$ per run). In Chapter \ref{ch:rom}, we apply projection-based Reduced Order Modeling (POD) and Energy-Conserving Sampling and Weighting (ECSW) hyper-reduction to slash evaluation time down to sub-millisecond rates ($<1.5\,\text{ms}$) for real-time $60\,\text{FPS}$ execution.
+\end{tcolorbox}

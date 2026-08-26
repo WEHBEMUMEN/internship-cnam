@@ -1,0 +1,185 @@
+\documentclass[11pt,a4paper]{article}
+
+% ==============================================================================
+% Packages & Formatting
+% ==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsfonts,bm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{hyperref}
+
+% Geometry setup
+\geometry{
+    top=2.2cm,
+    bottom=2.2cm,
+    left=2.2cm,
+    right=2.2cm
+}
+
+% Color definitions
+\definecolor{primaryblue}{rgb}{0.12, 0.35, 0.65}
+\definecolor{accentcyan}{rgb}{0.0, 0.55, 0.65}
+\definecolor{darkgray}{rgb}{0.25, 0.25, 0.25}
+\definecolor{lightbg}{rgb}{0.96, 0.97, 0.99}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    citecolor=primaryblue,
+    urlcolor=primaryblue,
+    pdftitle={Project Summary: IGA, Pullback Mapping, and ECSW Hyper-Reduction for Real-Time Structural Dynamics},
+    pdfauthor={Mumen Wehbe}
+}
+
+% Custom commands
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+
+% ==============================================================================
+% Document Title and Metadata
+% ==============================================================================
+\title{
+    \vspace{-1.0cm}
+    \textbf{\huge Project Summary} \\[0.4em]
+    \textbf{\Large Geometrical Parameters in Isogeometric Analysis and Reduced Order Modeling for Structural Dynamics} \\[0.2em]
+    \large Master 2 Thesis \& Internship Synthesis
+}
+\author{
+    \textbf{Mumen Wehbe} \quad \textit{Supervisor: Christophe Hoareau} \\
+    \small Conservatoire National des Arts et Métiers (CNAM)
+}
+\date{\today}
+
+% ==============================================================================
+% Document Body
+% ==============================================================================
+\begin{document}
+
+\maketitle
+
+\begin{tcolorbox}[colback=lightbg, colframe=primaryblue, title=\textbf{Executive Summary \& Core Breakthrough}, fonttitle=\bfseries]
+This project develops an ultra-fast, client-side simulation framework for parameterized transient structural dynamics. Resolving dynamic responses under varying geometry in real time ($\ge 60\,\text{FPS}$) is traditionally blocked by:
+\begin{enumerate}[noitemsep, leftmargin=*]
+    \item \textbf{Geometric discretization errors} from polygonal finite element meshes.
+    \item \textbf{Snapshot vector space incompatibility} caused by physical domain remeshing across parameters $\boldsymbol{\mu}$.
+    \item \textbf{Online non-affine integration bottlenecks} during finite element assembly.
+\end{enumerate}
+By synthesizing \textbf{Isogeometric Analysis (IGA)}, \textbf{Diffeomorphic Reference Domain Pullback Mapping $\hat{\boldsymbol{\Psi}}$}, and \textbf{Energy-Conserving Sampling and Weighting (ECSW)} hyper-reduction, this framework achieves:
+\begin{itemize}[noitemsep, leftmargin=*]
+    \item \textbf{Zero CAD geometric approximation error} via exact quadratic NURBS.
+    \item \textbf{100\% parameter-invariant snapshot representation} on reference domain $\hat{\Omega}$.
+    \item \textbf{$\mathbf{64.5\times}$ speedup} over the Full Order Model ($2.2\,\text{ms}$ vs. $142.1\,\text{ms}$ assembly time; $\approx 1.30\,\text{ms}$ total solve time per step) with relative $L_2$ error under $\mathbf{0.054\%}$.
+    \item Real-time, zero-install deployment in client-side WebGL (\url{https://cnam-internship-mumen.netlify.app/}).
+\end{itemize}
+\end{tcolorbox}
+
+% ------------------------------------------------------------------------------
+\section{Problem Statement and Motivations}
+% ------------------------------------------------------------------------------
+Real-time structural dynamics simulations are essential for digital twins, interactive educational tools, and fast design optimization. In traditional Finite Element Methods (FEM):
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Mesh Regeneration Cost:} Modifying geometric shape parameters $\boldsymbol{\mu} = (x_c, r)^T$ requires complete remeshing, generating varying node counts and destroying vector alignment across parameter instances.
+    \item \textbf{Standard ROM Failure:} Proper Orthogonal Decomposition (POD) requires a constant snapshot matrix size $\mathbf{S} \in \mathbb{R}^{N \times M}$. Parameter-dependent mesh topologies make naive POD mathematically undefined.
+    \item \textbf{Computational Burden:} High-fidelity 2D dynamic simulations ($N = 6,888$ DOFs, $E = 3,200$ elements) require $\approx 142.1\,\text{ms}$ for matrix assembly and up to $\approx 450\,\text{ms}$ per time step, far too slow for real-time interactive rendering ($<16.6\,\text{ms}$ required for $60\,\text{FPS}$, $<1.5\,\text{ms}$ solve target).
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\section{The Three Core Methodological Pillars}
+% ------------------------------------------------------------------------------
+
+\subsection{Pillar 1: Isogeometric Analysis (IGA)}
+Pioneered by Hughes et al. (2005), IGA adopts Computer-Aided Design (CAD) basis functions---specifically Non-Uniform Rational B-Splines (NURBS)---as the basis for both exact geometry representation and field approximation:
+\begin{equation}
+    \vect{u}_h(\vect{x}, t) = \sum_{a=1}^{n_b} R_a(\vect{x}) \vect{d}_a(t), \quad R_{i,j}^{p,q}(\xi, \eta) = \frac{N_{i,p}(\xi) M_{j,q}(\eta) w_{i,j}}{\sum_{k} \sum_{l} N_{k,p}(\xi) M_{l,q}(\eta) w_{k,l}}
+\end{equation}
+\textbf{Key Advantages:}
+\begin{itemize}[noitemsep, leftmargin=*]
+    \item Exact geometric boundaries preserved across all refinement levels.
+    \item Higher inter-element continuity ($C^{p-1}$ for degree $p$), yielding superior accuracy per degree of freedom compared to $C^0$ Lagrangian FEM ($44\%$ fewer DOFs and $6\times$ faster linear solves for equivalent precision).
+    \item Native $k$-refinement (order elevation before knot insertion), preserving maximum continuity across elements.
+\end{itemize}
+
+\subsection{Pillar 2: Diffeomorphic Reference Configuration Mapping (Pullback)}
+To eliminate vector space incompatibility across varying parameter settings $\boldsymbol{\mu} = (x_c, r)^T$ (notch position and cutout depth), governing equations are pulled back from the parameterized physical domain $\Omega(\boldsymbol{\mu})$ to an invariant reference domain $\hat{\Omega}$:
+\begin{equation}
+    \vect{x} = \hat{\vect{x}} + \vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu}) = \hat{\boldsymbol{\Psi}}(\boldsymbol{\xi}) + \vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu})
+\end{equation}
+Using the transformation Jacobian $\mathbf{J}_{\hat{\vect{x}}} = \nabla_{\hat{\vect{x}}} \boldsymbol{\Psi}$ and determinant $J_{\hat{\vect{x}}, \boldsymbol{\mu}} = \det \mathbf{J}_{\hat{\vect{x}}} > 0$, the continuous weak forms on $\hat{\Omega}$ become:
+\begin{align}
+    \hat{m}(\ddot{\vect{u}}, \delta\vect{u}; \boldsymbol{\mu}) &= \int_{\hat{\Omega}} \rho \ddot{\vect{u}} \cdot \delta\vect{u} \, J_{\hat{\vect{x}}, \boldsymbol{\mu}} \, \mathrm{d}\hat{\Omega} \\
+    \hat{k}(\vect{u}, \delta\vect{u}; \boldsymbol{\mu}) &= \int_{\hat{\Omega}} \boldsymbol{\varepsilon}_{\hat{\vect{x}}}(\delta\vect{u})^T \mathbf{J}_{\hat{\vect{x}}}^{-1} \mat{D} \mathbf{J}_{\hat{\vect{x}}}^{-T} \boldsymbol{\varepsilon}_{\hat{\vect{x}}}(\vect{u}) \, J_{\hat{\vect{x}}, \boldsymbol{\mu}} \, \mathrm{d}\hat{\Omega}
+\end{align}
+\textbf{Impact:} The spatial discretization basis functions $\hat{\mat{R}}$ remain strictly invariant. Parameter variations $\boldsymbol{\mu}$ only modify the local Jacobians $\mathbf{J}_{\hat{\vect{x}}}(\boldsymbol{\mu})$, guaranteeing that all snapshot vectors reside in $\mathbb{R}^N$ and avoiding live modal re-projections.
+
+\subsection{Pillar 3: ECSW Hyper-Reduction}
+Projection of the semi-discrete system onto a rank-$r$ POD basis $\boldsymbol{\Phi} \in \mathbb{R}^{N \times r}$ ($r=15$, capturing $>99.999\%$ system energy):
+\begin{equation}
+    \vect{U}(t) \approx \boldsymbol{\Phi} \vect{q}(t) \implies \mathbf{M}_r(\boldsymbol{\mu}) \ddot{\vect{q}}(t) + \mathbf{C}_r(\boldsymbol{\mu}) \dot{\vect{q}}(t) + \mathbf{K}_r(\boldsymbol{\mu}) \vect{q}(t) = \mathbf{F}_r(t)
+\end{equation}
+Because the stiffness matrix $\mathbf{K}(\boldsymbol{\mu})$ is non-affine, standard Galerkin ROM still requires evaluating integrals over all $E = 3,200$ elements ($154.5\,\text{ms}$). Energy-Conserving Sampling and Weighting (ECSW) overcomes this bottleneck by replacing full integration with a sparse, non-negatively weighted sum over an active element subset $E^* \subset E$:
+\begin{equation}
+    \mathbf{K}_{r, \text{ECSW}}(\boldsymbol{\mu}) = \sum_{e \in E^*} w_e \boldsymbol{\Phi}_e^T \mathbf{K}_e(\boldsymbol{\mu}) \boldsymbol{\Phi}_e
+\end{equation}
+Weights $\vect{w}$ and active elements $E^*$ are computed offline via Non-Negative Least Squares (NNLS) with coercivity pre-seeding of boundary/notch elements ($\mathcal{I}_{\text{act}} \gets \{e_{\text{clamp}}, e_{\text{notch}}\}$) and calibrated with a modal stiffness factor $\gamma$.
+
+% ------------------------------------------------------------------------------
+\section{Quantitative Performance and Validation}
+% ------------------------------------------------------------------------------
+A systematic benchmark on a 2D clamped-notched cantilever beam under transient sinusoidal loading yields the following comparative metrics:
+
+\begin{table}[htbp]
+    \centering
+    \caption{Comparative performance metrics between Full Order and Reduced Order Models.}
+    \label{tab:summary_metrics}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Solver Strategy} & \textbf{Active Size} & \textbf{Rel. $L_2$ Error} & \textbf{Assembly Time} & \textbf{Online Speedup} \\
+        \midrule
+        Full Order Model (FOM) & $6,888$ DOFs / $3,200$ Elem. & Baseline & $142.1\,\text{ms}$ & $1.0\times$ \\
+        Galerkin ROM (Unreduced) & $15$ DOFs / $3,200$ Elem. & $0.012\%$ & $154.5\,\text{ms}$ & $0.92\times$ \\
+        \textbf{ECSW ROM (Hyper-reduced)} & \textbf{$15$ DOFs / $28$ Elem.} & \textbf{$0.054\%$} & \textbf{$2.2\,\text{ms}$} & \textbf{$\mathbf{64.5\times}$} \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table}
+
+\noindent \textbf{Key Highlights from Results:}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Assembly Speedup:} Hyper-reduction slashes matrix assembly time from $142.1\,\text{ms}$ to $2.2\,\text{ms}$ ($64.5\times$ acceleration).
+    \item \textbf{Total Time Step Solve Time:} Reduced to $\approx 1.30\,\text{ms}$, well within the sub-millisecond real-time budget for smooth $60\,\text{FPS}$ rendering.
+    \item \textbf{Energy Conservation \& Accuracy:} ECSW strictly preserves symmetry and positive definiteness, retaining high fidelity with only $0.054\%$ relative displacement error.
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\section{Interactive Pedagogical Web Application}
+% ------------------------------------------------------------------------------
+The entire online pipeline is implemented in pure client-side JavaScript / WebGL with zero server backend or plugin requirements:
+\begin{itemize}[noitemsep, leftmargin=*]
+    \item \textbf{Live Parameter Manipulation:} Real-time sliders for notch position $x_c$ and depth $r$ dynamically morph the geometry via reference pullback with zero remeshing latency.
+    \item \textbf{Live Solver Switching:} Direct visual comparison between FOM, Galerkin ROM, and ECSW ROM.
+    \item \textbf{Live Stress Contours:} Real-time Von Mises stress colormaps and tip deflection graphs at $\ge 60\,\text{FPS}$.
+    \item \textbf{Live App URL:} \url{https://cnam-internship-mumen.netlify.app/}
+    \item \textbf{Source Code:} \url{https://github.com/WEHBEMUMEN/internship_report}
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\section{Future Perspectives}
+% ------------------------------------------------------------------------------
+Future extensions of this framework include:
+\begin{enumerate}[noitemsep, leftmargin=*]
+    \item \textbf{Geometrically Nonlinear Kinematics:} Incorporating Green-Lagrange strain tensors $\mathbf{E}$ and Second Piola-Kirchhoff stress with reduced-space Newton-Raphson solvers.
+    \item \textbf{3D Trivariate NURBS:} Extending 2D bivariate surface patches to complex 3D continuum structures.
+    \item \textbf{Multi-Patch CAD Topologies:} Coupling non-conforming patches via Nitsche's method or Mortar element formulations.
+    \item \textbf{Adaptive Online Sampling:} On-the-fly basis enrichment for extreme parametric excursions.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,141 @@
+% !TEX program = lualatex
+% !TEX root = main.tex
+\documentclass[12pt,a4paper,oneside]{report}
+
+% ==============================================================================
+% Packages & Configuration (Thesis 2.0 Visual Edition)
+% ==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{graphicx}
+\graphicspath{{./}{../figures/}}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, calc}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{subcaption}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{xcolor}
+
+% Color definitions
+\definecolor{primaryblue}{rgb}{0.12, 0.35, 0.65}
+\definecolor{accentcyan}{rgb}{0.0, 0.55, 0.65}
+\definecolor{lightbg}{rgb}{0.96, 0.97, 0.99}
+
+\usepackage{hyperref}
+\usepackage{bookmark}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    citecolor=primaryblue,
+    urlcolor=primaryblue,
+    pdftitle={M2 Thesis 2.0: Isogeometric Analysis and Reduced Order Modeling in Structural Dynamics},
+    pdfauthor={Mumen Wehbe}
+}
+
+% Geometry and layout tuning
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3cm,
+    right=3cm
+}
+
+% Float and spacing optimization
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.15}
+\renewcommand{\floatpagefraction}{0.75}
+
+% Section title formatting
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{primaryblue}}{\chaptername\ \thechapter}{10pt}{\Huge}
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+\titlespacing*{\chapter}{0pt}{-20pt}{18pt}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+\titlespacing*{\subsection}{0pt}{10pt}{4pt}
+
+% Custom macros
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+
+% ==============================================================================
+% Document Details
+% ==============================================================================
+\title{
+    \includegraphics[width=6cm]{CNAM_Logo.pdf} \\
+    \vspace{1.5cm}
+    \textbf{\huge Geometrical Parameters in Isogeometric Analysis and Reduced Order Modeling for Structural Dynamics} \\
+    \vspace{1.0cm}
+    \Large Master 2 Thesis
+}
+\author{
+    \textbf{\large Mumen Wehbe} \\
+    \vspace{0.3cm}
+    \small{Supervisor: Christophe Hoareau}
+}
+\date{\today}
+
+% ==============================================================================
+% Main Document Body
+% ==============================================================================
+\begin{document}
+
+\pagenumbering{alph}
+\maketitle
+
+\pagenumbering{roman}
+\input{chapters/0_frontmatter/abstract}
+\newpage
+
+\input{chapters/0_frontmatter/acknowledgements}
+\newpage
+
+\tableofcontents
+\newpage
+
+\listoffigures
+\newpage
+
+\listoftables
+\newpage
+
+\listofalgorithms
+\newpage
+
+\input{chapters/0_frontmatter/nomenclature}
+\newpage
+
+\pagenumbering{arabic}
+\input{chapters/1_introduction/index}
+\input{chapters/2_theory/index}
+\input{chapters/3_discretization/index}
+\input{chapters/4_pullback/index}
+\input{chapters/5_simulation/index}
+\input{chapters/6_rom/index}
+\input{chapters/7_conclusion/index}
+\input{chapters/8_appendix/index}
+\newpage
+
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

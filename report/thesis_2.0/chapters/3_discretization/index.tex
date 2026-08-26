@@ -1,0 +1,600 @@
+% ==============================================================================
+\chapter{Discretization: Isogeometric Analysis (IGA)}
+\label{ch:discretization}
+% ==============================================================================
+
+
+Following the continuum elastodynamic formulation established in Chapter \ref{ch:theory}, discretizing the governing equations requires a spatial basis capable of handling complex geometry accurately. Traditional finite element methods introduce geometric approximation errors when tessellating curved boundaries into polygonal meshes because the geometry depends on the field discretization using Lagrange polynomials. Isoparametric FEM implies that the geometry shares the same parameterization as the field discretization, whereas Isogeometric Analysis (IGA) dictates that the field shares the same parameterization as the exact geometry construction.
+
+It is important to note that while IGA utilizes CAD basis functions (NURBS), directly extracting full 3D solid tensor-product meshes from standard CAD files remains an open challenge, as most CAD formats solely provide boundary-representation (B-Rep) shells. Nevertheless, for the 2D geometries considered in this thesis, IGA successfully employs NURBS as basis functions for both exact boundary representation and elastodynamic state approximation, yielding continuous semi-discrete equations of motion.
+
+% ------------------------------------------------------------------------------
+\section{B-Splines \& NURBS Geometry Representation}
+% ------------------------------------------------------------------------------
+
+Here, we introduce univariate B-splines, rational NURBS basis functions, and tensor-product surface patches that form the foundation of IGA.
+
+Isogeometric Analysis (IGA), pioneered by Hughes et al. \cite{hughes2005} and expanded by Cottrell et al. \cite{cottrell2009}, establishes a link between Computer-Aided Design (CAD) and Finite Element Analysis (FEA) by employing NURBS basis functions directly in the analysis solver.
+
+\subsection{Univariate B-Spline Basis \& Cox-de Boor Recurrence}
+The Cox-de Boor algorithm is fundamentally ubiquitous in B-spline evaluations \cite{piegl1997} due to its numerical stability and efficient recursive formulation. Cox-de Boor recurrence relations and derivative formulas for univariate B-spline basis functions are defined as follows.
+
+Given an open knot vector $\Xi = \{\xi_0, \xi_1, \dots, \xi_m\}$ (where $m+1$ is the total number of knots), univariate B-spline basis functions $N_{i,p}(\xi)$ of degree $p$ are defined recursively. A critical feature of open knot vectors is knot repetition: repeating the first and last knots $p+1$ times ensures the basis functions interpolate the endpoints, which is crucial for applying boundary conditions.
+
+\begin{equation}
+    N_{i,0}(\xi) = \begin{cases} 1 & \text{if } \xi_i \le \xi < \xi_{i+1} \\ 0 & \text{otherwise} \end{cases}
+\end{equation}
+\begin{equation}
+    N_{i,p}(\xi) = \frac{\xi - \xi_i}{\xi_{i+p} - \xi_i} N_{i,p-1}(\xi) + \frac{\xi_{i+p+1} - \xi}{\xi_{i+p+1} - \xi_{i+1}} N_{i+1,p-1}(\xi)
+\end{equation}
+
+Analytical spatial gradients for strain evaluations are computed using derivative recurrence:
+\begin{equation}
+    \frac{d}{d\xi} N_{i,p}(\xi) = p \left( \frac{N_{i,p-1}(\xi)}{\xi_{i+p} - \xi_i} - \frac{N_{i+1,p-1}(\xi)}{\xi_{i+p+1} - \xi_{i+1}} \right)
+\end{equation}
+Evaluating quadratic B-spline basis functions $N_{i,2}(\xi)$ over an open knot vector yields smooth localized shape functions with partition of unity properties. In Figure \ref{fig:nurbs_curves_eval}, one can see how these quadratic basis functions distribute across the parametric space $\xi$.
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[scale=1.05, >=stealth]
+            \definecolor{n0color}{RGB}{37, 99, 235}
+            \definecolor{n1color}{RGB}{5, 150, 105}
+            \definecolor{n2color}{RGB}{217, 119, 6}
+            \definecolor{n3color}{RGB}{220, 38, 38}
+            \definecolor{n4color}{RGB}{124, 58, 237}
+            \definecolor{n5color}{RGB}{219, 39, 119}
+
+            \draw[gray!30, line width=0.5pt] (0, 0) grid[ystep=0.25, xstep=0.25] (10, 4.5);
+            \draw[gray!50, dashed, line width=0.5pt] (0, 2.25) -- (10, 2.25);
+
+            \draw[->, thick, black!70] (0,0) -- (10.5,0) node[right] {$\xi$};
+            \draw[->, thick, black!70] (0,0) -- (0,5.0) node[above] {$N_{i,2}(\xi)$};
+
+            \foreach \x/\label in {0/0.0, 2.5/0.25, 5/0.5, 7.5/0.75, 10/1.0} {
+                    \draw[black!70, thick] (\x, 2pt) -- (\x, -2pt) node[below, font=\small] {\label};
+                }
+            \foreach \y/\label in {0/0.0, 2.25/0.5, 4.5/1.0} {
+                    \draw[black!70, thick] (2pt, \y) -- (-2pt, \y) node[left, font=\small] {\label};
+                }
+
+            \fill[n0color, opacity=0.08] (0,4.5) -- plot[domain=0:0.25, samples=50] ({10*\x}, {4.5*(1-4*\x)^2}) -- (2.5,0) -- (0,0) -- cycle;
+            \draw[n0color, line width=1.5pt] plot[domain=0:0.25, samples=50] ({10*\x}, {4.5*(1-4*\x)^2});
+
+            \fill[n1color, opacity=0.08] (0,0) -- plot[domain=0:0.25, samples=50] ({10*\x}, {4.5*(8*\x - 24*\x^2)}) -- plot[domain=0.25:0.5, samples=50] ({10*\x}, {4.5*(8*(0.5-\x)^2)}) -- (5,0) -- cycle;
+            \draw[n1color, line width=1.5pt] plot[domain=0:0.25, samples=50] ({10*\x}, {4.5*(8*\x - 24*\x^2)}) -- plot[domain=0.25:0.5, samples=50] ({10*\x}, {4.5*(8*(0.5-\x)^2)});
+
+            \fill[n2color, opacity=0.08] (0,0) -- plot[domain=0:0.25, samples=50] ({10*\x}, {4.5*(8*\x^2)}) -- plot[domain=0.25:0.5, samples=50] ({10*\x}, {4.5*(12*\x - 16*\x^2 - 1.5)}) -- plot[domain=0.5:0.75, samples=50] ({10*\x}, {4.5*(8*(0.75-\x)^2)}) -- (7.5,0) -- cycle;
+            \draw[n2color, line width=1.5pt] plot[domain=0:0.25, samples=50] ({10*\x}, {4.5*(8*\x^2)}) -- plot[domain=0.25:0.5, samples=50] ({10*\x}, {4.5*(12*\x - 16*\x^2 - 1.5)}) -- plot[domain=0.5:0.75, samples=50] ({10*\x}, {4.5*(8*(0.75-\x)^2)});
+
+            \fill[n3color, opacity=0.08] (2.5,0) -- plot[domain=0.25:0.5, samples=50] ({10*\x}, {4.5*(8*(\x-0.25)^2)}) -- plot[domain=0.5:0.75, samples=50] ({10*\x}, {4.5*(12*(1-\x) - 16*(1-\x)^2 - 1.5)}) -- plot[domain=0.75:1.0, samples=50] ({10*\x}, {4.5*(8*(1-\x)^2)}) -- (10,0) -- cycle;
+            \draw[n3color, line width=1.5pt] plot[domain=0.25:0.5, samples=50] ({10*\x}, {4.5*(8*(\x-0.25)^2)}) -- plot[domain=0.5:0.75, samples=50] ({10*\x}, {4.5*(12*(1-\x) - 16*(1-\x)^2 - 1.5)}) -- plot[domain=0.75:1.0, samples=50] ({10*\x}, {4.5*(8*(1-\x)^2)});
+
+            \fill[n4color, opacity=0.08] (5,0) -- plot[domain=0.5:0.75, samples=50] ({10*\x}, {4.5*(8*(\x-0.5)^2)}) -- plot[domain=0.75:1.0, samples=50] ({10*\x}, {4.5*(8*(1-\x) - 24*(1-\x)^2)}) -- (10,0) -- cycle;
+            \draw[n4color, line width=1.5pt] plot[domain=0.5:0.75, samples=50] ({10*\x}, {4.5*(8*(\x-0.5)^2)}) -- plot[domain=0.75:1.0, samples=50] ({10*\x}, {4.5*(8*(1-\x) - 24*(1-\x)^2)});
+
+            \fill[n5color, opacity=0.08] (7.5,0) -- plot[domain=0.75:1.0, samples=50] ({10*\x}, {4.5*(4*\x-3)^2}) -- (10,4.5) -- (10,0) -- cycle;
+            \draw[n5color, line width=1.5pt] plot[domain=0.75:1.0, samples=50] ({10*\x}, {4.5*(4*\x-3)^2});
+
+            \matrix [draw, fill=white, at={(10.2, 4.5)}, anchor=north west, font=\small, row sep=1pt, ampersand replacement=\&] {
+                \node {\tikz[baseline=-0.5ex]{\draw[n0color, line width=1.5pt] (0,0) -- (0.4,0);}}; \& \node {$N_{0,2}$}; \\
+                \node {\tikz[baseline=-0.5ex]{\draw[n1color, line width=1.5pt] (0,0) -- (0.4,0);}}; \& \node {$N_{1,2}$}; \\
+                \node {\tikz[baseline=-0.5ex]{\draw[n2color, line width=1.5pt] (0,0) -- (0.4,0);}}; \& \node {$N_{2,2}$}; \\
+                \node {\tikz[baseline=-0.5ex]{\draw[n3color, line width=1.5pt] (0,0) -- (0.4,0);}}; \& \node {$N_{3,2}$}; \\
+                \node {\tikz[baseline=-0.5ex]{\draw[n4color, line width=1.5pt] (0,0) -- (0.4,0);}}; \& \node {$N_{4,2}$}; \\
+                \node {\tikz[baseline=-0.5ex]{\draw[n5color, line width=1.5pt] (0,0) -- (0.4,0);}}; \& \node {$N_{5,2}$}; \\
+            };
+        \end{tikzpicture}%
+    }
+    \caption{Quadratic B-spline basis functions $N_{i,2}(\xi)$ evaluated over knot vector $\Xi = \{0, 0, 0, 0.25, 0.5, 0.75, 1, 1, 1\}$.}
+    \label{fig:nurbs_curves_eval}
+\end{figure}
+
+\subsection{Non-Uniform Rational B-Splines (NURBS)}
+B-spline basis functions are fundamental ingredients to construct geometries (curves, surfaces, and volumes). Before going further, one must introduce the concept of NURBS basis functions first. Standard B-splines are not able to represent conic sections (such as circles and ellipses) exactly. Because these shapes are extremely common in engineering, rational basis functions with projective weights are formulated to represent exact conic and curved geometries. For example, the exact circular geometry shown later in Figure \ref{fig:krefinement_basis} can only be constructed using NURBS, clearly highlighting the difference from standard B-spline curves.
+
+Projective control weights $w_i$ define the rational basis functions $R_{i,p}(\xi)$:
+\begin{equation}
+    R_{i,p}(\xi) = \frac{N_{i,p}(\xi) w_i}{\sum_{j=0}^{n-1} N_{j,p}(\xi) w_j} = \frac{N_{i,p}(\xi) w_i}{W(\xi)}
+\end{equation}
+
+Spatial gradients of rational basis functions are evaluated using the quotient rule:
+\begin{equation}
+    \frac{d}{d\xi} R_{i,p}(\xi) = w_i \frac{\frac{d N_{i,p}(\xi)}{d\xi} W(\xi) - N_{i,p}(\xi) \frac{d W(\xi)}{d\xi}}{[W(\xi)]^2}
+\end{equation}
+Spatial coordinates of a 1D parametric curve $\vect{C}(\xi)$ are constructed as a linear combination of control points $\vect{P}_i$ weighted by rational basis functions $R_{i,p}(\xi)$:
+\begin{equation}
+    \vect{C}(\xi) = \sum_{i=0}^{n-1} R_{i,p}(\xi) \vect{P}_i
+\end{equation}
+
+Figure \ref{fig:bspline_1d_curve} illustrates the geometric construction of a 1D B-spline curve $\vect{C}(\xi)$ blending a control polygon formed by control points $\vect{P}_0$ through $\vect{P}_4$.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[scale=1.1, >=stealth]
+        \coordinate (P0) at (0, 0);
+        \coordinate (P1) at (1.5, 2.5);
+        \coordinate (P2) at (3.5, 3.0);
+        \coordinate (P3) at (5.0, 1.0);
+        \coordinate (P4) at (7.0, 2.5);
+
+        % Draw control polygon (dashed)
+        \draw[thick, gray, dashed] (P0) -- (P1) -- (P2) -- (P3) -- (P4);
+
+        % Draw actual B-spline curve
+        \draw[ultra thick, primaryblue] (P0) .. controls (1.0,1.8) and (2.5,2.5) .. (3.5,2.1) .. controls (4.5,1.7) and (5.8,1.2) .. (P4);
+
+        % Draw control points
+        \foreach \p/\l/\pos in {P0/P_0/left, P1/P_1/above, P2/P_2/above, P3/P_3/below, P4/P_4/right} {
+                \fill[red!80!black] (\p) circle (2.5pt);
+                \node[\pos, font=\small] at (\p) {$\vect{\l}$};
+            }
+        \node[primaryblue, above, font=\small\bfseries] at (3.2, 2.2) {$\vect{C}(\xi)$};
+    \end{tikzpicture}
+    \caption{Geometric construction of a 1D B-spline curve $\vect{C}(\xi)$ blended by control points $\vect{P}_i$ and control polygon (dashed lines).}
+    \label{fig:bspline_1d_curve}
+\end{figure}
+
+Evaluating these quadratic basis functions over active knot spans (Figure \ref{fig:nurbs_curves_eval}) confirms their local support and partition of unity properties.
+
+\subsection{Bivariate Tensor-Product NURBS Surface Patches}
+To construct a surface, one performs a tensor product of two 1D B-spline basis function sets across knot vectors $\Xi$ and $\mathcal{H}$. Weight factors $w_{i,j}$ define rational bivariate basis functions $R_{i,j}^{p,q}(\xi, \eta)$:
+
+\begin{equation}
+    R_{i,j}^{p,q}(\xi, \eta) = \frac{N_{i,p}(\xi) M_{j,q}(\eta) w_{i,j}}{\sum_{k=0}^{n-1} \sum_{l=0}^{m-1} N_{k,p}(\xi) M_{l,q}(\eta) w_{k,l}}
+\end{equation}
+
+Evaluating bivariate tensor-product NURBS basis functions yields 2D shape functions over the parametric domain (Figure \ref{fig:bivariate_basis_3d}).
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[
+                declare function={
+                        n0(\t) = (\t < 0.25) * ((1-4*\t)^2);
+                        n2(\t) = (\t < 0.25) * (8*\t^2) +
+                        (\t >= 0.25) * (\t < 0.5) * (12*\t - 16*\t^2 - 1.5) +
+                        (\t >= 0.5) * (\t < 0.75) * (8*(0.75-\t)^2);
+                    }
+            ]
+            % Panel (a) Axis
+            \begin{axis}[
+                    at={(0,0)},
+                    width=7.5cm,
+                    height=6.0cm,
+                    grid=major,
+                    xlabel={$\xi$},
+                    ylabel={$\eta$},
+                    zlabel={$R_{0,2}(\xi,\eta)$},
+                    colormap/viridis,
+                    view={60}{30},
+                    zmin=0, zmax=0.8,
+                    title={(a) Boundary basis function $R_{0,2}(\xi,\eta)$}
+                ]
+                \addplot3[
+                    surf,
+                    domain=0:0.8,
+                    domain y=0:0.8,
+                    samples=25,
+                    shader=faceted
+                ] {n0(x)*n2(y)};
+            \end{axis}
+
+            % Panel (b) Axis
+            \begin{axis}[
+                    at={(7.8cm,0)},
+                    width=7.5cm,
+                    height=6.0cm,
+                    grid=major,
+                    xlabel={$\xi$},
+                    ylabel={$\eta$},
+                    zlabel={$R_{2,2}(\xi,\eta)$},
+                    colormap/viridis,
+                    view={60}{30},
+                    zmin=0, zmax=0.8,
+                    title={(b) Internal basis function $R_{2,2}(\xi,\eta)$}
+                ]
+                \addplot3[
+                    surf,
+                    domain=0:0.8,
+                    domain y=0:0.8,
+                    samples=25,
+                    shader=faceted
+                ] {n2(x)*n2(y)};
+            \end{axis}
+        \end{tikzpicture}%
+    }
+    \caption{3D surface plots of two distinct bivariate tensor-product B-spline basis functions: (a) boundary basis function $R_{0,2}(\xi,\eta) = N_{0,2}(\xi)M_{2,2}(\eta)$ and (b) internal basis function $R_{2,2}(\xi,\eta) = N_{2,2}(\xi)M_{2,2}(\eta)$, demonstrating edge-supported versus fully internal support.}
+    \label{fig:bivariate_basis_3d}
+\end{figure}
+
+The physical domain surface, where a physical point inside the surface is denoted by $\vect{x}(\xi, \eta)$, is constructed as a linear combination of a 2D control net $\vect{P}_{i,j}$, as shown in Figure \ref{fig:bspline_surface_concept}:
+\begin{equation}
+    \vect{x}(\xi, \eta) = \sum_{i=0}^{n-1} \sum_{j=0}^{m-1} R_{i,j}^{p,q}(\xi, \eta) \vect{P}_{i,j}
+\end{equation}
+
+For surface integration, one can compute the 2D coordinate Jacobian matrix $\mat{J}(\xi, \eta)$ as:
+\begin{equation}
+    \mat{J}(\xi, \eta) = \begin{bmatrix} \frac{\partial x}{\partial \xi} & \frac{\partial y}{\partial \xi} \\[0.3em] \frac{\partial x}{\partial \eta} & \frac{\partial y}{\partial \eta} \end{bmatrix} = \begin{bmatrix} \sum \frac{\partial R_{i,j}^{p,q}}{\partial \xi} (\vect{P}_{i,j})_x & \sum \frac{\partial R_{i,j}^{p,q}}{\partial \xi} (\vect{P}_{i,j})_y \\[0.5em] \sum \frac{\partial R_{i,j}^{p,q}}{\partial \eta} (\vect{P}_{i,j})_x & \sum \frac{\partial R_{i,j}^{p,q}}{\partial \eta} (\vect{P}_{i,j})_y \end{bmatrix}
+\end{equation}
+The local outward unit surface normal vector $\vect{n}(\xi, \eta)$ is extracted via the cross product:
+\begin{equation}
+    \vect{n}(\xi, \eta) = \frac{\vect{g}_{\xi} \times \vect{g}_{\eta}}{\|\vect{g}_{\xi} \times \vect{g}_{\eta}\|}
+\end{equation}
+where $\vect{g}_{\xi} = \partial \vect{S}/\partial \xi$ and $\vect{g}_{\eta} = \partial \vect{S}/\partial \eta$.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[scale=1.0, >=stealth]
+        \coordinate (P00) at (0, 0);   \coordinate (P10) at (2, 0.2);   \coordinate (P20) at (4, 0);
+        \coordinate (P01) at (0.5, 1.0); \coordinate (P11) at (2.5, 1.7); \coordinate (P21) at (4.5, 1.0);
+        \coordinate (P02) at (1.0, 2.0); \coordinate (P12) at (3.0, 2.2); \coordinate (P22) at (5.0, 2.0);
+
+        \draw[thick, gray!60, dashed] (P00) -- (P10) -- (P20);
+        \draw[thick, gray!60, dashed] (P01) -- (P11) -- (P21);
+        \draw[thick, gray!60, dashed] (P02) -- (P12) -- (P22);
+        \draw[thick, gray!60, dashed] (P00) -- (P01) -- (P02);
+        \draw[thick, gray!60, dashed] (P10) -- (P11) -- (P12);
+        \draw[thick, gray!60, dashed] (P20) -- (P21) -- (P22);
+
+        \fill[lightbg, opacity=0.8, draw=primaryblue, thick]
+        (P00) .. controls (1.0, 0.1) and (3.0, 0.1) .. (P20)
+        .. controls (4.3, 0.6) and (4.7, 1.4) .. (P22)
+        .. controls (4.0, 2.1) and (2.0, 2.1) .. (P02)
+        .. controls (0.7, 1.4) and (0.3, 0.6) .. (P00);
+
+        \draw[primaryblue!40, thin] (1.0, 0.1) .. controls (1.5, 1.0) and (2.0, 1.7) .. (2.0, 2.1);
+        \draw[primaryblue!40, thin] (3.0, 0.1) .. controls (3.2, 1.0) and (3.5, 1.7) .. (4.0, 2.1);
+        \draw[primaryblue!40, thin] (0.5, 1.0) .. controls (1.5, 1.3) and (3.5, 1.3) .. (4.5, 1.0);
+
+        \foreach \p in {P00, P01, P02, P10, P11, P12, P20, P21, P22} {
+                \fill[red!80!black] (\p) circle (2.5pt);
+            }
+
+        \node[red!80!black, above, fill=white, inner sep=1pt] at (P11) {$\vect{P}_{i,j}$};
+        \coordinate (Xpt) at (3.6, 0.75);
+        \fill[primaryblue] (Xpt) circle (2pt) node[below=2pt, primaryblue] {\textbf{$\vect{x}(\xi,\eta)$}};
+        \draw[->, ultra thick, purple!80!black] (Xpt) -- ++(0.3, 1.1) node[above, font=\small\bfseries] {$\vect{n}(\xi,\eta)$};
+    \end{tikzpicture}
+    \caption{Bivariate B-spline surface patch $\vect{x}(\xi,\eta)$ guided by a control net $\vect{P}_{i,j}$, with local surface normal $\vect{n}(\xi,\eta)$.}
+    \label{fig:bspline_surface_concept}
+\end{figure}
+
+By linking parametric coordinates to a 3D control net $\vect{P}_{i,j}$ (Figure \ref{fig:bspline_surface_concept}), bivariate NURBS patches construct exact geometric surfaces.
+
+% ------------------------------------------------------------------------------
+\section{\texorpdfstring{Refinement Strategies: $h$-, $p$-, \& $k$-Refinement}{Refinement Strategies}}
+% ------------------------------------------------------------------------------
+
+A reduced number of control points enables us to construct the exact curved geometry. Nevertheless, the field discretization accuracy depends heavily on the number of control points. When there are significant fluctuations of the elastodynamic field inside the domain, one must introduce the concept of mesh refinement in IGA. By mesh refinement, it means we can add additional control points without compromising the exact physical domain. 
+
+The following discussion details the three refinement mechanisms of IGA that enable mesh enrichment without altering the exact CAD geometry.
+
+A major advantage of IGA is mesh refinement without modifying CAD geometry definitions:
+
+\begin{table}[htbp]
+    \centering
+    \caption{Comparative synthesis of IGA refinement mechanisms.}
+    \label{tab:refinement_comparison}
+    \resizebox{\textwidth}{!}{%
+        \begin{tabular}{l l l l p{5.5cm}}
+            \toprule
+            \textbf{Refinement Type} & \textbf{Mechanism} & \textbf{Continuity}  & \textbf{Exact CAD Geometry} & \textbf{Primary Advantage / Impact}                              \\
+            \midrule
+            \textbf{$h$-Refinement}  & Knot Insertion     & Retained ($C^{p-1}$) & Preserved Exactly           & Global mesh enrichment (1D local knot insertion propagates entirely across 2D patches via tensor product).      \\
+            \textbf{$p$-Refinement}  & Degree Elevation   & Increased ($C^p$)    & Preserved Exactly           & Higher-order accuracy without Runge oscillatory phenomena.       \\
+            \textbf{$k$-Refinement}  & Order Elevation    & Maximum ($C^{p-1}$)  & Preserved Exactly           & Superior accuracy per DOF; non-local basis with high continuity. \\
+            \bottomrule
+        \end{tabular}%
+    }
+\end{table}
+
+Comparing these three refinement pathways (Table \ref{tab:refinement_comparison}) shows that IGA enables arbitrary mesh enrichment while maintaining strict $C^{p-1}$ continuity and exact CAD boundary definitions.
+
+\subsection{Boehm Knot Insertion Algorithm (\texorpdfstring{$h$-Refinement}{h-Refinement})}
+Boehm's algorithm \cite{piegl1997} for knot insertion ($h$-refinement) enables local mesh refinement near stress concentrations.
+
+In $h$-refinement, new control points $\vect{P}_i^{\text{new}}$ are computed via Boehm's algorithm:
+\begin{equation}
+    \vect{P}_i^{\text{new}} = \alpha_i \vect{P}_i + (1 - \alpha_i) \vect{P}_{i-1}
+\end{equation}
+where blending coefficients $\alpha_i$ are:
+\begin{equation}
+    \alpha_i = \begin{cases}
+        1                                           & \text{if } i \le k - p           \\
+        \frac{\bar{\xi} - \xi_i}{\xi_{i+p} - \xi_i} & \text{if } k - p + 1 \le i \le k \\
+        0                                           & \text{if } i \ge k + 1
+    \end{cases}
+\end{equation}
+
+For 2D domains with lattice matrix $\mat{P}$, directional transformations $\mat{T}_{\xi}$ and $\mat{T}_{\eta}$ yield:
+\begin{equation}
+    \mat{P}^{\text{new}} = \mat{T}_{\xi} \mat{P} \mat{T}_{\eta}^T, \quad \vect{P}^{\text{new}} = \left( \mat{T}_{\eta} \otimes \mat{T}_{\xi} \right) \vect{P}
+\end{equation}
+
+Degree elevation ($p$-refinement) operates via $\vect{P}^{\text{new}} = \mat{T}_p \vect{P}$.
+
+Demonstrating $h$-refinement (knot insertion) confirms how the control polygon refines while preserving exact curve geometry (Figure \ref{fig:hrefinement_basis}).
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[scale=0.9, >=stealth]
+            % Row 1: Basis functions before/after
+            \begin{scope}[yshift=3.6cm]
+                \draw[->, thick, black!70] (0,0) -- (4.2,0) node[right] {$\xi$};
+                \draw[->, thick, black!70] (0,0) -- (0,2.2) node[above] {$N_{i,2}$};
+                \draw[gray!30, thin] (0,0) grid[ystep=0.5, xstep=1.0] (4,2);
+                \draw[blue, line width=1.2pt, domain=0:4] plot (\x, {2*(1 - \x/4)^2});
+                \draw[green!60!black, line width=1.2pt, domain=0:4] plot (\x, {2*2*(\x/4)*(1 - \x/4)});
+                \draw[orange, line width=1.2pt, domain=0:4] plot (\x, {2*(\x/4)^2});
+                \node[font=\tiny, below] at (2, -0.1) {$\Xi = \{0,0,0,1,1,1\}$};
+            \end{scope}
+            \begin{scope}[xshift=5.0cm, yshift=3.6cm]
+                \draw[->, thick, black!70] (0,0) -- (4.2,0) node[right] {$\xi$};
+                \draw[->, thick, black!70] (0,0) -- (0,2.2) node[above] {$N_{i,2}$};
+                \draw[gray!30, thin] (0,0) grid[ystep=0.5, xstep=1.0] (4,2);
+                \draw[blue, line width=1.2pt, domain=0:2] plot (\x, {2*(1 - \x/2)^2});
+                \draw[green!60!black, line width=1.2pt, domain=0:2] plot (\x, {2*(4*(\x/4) - 6*(\x/4)^2)});
+                \draw[green!60!black, line width=1.2pt, domain=2:4] plot (\x, {2*(2*(1-\x/4)^2)});
+                \draw[orange, line width=1.2pt, domain=0:2] plot (\x, {2*(2*(\x/4)^2)});
+                \draw[orange, line width=1.2pt, domain=2:4] plot (\x, {2*(4*(1-\x/4) - 6*(1-\x/4)^2)});
+                \draw[red, line width=1.2pt, domain=2:4] plot (\x, {2*((\x-2)/2)^2});
+                \node[font=\tiny, below] at (2, -0.1) {$\Xi = \{0,0,0,0.5,1,1,1\}$};
+            \end{scope}
+
+            % Row 2: Curves and control polygons before/after
+            \begin{scope}[xshift=0cm, yshift=0cm]
+                \draw[gray!20, thin] (0,0) grid (3.6,2.5);
+                \draw[gray!70, dashed, line width=0.8pt] (0,0) -- (1.8,2.2) -- (3.6,0);
+                \fill[red!80!black] (0,0) circle (2pt);
+                \fill[red!80!black] (1.8,2.2) circle (2pt);
+                \fill[red!80!black] (3.6,0) circle (2pt);
+                \draw[primaryblue, line width=1.5pt, domain=0:1] plot ({3.6*\x}, {4.4*\x*(1-\x)});
+                \node[primaryblue, above, font=\scriptsize] at (1.8, 1.2) {$\vect{C}(\xi)$};
+                \node[font=\tiny, below] at (1.8, -0.1) {Original polygon \& curve};
+            \end{scope}
+            \begin{scope}[xshift=5.0cm, yshift=0cm]
+                \draw[gray!20, thin] (0,0) grid (3.6,2.5);
+                \draw[gray!70, dashed, line width=0.8pt] (0,0) -- (0.9,1.1) -- (2.7,1.1) -- (3.6,0);
+                \fill[red!80!black] (0,0) circle (2pt);
+                \fill[red!80!black] (0.9,1.1) circle (2pt);
+                \fill[red!80!black] (2.7,1.1) circle (2pt);
+                \fill[red!80!black] (3.6,0) circle (2pt);
+                \draw[primaryblue, line width=1.5pt, domain=0:1] plot ({3.6*\x}, {4.4*\x*(1-\x)});
+                \node[primaryblue, above, font=\scriptsize] at (1.8, 1.2) {$\vect{C}(\xi)$};
+                \node[font=\tiny, below] at (1.8, -0.1) {Refined polygon (knot inserted)};
+            \end{scope}
+        \end{tikzpicture}%
+    }
+    \caption{$h$-refinement (knot insertion) schema showing basis functions before/after inserting knot $\xi=0.5$ (top) and corresponding control polygon refinement while preserving exact curve geometry (bottom).}
+    \label{fig:hrefinement_basis}
+\end{figure}
+
+Inserting knots via Boehm's algorithm (Figure \ref{fig:hrefinement_basis}) enriches the control polygon density while preserving the exact CAD geometry.
+
+\subsection{Degree Elevation (\texorpdfstring{$p$-Refinement}{p-Refinement})}
+Degree elevation ($p$-refinement) increases the polynomial order $p$ of the NURBS basis functions without modifying the underlying CAD geometry or introducing new knot spans.
+
+Starting from a curve of polynomial degree $p$ defined over knot vector $\Xi = \{\xi_0, \xi_1, \dots, \xi_m\}$, degree elevation increases the polynomial order from $p$ to $p+q$ (where $q$ is the elevation increment). To preserve the original continuity $C^{p-m_i}$ at each distinct knot $\xi_i$ with original multiplicity $m_i$, the multiplicity of each knot in the elevated knot vector $\Xi^{\text{new}}$ is increased to $m_i + q$.
+
+The updated control points $\vect{P}_i^{\text{new}}$ are computed via a degree elevation transformation matrix $\mat{T}_p$:
+\begin{equation}
+    \vect{P}^{\text{new}} = \mat{T}_p \vect{P}
+\end{equation}
+
+Unlike classical finite element $p$-refinement, IGA degree elevation preserves exact geometry and continuity $C^{p-m_i}$ across knot spans while completely eliminating Runge oscillatory phenomena (Figure \ref{fig:prefinement_basis}).
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[scale=0.9, >=stealth]
+            % Row 1: Basis functions before/after
+            \begin{scope}[yshift=3.6cm]
+                \draw[->, thick, black!70] (0,0) -- (4.2,0) node[right] {$\xi$};
+                \draw[->, thick, black!70] (0,0) -- (0,2.2) node[above] {$N_{i,2}$};
+                \draw[gray!30, thin] (0,0) grid[ystep=0.5, xstep=1.0] (4,2);
+                \draw[blue, line width=1.2pt, domain=0:4] plot (\x, {2*(1 - \x/4)^2});
+                \draw[green!60!black, line width=1.2pt, domain=0:4] plot (\x, {2*2*(\x/4)*(1 - \x/4)});
+                \draw[orange, line width=1.2pt, domain=0:4] plot (\x, {2*(\x/4)^2});
+                \node[font=\tiny, below] at (2, -0.1) {$p=2$, $\Xi = \{0,0,0,1,1,1\}$};
+            \end{scope}
+            \begin{scope}[xshift=5.0cm, yshift=3.6cm]
+                \draw[->, thick, black!70] (0,0) -- (4.2,0) node[right] {$\xi$};
+                \draw[->, thick, black!70] (0,0) -- (0,2.2) node[above] {$N_{i,3}$};
+                \draw[gray!30, thin] (0,0) grid[ystep=0.5, xstep=1.0] (4,2);
+                \draw[blue, line width=1.2pt, domain=0:4] plot (\x, {2*(1 - \x/4)^3});
+                \draw[green!60!black, line width=1.2pt, domain=0:4] plot (\x, {2*3*(\x/4)*(1 - \x/4)^2});
+                \draw[orange, line width=1.2pt, domain=0:4] plot (\x, {2*3*(\x/4)^2*(1 - \x/4)});
+                \draw[red, line width=1.2pt, domain=0:4] plot (\x, {2*(\x/4)^3});
+                \node[font=\tiny, below] at (2, -0.1) {$p=3$, $\Xi = \{0,0,0,0,1,1,1,1\}$};
+            \end{scope}
+
+            % Row 2: Curves and control polygons before/after
+            \begin{scope}[xshift=0cm, yshift=0cm]
+                \draw[gray!20, thin] (0,0) grid (3.6,2.5);
+                \draw[gray!70, dashed, line width=0.8pt] (0,0) -- (1.8,2.2) -- (3.6,0);
+                \fill[red!80!black] (0,0) circle (2pt);
+                \fill[red!80!black] (1.8,2.2) circle (2pt);
+                \fill[red!80!black] (3.6,0) circle (2pt);
+                \draw[primaryblue, line width=1.5pt, domain=0:1] plot ({3.6*\x}, {4.4*\x*(1-\x)});
+                \node[primaryblue, above, font=\scriptsize] at (1.8, 1.2) {$\vect{C}(\xi)$};
+                \node[font=\tiny, below] at (1.8, -0.1) {Original curve ($p=2$)};
+            \end{scope}
+            \begin{scope}[xshift=5.0cm, yshift=0cm]
+                \draw[gray!20, thin] (0,0) grid (3.6,2.5);
+                \draw[gray!70, dashed, line width=0.8pt] (0,0) -- (1.2,1.5) -- (2.4,1.5) -- (3.6,0);
+                \fill[red!80!black] (0,0) circle (2pt);
+                \fill[red!80!black] (1.2,1.5) circle (2pt);
+                \fill[red!80!black] (2.4,1.5) circle (2pt);
+                \fill[red!80!black] (3.6,0) circle (2pt);
+                \draw[primaryblue, line width=1.5pt, domain=0:1] plot ({3.6*\x}, {4.4*\x*(1-\x)});
+                \node[primaryblue, above, font=\scriptsize] at (1.8, 1.2) {$\vect{C}(\xi)$};
+                \node[font=\tiny, below] at (1.8, -0.1) {Degree elevated ($p=3$)};
+            \end{scope}
+        \end{tikzpicture}%
+    }
+    \caption{$p$-refinement (degree elevation) schema showing basis functions (top) and B-spline curves (bottom) before/after elevating polynomial degree from $p=2$ to $p=3$.}
+    \label{fig:prefinement_basis}
+\end{figure}
+
+\subsection{Order Elevation (\texorpdfstring{$k$-Refinement}{k-Refinement})}
+Unique to Isogeometric Analysis, $k$-refinement commutes degree elevation and knot insertion to construct high-order basis functions with maximum inter-element continuity ($C^{p-1}$).
+
+In traditional finite element analysis (or standard $p$-refinement applied after mesh subdivision), knot insertion followed by degree elevation results in $C^0$ continuity across element boundaries. In contrast, $k$-refinement executes these operations in reverse order:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Degree Elevation First}: The polynomial degree of the coarse curve or surface patch is elevated from $p$ to $p+q$, raising internal continuity to $C^{p+q-1}$.
+    \item \textbf{Knot Insertion Second}: Knots are subsequently inserted into the elevated knot vector, retaining the maximum achievable inter-element continuity $C^{p+q-1}$ across all newly created knot spans.
+\end{enumerate}
+
+By maintaining maximum inter-element continuity, $k$-refinement significantly reduces the total number of active control variables (degrees of freedom) required per element compared to standard $p$-FEM, offering superior spectral accuracy per degree of freedom for dynamic structural simulations. These powerful properties are formulated directly inside the patch and only exist for $k$-refinement. That is why $k$-refinement is always preferable for high accuracy simulations (and notably, it does not exist in classical FEM).
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[scale=1.05, >=stealth]
+            % --- PANEL (a) BEFORE ---
+            \begin{scope}[xshift=0cm]
+                \draw[gray!15, thin, step=0.5] (-1.4, -1.4) grid (1.4, 1.4);
+                \draw[->, black!40, line width=0.5pt] (-1.5, 0) -- (1.5, 0);
+                \draw[->, black!40, line width=0.5pt] (0, -1.5) -- (0, 1.5);
+                \draw[primaryblue, thick] (0,0) circle (1.0);
+                \draw[gray!70, dashed, thick] (1,0) -- (1,1) -- (0,1) -- (-1,1) -- (-1,0) -- (-1,-1) -- (0,-1) -- (1,-1) -- cycle;
+                \foreach \x/\y in {1/0, 0/1, -1/0, 0/-1, 1/1, -1/1, -1/-1, 1/-1} {
+                        \fill[red!80!black] (\x, \y) circle (2.2pt);
+                    }
+                \node[font=\tiny, fill=white, inner sep=1pt, draw=gray!20] at (1.2, 0.4) {$w_{\text{diag}}\approx 0.707$};
+                \node[below=1.5cm, font=\scriptsize\bfseries] at (0,0) {(a) Initial Geometry (8 Control Points)};
+            \end{scope}
+
+            % --- PANEL (b) AFTER ---
+            \begin{scope}[xshift=6.1cm]
+                \draw[gray!15, thin, step=0.5] (-1.4, -1.4) grid (1.4, 1.4);
+                \draw[->, black!40, line width=0.5pt] (-1.5, 0) -- (1.5, 0);
+                \draw[->, black!40, line width=0.5pt] (0, -1.5) -- (0, 1.5);
+                \draw[primaryblue, thick] (0,0) circle (1.0);
+                \draw[gray!70, dashed, thick] (0:1.025)
+                \foreach \angle in {22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5, 360} {
+                        -- (\angle:1.025)
+                    };
+                \foreach \angle in {0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5} {
+                        \fill[red!80!black] (\angle:1.025) circle (2.2pt);
+                    }
+                \node[below=1.5cm, font=\scriptsize\bfseries] at (0,0) {(b) After $k$-Refinement (16 Control Points)};
+            \end{scope}
+        \end{tikzpicture}%
+    }
+    \caption{$k$-refinement (order elevation) schema demonstrating exact circle CAD geometry preservation with increased control point density and maximum inter-element continuity $C^{p-1}$.}
+    \label{fig:krefinement_basis}
+\end{figure}
+\newpage
+% ------------------------------------------------------------------------------
+\section{Isogeometric System Matrix Assembly}
+% ------------------------------------------------------------------------------
+
+Here, we detail the Galerkin projection of elastodynamic fields onto NURBS basis functions to assemble global mass $\mat{M}$, stiffness $\mat{K}$, and force $\vect{F}_{\text{ext}}$ matrices.
+
+Approximating the displacement field using bivariate NURBS basis functions $R_a(\vect{x})$ yields:
+\begin{equation}
+    \vect{u}_h(\vect{x}, t) = \sum_{a=1}^{n_b} R_a(\vect{x}) \vect{d}_a(t)
+\end{equation}
+where $n_b$ is the total number of basis functions (degrees of freedom) after $k$-refinement. The explicit analytical derivatives $\frac{\partial R_a}{\partial \xi}$ and $\frac{\partial R_a}{\partial \eta}$ required for strain matrix assembly are detailed in Appendix \ref{sec:appendix_nurbs_derivatives}, and $\vect{d}_a(t) \in \mathbb{R}^2$ represents control variable displacements. The test functions $\delta \vect{u}$ are represented using the same basis functions. Substituting the NURBS approximations for $\vect{u}_h$ and the virtual displacements (test functions) $\delta\vect{u}$ into the continuous weak form bilinear and linear operators:
+\begin{align}
+    m(\vect{u}, \vect{v}) & = \int_{\Omega} \rho \vect{u} \cdot \vect{v} \, d\Omega                                             \\
+    k(\vect{u}, \vect{v}) & = \int_{\Omega} \vect{\varepsilon}(\vect{u})^T \mathbf{D} \vect{\varepsilon}(\vect{v}) \, d\Omega   \\
+    f(\vect{v})           & = \int_{\Omega} \vect{f}_b \cdot \vect{v} \, d\Omega + \int_{\Gamma_N} \vect{h}_N \cdot \vect{v} \, d\Gamma
+\end{align}
+leads to the discrete system representation:
+\begin{align}
+    m(\ddot{\vect{u}}_h, \delta\vect{u}) & = \sum_{a=1}^{n_b} \sum_{b=1}^{n_b} \delta\vect{d}_a^T \left( \int_{\Omega} \rho R_a R_b \mathbf{I}_2 \, d\Omega \right) \ddot{\vect{d}}_b = \delta \vect{d}^T \mathbf{M} \ddot{\vect{d}} \\
+    k(\vect{u}_h, \delta\vect{u})        & = \sum_{a=1}^{n_b} \sum_{b=1}^{n_b} \delta\vect{d}_a^T \left( \int_{\Omega} \mathbf{B}_a^T \mathbf{D} \mathbf{B}_b \, d\Omega \right) \vect{d}_b = \delta \vect{d}^T \mathbf{K} \vect{d}      \\
+    f(\delta\vect{u})                    & = \sum_{a=1}^{n_b} \delta\vect{d}_a^T \left( \int_{\Omega} R_a \vect{f}_b \, d\Omega + \int_{\Gamma_N} R_a \vect{h}_N \, d\Gamma \right) = \delta \vect{d}^T \vect{F}_{\text{ext}}
+\end{align}
+
+Since the virtual control point displacements $\delta \vect{d}$ are arbitrary, this leads directly to the semi-discrete equations of motion (incorporating a proportional damping matrix $\mathbf{C}$):
+\begin{equation}
+    \mathbf{M}\ddot{\vect{d}}(t) + \mathbf{C}\dot{\vect{d}}(t) + \mathbf{K}\vect{d}(t) = \vect{F}_{\text{ext}}(t)
+\end{equation}
+
+Here, the global mass matrix $\mathbf{M}$, stiffness matrix $\mathbf{K}$, and external force vector $\vect{F}_{\text{ext}}$ are assembled from the local element integrals over knot spans $\Omega_e$:
+\begin{align}
+    \mathbf{M}_{ab}   & = \int_{\Omega_e} \rho R_a R_b \mathbf{I}_2 \, d\Omega                                      \\
+    \mathbf{K}_{ab}   & = \int_{\Omega_e} \mathbf{B}_a^T \mathbf{D} \mathbf{B}_b \, d\Omega                         \\
+    \vect{F}_{\text{ext}, a} & = \int_{\Omega_e} R_a \vect{f}_b \, d\Omega + \int_{\Gamma_{N,e}} R_a \vect{h}_N \, d\Gamma
+\end{align}
+
+where $\mathbf{B}_a$ represents the strain-displacement matrix containing parametric derivatives of $R_a(\vect{x})$ mapped via the spatial Jacobian $\mathbf{J}(\xi, \eta)$.
+
+To justify selecting the $80 \times 40$ element baseline for the full-order model, we perform a grid convergence study under static bending and validate accuracy against classical Lagrangian Finite Element methods.
+
+% ------------------------------------------------------------------------------
+\section{Mesh Convergence \& Accuracy Validation}
+% ------------------------------------------------------------------------------
+
+Here, we state the physical load conditions, plane stress assumptions, and numerical setup governing the mesh convergence study, followed by accuracy benchmarks against Lagrangian FEM.
+
+\subsection{Simulation Conditions \& Boundary Assumptions}
+The mesh convergence study models the notched cantilever beam from Figure \ref{fig:notched_beam_geometry} of length $L = 2.0\text{ m}$ and height $H = 0.4\text{ m}$ subjected to a static vertical tip load $F_y = -10\text{ kN}$ applied at the free right boundary ($\xi = 1$). The fixed root boundary at $\xi = 0$ is fully clamped ($\vect{u} = \mathbf{0}$).
+
+The material is assumed homogeneous, isotropic, and linearly elastic with Young's modulus $E = 210\text{ GPa}$, Poisson's ratio $\nu = 0.3$, and mass density $\rho = 7850\text{ kg/m}^3$. Under plane stress conditions, the constitutive tensor $\mat{D}$ is given by:
+\begin{equation}
+    \mat{D} = \frac{E}{1 - \nu^2} \begin{bmatrix} 1 & \nu & 0 \\ \nu & 1 & 0 \\ 0 & 0 & \frac{1 - \nu}{2} \end{bmatrix}
+\end{equation}
+
+The strain-displacement matrix $\mathbf{B}_a$ for each control point $a$ is constructed from the Cartesian derivatives of the NURBS basis functions ($\frac{\partial R_a}{\partial x}$, $\frac{\partial R_a}{\partial y}$), which are computed by mapping the parametric gradients ($\frac{\partial R_a}{\partial \xi}$, $\frac{\partial R_a}{\partial \eta}$) to the physical space using the inverse of the spatial Jacobian matrix $\mathbf{J}(\xi, \eta)$.
+
+\subsection{Grid Convergence Analysis via \texorpdfstring{$k$-Refinement}{k-Refinement}}
+To construct a convergent mesh while maximizing accuracy per degree of freedom, the convergence study investigates $k$-refinement across multiple polynomial orders ($p \in \{1, 2, 3\}$) and dyadic knot insertion levels ($h$-refinement from $10 \times 5$ up to $160 \times 80$ elements), as implemented in the custom JavaScript simulation engine (\texttt{iga-sim-5.3}\footnote{The open-source JavaScript implementation is available on \href{https://github.com/WEHBEMUMEN/internship-cnam/tree/main/app/simulations/iga-sim-5.3}{GitHub}, and the interactive simulation tool can be accessed online \href{https://cnam-internship-mumen.netlify.app/app/simulations/iga-sim-5.3/}{here}}):
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Degree Elevation ($p$-Refinement)}: The initial CAD patch is elevated to linear ($p=1, C^0$), quadratic ($p=2, C^1$), and cubic ($p=3, C^2$) representations.
+    \item \textbf{Knot Insertion ($h$-Refinement)}: Dyadic knot insertion is subsequently performed on each elevated patch, refining the mesh resolution from $10 \times 5$ ($50$ elements) up to a fine reference grid of $160 \times 80$ ($12,800$ elements).
+\end{enumerate}
+
+Because degree elevation precedes knot insertion, all inserted internal knot spans preserve maximum $C^{p-1}$ inter-element continuity. Vertical tip displacement $U_y$ and relative error evaluated against the $160 \times 80$ fine reference solution ($U_y = 4.238\text{ mm}$) across degrees $p=1, 2, 3$ are illustrated in Figure \ref{fig:mesh_k_convergence}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/mesh_k_convergence.pdf}
+    \caption{Multi-level $k$-refinement convergence study under static bending load: (a) vertical tip displacement $U_y$ versus total Degrees of Freedom (DOFs) for linear ($p=1$), quadratic ($p=2$), and cubic ($p=3$) NURBS discretizations; (b) relative tip displacement error (\%) on log-log scale showing asymptotic convergence rates and justifying the $80 \times 40$ ($6,888$ DOFs, $1.24\%$ relative error) FOM baseline.}
+    \label{fig:mesh_k_convergence}
+\end{figure}
+
+As evident in Figure \ref{fig:mesh_k_convergence}, higher-order $k$-refinement ($p=2, 3$) yields dramatically superior accuracy per degree of freedom compared to standard linear $C^0$ approximations. For quadratic $k$-refinement ($p=2, C^1$), refining from $80 \times 40$ ($3,200$ elements, $6,888$ DOFs) to $160 \times 80$ ($12,800$ elements, $26,568$ DOFs) produces only a $1.24\%$ shift in tip displacement while increasing equation count by $3.8\times$. This confirms $80 \times 40$ ($p=2$) as the optimal, convergent baseline for full-order elastodynamic simulations.
+
+\subsection{Linear Accuracy Validation Against Lagrangian FEM}
+To assess the accuracy and computational efficiency of the bivariate NURBS discretization, the full-order IGA baseline ($80 \times 40$ elements, quadratic $C^1$-continuous basis functions) is benchmarked against a fine-mesh classical Finite Element model utilizing $C^0$ Lagrangian linear elements ($12,400$ DOFs). The primary goal of this comparison is to highlight the advantages of Isogeometric Analysis over classical FEM: specifically, how the higher inter-element continuity of NURBS basis functions allows IGA to yield equivalent or superior accuracy in structural displacements and energy norms using a much smaller system size (fewer DOFs), which in turn significantly reduces the solver computation time. The comparative validation metrics are summarized in Table \ref{tab:linear_validation}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Linear solution accuracy validation comparing full-order IGA degrees of freedom against fine-mesh Lagrangian FEM frameworks.}
+    \label{tab:linear_validation}
+    \resizebox{\textwidth}{!}{%
+        \begin{tabular}{lcccc}
+            \toprule
+            \textbf{Mesh Setup} & \textbf{Total DoFs} & \textbf{Tip Disp. (mm)} & \textbf{Energy Norm (J)}     & \textbf{Solve Time (ms)} \\
+            \midrule
+            Lagrangian FEM      & $12,400$            & $4.182$                 & $1.042 \times 10^5$          & $845.2$                  \\
+            \textbf{IGA Core}   & \textbf{6,888}      & \textbf{4.185}          & \textbf{1.044 $\times 10^5$} & \textbf{142.1}           \\
+            \bottomrule
+        \end{tabular}%
+    }
+\end{table}
+
+Owing to the inter-element $C^{p-1}$ continuity of quadratic NURBS basis functions, the IGA core achieves equivalent tip displacement accuracy ($4.185\text{ mm}$ vs. $4.182\text{ mm}$) with $44\%$ fewer DOFs and a $6\times$ reduction in linear solver computation time ($142.1\text{ ms}$ vs. $845.2\text{ ms}$).
+
+% ------------------------------------------------------------------------------
+\section{Chapter Summary}
+% ------------------------------------------------------------------------------
+
+In closing, we summarize the IGA discretization framework and establish the transition to Chapter \ref{ch:pullback} for reference domain pullback mapping.
+
+\begin{tcolorbox}[colback=lightbg, colframe=primaryblue, title=\textbf{Chapter Summary: CAD-Integrated Discretization}, fonttitle=\bfseries]
+    \begin{description}[leftmargin=!, labelwidth=3.4cm]
+        \item[\textbf{Core Paradigm}] Use Non-Uniform Rational B-Splines (NURBS) as basis functions for both geometry definition and elastodynamic state approximation.
+        \item[\textbf{Refinement Vectors}] $h$-refinement (knot insertion), $p$-refinement (degree elevation), and $k$-refinement (order elevation maintaining $C^{p-1}$ continuity).
+        \item[\textbf{System Output}] Semi-discrete matrix equations of motion $\mat{M}\ddot{\vect{d}} + \mat{C}\dot{\vect{d}} + \mat{K}\vect{d} = \vect{F}_{\text{ext}}$ without geometry discretization error.
+    \end{description}
+    
+    \vspace{0.2cm}
+    \textbf{Key Takeaway}: Isogeometric Analysis discretizes the continuous elastodynamic equations using exact NURBS CAD geometry basis functions, assembling the full-order matrices $\mathbf{M}$, $\mathbf{K}$, and $\mathbf{C}$. In Chapter \ref{ch:pullback}, we pull back these element integrals to a parameter-independent reference configuration $\hat{\Omega}$ to resolve shape parameter compatibility.
+\end{tcolorbox}

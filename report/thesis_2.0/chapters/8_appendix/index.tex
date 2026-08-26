@@ -1,0 +1,70 @@
+% ==============================================================================
+\chapter*{Appendices}
+\addcontentsline{toc}{chapter}{Appendices}
+\markboth{Appendices}{Appendices}
+% ==============================================================================
+
+Supplemental mathematical derivations and complete parameter values are provided to ensure full reproducibility of the IGA-ROM-ECSW engine. This appendix contains explicit analytical basis function derivatives and lists all physical, discretization, and solver parameters used in the numerical experiments.
+
+\section*{Appendix A: Analytical Derivatives of NURBS Basis Functions}
+\label{sec:appendix_nurbs_derivatives}
+
+Explicit 1D and 2D analytical derivative expressions used during spatial Jacobian mapping and strain tensor evaluations are stated below.
+
+Analytical spatial derivatives of univariate B-spline basis functions $N_{i,p}(\xi)$ are computed via derivative recurrence:
+
+\begin{equation}
+    \frac{d}{d\xi} N_{i,p}(\xi) = p \left( \frac{N_{i,p-1}(\xi)}{\xi_{i+p} - \xi_i} - \frac{N_{i+1,p-1}(\xi)}{\xi_{i+p+1} - \xi_{i+1}} \right)
+\end{equation}
+
+For rational NURBS curves with control weights $w_i$, the basis function derivatives are:
+
+\begin{equation}
+    \frac{d R_i(\xi)}{d\xi} = w_i \frac{N'_i(\xi) W(\xi) - N_i(\xi) W'(\xi)}{[W(\xi)]^2}, \quad W(\xi) = \sum_{j=0}^{n-1} N_j(\xi) w_j
+\end{equation}
+
+For 2D bivariate tensor-product NURBS patches, partial derivatives are:
+
+\begin{align}
+    \frac{\partial R_{i,j}(\xi, \eta)}{\partial \xi} &= w_{i,j} \frac{N'_i(\xi) M_j(\eta) W(\xi, \eta) - N_i(\xi) M_j(\eta) \frac{\partial W}{\partial \xi}}{[W(\xi, \eta)]^2} \\
+    \frac{\partial R_{i,j}(\xi, \eta)}{\partial \eta} &= w_{i,j} \frac{N_i(\xi) M'_j(\eta) W(\xi, \eta) - N_i(\xi) M_j(\eta) \frac{\partial W}{\partial \eta}}{[W(\xi, \eta)]^2}
+\end{align}
+
+\newpage
+
+\section*{Appendix B: Simulation Engine Configuration Parameters}
+\label{sec:appendix_sim_params}
+
+All physical constants, grid dimensions, and solver options are tabulated below to enable independent numerical replication.
+
+Complete physical constants, grid dimensions, and solver configuration parameters utilized by the IGA-ROM engine are specified below:
+
+\begin{table}[htbp]
+    \centering
+    \caption{Physical, discretization, and temporal solver parameters used in benchmark validations.}
+    \label{tab:sim_parameters}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{lclc}
+        \toprule
+        \textbf{Physical Constants} & \textbf{Value} & \textbf{Solver Settings} & \textbf{Value} \\
+        \midrule
+        Young's Modulus $E$ & $2.1 \times 10^{11}\,\text{Pa}$ & Time Step size $\Delta t$ & $0.005\,\text{s}$ \\
+        Poisson's Ratio $\nu$ & $0.3$ & Total Steps $N_{\text{steps}}$ & $400\,\text{steps}$ \\
+        Mass Density $\rho$ & $7850\,\text{kg/m}^3$ & End Time $T$ & $2.0\,\text{s}$ \\
+        Beam Length $L$ & $8.0\,\text{m}$ & Newmark Coefficient $\beta$ & $0.25$ \\
+        Beam Height $H$ & $2.0\,\text{m}$ & Newmark Coefficient $\gamma$ & $0.50$ \\
+        Beam Thickness $t_h$ & $0.01\,\text{m}$ & Mass Damping $\alpha_M$ & $0.05$ \\
+        Notch Width Factor $\sigma$ & $0.6\,\text{m}$ & Stiffness Damping $\beta_K$ & $0.002$ \\
+        \midrule
+        \textbf{Mesh Configuration} & \textbf{Value} & \textbf{ECSW Settings} & \textbf{Value} \\
+        \midrule
+        Polynomial Degree $p, q$ & $2 \times 2$ (Quadratic) & Target Error Tolerance $\epsilon_{\text{tol}}$ & $1 \times 10^{-4}$ \\
+        Elements along $L$ & $80$ elements & Max Active Elements $N_{\text{max}}$ & $100$ elements \\
+        Elements along $H$ & $40$ elements & Training Snapshots $M$ & $3$ snapshots \\
+        Total DOFs $N$ & $6,888$ equations & ROM Subspace size $r$ & $15$ modes \\
+        \bottomrule
+    \end{tabular}%
+    }
+\end{table}
+
+These exact numerical configurations (Table \ref{tab:sim_parameters}) ensure complete reproducibility of all transient Full Order Model and ECSW Reduced Order Model benchmarks.

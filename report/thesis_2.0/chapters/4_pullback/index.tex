@@ -1,0 +1,191 @@
+% ==============================================================================
+\chapter{Shape Parameterization: Reference Configuration Mapping}
+\label{ch:pullback}
+% ==============================================================================
+
+
+
+While Chapter \ref{ch:discretization} establishes exact NURBS-based spatial discretization on a single configuration, evaluating structural snapshots on varying physical meshes creates incompatible vector spaces across parameters, making global Model Order Reduction impossible. This chapter formulates the diffeomorphic pullback transformation $\boldsymbol{\Psi}(\hat{\vect{x}}; \boldsymbol{\mu})$, mapping all parameter-dependent physical configurations onto a single invariant reference domain $\hat{\Omega}$ to enable consistent POD basis extraction and hyper-reduction.
+
+% ------------------------------------------------------------------------------
+\section{Coordinate Domain Mapping Architecture}
+% ------------------------------------------------------------------------------
+
+We first establish the three-domain mapping framework linking parametric space $\hat{\Omega}_{\text{param}}$, reference domain $\hat{\Omega}$, and physical domain $\Omega(\boldsymbol{\mu})$.
+
+To resolve vector space incompatibility across varying geometric parameters $\boldsymbol{\mu}$, we establish a three-domain mapping framework. As illustrated in Figure \ref{fig:pullback_mapping}, the physical coordinates $\vect{x} \in \Omega(\boldsymbol{\mu})$ are expressed as a composition of reference coordinates $\hat{\vect{x}} \in \hat{\Omega}$ (which themselves are mapped from parametric space coordinates $\boldsymbol{\xi}$ via $\hat{\boldsymbol{\Psi}}(\boldsymbol{\xi})$) and a parameter-dependent geometric displacement field $\vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu})$. It is critically important to distinguish the geometric shape parameter $\boldsymbol{\mu}$ from the NURBS parametric coordinates $\boldsymbol{\xi}$, and to distinguish this geometric displacement $\vect{d}_{\text{geo}}$ from the physical structural displacement $\vect{u}$:
+
+\begin{equation}
+    \vect{x} = \hat{\vect{x}} + \vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu}) = \hat{\boldsymbol{\Psi}}(\boldsymbol{\xi}) + \vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu})
+\end{equation}
+
+\begin{tcolorbox}[colback=lightbg, colframe=primaryblue, title=\textbf{Important Distinction: Geometric vs. Structural Displacement}, fonttitle=\bfseries]
+    To prevent mathematical confusion, a strict distinction must be made between:
+    \begin{enumerate}[leftmargin=*]
+        \item \textbf{Geometric domain displacement} $\vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu})$: Represents the geometric mapping of boundary/domain coordinate positions from the invariant reference domain to the physical domain (i.e., domain shape morphing).
+        \item \textbf{Physical structural displacement} $\vect{u}(\vect{x}, t)$: Represents the structural field solution of the elastodynamic equations of motion under loading.
+    \end{enumerate}
+\end{tcolorbox}
+
+
+\begin{figure}[htbp]
+    \centering
+    \makebox[\textwidth][c]{%
+        \begin{tikzpicture}[scale=0.9, >=stealth]
+            % --- PARAMETRIC DOMAIN (left) ---
+            \begin{scope}[xshift=0cm, yshift=0cm]
+                \draw[fill=lightbg, draw=primaryblue, thick] (0,0) rectangle (2.5,2.0);
+                \foreach \x in {0.5, 1.0, 1.5, 2.0} {
+                        \draw[primaryblue!30, thin] (\x, 0) -- (\x, 2.0);
+                    }
+                \foreach \y in {0.5, 1.0, 1.5} {
+                        \draw[primaryblue!30, thin] (0, \y) -- (2.5, \y);
+                    }
+                \node[below=2pt] at (1.25, 0) {$\xi$};
+                \node[left=4pt] at (0, 1.0) {$\eta$};
+                \node[fill=lightbg, inner sep=2pt, rounded corners=1pt] at (1.25, 1.0) {\large $\hat{\Omega}_{\text{param}}$};
+                \node[below=14pt, align=center] at (1.25, 0) {\small Parametric Space \\ $\boldsymbol{\xi} = (\xi, \eta)^T$};
+            \end{scope}
+
+            % --- REFERENCE CONFIGURATION (top right) ---
+            \begin{scope}[xshift=7.0cm, yshift=2.2cm, scale=0.6]
+                \draw[fill=gray!5, draw=black, thick]
+                (0, -1.0) -- (2.0, -1.0)
+                .. controls (2.5, -1.0) and (2.7, -0.4) .. (3.0, -0.4)
+                .. controls (3.3, -0.4) and (3.5, -1.0) .. (4.0, -1.0)
+                -- (6.0, -1.0) -- (6.0, 1.0) -- (4.0, 1.0)
+                .. controls (3.5, 1.0) and (3.3, 0.4) .. (3.0, 0.4)
+                .. controls (2.7, 0.4) and (2.5, 1.0) .. (2.0, 1.0)
+                -- (0, 1.0) -- cycle;
+
+                \foreach \x in {1, 2, 3, 4, 5} {
+                        \draw[black!20, thin] (\x, -1.0) -- (\x, 1.0);
+                    }
+                \draw[black!20, thin] (0, -0.5) -- (6.0, -0.5);
+                \draw[black!20, thin] (0, 0) -- (6.0, 0);
+                \draw[black!20, thin] (0, 0.5) -- (6.0, 0.5);
+
+                \fill[black] (4.5, 0.3) circle (2.0pt) node[above] {$\hat{\vect{x}}$};
+                \node[fill=gray!5, inner sep=2pt] at (1.0, 0) {\large $\hat{\Omega}$};
+                \node[right=15pt, align=left] at (6.0, 0) {\small Reference Domain \\ (Invariant, $\hat{\vect{x}}$)};
+            \end{scope}
+
+            % --- PARAMETERIZED PHYSICAL DOMAIN (bottom right) ---
+            \begin{scope}[xshift=7.0cm, yshift=-1.5cm, scale=0.6]
+                \draw[fill=lightbg, draw=primaryblue, thick]
+                (0, -1.0) -- (2.0, -1.0)
+                .. controls (2.4, -1.0) and (2.6, -0.2) .. (3.0, -0.2)
+                .. controls (3.4, -0.2) and (3.6, -1.0) .. (4.0, -1.0)
+                -- (6.0, -1.0) -- (6.0, 1.0) -- (4.0, 1.0)
+                .. controls (3.6, 1.0) and (3.4, 0.2) .. (3.0, 0.2)
+                .. controls (2.6, 0.2) and (2.4, 1.0) .. (2.0, 1.0)
+                -- (0, 1.0) -- cycle;
+
+                \foreach \x in {1, 2, 3, 4, 5} {
+                        \draw[primaryblue!20, thin] (\x, -1.0) -- (\x, 1.0);
+                    }
+                \draw[primaryblue!20, thin] (0, -0.5) .. controls (2, -0.5) and (2.5, -0.15) .. (3.0, -0.15) .. controls (3.5, -0.15) and (4, -0.5) .. (6, -0.5);
+                \draw[primaryblue!20, thin] (0, 0) -- (6.0, 0);
+                \draw[primaryblue!20, thin] (0, 0.5) .. controls (2, 0.5) and (2.5, 0.15) .. (3.0, 0.15) .. controls (3.5, 0.15) and (4, 0.5) .. (6, 0.5);
+
+                \fill[primaryblue] (4.5, 0.3) circle (2.0pt) node[above] {$\vect{x}$};
+                \node[fill=lightbg, inner sep=2pt] at (1.0, 0) {\large $\Omega(\boldsymbol{\mu})$};
+                \node[right=15pt, align=left] at (6.0, 0) {\small Physical Domain \\ (Parameterized, $\vect{x}$)};
+            \end{scope}
+
+            % --- MAPPING ARROWS ---
+            \draw[->, ultra thick, black!60] (2.7, 1.5) to[out=25, in=195] node[midway, above left, black] {$\hat{\boldsymbol{\Psi}}(\boldsymbol{\xi})$} (6.8, 2.5);
+            \draw[->, ultra thick, black!60] (2.7, 0.5) to[out=-25, in=165] node[midway, below left, black] {$\boldsymbol{\Psi}(\boldsymbol{\xi}; \boldsymbol{\mu})$} (6.8, -0.6);
+            \draw[->, ultra thick, red!70!black] (8.8, 1.5) to[out=-90, in=90] node[midway, right, red!70!black] {$\vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu})$} (8.8, -0.2);
+
+            \node[below, font=\small] at (8.8, -2.5) {$\vect{x} = \hat{\vect{x}} + \vect{d}_{\text{geo}} = \hat{\boldsymbol{\Psi}}(\boldsymbol{\xi}) + \vect{d}_{\text{geo}}(\boldsymbol{\xi}, \boldsymbol{\mu})$};
+        \end{tikzpicture}%
+    }
+    \caption{Diffeomorphic coordinate mappings between Parametric Space $\hat{\Omega}_{\text{param}}$, Reference Domain $\hat{\Omega}$, and Parameterized Physical Domain $\Omega(\boldsymbol{\mu})$.}
+    \label{fig:pullback_mapping}
+\end{figure}
+
+This three-domain mapping framework (Figure \ref{fig:pullback_mapping}) seamlessly links parametric space $\hat{\Omega}_{\text{param}}$, reference domain $\hat{\Omega}$, and parameterized physical domain $\Omega(\boldsymbol{\mu})$.
+\newpage
+% ------------------------------------------------------------------------------
+\section{Continuum Pullback Formulation}
+% ------------------------------------------------------------------------------
+
+We now derive the pulled-back weak variational statements, expressing gradient operators and volume integrals on the invariant reference domain.
+
+Let $\boldsymbol{\Psi}(\hat{\vect{x}}; \boldsymbol{\mu}) : \hat{\Omega} \to \Omega(\boldsymbol{\mu})$ be a smooth, orientation-preserving diffeomorphism (meaning a differentiable mapping having a differentiable inverse) with positive Jacobian determinant $J_{\hat{\vect{x}}, \boldsymbol{\mu}} = \det \mathbf{J}_{\hat{\vect{x}}} > 0$, where $\mathbf{J}_{\hat{\vect{x}}} = \nabla_{\hat{\vect{x}}} \boldsymbol{\Psi}$ is the spatial Jacobian matrix. 
+
+By applying the chain rule, the gradient of a scalar field $\phi(\vect{x}) = \hat{\phi}(\hat{\vect{x}})$ with respect to physical coordinates $\vect{x}$ is related to the gradient with respect to reference coordinates $\hat{\vect{x}}$ by:
+\begin{equation}
+    \nabla_{\vect{x}} \phi = \mathbf{J}_{\hat{\vect{x}}}^{-T} \nabla_{\hat{\vect{x}}} \hat{\phi}
+\end{equation}
+For vector fields, this mapping relates the physical displacement gradient $\nabla_{\vect{x}} \vect{u}$ to the reference gradient $\nabla_{\hat{\vect{x}}} \hat{\vect{u}}$, while the differential volume element maps using the Jacobian determinant:
+\begin{equation}
+    \nabla_{\vect{x}} \vect{u} = (\nabla_{\hat{\vect{x}}} \hat{\vect{u}}) \mathbf{J}_{\hat{\vect{x}}}^{-1}, \quad \mathrm{d}\Omega = J_{\hat{\vect{x}}, \boldsymbol{\mu}} \, \mathrm{d}\hat{\Omega}
+\end{equation}
+
+Substituting these transformation laws into the elastodynamic weak form yields the pulled-back variational statement on the reference domain $\hat{\Omega}$ (where the `hat` notation explicitly designates operators and variables evaluated on this reference domain):
+
+\begin{equation}
+    \hat{m}(\ddot{\vect{u}}, \delta\vect{u}; \boldsymbol{\mu}) + \hat{k}(\vect{u}, \delta\vect{u}; \boldsymbol{\mu}) = \hat{f}(\delta\vect{u}; \boldsymbol{\mu}) \quad \forall \delta\vect{u} \in \mathcal{V}_0(\hat{\Omega})
+\end{equation}
+
+where the mapped bilinear and linear forms are evaluated as:
+\begin{align}
+    \hat{m}(\ddot{\vect{u}}, \delta\vect{u}; \boldsymbol{\mu}) & = \int_{\hat{\Omega}} \rho \ddot{\vect{u}} \cdot \delta\vect{u} \, J_{\hat{\vect{x}}, \boldsymbol{\mu}} \, \mathrm{d}\hat{\Omega} \quad \text{(assuming constant material density $\rho$)}                                                                                                                                                 \\
+    \hat{k}(\vect{u}, \delta\vect{u}; \boldsymbol{\mu})        & = \int_{\hat{\Omega}} \boldsymbol{\varepsilon}_{\hat{\vect{x}}}(\delta\vect{u})^T \mathbf{J}_{\hat{\vect{x}}}^{-1} \mat{D} \mathbf{J}_{\hat{\vect{x}}}^{-T} \boldsymbol{\varepsilon}_{\hat{\vect{x}}}(\vect{u}) \, J_{\hat{\vect{x}}, \boldsymbol{\mu}} \, \mathrm{d}\hat{\Omega} \\
+    \hat{f}(\delta\vect{u}; \boldsymbol{\mu})                  & = \int_{\hat{\Omega}} \vect{f}_b \cdot \delta\vect{u} \, J_{\hat{\vect{x}}, \boldsymbol{\mu}} \, \mathrm{d}\hat{\Omega} + \int_{\hat{\Gamma}_N} \vect{h}_N \cdot \delta\vect{u} \, J_{\hat{\vect{x}}, \boldsymbol{\mu}, \Gamma} \, \mathrm{d}\hat{\Gamma}
+\end{align}
+
+% ------------------------------------------------------------------------------
+\section{Naive vs. Pullback Algebraic Paradigms}
+% ------------------------------------------------------------------------------
+
+The following comparison contrasts classical physical remeshing against reference pullback integration, demonstrating how pullback eliminates snapshot vector space incompatibility.
+
+Comparing discretization properties or implementation highlights key structural differences between the Naive\footnote{Also referred to as the classical or classic approach, where the system stiffness $\mathbf{K}(\boldsymbol{\mu})$ and mass $\mathbf{M}(\boldsymbol{\mu})$ matrices are computed directly on the parameterized physical configurations $\Omega(\boldsymbol{\mu})$ without utilizing a reference pullback mapping.} and Pullback approaches:
+
+\begin{table}[htbp]
+    \centering
+    \caption{Algebraic and computational comparison between Naive and Pullback discretization.}
+    \label{tab:naive_vs_pullback_algebraic}
+    \resizebox{\textwidth}{!}{%
+        \begin{tabular}{p{3.5cm} p{5.5cm} p{5.5cm}}
+            \toprule
+            \textbf{Feature}         & \textbf{Naive Physical Discretization}          & \textbf{Pullback Reference Discretization}  \\
+            \midrule
+            \textbf{Basis Functions} & Parameter-dependent $\mat{R}(\boldsymbol{\mu})$ & Invariant NURBS-based spatial basis $\hat{\mat{R}}$   \\
+            \textbf{Vector Space}    & Variable DOF count across $\boldsymbol{\mu}$    & Constant reference DOF vector space         \\
+            \textbf{POD / SVD Basis} & Impossible (snapshot size mismatch)             & Native snapshot matrix POD projection       \\
+            \textbf{Online Assembly} & Full physical remeshing \& re-assembly          & Fast Jacobian updates at integration points \\
+            \bottomrule
+        \end{tabular}%
+    }
+\end{table}
+
+\begin{tcolorbox}[colback=lightbg, colframe=accentcyan, title=\textbf{Remark: Computational Efficiency \& Conditioning of Jacobian Mapping}, fonttitle=\bfseries]
+    An important computational advantage of this pullback framework in Isogeometric Analysis (IGA) is that the spatial Jacobian mapping $\mathbf{J}_{\hat{\vect{x}}}(\boldsymbol{\mu})$ depends only on the initial, coarse CAD control points defining the geometric boundaries, rather than the refined simulation mesh. Therefore, even when the analysis mesh is enriched via $h$- or $k$-refinement to include thousands of degrees of freedom, the mapping functions and their derivatives are evaluated using a very small number of basis functions, making the online Jacobian updates at integration points extremely fast to calculate.
+    
+    However, the use of coordinate domain mapping introduces a potential risk of numerical ill-conditioning. If geometric parameter variations induce extreme physical distortions (such as highly compressed notches or sharp boundary shapes), the mapping Jacobian $\mathbf{J}_{\hat{\vect{x}}}$ can become poorly conditioned or near-singular. Since the inverse Jacobian $\mathbf{J}_{\hat{\vect{x}}}^{-1}$ is present in the stiffness bilinear integrand, this ill-conditioning propagates directly to the global stiffness matrix $\mathbf{K}(\boldsymbol{\mu})$, potentially degrading the stability and accuracy of the linear solvers.
+\end{tcolorbox}
+
+To construct a Reduced Order Model (ROM), snapshots of the displacement field $\vect{u}(\vect{x}, t; \boldsymbol{\mu})$ are computed for different parameter values $\boldsymbol{\mu}$ and assembled into a snapshot matrix $\mathbf{S}$. In a naive physical discretization, varying the geometric parameters $\boldsymbol{\mu}$ alters the physical domain geometry $\Omega(\boldsymbol{\mu})$ and changes the spatial coordinates of the control points. Consequently, the resulting snapshot vectors belong to different parameter-dependent vector spaces, rendering standard Proper Orthogonal Decomposition (POD) mathematically invalid. 
+
+The diffeomorphic pullback mapping $\boldsymbol{\Psi}$ resolves this incompatibility by referencing all physical displacement fields to the invariant reference domain $\hat{\Omega}$ under the same set of reference basis functions $\hat{\mat{R}}$ (Table \ref{tab:naive_vs_pullback_algebraic}). This guarantees that all snapshot vectors $\vect{d}(\boldsymbol{\mu}_i, t)$ lie in the same constant vector space $\mathbb{R}^{N_{dof}}$, making Proper Orthogonal Decomposition (POD) mathematically consistent and exact.
+
+% ------------------------------------------------------------------------------
+\section{Chapter Summary}
+% ------------------------------------------------------------------------------
+
+In summary, we synthesize the reference pullback mapping framework and preview the Full Order Model simulation pipeline in Chapter \ref{ch:fom}.
+
+\begin{tcolorbox}[colback=lightbg, colframe=primaryblue, title=\textbf{Chapter Summary: Reference Diffeomorphic Mapping}, fonttitle=\bfseries]
+    \begin{description}[leftmargin=!, labelwidth=3.4cm]
+        \item[\textbf{Core Objective}] Map parameterized physical domains $\Omega(\boldsymbol{\mu})$ onto a reference domain $\hat{\Omega}$ to preserve snapshot vector space compatibility.
+        \item[\textbf{Mathematical Tool}] Smooth bijective mapping (diffeomorphism) $\boldsymbol{\Psi}(\hat{\vect{x}}; \boldsymbol{\mu}): \hat{\Omega} \to \Omega(\boldsymbol{\mu})$ with Jacobian $J_{\hat{\vect{x}}, \boldsymbol{\mu}} > 0$.
+        \item[\textbf{Key Result}] Shifts geometric parameter dependency entirely into integration Jacobians, enabling invariant basis functions $\hat{\mat{R}}$ and sub-millisecond hyper-reduction.
+    \end{description}
+    
+    \vspace{0.2cm}
+    \textbf{Key Takeaway}: The diffeomorphic pullback mapping shifts parameter dependencies into the integration Jacobians $\mathbf{J}_{\hat{\vect{x}}}(\boldsymbol{\mu})$ while preserving a constant reference discretization $\hat{\mat{R}}$. This guarantees vector space compatibility across parameter instances, laying the foundation for snapshot POD collection in Chapter \ref{ch:fom} and ROM hyper-reduction in Chapter \ref{ch:rom}.
+\end{tcolorbox}
