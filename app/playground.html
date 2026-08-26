@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Essential IGA Playground | Core Simulations</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <link rel="stylesheet" href="../index.css">
+  <style>
+    body {
+      overflow-x: hidden;
+      background-color: var(--bg-primary, #090d16);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Sub-Bar / Milestone Switcher */
+    .playground-toolbar {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 20px;
+      color: #93c5fd;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Milestone Nav Tabs */
+    .sim-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(30, 41, 59, 0.6);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .sim-group-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      padding: 0 8px;
+      font-weight: 700;
+    }
+
+    .sim-tab {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sim-tab:hover {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .sim-tab.active {
+      background: #3b82f6;
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    }
+
+    .sim-tab .badge-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      opacity: 0.85;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    /* Explore All Button */
+    .explore-all-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(51, 65, 85, 0.9));
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      text-decoration: none;
+      transition: all 0.2s ease;
+      margin-left: auto;
+    }
+
+    .explore-all-btn:hover {
+      background: linear-gradient(135deg, #475569, #334155);
+      border-color: #38bdf8;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Main Stage */
+    .main-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Info Bar above Frame */
+    .sim-info-banner {
+      background: rgba(15, 23, 42, 0.6);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .sim-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .sim-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sim-desc {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin: 0;
+    }
+
+    .sim-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-action {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #94a3b8;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      color: #ffffff;
+      background: rgba(51, 65, 85, 0.9);
+      border-color: #60a5fa;
+    }
+
+    /* Simulation Viewport / Iframe */
+    .iframe-container {
+      position: relative;
+      flex: 1;
+      min-height: calc(100vh - 170px);
+      width: 100%;
+      background: #020617;
+    }
+
+    #simFrame {
+      width: 100%;
+      height: 100%;
+      min-height: calc(100vh - 170px);
+      border: none;
+      display: block;
+      transition: opacity 0.2s ease;
+    }
+
+    /* Frame Loader Overlay */
+    .frame-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(2, 6, 23, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .frame-loader.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 38px;
+      height: 38px;
+      border: 3px solid rgba(59, 130, 246, 0.2);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 900px) {
+      .playground-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .toolbar-left {
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .explore-all-btn {
+        margin-left: 0;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="container header-container">
+      <a href="../index.html" class="logo">
+        <i class="fa-solid fa-cube"></i>
+        <span>Digital Twin [ROM]</span>
+      </a>
+      <nav class="nav-links">
+        <a href="../index.html" class="home-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+        <a href="playground.html" class="active" style="color: #60a5fa;"><i class="fa-solid fa-gamepad"></i> <span>Playground</span></a>
+        <a href="index.html"><i class="fa-solid fa-layer-group"></i> <span>All Versions (40+)</span></a>
+        <a href="../theory/overview.html"><i class="fa-solid fa-file-invoice"></i> <span>Abstract</span></a>
+        <a href="../theory/dictionary.html"><i class="fa-solid fa-book-bookmark"></i> <span>Dictionary</span></a>
+        <a href="https://github.com/WEHBEMUMEN/internship-cnam" target="_blank" class="github-link btn btn-outline" style="padding: 8px 16px; font-size: 0.85rem;">
+          <i class="fa-brands fa-github"></i> <span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Interactive Toolbar & Milestone Selector -->
+  <div class="playground-toolbar">
+    <div class="toolbar-left">
+      <div class="brand-pill">
+        <i class="fa-solid fa-microchip"></i>
+        <span>CORE SUITE</span>
+      </div>
+
+      <!-- Navigation Tabs for 1.1, 1.2, 1.3, 1.5, 2.1, 5.3, 5.3a -->
+      <div class="sim-nav" role="tablist">
+        <span class="sim-group-label">1D IGA</span>
+        <button class="sim-tab active" onclick="loadSimulation('1.1')" id="tab-1.1" title="Phase 1.1: 1D IGA Baseline Rod">
+          <span class="badge-code">1.1</span> Baseline Rod
+        </button>
+        <button class="sim-tab" onclick="loadSimulation('1.2')" id="tab-1.2" title="Phase 1.2: h-Refinement (Knot Insertion)">
+          <span class="badge-code">1.2</span> $h$-Refinement
+        </button>
+        <button class="sim-tab" onclick="loadSimulation('1.3')" id="tab-1.3" title="Phase 1.3: p-Refinement (Degree Elevation)">
+          <span class="badge-code">1.3</span> $p$-Refinement
+        </button>
+        <button class="sim-tab" onclick="loadSimulation('1.5')" id="tab-1.5" title="Phase 1.5: k-Refinement (Max Continuity)">
+          <span class="badge-code">1.5</span> $k$-Refinement
+        </button>
+
+        <span class="sim-group-label">2D IGA</span>
+        <button class="sim-tab" onclick="loadSimulation('2.1')" id="tab-2.1" title="Phase 2.1: 2D Elasticity Plate">
+          <span class="badge-code">2.1</span> 2D Elastic Plate
+        </button>
+
+        <span class="sim-group-label">Advanced</span>
+        <button class="sim-tab" onclick="loadSimulation('5.3')" id="tab-5.3" title="Phase 5.3: Plate with Hole Benchmark">
+          <span class="badge-code">5.3</span> Plate w/ Hole
+        </button>
+        <button class="sim-tab" onclick="loadSimulation('5.3a')" id="tab-5.3a" title="Phase 5.3a: Adaptive Refinement Comparison">
+          <span class="badge-code">5.3a</span> Adaptive Refinement
+        </button>
+      </div>
+    </div>
+
+    <!-- Back / Explore All Button -->
+    <a href="index.html" class="explore-all-btn" title="Explore all 40+ simulation variations and flowcharts">
+      <i class="fa-solid fa-compass"></i>
+      <span>Explore All 40+ Simulations</span>
+      <i class="fa-solid fa-arrow-right" style="font-size: 0.75rem;"></i>
+    </a>
+  </div>
+
+  <!-- Simulation Host & Metadata Area -->
+  <main class="main-stage">
+    <div class="sim-info-banner">
+      <div class="sim-meta">
+        <div>
+          <h2 class="sim-title" id="simTitle"><i class="fa-solid fa-sliders" style="color: #60a5fa; font-size: 1rem;"></i> <span>1D IGA Baseline Rod</span></h2>
+          <p class="sim-desc" id="simDesc">1D B-Spline Basis & Elastic Rod Foundation</p>
+        </div>
+      </div>
+      <div class="sim-actions">
+        <a href="../theory/overview.html" id="simTheoryLink" class="btn-action" target="_blank">
+          <i class="fa-solid fa-book-open"></i> Theory Notes
+        </a>
+        <a href="simulations/iga-sim/index.html" id="simDirectLink" class="btn-action" target="_blank" title="Open this standalone simulation directly in a new tab">
+          <i class="fa-solid fa-up-right-from-square"></i> Open Fullscreen
+        </a>
+      </div>
+    </div>
+
+    <div class="iframe-container">
+      <div class="frame-loader" id="frameLoader">
+        <div class="spinner"></div>
+        <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 600;">Loading Simulation Module...</span>
+      </div>
+      <iframe id="simFrame" src="simulations/iga-sim/index.html" title="IGA Interactive Simulation"></iframe>
+    </div>
+  </main>
+
+  <script>
+    // Configuration dictionary for the 7 curated core simulations
+    const SIM_CONFIG = {
+      '1.1': {
+        title: 'Phase 1.1 — 1D IGA Baseline Rod',
+        desc: 'Interactive 1D B-Spline Basis Functions & Linear Elastic Rod Solver ($u, \\sigma$).',
+        url: 'simulations/iga-sim/index.html',
+        theory: '../theory/timeline.html'
+      },
+      '1.2': {
+        title: 'Phase 1.2 — $h$-Refinement (Knot Insertion)',
+        desc: 'Boehm\'s algorithm for knot insertion without changing geometry or physical field.',
+        url: 'simulations/iga-sim-1.2/index.html',
+        theory: '../theory/dictionary.html'
+      },
+      '1.3': {
+        title: 'Phase 1.3 — $p$-Refinement (Degree Elevation)',
+        desc: 'Elevating polynomial order $p$ to accelerate convergence while preserving geometry.',
+        url: 'simulations/iga-sim-1.3/index.html',
+        theory: '../theory/dictionary.html'
+      },
+      '1.5': {
+        title: 'Phase 1.5 — $k$-Refinement (Max Continuity)',
+        desc: 'Degree elevation followed by knot insertion for maximum inter-element smoothness $C^{p-1}$.',
+        url: 'simulations/iga-sim-1.5/index.html',
+        theory: '../theory/dictionary.html'
+      },
+      '2.1': {
+        title: 'Phase 2.1 — 2D Elasticity Plate Benchmark',
+        desc: 'Tensor product 2D NURBS mapping, bi-unit parametric space, and plane stress elasticity.',
+        url: 'simulations/iga-sim-2.1/index.html',
+        theory: '../theory/dictionary.html'
+      },
+      '5.3': {
+        title: 'Phase 5.3 — 2D Plate with Circular Hole',
+        desc: 'Exact circular arc geometry via NURBS weights, quarter-plate symmetry, and Kirsch stress field.',
+        url: 'simulations/iga-sim-5.3/index.html',
+        theory: '../theory/theory-5.3.html'
+      },
+      '5.3a': {
+        title: 'Phase 5.3a — Adaptive Refinement & Stress Concentration',
+        desc: 'Refinement comparison on stress concentration $K_t \\approx 3.0$ around circular hole.',
+        url: 'simulations/iga-sim-5.3a/index.html',
+        theory: '../theory/theory-5.3a.html'
+      }
+    };
+
+    function loadSimulation(key) {
+      const config = SIM_CONFIG[key];
+      if (!config) return;
+
+      // Update active tab styling
+      document.querySelectorAll('.sim-tab').forEach(tab => tab.classList.remove('active'));
+      const activeTab = document.getElementById(`tab-${key}`);
+      if (activeTab) activeTab.classList.add('active');
+
+      // Update metadata text
+      document.getElementById('simTitle').innerHTML = `<i class="fa-solid fa-sliders" style="color: #60a5fa; font-size: 1rem;"></i> <span>${config.title}</span>`;
+      document.getElementById('simDesc').innerHTML = config.desc;
+      document.getElementById('simTheoryLink').href = config.theory;
+      document.getElementById('simDirectLink').href = config.url;
+
+      // Render any LaTeX in the description
+      if (window.renderMathInElement) {
+        renderMathInElement(document.getElementById('simTitle'));
+        renderMathInElement(document.getElementById('simDesc'));
+      }
+
+      // Show loader and update iframe
+      const loader = document.getElementById('frameLoader');
+      const frame = document.getElementById('simFrame');
+      loader.classList.add('active');
+
+      frame.onload = () => {
+        loader.classList.remove('active');
+      };
+
+      frame.src = config.url;
+
+      // Store selection in URL hash
+      window.location.hash = key;
+    }
+
+    // Handle hash on initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body);
+      }
+      
+      const hash = window.location.hash.replace('#', '');
+      if (hash && SIM_CONFIG[hash]) {
+        loadSimulation(hash);
+      } else {
+        loadSimulation('1.1');
+      }
+    });
+  </script>
+</body>
+</html>
