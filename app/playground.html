@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
   <link rel="stylesheet" href="../index.css">
   <style>
     body {
@@ -329,12 +329,12 @@
           <span class="badge-code">2.1</span> 2D Elastic Plate
         </button>
 
-        <span class="sim-group-label">Advanced</span>
-        <button class="sim-tab" onclick="loadSimulation('5.3')" id="tab-5.3" title="Phase 5.3: Plate with Hole Benchmark">
-          <span class="badge-code">5.3</span> Plate w/ Hole
+        <span class="sim-group-label">Plate w/ Hole</span>
+        <button class="sim-tab" onclick="loadSimulation('5.3')" id="tab-5.3" title="Phase 5.3: FOM (Full Order Model) Plate with Circular Hole">
+          <span class="badge-code">5.3</span> FOM
         </button>
-        <button class="sim-tab" onclick="loadSimulation('5.3a')" id="tab-5.3a" title="Phase 5.3a: Adaptive Refinement Comparison">
-          <span class="badge-code">5.3a</span> Adaptive Refinement
+        <button class="sim-tab" onclick="loadSimulation('5.3a')" id="tab-5.3a" title="Phase 5.3a: ROM (Reduced Order Model) & Refinement">
+          <span class="badge-code">5.3a</span> ROM
         </button>
       </div>
     </div>
@@ -409,14 +409,14 @@
         theory: '../theory/dictionary.html'
       },
       '5.3': {
-        title: 'Phase 5.3 — 2D Plate with Circular Hole',
-        desc: 'Exact circular arc geometry via NURBS weights, quarter-plate symmetry, and Kirsch stress field.',
+        title: 'Phase 5.3 — FOM (Full Order Model) Plate with Hole',
+        desc: 'Exact circular arc geometry via NURBS weights, full-order Kirsch stress field, and quarter-plate symmetry.',
         url: 'simulations/iga-sim-5.3/index.html',
         theory: '../theory/theory-5.3.html'
       },
       '5.3a': {
-        title: 'Phase 5.3a — Adaptive Refinement & Stress Concentration',
-        desc: 'Refinement comparison on stress concentration $K_t \\approx 3.0$ around circular hole.',
+        title: 'Phase 5.3a — ROM (Reduced Order Model) & Refinement',
+        desc: 'Reduced order modelling, adaptive refinement comparison, and stress concentration $K_t \\approx 3.0$ evaluation.',
         url: 'simulations/iga-sim-5.3a/index.html',
         theory: '../theory/theory-5.3a.html'
       }
@@ -439,8 +439,15 @@
 
       // Render any LaTeX in the description
       if (window.renderMathInElement) {
-        renderMathInElement(document.getElementById('simTitle'));
-        renderMathInElement(document.getElementById('simDesc'));
+        const katexOpts = {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        };
+        renderMathInElement(document.getElementById('simTitle'), katexOpts);
+        renderMathInElement(document.getElementById('simDesc'), katexOpts);
       }
 
       // Show loader and update iframe
@@ -461,7 +468,13 @@
     // Handle hash on initial load
     window.addEventListener('DOMContentLoaded', () => {
       if (window.renderMathInElement) {
-        renderMathInElement(document.body);
+        renderMathInElement(document.body, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
       }
       
       const hash = window.location.hash.replace('#', '');
