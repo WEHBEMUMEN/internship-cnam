@@ -1,39 +1,92 @@
 # Digital Twin & Reduced Order Modelling for Nonlinear Dynamics
 
-**Supervisor:** Christophe Hoareau (EPN04, Cnam)  
-**Duration:** < 6 Months  
-**Objective:** Create a pedagogical "Digital Twin" set-up for FSI / Non-Linear courses, combining a physical 3D-printed model with a real-time virtual environment.
+[![GitHub Pages](https://img.shields.io/badge/Live_Demo-GitHub_Pages-blue?logo=github)](https://wehbemumen.github.io/internship-cnam/)
+[![Institution](https://img.shields.io/badge/Cnam-EPN04_Paris-red)](https://www.cnam.fr/)
+[![Methodology](https://img.shields.io/badge/Methodology-IGA_%2B_ROM-green)]()
 
-## 📌 Project Overview
-The Équipement pour la Performance et le Numerique (EPN04) department is dedicated to advancing engineering performance through numerical methods and advanced simulation techniques. This project bridges structural mechanics and interactive software by focusing on reduced order modelling of nonlinear dynamic problems with geometrical parameters.
+**Author:** Mumen Wehbe  
+**Supervisor:** Dr. Christophe Hoareau  
+**Institution:** Conservatoire National des Arts et Métiers (Cnam), Équipement pour la Performance et le Numérique (EPN04), Paris  
+**Duration:** March – September 2026  
 
-The main objective is to propose a methodology and validate a reduced order model strategy to solve nonlinear dynamic problems with large displacements of structures. The originality of the core research consists in using Isogeometric Analysis (IGA) and hyper-reduction techniques to construct the reduced order models (ROM).
+---
 
-## 📅 Project Timeline (Gantt Chart)
-```mermaid
-    gantt
-        title Internship Project Plan: Digital Twin & ROM
-        dateFormat  YYYY-MM-DD
-        axisFormat  %m/%d
+## 📌 Executive Summary
 
-        section 1. Research & Planning
-        State of the Art (IGA, ROM, Digital Twin) :a1, 2026-03-23, 21d
-        Determine App Software Requirements :a2, after a1, 14d
+This project presents the design and implementation of a real-time, web-based **Digital Twin** platform for geometrically nonlinear structural mechanics. By bridging **Isogeometric Analysis (IGA)** with projection-based **Reduced Order Modelling (ROM)** techniques, the platform executes high-fidelity physics natively inside modern web browsers at sub-10 ms solve times.
 
-        section 2. Core Computational Model
-        Define 2D Parameterized Test Case :b1, 2026-04-13, 21d
-        Generate Test Sets & ROM Basis :b2, after b1, 21d
-        Extension to 3D Problems :b3, after b2, 28d
+The platform serves as both a research validation engine and an interactive pedagogical tool for advanced computational mechanics courses (e.g. Non-linear Dynamics, Fluid-Structure Interaction).
 
-        section 3. Physical Set-up
-        CAD Design (FreeCAD/SolidWorks) :c1, 2026-04-20, 21d
-        3D Printing & Assembly :c2, after c1, 14d
+---
 
-        section 4. Digital Twin & App UI
-        App UI Development & Real-time Integration :d1, 2026-05-25, 45d
-        Connect Physical & Virtual Set-ups (Hybrid) :d2, after d1, 30d
+## 🔬 Key Scientific Pillars
 
-        section 5. Documentation
-        Draft Paper based on results :e1, 2026-08-01, 30d
-        Finalize Pedagogical Environment :e2, after e1, 20d
+1. **Isogeometric Analysis (IGA):**
+   - Exact CAD geometry discretization using **Non-Uniform Rational B-Splines (NURBS)**.
+   - Elimination of mesh generation errors.
+   - Built-in support for $h$-refinement (knot insertion), $p$-refinement (degree elevation), and $k$-refinement (maximum inter-element smoothness $C^{p-1}$).
+
+2. **Geometrically Nonlinear Continuum Mechanics:**
+   - Total Lagrangian formulation on a fixed bi-unit master domain $\hat{\Omega} = [0,1]^2$.
+   - **Green–Lagrange strain tensor** $\mathbf{E}$ and **Second Piola–Kirchhoff stress** $\mathbf{S}$.
+   - Newton–Raphson nonlinear solver with tangent stiffness matrix updates.
+
+3. **Projection-Based Reduced Order Modelling (ROM):**
+   - Snapshot generation across parametric configurations.
+   - **Proper Orthogonal Decomposition (POD)** via Singular Value Decomposition (SVD).
+   - Galerkin projection reducing systems with hundreds of DOFs to a compact reduced basis ($\sim 5\text{--}10$ modes).
+   - Hyper-reduction concepts (DEIM / ECSW) for nonlinear internal force evaluation.
+
+---
+
+## 🎮 Interactive Simulation Suite
+
+- **[Essential IGA Playground](app/playground.html):** A clean, unified sandbox focusing on core milestones:
+  - **1D IGA Rod Baseline & Refinements:** Phases 1.1, 1.2 ($h$), 1.3 ($p$), 1.5 ($k$)
+  - **2D Elastic Plate Benchmark:** Phase 2.1
+  - **Infinite Plate with Circular Hole:** Full Order Model (Phase 5.3) & Reduced Order Model (Phase 5.3a)
+- **[Full Development Versions Catalog](app/index.html):** All iterative research prototypes and flowcharts across Phases 1 through 5.
+
+---
+
+## 🏗️ Repository Architecture
+
 ```
+├── app/
+│   ├── playground.html       # Streamlined 1-page interactive playground
+│   ├── index.html            # Complete catalog of all development versions
+│   ├── simulations/          # Modular standalone IGA & ROM simulation engines
+│   └── shared/               # Reusable math, NURBS, and solver utilities
+├── report/                   # Complete LaTeX master thesis report & chapters
+│   ├── main.tex              # Master LaTeX document
+│   └── chapters/             # Chapters 1-4, intro, conclusion, titlepage
+├── theory/                   # Interactive theory documentation & glossary
+│   ├── overview.html         # Research abstract & project executive summary
+│   ├── timeline.html         # Internship Gantt chart & roadmap
+│   ├── tasks.html            # Work package task tracker
+│   └── dictionary.html       # Mathematical glossary & definition cards
+├── index.html                # Main project landing page
+├── index.css                 # Unified styling and design tokens
+└── .nojekyll                 # GitHub Pages direct deployment bypass
+```
+
+---
+
+## 🚀 Running Locally
+
+You can run the web platform with any static local web server:
+
+```bash
+# Python 3
+python -m http.server 8000
+
+# Or Node.js
+npx serve .
+```
+
+Open `http://localhost:8000` in your web browser.
+
+---
+
+## 📄 License & Attribution
+© 2026 Mumen Wehbe & EPN04, Cnam (Paris). All rights reserved.

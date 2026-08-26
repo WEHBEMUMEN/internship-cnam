@@ -40,18 +40,69 @@
     <section class="section">
       <div class="container">
         <div class="section-head reveal reveal-up">
-          <span class="badge">RESEARCH ABSTRACT</span>
-          <h2 class="section-title">Project Overview</h2>
-          <p class="section-sub">Digital Twin methodology for FSI / Non-Linear dynamics courses.</p>
+          <span class="badge">RESEARCH ABSTRACT & SUMMARY</span>
+          <h2 class="section-title">Digital Twin & Reduced Order Modelling</h2>
+          <p class="section-sub">Conservatoire National des Arts et Métiers (Cnam) — EPN04 Department</p>
         </div>
-        <div class="reveal reveal-up delay-1" style="max-width: 850px; margin: 0 auto; line-height: 1.8; color: var(--text-secondary); font-size: 1.15rem;">
-          <p style="margin-bottom: 30px;">The Équipement pour la Performance et le Numerique (EPN04) department at Cnam is dedicated to advancing engineering performance through numerical methods and advanced simulation techniques. This project bridges structural mechanics and interactive software by focusing on reduced order modelling of nonlinear dynamic problems with geometrical parameters.</p>
+        
+        <div class="reveal reveal-up delay-1" style="max-width: 900px; margin: 0 auto; line-height: 1.8; color: var(--text-secondary); font-size: 1.1rem;">
           
-          <h3 style="color: var(--text-primary); font-size: 1.8rem; margin-bottom: 20px; font-weight: 800;">Core Objectives</h3>
-          <p style="margin-bottom: 30px;">The main goal is to propose a methodology and validate a <strong>Reduced Order Model (ROM)</strong> strategy to solve nonlinear dynamic problems with large displacements of structures. We use <strong>Isogeometric Analysis (IGA)</strong> and innovative hyper-reduction techniques to construct the ROM, ensuring both accuracy and computational efficiency for real-time applications.</p>
-          
-          <h3 style="color: var(--text-primary); font-size: 1.8rem; margin-bottom: 20px; font-weight: 800;">Real-time Synergy</h3>
-          <p>The originality of this core research consists in its pedagogical application. We aim to create a "Digital Twin" set-up that integrates a physical 3D-printed model with a real-time virtual simulation environment. This hybrid approach allows students and researchers to observe the correlation between theoretical models and physical behavior in dynamic environments like Fluid-Structure Interaction (FSI).</p>
+          <!-- Executive Info Card -->
+          <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border); border-radius: 16px; padding: 24px 30px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Author</span>
+              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">Mumen Wehbe</p>
+            </div>
+            <div>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Supervisor</span>
+              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">Dr. Christophe Hoareau</p>
+            </div>
+            <div>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Institution</span>
+              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">Cnam (EPN04), Paris</p>
+            </div>
+            <div>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Duration</span>
+              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">March – September 2026</p>
+            </div>
+          </div>
+
+          <h3 style="color: var(--text-primary); font-size: 1.6rem; margin-bottom: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-file-lines" style="color: var(--accent); font-size: 1.3rem;"></i> Abstract
+          </h3>
+          <p style="margin-bottom: 25px;">
+            This project addresses the development of a real-time pedagogical <strong>Digital Twin</strong> for nonlinear structural mechanics, combining <strong>Isogeometric Analysis (IGA)</strong> with projection-based <strong>Reduced Order Modelling (ROM)</strong> techniques.
+          </p>
+          <p style="margin-bottom: 25px;">
+            The methodology relies on <strong>Non-Uniform Rational B-Splines (NURBS)</strong> basis functions for exact geometric representation and employs <strong>Proper Orthogonal Decomposition (POD)</strong> via <strong>Singular Value Decomposition (SVD)</strong> to extract dominant deformation modes from parametric snapshot databases. A Galerkin projection framework reduces the dimensionality of the governing equations, while hyper-reduction strategies (DEIM, ECSW) accelerate the evaluation of nonlinear internal force terms.
+          </p>
+          <p style="margin-bottom: 35px;">
+            The resulting web-based application enables real-time simulation of geometrically nonlinear 2D structures with parametric control, achieving solve times <strong>under 10 ms</strong> compared to several seconds for the full-order model. The platform serves as both a research validation tool and an interactive pedagogical environment for teaching advanced computational mechanics.
+          </p>
+
+          <h3 style="color: var(--text-primary); font-size: 1.6rem; margin-bottom: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-bullseye" style="color: var(--accent); font-size: 1.3rem;"></i> Research Objectives & Problematic
+          </h3>
+          <ul style="margin-bottom: 35px; padding-left: 20px; display: flex; flex-direction: column; gap: 12px;">
+            <li><strong>Nonlinear Operator Dependence:</strong> Resolving the computational bottleneck where the tangent stiffness matrix $\mathbf{K}_T(\mathbf{u})$ changes at every Newton–Raphson iteration.</li>
+            <li><strong>Geometric Parameterization:</strong> Leveraging parameter-dependent NURBS control points $\mathbf{P}_i(\mu)$ so the physical domain changes without invalidating reference coordinates.</li>
+            <li><strong>Real-Time Client-Side Execution:</strong> Deploying a complete IGA and ROM solver directly in the browser via JavaScript and WebGL (Three.js) without any server-side dependencies.</li>
+            <li><strong>Pedagogical Accessibility:</strong> Democratizing computational mechanics through interactive visual sandboxes that allow students to explore $h$-, $p$-, and $k$-refinements in real time.</li>
+          </ul>
+
+          <h3 style="color: var(--text-primary); font-size: 1.6rem; margin-bottom: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-tags" style="color: var(--accent); font-size: 1.3rem;"></i> Keywords
+          </h3>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 40px;">
+            <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">Isogeometric Analysis (IGA)</span>
+            <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3);">Reduced Order Modelling (ROM)</span>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">Nonlinear Mechanics</span>
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">Digital Twin</span>
+            <span class="badge" style="background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3);">NURBS</span>
+            <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3);">POD / SVD</span>
+            <span class="badge" style="background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3);">Real-Time WebGL</span>
+          </div>
+
         </div>
       </div>
     </section>
