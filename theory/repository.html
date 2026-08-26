@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
   <script src="../scripts.js" defer></script>
 </head>
 <body>
@@ -45,17 +45,17 @@
           <p class="section-sub">Navigate the core components and datasets of the internship.</p>
         </div>
         <div class="grid">
-          <div class="card reveal reveal-up" style="border: 1px solid rgba(59, 130, 246, 0.4); background: linear-gradient(135deg, rgba(30, 58, 138, 0.2), rgba(15, 23, 42, 0.8));">
-            <i class="fa-solid fa-file-pdf" style="color: #60a5fa;"></i>
-            <h3>Master 2 Thesis (v2.0)</h3>
+          <div class="card reveal reveal-up">
+            <i class="fa-solid fa-file-pdf" style="color: var(--accent);"></i>
+            <h3>Master 2 Thesis</h3>
             <p>Full academic thesis report covering IGA, Reference Domain Pullback $\hat{\boldsymbol{\Psi}}$, and ECSW Hyper-Reduction.</p>
-            <a href="../report/thesis_2.0/main.pdf" class="card-link" style="color: #60a5fa;" target="_blank">Download Thesis PDF <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+            <a href="../report/thesis_2.0/main.pdf" class="card-link" target="_blank">Download Thesis PDF <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
           </div>
-          <div class="card reveal reveal-up delay-1" style="border: 1px solid rgba(16, 185, 129, 0.4); background: linear-gradient(135deg, rgba(6, 78, 59, 0.2), rgba(15, 23, 42, 0.8));">
-            <i class="fa-solid fa-file-lines" style="color: #34d399;"></i>
+          <div class="card reveal reveal-up delay-1">
+            <i class="fa-solid fa-file-lines" style="color: #10b981;"></i>
             <h3>Executive Summary</h3>
             <p>High-level research synthesis, core breakthroughs ($64.5\times$ speedup, $0.054\%$ error), and methodological pillars.</p>
-            <a href="../report/summary/summary.pdf" class="card-link" style="color: #34d399;" target="_blank">Download Summary PDF <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+            <a href="../report/summary/summary.pdf" class="card-link" style="color: #10b981;" target="_blank">Download Summary PDF <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
           </div>
           <div class="card reveal reveal-up delay-2">
             <i class="fa-solid fa-book-open"></i>

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
   <script src="../scripts.js" defer></script>
 </head>
 <body>
@@ -47,23 +47,23 @@
         
         <div class="reveal reveal-up delay-1" style="max-width: 900px; margin: 0 auto; line-height: 1.8; color: var(--text-secondary); font-size: 1.1rem;">
           
-          <!-- Executive Info Card -->
-          <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border); border-radius: 16px; padding: 24px 30px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+          <!-- Executive Info Card (Light Theme Friendly) -->
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px; padding: 24px 30px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; box-shadow: var(--card-shadow);">
             <div>
-              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Author</span>
-              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">Mumen Wehbe</p>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 700;">Author</span>
+              <p style="margin: 4px 0 0; color: var(--text-primary); font-weight: 700; font-size: 1rem;">Mumen Wehbe</p>
             </div>
             <div>
-              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Supervisor</span>
-              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">Dr. Christophe Hoareau</p>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 700;">Supervisor</span>
+              <p style="margin: 4px 0 0; color: var(--text-primary); font-weight: 700; font-size: 1rem;">Dr. Christophe Hoareau</p>
             </div>
             <div>
-              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Institution</span>
-              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">Cnam (EPN04), Paris</p>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 700;">Institution</span>
+              <p style="margin: 4px 0 0; color: var(--text-primary); font-weight: 700; font-size: 1rem;">Cnam (EPN04), Paris</p>
             </div>
             <div>
-              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Duration</span>
-              <p style="margin: 4px 0 0; color: #f8fafc; font-weight: 700; font-size: 1rem;">March – September 2026</p>
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 700;">Duration</span>
+              <p style="margin: 4px 0 0; color: var(--text-primary); font-weight: 700; font-size: 1rem;">March – September 2026</p>
             </div>
           </div>
 
